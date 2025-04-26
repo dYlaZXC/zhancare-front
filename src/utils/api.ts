@@ -2,8 +2,8 @@
 import axios from 'axios';
 
 // ✅ Используем env-переменные для гибкости
-const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
-export const baseURLImg = process.env.NEXT_PUBLIC_API_IMG_URL || 'http://localhost:8000/api/v1';
+const baseURL = process.env.NEXT_PUBLIC_API_URL || 'https://zhancareai-back.vercel.app/api/v1';
+export const baseURLImg = process.env.NEXT_PUBLIC_API_IMG_URL || 'https://zhancareai-back.vercel.app/api/v1';
 
 // ✅ Создаем инстанс axios
 const axiosInstance = axios.create({
