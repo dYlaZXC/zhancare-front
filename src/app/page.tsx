@@ -13,6 +13,8 @@ import { ProductShowcase } from "@/sections/ProductShowcase";
 import { ChatButton } from "@/sections/ChatButton";
 import { ChatComponent } from "@/components/ChatComponent";
 import { useLanguage } from "@/context/LanguageContext";
+import { DoctorsCarousel } from "@/sections/DoctorsCarousel";
+
 
 export default function Home() {
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -20,15 +22,6 @@ export default function Home() {
 
   return (
     <div>
-      {/* Language Toggle Button
-      <div className="fixed top-4 right-4 z-50">
-        <button
-          onClick={() => setLanguage(language === "ru" ? "kz" : "ru")}
-          className="bg-gray-800 text-white px-4 py-2 rounded-lg"
-        >
-          {language === "ru" ? "Қазақша" : "Русский"}
-        </button>
-      </div> */}
 
       {/* Hero Section */}
       <Hero />
@@ -38,6 +31,7 @@ export default function Home() {
       {/* Features Section */}
       <Features />
       <ImpactSection />
+      <DoctorsCarousel />
       {/* Product Showcase Section */}
       <ProductShowcase />
       {/* Call To Action Section */}

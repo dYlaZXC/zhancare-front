@@ -19,22 +19,21 @@ const statusTranslations: Record<string, string> = {
 interface Consultation {
   id: number;
   patient_name: string;
-  patient_email: string;
+  patient_email: string | null;
   status: "pending" | "ongoing" | "completed" | "cancelled";
 }
 
 const DoctorConsultations: React.FC = () => {
   const { token } = useAuth();
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [newConsultation, setNewConsultation] = useState<Consultation | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const seenConsultationIds = useRef(new Set<number>());
+  const seenIds = useRef(new Set<number>());
+  const dismissedIds = useRef(new Set<number>());
   const isSoundPlaying = useRef(false);
-  const dismissedConsultations = useRef(new Set<number>());
 
   useEffect(() => {
     fetchConsultations();
@@ -43,65 +42,43 @@ const DoctorConsultations: React.FC = () => {
   }, []);
 
   const fetchConsultations = async () => {
-    setError(null);
-    setLoading(true);
     try {
-      const response = await api.get<Consultation[]>("/consultations/");
-      setConsultations(response.data);
+      const { data } = await api.get<Consultation[]>("/consultations/");
+      setConsultations(data);
     } catch (error) {
-      console.error("Ошибка загрузки консультаций:", error);
-      setError("Ошибка загрузки консультаций.");
+      toast.error("Ошибка загрузки консультаций");
     } finally {
       setLoading(false);
     }
   };
 
-  const closePopup = () => {
-    stopSound();
-    if (newConsultation) {
-      dismissedConsultations.current.add(newConsultation.id);
-    }
-    setNewConsultation(null);
-  };
-
   const fetchNewConsultations = async () => {
     try {
-      const response = await api.get<Consultation[]>("/consultations/");
-      const newConsultations = response.data.filter(
-        (consultation) =>
-          consultation.status === "pending" &&
-          !seenConsultationIds.current.has(consultation.id) &&
-          !dismissedConsultations.current.has(consultation.id)
+      const { data } = await api.get<Consultation[]>("/consultations/");
+      const pending = data.find(
+        (c) =>
+          c.status === "pending" &&
+          !seenIds.current.has(c.id) &&
+          !dismissedIds.current.has(c.id)
       );
 
-      if (newConsultations.length > 0 && !newConsultation) {
-        setNewConsultation(newConsultations[0]);
-        newConsultations.forEach((c) => seenConsultationIds.current.add(c.id));
-        setConsultations((prev) => [...prev, ...newConsultations]);
-
-        if (!isSoundPlaying.current) {
-          playSound();
-        }
+      if (pending && !newConsultation) {
+        setNewConsultation(pending);
+        seenIds.current.add(pending.id);
+        playSound();
       }
     } catch (error) {
-      console.error("Ошибка загрузки новых консультаций:", error);
+      console.error(error);
     }
   };
 
   const playSound = () => {
-    if (!isSoundPlaying.current) {
-      if (!audioRef.current) {
-        audioRef.current = new Audio("/sounds/notification.mp3");
-        audioRef.current.loop = true;
-      }
-
-      audioRef.current
-        .play()
-        .then(() => {
-          isSoundPlaying.current = true;
-        })
-        .catch((error) => console.error("Ошибка воспроизведения звука:", error));
+    if (!audioRef.current) {
+      audioRef.current = new Audio("/sounds/notification.mp3");
+      audioRef.current.loop = true;
     }
+    audioRef.current.play().catch(() => {});
+    isSoundPlaying.current = true;
   };
 
   const stopSound = () => {
@@ -112,147 +89,136 @@ const DoctorConsultations: React.FC = () => {
     }
   };
 
-  const handleAccept = async (consultationId: number) => {
+  const acceptConsultation = async (id: number) => {
     stopSound();
-    dismissedConsultations.current.add(consultationId);
-    setNewConsultation(null);
-
     try {
-      const response = await api.post<{ meeting_id: string }>(`/consultations/${consultationId}/accept/`, {});
-      if (response.status === 200) {
-        const { meeting_id } = response.data;
-        toast.success("Консультация принята! Переход к видеозвонку...");
-        setConsultations((prev) => prev.filter((c) => c.id !== consultationId));
-        seenConsultationIds.current.delete(consultationId);
-        setTimeout(fetchConsultations, 3000);
-
-        router.push(`/video-call?meetingId=${meeting_id}`);
-      } else {
-        toast.error("Ошибка при принятии консультации.");
-      }
-    } catch (error) {
-      console.error("Ошибка при принятии консультации:", error);
-      toast.error("Ошибка при принятии консультации.");
+      const { data } = await api.post<{ meeting_id: string }>(`/consultations/${id}/accept/`, {});
+      toast.success("Консультация принята");
+      router.push(`/video-call?meetingId=${data.meeting_id}`);
+    } catch {
+      toast.error("Ошибка при принятии консультации");
     }
+    setNewConsultation(null);
+    fetchConsultations();
   };
 
-  const handleReject = async (consultationId: number) => {
+  const rejectConsultation = async (id: number) => {
     stopSound();
-    dismissedConsultations.current.add(consultationId);
-    setNewConsultation(null);
-
     try {
-      await api.post(`/consultations/${consultationId}/reject/`, {});
-      toast.info("Консультация отклонена.");
-      setConsultations((prev) => prev.filter((c) => c.id !== consultationId));
-      seenConsultationIds.current.delete(consultationId);
-      setTimeout(fetchConsultations, 3000);
-    } catch (error) {
-      console.error("Ошибка при отклонении консультации:", error);
-      toast.error("Ошибка при отклонении консультации.");
+      await api.post(`/consultations/${id}/reject/`, {});
+      toast.info("Консультация отклонена");
+    } catch {
+      toast.error("Ошибка при отклонении консультации");
     }
+    setNewConsultation(null);
+    fetchConsultations();
+  };
+
+  const dismissPopup = () => {
+    if (newConsultation) {
+      dismissedIds.current.add(newConsultation.id);
+    }
+    stopSound();
+    setNewConsultation(null);
   };
 
   return (
-    <div className="p-4 sm:p-6 bg-white shadow-xl rounded-2xl relative">
+    <div className="p-6 bg-white shadow-xl rounded-2xl relative min-h-[400px]">
       <h2 className="text-2xl font-bold text-[#001E80]">Мои Консультации</h2>
-      <p className="text-gray-600 mt-2">Список всех запланированных консультаций.</p>
+      <p className="text-gray-600 mt-2">Следите за новыми запросами консультаций.</p>
 
-      {error && <p className="text-red-500 mt-3">{error}</p>}
-
-      {/* ✅ Popup */}
+      {/* ✅ Popup for New Consultation */}
       <AnimatePresence>
-  {newConsultation && (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm z-50 px-4"
-    >
-      <div className="bg-gradient-to-r from-[#001E80] to-[#3A50FF] w-full sm:w-1/2 lg:w-1/3 p-6 rounded-xl shadow-xl space-y-4">
-        <h3 className="text-xl font-bold text-white">🆕 Новая консультация</h3>
-        <p className="text-lg text-white">
-          Пациент: <strong>{newConsultation.patient_name}</strong>
-        </p>
-        <p className="text-gray-200">📧 {newConsultation.patient_email}</p>
-        <p className="text-gray-200">
-          📅 Статус: <strong>{statusTranslations[newConsultation.status]}</strong>
-        </p>
-
-        <div className="mt-4 flex flex-col sm:flex-row justify-end gap-3">
-          <button
-            onClick={() => handleAccept(newConsultation.id)}
-            className="bg-gradient-to-r from-green-600 to-green-500 px-4 py-2 rounded-lg text-white w-full sm:w-auto hover:opacity-90 transition"
+        {newConsultation && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-6"
           >
-            <FontAwesomeIcon icon={faCheckCircle} className="mr-2" />
-            Принять
-          </button>
-          <button
-            onClick={() => handleReject(newConsultation.id)}
-            className="bg-gradient-to-r from-red-600 to-red-500 px-4 py-2 rounded-lg text-white w-full sm:w-auto hover:opacity-90 transition"
-          >
-            <FontAwesomeIcon icon={faTimesCircle} className="mr-2" />
-            Отклонить
-          </button>
-          <button
-            onClick={closePopup}
-            className="bg-gray-500 px-4 py-2 rounded-lg text-white w-full sm:w-auto hover:opacity-85 transition"
-          >
-            <FontAwesomeIcon icon={faWindowClose} className="mr-2" />
-            Закрыть
-          </button>
-        </div>
-      </div>
-    </motion.div>
-  )}
-</AnimatePresence>
+            <div className="bg-gradient-to-r from-[#001E80] to-[#3A50FF] p-8 rounded-xl w-full max-w-md space-y-4">
+              <h3 className="text-xl font-bold text-white">🆕 Новая консультация</h3>
+              <p className="text-lg text-white">
+                Пациент: <strong>{newConsultation.patient_name}</strong>
+              </p>
+              <p className="text-gray-200">📧 {newConsultation.patient_email || "Нет Email"}</p>
+              <p className="text-gray-200">
+                📅 Статус: <strong>{statusTranslations[newConsultation.status]}</strong>
+              </p>
 
+              <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                <button
+                  onClick={() => acceptConsultation(newConsultation.id)}
+                  className="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg flex-1"
+                >
+                  <FontAwesomeIcon icon={faCheckCircle} className="mr-2" />
+                  Принять
+                </button>
+                <button
+                  onClick={() => rejectConsultation(newConsultation.id)}
+                  className="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg flex-1"
+                >
+                  <FontAwesomeIcon icon={faTimesCircle} className="mr-2" />
+                  Отклонить
+                </button>
+                <button
+                  onClick={dismissPopup}
+                  className="bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-lg flex-1"
+                >
+                  <FontAwesomeIcon icon={faWindowClose} className="mr-2" />
+                  Закрыть
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* ✅ Table */}
+      {/* ✅ Consultations Table */}
       <div className="mt-6 overflow-x-auto">
-        <table className="w-full text-sm sm:text-base border-collapse border min-w-[600px]">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="border p-2">Пациент</th>
-              <th className="border p-2">Email</th>
-              <th className="border p-2">Статус</th>
-              <th className="border p-2">Действия</th>
-            </tr>
-          </thead>
-          <tbody>
-            {consultations.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="p-4 text-center text-gray-500">
-                  Консультации отсутствуют.
-                </td>
+        {loading ? (
+          <div className="text-center py-20 text-gray-400 animate-pulse">
+            Загрузка консультаций...
+          </div>
+        ) : consultations.length === 0 ? (
+          <div className="text-center py-20 text-gray-500">
+            Консультаций нет
+          </div>
+        ) : (
+          <table className="w-full border-collapse mt-4 min-w-[600px] text-sm">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border p-3">Пациент</th>
+                <th className="border p-3">Email</th>
+                <th className="border p-3">Статус</th>
+                <th className="border p-3">Действия</th>
               </tr>
-            ) : (
-              consultations
-                .filter((c, i, self) => i === self.findIndex((t) => t.id === c.id))
-                .map((consultation) => (
-                  <tr key={consultation.id} className="border">
-                    <td className="border p-2">{consultation.patient_name}</td>
-                    <td className="border p-2">{consultation.patient_email}</td>
-                    <td className="border p-2">
-                      <span className="px-2 py-1 rounded-lg bg-gray-200 text-sm">
-                        {statusTranslations[consultation.status] || consultation.status}
-                      </span>
-                    </td>
-                    <td className="border p-2">
-                      {consultation.status === "pending" && (
-                        <button
-                          onClick={() => handleAccept(consultation.id)}
-                          className="bg-gradient-to-r from-green-600 to-green-500 px-3 py-1.5 rounded-md text-white text-sm hover:opacity-90 transition"
-                        >
-                          ✅ Принять
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {consultations.map((c) => (
+                <tr key={c.id} className="hover:bg-gray-50 transition">
+                  <td className="border p-3 font-medium">{c.patient_name}</td>
+                  <td className="border p-3 break-all text-gray-700">{c.patient_email || "—"}</td>
+                  <td className="border p-3">
+                    <span className="bg-gray-200 px-3 py-1 rounded-full text-xs font-medium">
+                      {statusTranslations[c.status]}
+                    </span>
+                  </td>
+                  <td className="border p-3">
+                    {c.status === "pending" && (
+                      <button
+                        onClick={() => acceptConsultation(c.id)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded-md"
+                      >
+                        Принять
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

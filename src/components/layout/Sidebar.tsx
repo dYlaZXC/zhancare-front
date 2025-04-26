@@ -42,7 +42,7 @@ export const Sidebar = ({
   const menuItems = [
     { id: "profile", icon: faUser, title: "Профиль" },
     { id: "video", icon: faVideo, title: "Видео консультация" },
-    { id: "appointments", icon: faCalendar, title: "Запись на прием" },
+    { id: "appointments", icon: faCalendar, title: "Вызов на дом" },
     { id: "history", icon: faNotesMedical, title: "Медицинская история" },
     { id: "chat", icon: faComment, title: "Чат с врачами" },
     { id: "documents", icon: faFileMedical, title: "Документы" },
