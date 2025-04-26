@@ -190,11 +190,17 @@ export const Hero = () => {
 
             {/* ✅ Mobile User Icon + First Name after login */}
             {user ? (
-              <button className="bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white rounded-lg px-6 py-3 font-medium flex items-center gap-2">
+              <button
+                className="bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white rounded-lg px-6 py-3 font-medium flex items-center gap-2"
+                onClick={() => window.location.href = user.role === "doctor" ? "/doctor-profile" : "/profile"}
+              >
                 <FontAwesomeIcon icon={faUserMd} className="text-xl" /> {user.first_name}
               </button>
             ) : (
-              <button onClick={() => setIsAuthOpen(true)} className="bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white rounded-lg px-6 py-3 font-medium">
+              <button
+                onClick={() => setIsAuthOpen(true)}
+                className="bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white rounded-lg px-6 py-3 font-medium"
+              >
                 {language === "ru" ? "Войти" : "Кіру"}
               </button>
             )}
