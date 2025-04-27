@@ -145,7 +145,7 @@ const VideoConsultation: React.FC = () => {
               <option value="">-- Выберите врача --</option>
               {doctors.map((doc) => (
                 <option key={doc.id} value={doc.id}>
-                  {doc.name} ({doc.email})
+                  {doc.name}
                 </option>
               ))}
             </select>

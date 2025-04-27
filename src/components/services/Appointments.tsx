@@ -145,7 +145,7 @@ const Appointments = () => {
                     {doctors.length > 0 ? (
                       doctors.map((doc) => (
                         <option key={doc.id} value={doc.id}>
-                          {doc.name} ({doc.email})
+                          {doc.name}
                         </option>
                       ))
                     ) : (
