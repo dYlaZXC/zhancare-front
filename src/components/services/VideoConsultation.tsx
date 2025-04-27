@@ -38,17 +38,21 @@ const VideoConsultation: React.FC = () => {
   const fetchDoctors = async () => {
     setFetchingDoctors(true);
     setError(null);
-
+  
     try {
       if (!token) {
         setError("🚫 Вы не авторизованы! Пожалуйста, войдите в систему.");
         return;
       }
-
+  
       const response = await api.get("/auth/doctor/available/");
-
+  
       if (response.status === 200) {
-        setDoctors(response.data.doctors || []);
+        // 🛑 Filter out doctors with doctor_type = "Сестринское дело"
+        const filteredDoctors = (response.data.doctors || []).filter(
+          (doc: { doctor_type: string }) => doc.doctor_type !== "Сестринское дело"
+        );
+        setDoctors(filteredDoctors);
       } else {
         setError("⚠️ Нет доступных врачей.");
       }
@@ -59,6 +63,7 @@ const VideoConsultation: React.FC = () => {
       setFetchingDoctors(false);
     }
   };
+  
 
   const handleStartCall = async () => {
     if (!selectedDoctorId) {

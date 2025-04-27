@@ -98,7 +98,7 @@ export const Sidebar = ({
         {/* Desktop Logo */}
         <div className="hidden sm:flex items-center justify-center px-6 py-6">
           <Link href="/" className="transition-transform duration-300 hover:scale-105">
-            <Image src={Logo} alt="Logo" width={160} height={50} priority />
+            <Image src={Logo} alt="Logo" width={260} height={50} priority />
           </Link>
         </div>
 

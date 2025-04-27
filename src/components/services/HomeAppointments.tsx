@@ -3,15 +3,18 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-toastify";
-import { Loader2, CalendarCheck, UserCircle, CheckCircle2, AlertCircle, Stethoscope, Clock } from "lucide-react";
+import { Loader2, CalendarCheck, UserCircle, CheckCircle2, AlertCircle, MapPin } from "lucide-react";
 import { api } from "@/utils/api";
 import { motion, AnimatePresence } from "framer-motion";
 
-const Appointments = () => {
+const HomeAppointments = () => {
   const { user } = useAuth();
   const [doctors, setDoctors] = useState<{ id: number; name: string; email: string }[]>([]);
   const [selectedDoctor, setSelectedDoctor] = useState<number | null>(null);
   const [appointmentTime, setAppointmentTime] = useState<string>("");
+  const [address, setAddress] = useState<string>("");
+  const [symptoms, setSymptoms] = useState<string>("");  // ✅ added
+  const [notes, setNotes] = useState<string>("");        // ✅ added
   const [loading, setLoading] = useState(false);
   const [fetchingDoctors, setFetchingDoctors] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +28,7 @@ const Appointments = () => {
   const fetchDoctors = async () => {
     setFetchingDoctors(true);
     try {
-      const response = await api.get("/auth/doctor/available/");
+      const response = await api.get("/appointments/available-doctors-sestrinskoe-delo/");
       setDoctors(response.data.doctors || []);
     } catch (err) {
       console.error("Ошибка загрузки врачей:", err);
@@ -36,8 +39,8 @@ const Appointments = () => {
   };
 
   const handleBeforeSubmit = () => {
-    if (!selectedDoctor || !appointmentTime) {
-      toast.error("Пожалуйста, выберите врача и время приема.");
+    if (!selectedDoctor || !appointmentTime || !address.trim()) {
+      toast.error("Пожалуйста, заполните все обязательные поля: врача, адрес и время приема.");
       return;
     }
 
@@ -54,20 +57,26 @@ const Appointments = () => {
     setLoading(true);
     try {
       const response = await api.post("/appointments/", {
-        doctor_id: selectedDoctor,
+        doctor: selectedDoctor,
         appointment_time: appointmentTime,
+        address: address.trim(),
+        symptoms: symptoms.trim() || null,
+        notes: notes.trim() || null,
       });
 
       if (response.status === 201 || response.status === 200) {
-        toast.success("✅ Запись успешно создана!");
+        toast.success("✅ Вызов успешно создан!");
         setSelectedDoctor(null);
         setAppointmentTime("");
+        setAddress("");
+        setSymptoms(""); // reset
+        setNotes("");    // reset
         setSuccess(true);
       } else {
-        toast.error("❌ Не удалось создать запись.");
+        toast.error("❌ Не удалось создать вызов.");
       }
     } catch (err: any) {
-      console.error("Ошибка создания записи:", err);
+      console.error("Ошибка создания вызова:", err);
       toast.error(err?.response?.data?.error || "Ошибка сервера.");
     }
     setLoading(false);
@@ -76,7 +85,6 @@ const Appointments = () => {
   return (
     <div className="w-full px-6 py-8">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
-
         {/* Left Info Panel */}
         <div className="space-y-6 md:col-span-1">
           <div className="flex items-center space-x-4 bg-white rounded-2xl p-4 shadow border border-gray-100">
@@ -91,27 +99,26 @@ const Appointments = () => {
 
           <div className="bg-white rounded-2xl p-4 shadow border border-gray-100 space-y-2">
             <h3 className="text-md font-semibold text-[#001E80] flex items-center gap-2">
-              <CalendarCheck className="w-5 h-5" /> Советы по записи
+              <CalendarCheck className="w-5 h-5" /> Советы перед вызовом врача
             </h3>
             <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
-              <li>Выбирайте удобное для вас время</li>
-              <li>Доктор свяжется с вами для подтверждения</li>
-              <li>Не забудьте проверить уведомления</li>
+              <li>Укажите правильный адрес</li>
+              <li>Доктор приедет в выбранное время</li>
+              <li>Будьте на связи для подтверждения</li>
             </ul>
           </div>
         </div>
 
         {/* Right Form Panel */}
         <div className="md:col-span-2 space-y-8">
-          {/* Title */}
           <div className="flex items-center space-x-3">
-            <CalendarCheck className="w-8 h-8 text-[#001E80]" />
+            <MapPin className="w-8 h-8 text-[#001E80]" />
             <h1 className="text-3xl font-extrabold text-[#001E80]">
-              Запись на прием
+              Вызов врача на дом
             </h1>
           </div>
           <p className="text-gray-600">
-            Выберите врача и удобное время для консультации
+            Заполните форму, чтобы вызвать врача к себе домой.
           </p>
 
           {error && (
@@ -134,14 +141,14 @@ const Appointments = () => {
                 {/* Doctor Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    🩺 Выберите врача:
+                    🩺 Выберите медсестру:
                   </label>
                   <select
                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
                     value={selectedDoctor || ""}
                     onChange={(e) => setSelectedDoctor(Number(e.target.value))}
                   >
-                    <option value="">-- Выберите врача --</option>
+                    <option value="">-- Выберите специалиста --</option>
                     {doctors.length > 0 ? (
                       doctors.map((doc) => (
                         <option key={doc.id} value={doc.id}>
@@ -150,7 +157,7 @@ const Appointments = () => {
                       ))
                     ) : (
                       <option value="" disabled>
-                        Нет доступных врачей
+                        Нет доступных специалистов
                       </option>
                     )}
                   </select>
@@ -160,6 +167,48 @@ const Appointments = () => {
                       <Loader2 className="animate-spin w-4 h-4" /> Загрузка списка врачей...
                     </p>
                   )}
+                </div>
+
+                {/* Address Input */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    📍 Адрес вызова:
+                  </label>
+                  <input
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Введите полный адрес"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                  />
+                </div>
+
+                {/* Symptoms Input */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    🤒 Симптомы (необязательно):
+                  </label>
+                  <textarea
+                    value={symptoms}
+                    onChange={(e) => setSymptoms(e.target.value)}
+                    placeholder="Опишите симптомы..."
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    rows={3}
+                  />
+                </div>
+
+                {/* Notes Input */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    📝 Заметки (необязательно):
+                  </label>
+                  <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Дополнительные замечания..."
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    rows={2}
+                  />
                 </div>
 
                 {/* Appointment Time */}
@@ -189,7 +238,7 @@ const Appointments = () => {
                   {loading ? (
                     <Loader2 className="animate-spin w-5 h-5" />
                   ) : (
-                    "Записаться на консультацию"
+                    "Вызвать врача"
                   )}
                 </button>
               </motion.div>
@@ -204,10 +253,10 @@ const Appointments = () => {
               >
                 <CheckCircle2 className="w-12 h-12 text-green-600 mx-auto mb-4" />
                 <h2 className="text-2xl font-bold text-green-700 mb-2">
-                  Запись успешно создана!
+                  Вызов успешно оформлен!
                 </h2>
                 <p className="text-green-700">
-                  Ожидайте подтверждения врача. Информация будет доступна в личном кабинете.
+                  Ожидайте прибытия специалиста в выбранное время.
                 </p>
               </motion.div>
             )}
@@ -219,9 +268,9 @@ const Appointments = () => {
       {confirmModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
           <div className="bg-white rounded-lg p-6 w-full max-w-md space-y-4">
-            <h3 className="text-xl font-semibold text-gray-900">Подтверждение записи</h3>
+            <h3 className="text-xl font-semibold text-gray-900">Подтверждение вызова</h3>
             <p className="text-gray-700">
-              Вы уверены, что хотите записаться на консультацию к выбранному врачу?
+              Вы уверены, что хотите оформить вызов на дом?
             </p>
             <div className="flex justify-end gap-3 mt-4">
               <button
@@ -244,4 +293,4 @@ const Appointments = () => {
   );
 };
 
-export default Appointments;
+export default HomeAppointments;

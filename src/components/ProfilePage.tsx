@@ -9,7 +9,7 @@ import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { MainContent } from "@/components/layout/MainContent";
 
 import VideoConsultation from "@/components/services/VideoConsultation";
-import Appointments from "@/components/services/Appointments";
+import Appointments from "@/components/services/HomeAppointments";
 import MedicalHistory from "@/components/services/MedicalHistory";
 import ChatDoctors from "@/components/services/ChatDoctors";
 import ProfileDetails from "@/components/services/ProfileDetails";
