@@ -10,14 +10,13 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
-import { api } from "@/utils/api"; // ✅ Используем api instance
+import { api } from "@/utils/api";
 
 const AuthPopup = () => {
   const { isAuthOpen, setIsAuthOpen, loginUser } = useAuth();
   const { language } = useLanguage();
   const translations = language === "ru" ? ru.auth : kz.auth;
-  const [activeTab, setActiveTab] = useState("login");
-
+  const [activeTab, setActiveTab] = useState<"login" | "register">("login");
   const [formData, setFormData] = useState({
     email: "",
     phone: "",
@@ -39,11 +38,14 @@ const AuthPopup = () => {
     setLoading(true);
     setError("");
 
-    const apiUrl =
-      activeTab === "login"
-        ? "/auth/login/"
-        : "/auth/register/";
+    if (activeTab === "register" && formData.password !== formData.confirmPassword) {
+      setError("Пароли не совпадают.");
+      toast.error("❌ Пароли не совпадают!");
+      setLoading(false);
+      return;
+    }
 
+    const apiUrl = activeTab === "login" ? "/auth/login/" : "/auth/register/";
     const payload =
       activeTab === "login"
         ? { email: formData.email, password: formData.password }
@@ -57,14 +59,11 @@ const AuthPopup = () => {
 
     try {
       const response = await api.post(apiUrl, payload);
-
       const data = response.data;
-      console.log("🔍 Backend Response:", data);
 
       if (activeTab === "login") {
         loginUser(data.token, data.user);
         localStorage.setItem("token", data.token);
-        console.log("✅ Token Stored:", data.token);
         toast.success("Вы успешно вошли!");
       } else {
         toast.success("Регистрация прошла успешно!");
@@ -105,9 +104,8 @@ const AuthPopup = () => {
             </button>
 
             <div className="flex flex-col md:flex-row p-4 md:p-8 gap-6 md:gap-8 items-center">
-              {/* Text Section */}
+              {/* Left Logo and Welcome */}
               <div className="text-center md:text-left w-full md:w-1/2">
-                {/* ✅ Добавляем логотип */}
                 <div className="flex justify-center md:justify-start mb-4">
                   <Image src={Logo} alt="Logo" width={100} height={100} />
                 </div>
@@ -119,7 +117,7 @@ const AuthPopup = () => {
                 </p>
               </div>
 
-              {/* Form Section */}
+              {/* Right Form Section */}
               <div className="w-full md:w-1/2">
                 {/* Tabs */}
                 <div className="flex border-b mb-4 w-full">
@@ -156,7 +154,7 @@ const AuthPopup = () => {
                         placeholder={translations.email}
                         value={formData.email}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 md:py-4 rounded-lg mb-3 bg-gray-100 focus:outline-none border border-gray-300"
+                        className="w-full px-4 py-3 md:py-4 rounded-lg mb-3 bg-gray-100 border border-gray-300 focus:outline-none"
                         required
                         autoComplete="email"
                       />
@@ -166,7 +164,7 @@ const AuthPopup = () => {
                         placeholder={translations.password}
                         value={formData.password}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 md:py-4 rounded-lg mb-3 bg-gray-100 focus:outline-none border border-gray-300"
+                        className="w-full px-4 py-3 md:py-4 rounded-lg mb-3 bg-gray-100 border border-gray-300 focus:outline-none"
                         required
                         autoComplete="current-password"
                       />
@@ -177,9 +175,13 @@ const AuthPopup = () => {
                       </div>
                       <button
                         type="submit"
-                        className="w-full bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white py-3 md:py-4 rounded-lg font-medium hover:opacity-85 transition"
+                        className="w-full bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white py-3 md:py-4 rounded-lg font-medium hover:opacity-85 transition flex justify-center items-center gap-2"
                       >
-                        {loading ? "Входим..." : translations.loginButton}
+                        {loading ? (
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          translations.loginButton
+                        )}
                       </button>
                     </>
                   ) : (
@@ -191,7 +193,7 @@ const AuthPopup = () => {
                         placeholder={translations.lastName}
                         value={formData.last_name}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 md:py-4 rounded-lg mb-3 bg-gray-100 focus:outline-none border border-gray-300"
+                        className="w-full px-4 py-3 md:py-4 rounded-lg mb-3 bg-gray-100 border border-gray-300 focus:outline-none"
                         required
                       />
                       <input
@@ -200,7 +202,7 @@ const AuthPopup = () => {
                         placeholder={translations.firstName}
                         value={formData.first_name}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 md:py-4 rounded-lg mb-3 bg-gray-100 focus:outline-none border border-gray-300"
+                        className="w-full px-4 py-3 md:py-4 rounded-lg mb-3 bg-gray-100 border border-gray-300 focus:outline-none"
                         required
                       />
                       <input
@@ -209,9 +211,8 @@ const AuthPopup = () => {
                         placeholder={translations.email}
                         value={formData.email}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 md:py-4 rounded-lg mb-3 bg-gray-100 focus:outline-none border border-gray-300"
+                        className="w-full px-4 py-3 md:py-4 rounded-lg mb-3 bg-gray-100 border border-gray-300 focus:outline-none"
                         required
-                        autoComplete="email"
                       />
                       <input
                         name="phone"
@@ -219,7 +220,7 @@ const AuthPopup = () => {
                         placeholder={translations.phone}
                         value={formData.phone}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 md:py-4 rounded-lg mb-3 bg-gray-100 focus:outline-none border border-gray-300"
+                        className="w-full px-4 py-3 md:py-4 rounded-lg mb-3 bg-gray-100 border border-gray-300 focus:outline-none"
                       />
                       <input
                         name="password"
@@ -227,7 +228,7 @@ const AuthPopup = () => {
                         placeholder={translations.password}
                         value={formData.password}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 md:py-4 rounded-lg mb-3 bg-gray-100 focus:outline-none border border-gray-300"
+                        className="w-full px-4 py-3 md:py-4 rounded-lg mb-3 bg-gray-100 border border-gray-300 focus:outline-none"
                         required
                         autoComplete="new-password"
                       />
@@ -237,14 +238,18 @@ const AuthPopup = () => {
                         placeholder={translations.confirmPassword}
                         value={formData.confirmPassword}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 md:py-4 rounded-lg mb-3 bg-gray-100 focus:outline-none border border-gray-300"
+                        className="w-full px-4 py-3 md:py-4 rounded-lg mb-3 bg-gray-100 border border-gray-300 focus:outline-none"
                         required
                       />
                       <button
                         type="submit"
-                        className="w-full bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white py-3 md:py-4 rounded-lg font-medium hover:opacity-85 transition"
+                        className="w-full bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white py-3 md:py-4 rounded-lg font-medium hover:opacity-85 transition flex justify-center items-center gap-2"
                       >
-                        {loading ? "Регистрируемся..." : translations.registerButton}
+                        {loading ? (
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          translations.registerButton
+                        )}
                       </button>
                     </>
                   )}

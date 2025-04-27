@@ -31,10 +31,11 @@ export const CallToAction = () => {
 
   return (
     <section
-      id="contacts"
-      ref={sectionRef}
-      className="bg-gradient-to-b from-[#D2DCFF] to-[#1D1D2F] py-16 sm:py-24 overflow-x-clip relative"
-    >
+  id="contacts"
+  ref={sectionRef}
+  className="bg-gradient-to-b from-[#d2dcff] to-[#1d1d2f] py-16 sm:py-24 overflow-x-clip relative"
+>
+
       <div className="container mx-auto px-4 sm:px-6">
         {/* Section Heading */}
         <div className="section-heading relative text-center mb-8 sm:mb-10">

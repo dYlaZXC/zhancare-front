@@ -113,10 +113,10 @@ const Features = () => {
           }}
         >
           <Image
-            src={robotImage.src}
+            src={robotImage}
             alt="Robot"
-            width={400}
-            height={400}
+            width={380}
+            height={380}
             style={{
               objectFit: "contain",
             }}
