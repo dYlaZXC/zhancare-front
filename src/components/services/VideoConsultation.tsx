@@ -13,7 +13,7 @@ const VideoConsultation: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [meetingId, setMeetingId] = useState<string | null>(null);
-  const [doctors, setDoctors] = useState<{ id: number; name: string; email: string }[]>([]);
+  const [doctors, setDoctors] = useState<{ id: number; name: string; email: string; doctor_type: string }[]>([]);
   const [selectedDoctorId, setSelectedDoctorId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetchingDoctors, setFetchingDoctors] = useState(true);
@@ -145,7 +145,7 @@ const VideoConsultation: React.FC = () => {
               <option value="">-- Выберите врача --</option>
               {doctors.map((doc) => (
                 <option key={doc.id} value={doc.id}>
-                  {doc.name}
+                  {doc.name} ({doc.doctor_type})
                 </option>
               ))}
             </select>
