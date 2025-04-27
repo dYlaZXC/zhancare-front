@@ -1,34 +1,50 @@
 "use client";
-import { useState, useRef } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
+
+import React, { useState, useRef } from "react";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import product1 from "@/assets/hero1212.png";
 import product2 from "@/assets/hero1213.png";
 import product3 from "@/assets/hero1214.png";
 import product4 from "@/assets/hero1215.png";
 
-const images: {
-  hero1212: string;
-  hero1213: string;
-  hero1214: string;
-  hero1215: string;
-} = {
+import { useLanguage } from "@/context/LanguageContext";
+import ru from "@/locales/ru.json";
+import kz from "@/locales/kz.json";
+
+const images = {
   hero1212: product1.src,
   hero1213: product2.src,
   hero1214: product3.src,
   hero1215: product4.src,
+} as const;
+
+type ImageKey = keyof typeof images;
+
+interface ContentData {
+  id: number;
+  title: string;
+  description: string;
+  imageSrc: ImageKey;
+}
+
+const mapTranslations = (contentData: any[]): ContentData[] => {
+  return contentData.map((item) => ({
+    id: item.id,
+    title: item.title,
+    description: item.description,
+    imageSrc: item.imageSrc as ImageKey,
+  }));
 };
 
-import { useLanguage } from "@/context/LanguageContext"; // Import Language Context
-import ru from "@/locales/ru.json";
-import kz from "@/locales/kz.json";
-
 export const ProductShowcase = () => {
-  const { language } = useLanguage(); // Get current language from context
-  const translations = language === "ru" ? ru.productShowcase : kz.productShowcase; // Select appropriate translations
+  const { language } = useLanguage();
+  const rawTranslations = language === "ru" ? ru.productShowcase : kz.productShowcase;
+  const contentData: ContentData[] = mapTranslations(rawTranslations.contentData);
 
-  const [activeContent, setActiveContent] = useState(translations.contentData[0]);
+  const [activeContent, setActiveContent] = useState<ContentData>(contentData[0]);
   const sectionRef = useRef(null);
+
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start end", "end start"],
@@ -37,11 +53,9 @@ export const ProductShowcase = () => {
   const translateY = useTransform(scrollYProgress, [0, 1], [100, -100]);
 
   const handleContentChange = (contentId: number) => {
-    const selectedContent = translations.contentData.find(
-      (content) => content.id === contentId
-    );
-    if (selectedContent) {
-      setActiveContent(selectedContent);
+    const selected = contentData.find((c) => c.id === contentId);
+    if (selected) {
+      setActiveContent(selected);
     }
   };
 
@@ -49,69 +63,76 @@ export const ProductShowcase = () => {
     <section
       id="modules"
       ref={sectionRef}
-      className="bg-gradient-to-b from-white to-[#D2DCFF] py-24 overflow-x-clip relative"
+      className="bg-gradient-to-b from-white to-[#D2DCFF] py-28 overflow-x-clip relative"
     >
-      <motion.img
-        className="absolute -left-30 bottom-0 z-0 hidden lg:block object-contain"
-        style={{
-          height: "400px",
-          width: "auto",
-          translateY,
-        }}
+      {/* Floating blurred background blobs */}
+      <motion.div
+        className="absolute top-20 left-10 w-80 h-80 bg-blue-300 opacity-20 rounded-full blur-3xl hidden lg:block"
+        style={{ translateY }}
       />
-      <motion.img
-        className="absolute -right-10 top-0 z-0 hidden lg:block object-contain"
-        style={{
-          height: "400px",
-          width: "auto",
-          translateY,
-        }}
+      <motion.div
+        className="absolute bottom-20 right-10 w-80 h-80 bg-pink-300 opacity-20 rounded-full hidden lg:block"
+        style={{ translateY }}
       />
 
-      <div className="container mx-auto relative z-10 max-w-7xl px-8">
-        <div className="bg-white p-10 rounded-lg shadow-xl">
-          {/* Top text section */}
-          <div className="text-center mb-12 flex flex-col items-center">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-800">
-              {translations.title}
-            </h2>
-            <p className="text-lg text-gray-600 mt-4 max-w-3xl">
-              {translations.description}
-            </p>
-          </div>
-          {/* Buttons and Image section */}
-          <div className="flex flex-wrap md:flex-nowrap items-start relative z-10">
-            {/* Left Column: Buttons */}
-            <div className="w-full md:w-1/3 flex flex-col gap-6 pr-8">
-              {translations.contentData.map((content) => (
-                <button
-                  key={content.id}
-                  onClick={() => handleContentChange(content.id)}
-                  className={`p-6 text-left border-2 rounded-lg transition-all duration-300 ${
-                    activeContent.id === content.id
-                      ? "bg-blue-700 text-white border-blue-700"
-                      : "bg-white text-gray-800 border-gray-300 hover:border-blue-700"
-                  }`}
-                >
-                  <span className="font-bold text-lg">{content.title} →</span>
-                  {activeContent.id === content.id && (
-                    <p className="mt-2 text-sm">{content.description}</p>
-                  )}
-                </button>
-              ))}
-            </div>
+      <div className="relative z-10 container mx-auto max-w-7xl px-6 lg:px-10">
+        {/* Heading */}
+        <div className="text-center mb-12">
+          <motion.h2
+            className="text-4xl md:text-5xl font-bold text-[#001E80]"
+            initial={{ opacity: 0, y: -30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            {rawTranslations.title}
+          </motion.h2>
+          <p className="text-gray-600 text-lg mt-4 max-w-2xl mx-auto">
+            {rawTranslations.description}
+          </p>
+        </div>
 
-            {/* Right Column: Image */}
-            <div className="w-full md:w-2/3 mt-6 md:mt-0 flex justify-center relative">
+        {/* Tabs */}
+        <div className="flex flex-wrap justify-center gap-4 mb-12">
+          {contentData.map((content) => (
+            <button
+              key={content.id}
+              onClick={() => handleContentChange(content.id)}
+              className={`px-6 py-2 rounded-full border-2 text-sm font-semibold transition-all ${
+                activeContent.id === content.id
+                  ? "bg-blue-700 text-white border-blue-700"
+                  : "border-gray-300 text-gray-700 hover:border-blue-500 hover:text-[#001E80]"
+              }`}
+            >
+              {content.title}
+            </button>
+          ))}
+        </div>
+
+        {/* Image Showcase */}
+        <div className="flex justify-center">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeContent.imageSrc}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -30 }}
+              transition={{ duration: 0.6 }}
+              className="relative w-full max-w-4xl"
+            >
               <Image
-                src={images[activeContent.imageSrc as keyof typeof images]}
+                src={images[activeContent.imageSrc]}
                 alt={activeContent.title}
-                width={800}
-                height={500}
-                className="rounded-lg shadow-lg"
+                width={900}
+                height={600}
+                className="rounded-3xl shadow-2xl mx-auto"
               />
-            </div>
-          </div>
+              <div className="text-center mt-6">
+                <h3 className="text-2xl font-bold text-[#001E80]">{activeContent.title}</h3>
+                <p className="text-gray-600 mt-2">{activeContent.description}</p>
+              </div>
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
     </section>

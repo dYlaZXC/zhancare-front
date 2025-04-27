@@ -69,7 +69,7 @@ const doctors = [
       : doctors.filter((doc) => doc.category === activeCategory);
   
     return (
-      <section id="specialists" className="py-20 bg-gradient-to-b from-[#f0f4f8] to-[#e6ebf3] text-center overflow-hidden">
+      <section id="specialists" className="py-20 bg-[#e6ebf3] text-center overflow-hidden">
         
         <motion.h2
           className="text-4xl font-extrabold mb-8 text-[#001E80] tracking-tight"

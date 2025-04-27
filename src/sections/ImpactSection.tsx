@@ -44,7 +44,7 @@ export const ImpactSection = () => {
   const translations = language === "kz" ? kz.impactSection : ru.impactSection;
 
   return (
-    <section className="relative py-20 px-4 md:px-6 lg:px-8 overflow-hidden bg-gradient-to-b from-[#f0f4f8] to-[#e6ebf3]">
+    <section className="relative py-20 px-4 md:px-6 lg:px-8 overflow-hidden bg-[#e6ebf3]">
       {/* 🌀 Blurred Floating Background */}
       <div className="absolute top-10 left-10 w-96 h-96 bg-blue-300 opacity-20 rounded-full blur-3xl animate-pulse"></div>
       <div className="absolute bottom-10 right-10 w-96 h-96 bg-pink-300 opacity-20 rounded-full blur-3xl animate-pulse"></div>
