@@ -42,27 +42,39 @@ const VideoConsultation: React.FC = () => {
     try {
       if (!token) {
         setError("🚫 Вы не авторизованы! Пожалуйста, войдите в систему.");
+        setDoctors([]);
         return;
       }
   
       const response = await api.get("/auth/doctor/available/");
   
       if (response.status === 200) {
-        // 🛑 Filter out doctors with doctor_type = "Сестринское дело"
-        const filteredDoctors = (response.data.doctors || []).filter(
-          (doc: { doctor_type: string }) => doc.doctor_type !== "Сестринское дело"
+        const doctors = response.data.doctors || [];
+  
+        const filteredDoctors = doctors.filter(
+          (doc: { doctor_type: string | null | undefined }) => 
+            doc.doctor_type !== "Сестринское дело" && doc.doctor_type != null
         );
-        setDoctors(filteredDoctors);
+  
+        if (filteredDoctors.length > 0) {
+          setDoctors(filteredDoctors);
+        } else {
+          setDoctors([]);
+          setError("⚠️ Нет доступных врачей.");
+        }
       } else {
+        setDoctors([]);
         setError("⚠️ Нет доступных врачей.");
       }
     } catch (error: any) {
       console.error("❌ Ошибка загрузки врачей:", error);
+      setDoctors([]);
       setError("⚠️ Ошибка загрузки списка врачей. Попробуйте позже.");
     } finally {
       setFetchingDoctors(false);
     }
   };
+  
   
 
   const handleStartCall = async () => {
