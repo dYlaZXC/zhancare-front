@@ -4,8 +4,15 @@ import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
-import { api } from "@/utils/api";
 import { Loader2 } from "lucide-react";
+import { fetchAvailableDoctors, startConsultation, checkConsultationStatus } from "@/components/services/consultationService";
+
+interface Doctor {
+  id: number;
+  name: string;
+  email: string;
+  doctor_type: string;
+}
 
 const VideoConsultation: React.FC = () => {
   const { token } = useAuth();
@@ -13,12 +20,11 @@ const VideoConsultation: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [meetingId, setMeetingId] = useState<string | null>(null);
-  const [doctors, setDoctors] = useState<{ id: number; name: string; email: string; doctor_type: string }[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [selectedDoctorId, setSelectedDoctorId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetchingDoctors, setFetchingDoctors] = useState(true);
   const [waitingForDoctor, setWaitingForDoctor] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDoctors();
@@ -29,7 +35,6 @@ const VideoConsultation: React.FC = () => {
     if (waitingForDoctor && meetingId) {
       interval = pollForDoctorAcceptance();
     }
-
     return () => {
       if (interval) clearInterval(interval);
     };
@@ -37,70 +42,65 @@ const VideoConsultation: React.FC = () => {
 
   const fetchDoctors = async () => {
     setFetchingDoctors(true);
-    setError(null);
-  
+
     try {
       if (!token) {
-        setError("🚫 Вы не авторизованы! Пожалуйста, войдите в систему.");
+        toast.error("🚫 Вы не авторизованы! Пожалуйста, войдите в систему.");
         setDoctors([]);
         return;
       }
-  
-      const response = await api.get("/auth/doctor/available/");
-  
+
+      const response = await fetchAvailableDoctors();
+
       if (response.status === 200) {
         const doctors = response.data.doctors || [];
-  
+
         const filteredDoctors = doctors.filter(
-          (doc: { doctor_type: string | null | undefined }) => 
-            doc.doctor_type !== "Сестринское дело" && doc.doctor_type != null
+          (doc: Doctor) => doc.doctor_type !== "Сестринское дело" && doc.doctor_type != null
         );
-  
+
         if (filteredDoctors.length > 0) {
           setDoctors(filteredDoctors);
         } else {
           setDoctors([]);
-          setError("⚠️ Нет доступных врачей.");
+          toast.warn("⚠️ Нет доступных врачей.");
         }
       } else {
         setDoctors([]);
-        setError("⚠️ Нет доступных врачей.");
+        toast.warn("⚠️ Нет доступных врачей.");
       }
     } catch (error: any) {
       console.error("❌ Ошибка загрузки врачей:", error);
       setDoctors([]);
-      setError("⚠️ Ошибка загрузки списка врачей. Попробуйте позже.");
+      toast.error("⚠️ Ошибка загрузки списка врачей. Попробуйте позже.");
     } finally {
       setFetchingDoctors(false);
     }
   };
-  
-  
 
   const handleStartCall = async () => {
     if (!selectedDoctorId) {
-      setError("⚠️ Пожалуйста, выберите врача перед началом звонка.");
+      toast.error("⚠️ Пожалуйста, выберите врача перед началом звонка.");
       scrollToTop();
       return;
     }
 
-    setError(null);
     setLoading(true);
     setWaitingForDoctor(true);
 
     try {
-      const response = await api.post("/consultations/start/", { doctor_id: selectedDoctorId });
+      const response = await startConsultation(selectedDoctorId);
 
       if (response.status === 200 && response.data) {
         setMeetingId(response.data.meeting_id);
         toast.success("Консультация запрошена! Ожидаем подтверждения врача.");
       } else {
-        setError("⚠️ Не удалось начать консультацию.");
+        toast.error("⚠️ Не удалось начать консультацию.");
         setWaitingForDoctor(false);
       }
     } catch (error: any) {
       console.error("❌ Ошибка начала консультации:", error);
-      setError(error?.response?.data?.error || "⚠️ Ошибка сети. Попробуйте позже.");
+      toast.error(error?.response?.data?.error || "⚠️ Ошибка сети. Попробуйте позже.");
       setWaitingForDoctor(false);
       scrollToTop();
     } finally {
@@ -109,9 +109,21 @@ const VideoConsultation: React.FC = () => {
   };
 
   const pollForDoctorAcceptance = () => {
+    const startTime = Date.now();
+    const maxWaitTime = 2 * 60 * 1000; // 2 minutes
+
     const interval = setInterval(async () => {
       try {
-        const response = await api.get(`/consultations/status/?meeting_id=${meetingId}`);
+        const elapsed = Date.now() - startTime;
+        if (elapsed > maxWaitTime) {
+          toast.error("⏳ Время ожидания истекло. Попробуйте выбрать другого врача.");
+          clearInterval(interval);
+          setWaitingForDoctor(false);
+          setMeetingId(null);
+          return;
+        }
+
+        const response = await checkConsultationStatus(meetingId!);
 
         if (response.status === 200) {
           const { status } = response.data;
@@ -145,15 +157,13 @@ const VideoConsultation: React.FC = () => {
       <h2 className="text-2xl font-bold text-[#001E80]">Видео консультация</h2>
       <p className="text-gray-600 mt-2">Выберите врача для онлайн-видеозвонка.</p>
 
-      {error && <p className="text-red-500 mt-4">{error}</p>}
-
       <div className="mt-6 space-y-4">
         {/* 🔹 Выбор врача */}
         <div>
           <label className="block text-gray-700 mb-2 text-sm">Выберите доступного врача:</label>
           {fetchingDoctors ? (
-            <div className="text-sm text-gray-500">Загрузка списка врачей...</div>
-          ) : (
+            <div className="animate-pulse text-sm text-gray-500">Загрузка списка врачей...</div>
+          ) : doctors.length > 0 ? (
             <select
               className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 transition"
               value={selectedDoctorId || ""}
@@ -166,6 +176,8 @@ const VideoConsultation: React.FC = () => {
                 </option>
               ))}
             </select>
+          ) : (
+            <div className="text-gray-400 text-sm">Нет доступных врачей.</div>
           )}
         </div>
 

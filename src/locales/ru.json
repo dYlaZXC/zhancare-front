@@ -200,7 +200,7 @@
     "description": "Мы масштабируем умное здравоохранение с помощью ИИ.",
     
     "statistics": [
-      { "value": "1000+", "description": "Проведенных демо онлайн-консультаций", "icon": "faVideo" },
+      { "value": "700+", "description": "Проведенных демо онлайн-консультаций", "icon": "faVideo" },
       { "value": "30+", "description": "Сертифицированных врачей", "icon": "faUserMd" },
       { "value": "2+", "description": "Стран, знающих о ZhanCare.AI", "icon": "faClinicMedical" },
       { "value": "95%", "description": "Более быстрая диагностика с ИИ", "icon": "faChartLine" }

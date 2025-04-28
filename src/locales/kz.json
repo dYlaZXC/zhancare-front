@@ -200,7 +200,7 @@
       "description": "Біз денсаулық сақтауды жасанды интеллект көмегімен жетілдіреміз.",
       
       "statistics": [
-        { "value": "1000+", "description": "Онлайн-демо кеңестер өтті", "icon": "faVideo" },
+        { "value": "700+", "description": "Онлайн-демо кеңестер өтті", "icon": "faVideo" },
         { "value": "30+", "description": "Сертификатталған дәрігерлер", "icon": "faUserMd" },
         { "value": "2+", "description": "ZhanCare.AI туралы білетін елдер", "icon": "faClinicMedical" },
         { "value": "95%", "description": "ИИ арқылы жылдам диагностика", "icon": "faChartLine" }
