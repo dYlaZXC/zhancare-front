@@ -200,12 +200,12 @@
       "description": "Біз денсаулық сақтауды жасанды интеллект көмегімен жетілдіреміз.",
       
       "statistics": [
-        { "value": "700+", "description": "Онлайн-демо кеңестер өтті", "icon": "faVideo" },
-        { "value": "30+", "description": "Сертификатталған дәрігерлер", "icon": "faUserMd" },
-        { "value": "2+", "description": "ZhanCare.AI туралы білетін елдер", "icon": "faClinicMedical" },
-        { "value": "95%", "description": "ИИ арқылы жылдам диагностика", "icon": "faChartLine" }
+        { "value": 1500, "description": "Кезекші дәрігердің консультациясы", "icon": "faVideo", "currency": "₸" },
+        { "value": 30, "description": "Сертификатталған дәрігерлер", "icon": "faUserMd" },
+        { "value": 2, "description": "ZhanCare.AI туралы білетін елдер", "icon": "faClinicMedical" },
+        { "value": 95, "description": "ИИ арқылы жылдам диагноз қою", "icon": "faChartLine", "percent": true }
       ],
-  
+      
       "features": {
         "title": "Денсаулық сақтау технологиялары",
         "description": "Интеллектуалды, автоматтандырылған және қолжетімді медициналық қызмет көрсету.",

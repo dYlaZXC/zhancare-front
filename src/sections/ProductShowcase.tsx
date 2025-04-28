@@ -65,15 +65,8 @@ export const ProductShowcase = () => {
       ref={sectionRef}
       className="bg-gradient-to-b from-white to-[#D2DCFF] py-28 overflow-x-clip relative"
     >
-      {/* Floating blurred background blobs */}
-      <motion.div
-        className="absolute top-20 left-10 w-80 h-80 bg-blue-300 opacity-20 rounded-full blur-3xl hidden lg:block"
-        style={{ translateY }}
-      />
-      <motion.div
-        className="absolute bottom-20 right-10 w-80 h-80 bg-pink-300 opacity-20 rounded-full hidden lg:block"
-        style={{ translateY }}
-      />
+      <div className="absolute top-0 left-10 w-96 h-96 bg-blue-300 opacity-20 rounded-full blur-3xl animate-pulse"></div>
+      <div className="absolute top-[60%] right-10 w-96 h-96 bg-pink-300 opacity-20 rounded-full blur-3xl animate-pulse"></div>
 
       <div className="relative z-10 container mx-auto max-w-7xl px-6 lg:px-10">
         {/* Heading */}

@@ -14,6 +14,7 @@ import { ChatButton } from "@/sections/ChatButton";
 import { ChatComponent } from "@/components/ChatComponent";
 import { useLanguage } from "@/context/LanguageContext";
 import { DoctorsCarousel } from "@/sections/DoctorsCarousel";
+import { MobileApp } from "@/sections/MobileApp";
 
 
 export default function Home() {
@@ -30,8 +31,9 @@ export default function Home() {
       
       {/* Features Section */}
       <Features />
-      <ImpactSection />
       <DoctorsCarousel />
+      <ImpactSection />
+      
       {/* Product Showcase Section */}
       <ProductShowcase />
       {/* Call To Action Section */}
@@ -40,11 +42,12 @@ export default function Home() {
       
       {/* <Pricing /> */}
       {/* Logo Ticker Section */}
-      {/* <LogoTicker /> */}
+      <LogoTicker />
       {/* Chat Button */}
       <ChatButton onToggle={() => setIsChatOpen((prev) => !prev)} />
       {isChatOpen && <ChatComponent onClose={() => setIsChatOpen(false)} />}
       {/* Footer */}
+      {/* <MobileApp /> */}
       <Footer />
     </div>
   );

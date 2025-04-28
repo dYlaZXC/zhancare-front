@@ -44,40 +44,35 @@ export const ImpactSection = () => {
   const translations = language === "kz" ? kz.impactSection : ru.impactSection;
 
   return (
-    <section className="relative py-20 px-4 md:px-6 lg:px-8 overflow-hidden bg-gradient-to-b from-[#e6ebf3] via-[#d2dcff] to-white">
-      {/* 🌀 Blurred Floating Background */}
-      <div className="absolute top-10 left-10 w-96 h-96 bg-blue-300 opacity-20 rounded-full blur-3xl animate-pulse"></div>
-      <div className="absolute bottom-10 right-10 w-96 h-96 bg-pink-300 opacity-20 rounded-full blur-3xl animate-pulse"></div>
+    <section id="impact" className="relative py-32 px-6 md:px-12 bg-gradient-to-b from-[#d2dcff] via-[#d2dcff] to-white text-center overflow-hidden">
+      {/* Floating Background */}
+      <div className="absolute top-[-0px] left-[-150px] w-[300px] h-[300px] bg-blue-300 opacity-20 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-[-40%] right-[-150px] w-[300px] h-[300px] bg-pink-300 opacity-20 rounded-full blur-3xl"></div>
 
       <div className="container mx-auto relative z-10">
+        {/* Title */}
+        <motion.h2
+          className="text-5xl font-extrabold tracking-tight text-[#001E80] mb-6"
+          initial={{ opacity: 0, y: -30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+        >
+          {translations.title}
+        </motion.h2>
+        <p className="text-gray-600 max-w-2xl mx-auto text-lg mb-16">
+          {translations.description}
+        </p>
 
-        {/* 📊 Title */}
-        <div className="text-center mb-14">
-          <motion.h2
-            className="text-4xl font-extrabold tracking-tight text-[#001E80]"
-            initial={{ opacity: 0, y: -30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            {translations.title}
-          </motion.h2>
-          <p className="text-gray-600 mt-4">{translations.description}</p>
-        </div>
-
-        {/* 🔹 Statistics Section */}
+        {/* Statistics Grid */}
         <motion.div
-          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 text-center"
+          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10 mb-24"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
           variants={{
             hidden: {},
-            visible: {
-              transition: {
-                staggerChildren: 0.2,
-              },
-            },
+            visible: { transition: { staggerChildren: 0.2 } },
           }}
         >
           {translations.statistics.map((stat, index) => {
@@ -85,49 +80,42 @@ export const ImpactSection = () => {
             return (
               <motion.div
                 key={index}
-                className="p-6 bg-white rounded-2xl shadow-md hover:shadow-xl transition-transform duration-300 hover:scale-105 hover:-rotate-1"
-                variants={{
-                  hidden: { opacity: 0, y: 20 },
-                  visible: { opacity: 1, y: 0 },
-                }}
+                className="group p-8 bg-white backdrop-blur-md border border-white/20 rounded-3xl shadow-md hover:shadow-2xl transition-transform duration-300 ease-out hover:-translate-y-3 flex flex-col items-center"
+                variants={{ hidden: { opacity: 0, y: 40 }, visible: { opacity: 1, y: 0 } }}
+                transition={{ type: "spring", stiffness: 150, damping: 20 }}
               >
-                <FontAwesomeIcon icon={icon} className="text-4xl text-blue-600 mb-4" />
-                <h3 className="text-3xl font-bold text-[#001E80]">
-                  <CountUp end={parseInt(stat.value)} duration={2} />+
+                <div className="flex justify-center items-center w-16 h-16 mb-6 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 group-hover:scale-110 transition-all duration-300">
+                  <FontAwesomeIcon icon={icon} className="text-3xl text-white" />
+                </div>
+                <h3 className="text-4xl font-bold text-[#001E80] mb-2">
+                  <CountUp end={stat.value} duration={2} />{stat.currency ? stat.currency : stat.percent ? "%" : "+"}
                 </h3>
-                <p className="text-gray-600 text-sm">{stat.description}</p>
+                <p className="text-gray-600 text-base mt-2">{stat.description}</p>
               </motion.div>
             );
           })}
         </motion.div>
 
-        {/* 🤖 AI Features */}
-        <div className="text-center mt-20 mb-12">
-          <motion.h2
-            className="text-4xl font-extrabold tracking-tight text-[#001E80]"
-            initial={{ opacity: 0, y: -30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            {translations.features.title}
-          </motion.h2>
-          <p className="text-gray-600 mt-4">{translations.features.description}</p>
-        </div>
-
-        {/* 🔹 Features Grid */}
+        {/* Features Section */}
         <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+          initial={{ opacity: 0, y: -30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+          className="text-center mb-16"
+        >
+          <h2 className="text-4xl font-extrabold text-[#001E80] mb-6">{translations.features.title}</h2>
+          <p className="text-gray-600 max-w-2xl mx-auto text-lg">{translations.features.description}</p>
+        </motion.div>
+
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
           variants={{
             hidden: {},
-            visible: {
-              transition: {
-                staggerChildren: 0.2,
-              },
-            },
+            visible: { transition: { staggerChildren: 0.2 } },
           }}
         >
           {translations.features.list.map((feature, index) => {
@@ -135,47 +123,40 @@ export const ImpactSection = () => {
             return (
               <motion.div
                 key={index}
-                className="p-6 bg-white rounded-2xl shadow-md hover:shadow-xl transition-transform duration-300 hover:scale-105"
-                variants={{
-                  hidden: { opacity: 0, y: 20 },
-                  visible: { opacity: 1, y: 0 },
-                }}
+                className="p-8 bg-white backdrop-blur-md border border-white/20 rounded-3xl shadow-md hover:shadow-2xl transition-transform duration-300 ease-out hover:-translate-y-3 flex flex-col items-center text-center"
+                variants={{ hidden: { opacity: 0, y: 40 }, visible: { opacity: 1, y: 0 } }}
+                transition={{ type: "spring", stiffness: 150, damping: 20 }}
               >
-                <FontAwesomeIcon icon={icon} className="text-4xl text-blue-600 mb-4" />
-                <h3 className="text-xl font-bold">{feature.title}</h3>
-                <p className="text-gray-600 text-sm">{feature.description}</p>
+                <div className="flex justify-center items-center w-16 h-16 mb-6 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600">
+                  <FontAwesomeIcon icon={icon} className="text-3xl text-white" />
+                </div>
+                <h3 className="text-2xl font-bold mb-2">{feature.title}</h3>
+                <p className="text-gray-600 text-base">{feature.description}</p>
               </motion.div>
             );
           })}
         </motion.div>
 
-        {/* 🚀 Success Stories */}
-        <div className="text-center mt-20 mb-12">
-          <motion.h2
-            className="text-4xl font-extrabold tracking-tight text-[#001E80]"
-            initial={{ opacity: 0, y: -30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            {translations.successStories.title}
-          </motion.h2>
-          <p className="text-gray-600 mt-4">{translations.successStories.description}</p>
-        </div>
-
-        {/* 🔹 Success Stories Section */}
+        {/* Success Stories Section */}
         <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 gap-8"
+          initial={{ opacity: 0, y: -30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+          className="text-center mt-24 mb-16"
+        >
+          <h2 className="text-4xl font-extrabold text-[#001E80] mb-6">{translations.successStories.title}</h2>
+          <p className="text-gray-600 max-w-2xl mx-auto text-lg">{translations.successStories.description}</p>
+        </motion.div>
+
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-2 gap-10"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
           variants={{
             hidden: {},
-            visible: {
-              transition: {
-                staggerChildren: 0.3,
-              },
-            },
+            visible: { transition: { staggerChildren: 0.3 } },
           }}
         >
           {translations.successStories.stories.map((story, index) => {
@@ -183,18 +164,16 @@ export const ImpactSection = () => {
             return (
               <motion.div
                 key={index}
-                className="p-6 bg-white rounded-2xl shadow-md flex flex-col sm:flex-row items-center gap-6 hover:shadow-xl transition-transform duration-300 hover:scale-105"
-                variants={{
-                  hidden: { opacity: 0, y: 20 },
-                  visible: { opacity: 1, y: 0 },
-                }}
+                className="flex flex-col sm:flex-row items-center gap-6 p-8 bg-white backdrop-blur-md border border-white/20 rounded-3xl shadow-md hover:shadow-2xl transition-transform duration-300 ease-out hover:-translate-y-3"
+                variants={{ hidden: { opacity: 0, y: 40 }, visible: { opacity: 1, y: 0 } }}
+                transition={{ type: "spring", stiffness: 150, damping: 20 }}
               >
-                <div className="flex items-center justify-center w-16 h-16 bg-blue-500 text-white rounded-full">
+                <div className="flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white">
                   <FontAwesomeIcon icon={icon} className="text-2xl" />
                 </div>
                 <div className="text-center sm:text-left">
-                  <h3 className="text-lg font-bold">{story.title}</h3>
-                  <p className="text-gray-600 text-sm">{story.description}</p>
+                  <h3 className="text-lg font-bold mb-1">{story.title}</h3>
+                  <p className="text-gray-600 text-base">{story.description}</p>
                 </div>
               </motion.div>
             );

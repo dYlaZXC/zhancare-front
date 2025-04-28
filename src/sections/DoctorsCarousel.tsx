@@ -88,7 +88,7 @@ const doctors = [
               onClick={() => setActiveCategory(category)}
               className={`px-5 py-2 rounded-full border 
                 ${activeCategory === category 
-                  ? "bg-gradient-to-r from-[#0079ff] to-[#00cfff] text-white" 
+                  ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white" 
                   : "border-blue-400 text-blue-700 hover:bg-blue-100 transition"
                 }`
               }
@@ -147,7 +147,7 @@ const doctors = [
   
                 <button
                   onClick={() => setSelectedDoctor(doc)}
-                  className="mt-6 bg-gradient-to-r from-[#00cfff] to-[#0079ff] text-white py-2 px-5 rounded-full hover:opacity-90 transition"
+                  className="mt-6 bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-2 px-5 rounded-full hover:opacity-90 transition"
                 >
                   Профиль
                 </button>
