@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true); // ✅ Added loading state
-
+  
   // ✅ Load user session from localStorage on page load
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -57,10 +57,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // ✅ Logout function
   const logoutUser = () => {
-    setToken(null);
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
     setUser(null);
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
   };
 
   return (

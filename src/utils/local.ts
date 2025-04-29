@@ -1,23 +1,20 @@
-// utils/api.ts
 import axios from 'axios';
+import * as Sentry from "@sentry/nextjs";
 
-// ✅ Используем env-переменные для гибкости
 const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 export const baseURLImg = process.env.NEXT_PUBLIC_API_IMG_URL || 'http://localhost:8000/api/v1';
 
-// ✅ Создаем инстанс axios
 const axiosInstance = axios.create({
   baseURL,
   paramsSerializer: (params: any) => new URLSearchParams(params).toString(),
 });
 
-// ✅ Интерцептор для автоматического добавления токена авторизации
 axiosInstance.interceptors.request.use(
   (config) => {
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('token');
       if (token) {
-        config.headers.Authorization = `Token ${token}`; // У тебя на сервере Token, не Bearer
+        config.headers.Authorization = `Token ${token}`;
       }
     }
     return config;
@@ -25,7 +22,6 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ✅ Интерцептор для обработки ошибок (дополнительно — рекомендую)
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -35,6 +31,22 @@ axiosInstance.interceptors.response.use(
         window.location.href = '/login';
       }
     }
+
+    if (error.response) {
+      Sentry.captureException(error, {
+        extra: {
+          status: error.response.status,
+          url: error.config?.url,
+          method: error.config?.method,
+          data: error.response.data,
+        },
+      });
+    } else {
+      Sentry.captureException(error, {
+        extra: { message: "No server response", originalError: error.message },
+      });
+    }
+
     return Promise.reject(error);
   }
 );

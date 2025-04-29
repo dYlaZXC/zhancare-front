@@ -62,17 +62,29 @@ const AuthPopup = () => {
       const data = response.data;
 
       if (activeTab === "login") {
-        loginUser(data.token, data.user);
-        localStorage.setItem("token", data.token);
+        loginUser(data.access_token, data.user);
+        localStorage.setItem("access_token", data.access_token);
+        localStorage.setItem("refresh_token", data.refresh_token);
         toast.success("Вы успешно вошли!");
       } else {
         toast.success("Регистрация прошла успешно!");
       }
 
+      // Reset form and close modal
+      setFormData({
+        email: "",
+        phone: "",
+        password: "",
+        confirmPassword: "",
+        first_name: "",
+        last_name: "",
+      });
+      setError("");
       setIsAuthOpen(false);
     } catch (err: any) {
       const errorMessage =
         err?.response?.data?.error ||
+        err?.response?.data?.non_field_errors?.[0] ||
         err?.message ||
         "Произошла ошибка. Попробуйте снова.";
       setError(errorMessage);
@@ -151,6 +163,7 @@ const AuthPopup = () => {
                       <input
                         name="email"
                         type="email"
+                        autoFocus
                         placeholder={translations.email}
                         value={formData.email}
                         onChange={handleChange}
@@ -190,6 +203,7 @@ const AuthPopup = () => {
                       <input
                         name="last_name"
                         type="text"
+                        autoFocus
                         placeholder={translations.lastName}
                         value={formData.last_name}
                         onChange={handleChange}
