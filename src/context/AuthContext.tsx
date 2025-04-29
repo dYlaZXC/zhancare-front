@@ -1,13 +1,14 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from "react";
+import { toast } from "react-toastify";
 
 interface User {
   id: number;
   email: string;
   first_name: string;
   last_name: string;
-  role: "patient" | "doctor" | "admin";  // ✅ Add role here
+  role: "patient" | "doctor" | "admin"; // ✅ Add role typing
 }
 
 interface AuthContextProps {
@@ -16,8 +17,8 @@ interface AuthContextProps {
   user: User | null;
   token: string | null;
   loading: boolean;
-  loginUser: (token: string, userData: User) => void;
-  logoutUser: () => void;
+  loginUser: (accessToken: string, refreshToken: string, userData: User) => void;
+  logoutUser: (showMessage?: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -26,40 +27,45 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true); // ✅ Added loading state
-  
-  // ✅ Load user session from localStorage on page load
+  const [loading, setLoading] = useState(true);
+
+  // ✅ Load user session on page load
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const storedToken = localStorage.getItem("token");
+      const storedAccessToken = localStorage.getItem("access_token");
       const storedUser = localStorage.getItem("user");
 
-      if (storedToken && storedUser) {
-        setToken(storedToken);
+      if (storedAccessToken && storedUser) {
+        setToken(storedAccessToken);
         setUser(JSON.parse(storedUser));
       }
     }
-    setLoading(false); // ✅ Done loading
+    setLoading(false);
   }, []);
 
   // ✅ Login function
-  const loginUser = (token: string, userData: User) => {
-    setToken(token);
+  const loginUser = (accessToken: string, refreshToken: string, userData: User) => {
+    setToken(accessToken);
     setUser(userData);
-    localStorage.setItem("token", token);
-    localStorage.setItem("user", JSON.stringify(userData));
   
-    // ✅ Redirect user to the correct profile
-    const profileUrl = userData.role === "doctor" ? "/doctor-profile" : "/profile";
-    window.location.href = profileUrl;
+    localStorage.setItem("access_token", accessToken);
+    localStorage.setItem("refresh_token", refreshToken);
+    localStorage.setItem("user", JSON.stringify(userData));
   };
   
 
   // ✅ Logout function
-  const logoutUser = () => {
+  const logoutUser = (showMessage = true) => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
+    localStorage.removeItem("user");
     setUser(null);
+    setToken(null);
+    // setIsAuthOpen(true); // 🔓 Open login popup automatically
+
+    // if (showMessage) {
+    //   toast.warning("⏳ Ваша сессия истекла. Пожалуйста, войдите снова.");
+    // }
   };
 
   return (
@@ -71,7 +77,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-// ✅ Hook to use AuthContext
+// ✅ Hook to use AuthContext easily
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

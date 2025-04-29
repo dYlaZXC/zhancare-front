@@ -62,13 +62,16 @@ const AuthPopup = () => {
       const data = response.data;
 
       if (activeTab === "login") {
-        loginUser(data.access_token, data.user);
-        localStorage.setItem("access_token", data.access_token);
-        localStorage.setItem("refresh_token", data.refresh_token);
-        toast.success("Вы успешно вошли!");
+        loginUser(data.access_token, data.refresh_token, data.user);
+        toast.success("✅ Вы успешно вошли!");
+      
+        // 🚀 Redirect to appropriate profile page (no delay)
+        const redirectTo = data.user.role === "doctor" ? "/doctor-profile" : "/profile";
+        window.location.href = redirectTo;
       } else {
-        toast.success("Регистрация прошла успешно!");
+        toast.success("✅ Регистрация прошла успешно!");
       }
+      
 
       // Reset form and close modal
       setFormData({
@@ -116,7 +119,7 @@ const AuthPopup = () => {
             </button>
 
             <div className="flex flex-col md:flex-row p-4 md:p-8 gap-6 md:gap-8 items-center">
-              {/* Left Logo and Welcome */}
+              {/* Left Section */}
               <div className="text-center md:text-left w-full md:w-1/2">
                 <div className="flex justify-center md:justify-start mb-4">
                   <Image src={Logo} alt="Logo" width={100} height={100} />
@@ -129,7 +132,7 @@ const AuthPopup = () => {
                 </p>
               </div>
 
-              {/* Right Form Section */}
+              {/* Right Section */}
               <div className="w-full md:w-1/2">
                 {/* Tabs */}
                 <div className="flex border-b mb-4 w-full">
@@ -155,15 +158,13 @@ const AuthPopup = () => {
                   </button>
                 </div>
 
-                {/* Login / Register Forms */}
+                {/* Forms */}
                 <form onSubmit={handleSubmit} className="text-black mt-4 md:mt-6">
                   {activeTab === "login" ? (
                     <>
-                      {/* Login Form */}
                       <input
                         name="email"
                         type="email"
-                        autoFocus
                         placeholder={translations.email}
                         value={formData.email}
                         onChange={handleChange}
@@ -199,7 +200,7 @@ const AuthPopup = () => {
                     </>
                   ) : (
                     <>
-                      {/* Registration Form */}
+                      {/* Registration */}
                       <input
                         name="last_name"
                         type="text"
