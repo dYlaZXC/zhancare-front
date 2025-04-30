@@ -1,19 +1,22 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    "./src/**/*.{js,ts,jsx,tsx}", // Include all files in the src directory
-    "./pages/**/*.{js,ts,jsx,tsx}", // If you have a pages directory
-    "./components/**/*.{js,ts,jsx,tsx}", // If you use a components folder
+    "./src/**/*.{js,ts,jsx,tsx}",
+    "./pages/**/*.{js,ts,jsx,tsx}",
+    "./components/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
-      // Example: Custom colors or fonts
       colors: {
         primary: "#001E80",
         secondary: "#3A50FF",
       },
       fontFamily: {
         sans: ["Inter", "sans-serif"],
+      },
+      backgroundImage: {
+        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+        'gradient-conic': 'conic-gradient(var(--tw-gradient-stops))',
       },
     },
   },
