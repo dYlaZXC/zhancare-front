@@ -17,6 +17,8 @@ const Features = () => {
   const translations = language === "ru" ? ru.features : kz.features;
 
   const [messageIndex, setMessageIndex] = React.useState(0);
+  const [particles, setParticles] = React.useState<any[]>([]);
+
   const messages = [
     "Ищу информацию по симптомам...",
     "Поиск завершен... ",
@@ -26,11 +28,20 @@ const Features = () => {
   React.useEffect(() => {
     const interval = setInterval(() => {
       setMessageIndex((prev) => (prev + 1) % messages.length);
-    }, 4000); // 4 seconds per message
+    }, 4000);
     return () => clearInterval(interval);
   }, []);
 
-
+  // Safe client-only random style generation
+  React.useEffect(() => {
+    const generated = Array.from({ length: 8 }).map((_, i) => ({
+      size: Math.random() * 5 + 3,
+      left: Math.random() * 100,
+      duration: Math.random() * 3 + 3,
+      delay: i * 0.5,
+    }));
+    setParticles(generated);
+  }, []);
 
   return (
     <section
@@ -67,7 +78,6 @@ const Features = () => {
           <div className="space-y-5 pt-4">
             {translations?.featuresList?.map((feature, index) => {
               const Icon = iconMap[index % iconMap.length];
-
               return (
                 <motion.div
                   key={index}
@@ -97,37 +107,29 @@ const Features = () => {
           viewport={{ once: true }}
         >
           {/* ✨ Sparkling particles */}
-          {Array.from({ length: 8 }).map((_, i) => {
-            const size = Math.random() * 5 + 3;
-            const left = Math.random() * 100;
-            const duration = Math.random() * 3 + 3;
-            const delay = i * 0.5;
+          {particles.map((p, i) => (
+            <div
+              key={i}
+              className="absolute bg-white rounded-full opacity-30 blur-md z-0"
+              style={{
+                width: `${p.size}px`,
+                height: `${p.size}px`,
+                left: `${p.left}%`,
+                bottom: "20px",
+                animationName: "rise",
+                animationDuration: `${p.duration}s`,
+                animationTimingFunction: "linear",
+                animationIterationCount: "infinite",
+                animationDelay: `${p.delay}s`,
+              }}
+            />
+          ))}
 
-            return (
-              <div
-                key={i}
-                className="absolute bg-white rounded-full opacity-30 blur-md z-0"
-                style={{
-                  width: `${size}px`,
-                  height: `${size}px`,
-                  left: `${left}%`,
-                  bottom: "20px",
-                  animationName: "rise",
-                  animationDuration: `${duration}s`,
-                  animationTimingFunction: "linear",
-                  animationIterationCount: "infinite",
-                  animationDelay: `${delay}s`,
-                }}
-              />
-            );
-          })}
-
-          {/* Hover Platform (enhanced visual effect) */}
+          {/* Hover Platform */}
           <div className="absolute bottom-2 w-52 h-10 rounded-full z-0 bg-gradient-to-t from-blue-600/50 to-transparent blur-[6px] animate-pulse-platform shadow-xl" />
 
           {/* Robot + Chat Bubble */}
           <div className="relative z-10 animate-floating-strong">
-            {/* 💬 Chat Bubble ABOVE the Robot */}
             <div className="absolute -top-6 sm:-top-10 left-1/2 transform -translate-x-1/2 bg-white text-black text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl shadow-md flex items-center gap-2 max-w-[85vw] sm:max-w-none bubble-speech">
               <span className="opacity-70">{messages[messageIndex]}</span>
               <div className="flex space-x-1">
