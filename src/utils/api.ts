@@ -2,8 +2,8 @@ import axios from "axios";
 import * as Sentry from "@sentry/nextjs";
 import { logoutUser } from "@/utils/auth";
 
-const baseURL = process.env.NEXT_PUBLIC_API_URL || "https://zhancareai-back.vercel.app/api/v1";
-export const baseURLImg = process.env.NEXT_PUBLIC_API_IMG_URL || "https://zhancareai-back.vercel.app/api/v1";
+const baseURL = process.env.NEXT_PUBLIC_API_URL || "https://exp-admin.smartalmaty.kz/api/v1";
+export const baseURLImg = process.env.NEXT_PUBLIC_API_IMG_URL || "https://exp-admin.smartalmaty.kz/api/v1";
 
 const axiosInstance = axios.create({
   baseURL,

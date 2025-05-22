@@ -2,13 +2,14 @@
 
 import { createContext, useContext, useState, useEffect } from "react";
 import { toast } from "react-toastify";
+import { api } from "@/utils/api"; // 💡 импорт axiosInstance
 
 interface User {
   id: number;
   email: string;
   first_name: string;
   last_name: string;
-  role: "patient" | "doctor" | "admin"; // ✅ Add role typing
+  role: "patient" | "doctor" | "admin";
 }
 
 interface AuthContextProps {
@@ -29,7 +30,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Load user session on page load
+  // ✅ Set axios default Authorization header
+  const setAuthHeader = (token: string | null) => {
+    if (token) {
+      api.defaults.headers.common["Authorization"] = `Token ${token}`;
+    } else {
+      delete api.defaults.headers.common["Authorization"];
+    }
+  };
+
+  // ✅ Load user session on first load
   useEffect(() => {
     if (typeof window !== "undefined") {
       const storedAccessToken = localStorage.getItem("access_token");
@@ -38,34 +48,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (storedAccessToken && storedUser) {
         setToken(storedAccessToken);
         setUser(JSON.parse(storedUser));
+        setAuthHeader(storedAccessToken);
       }
     }
     setLoading(false);
   }, []);
 
-  // ✅ Login function
+  // ✅ Login
   const loginUser = (accessToken: string, refreshToken: string, userData: User) => {
     setToken(accessToken);
     setUser(userData);
-  
+
     localStorage.setItem("access_token", accessToken);
     localStorage.setItem("refresh_token", refreshToken);
     localStorage.setItem("user", JSON.stringify(userData));
-  };
-  
 
-  // ✅ Logout function
+    setAuthHeader(accessToken);
+  };
+
+  // ✅ Logout
   const logoutUser = (showMessage = true) => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
     localStorage.removeItem("user");
+
     setUser(null);
     setToken(null);
-    // setIsAuthOpen(true); // 🔓 Open login popup automatically
+    setAuthHeader(null);
 
-    // if (showMessage) {
-    //   toast.warning("⏳ Ваша сессия истекла. Пожалуйста, войдите снова.");
-    // }
+    if (showMessage) {
+      toast.warning("⏳ Ваша сессия истекла. Пожалуйста, войдите снова.");
+    }
   };
 
   return (
@@ -77,7 +90,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-// ✅ Hook to use AuthContext easily
+// ✅ useAuth hook
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
