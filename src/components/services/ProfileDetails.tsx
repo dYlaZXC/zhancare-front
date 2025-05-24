@@ -1,11 +1,8 @@
-// ProfileDetails Full Width with Responsive Layout
-
 "use client";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faUser,
-  faEnvelope,
   faClipboardList,
   faHome,
   faEdit,
@@ -15,8 +12,10 @@ import {
 import { useEffect, useState, useRef } from "react";
 import { api } from "@/utils/api";
 import classNames from "classnames";
+import { toast } from "react-toastify";
 
 interface User {
+  id: number;
   first_name: string;
   last_name: string;
   email: string;
@@ -49,7 +48,7 @@ const ProfileDetails: React.FC<ProfileDetailsProps> = ({ user }) => {
   const [editValues, setEditValues] = useState(user);
   const [showAllConsultations, setShowAllConsultations] = useState(false);
   const [showAllAppointments, setShowAllAppointments] = useState(false);
-  const printRef = useRef(null);
+  const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -69,7 +68,8 @@ const ProfileDetails: React.FC<ProfileDetailsProps> = ({ user }) => {
           }))
         );
       } catch (err) {
-        console.error("Ошибка загрузки данных:", err);
+        toast.error("Ошибка загрузки данных");
+        console.error(err);
       } finally {
         setLoading(false);
       }
@@ -79,10 +79,12 @@ const ProfileDetails: React.FC<ProfileDetailsProps> = ({ user }) => {
 
   const saveProfile = async () => {
     try {
-      await api.patch("/users/me/", editValues);
+      await api.patch("/user-profile/partial_update/", editValues);
+      toast.success("Профиль успешно обновлен!");
       setIsEditing(false);
     } catch (err) {
-      console.error("Ошибка сохранения профиля:", err);
+      toast.error("Ошибка при сохранении профиля");
+      console.error(err);
     }
   };
 
@@ -111,111 +113,128 @@ const ProfileDetails: React.FC<ProfileDetailsProps> = ({ user }) => {
     new Intl.DateTimeFormat("ru-RU", { dateStyle: "medium" }).format(new Date(dateStr));
 
   const getStatusColor = (status: string) =>
-    classNames("inline-block px-2 py-0.5 text-xs rounded font-medium", {
+    classNames("inline-block px-2 py-0.5 rounded-full text-xs font-medium", {
       "bg-green-100 text-green-700": status === "completed",
       "bg-red-100 text-red-600": status === "cancelled",
       "bg-blue-100 text-blue-600": status === "scheduled",
     });
 
-  const limitedConsultations = showAllConsultations ? consultations : consultations.slice(0, 5);
-  const limitedAppointments = showAllAppointments ? appointments : appointments.slice(0, 5);
+  const consultationsToShow = showAllConsultations ? consultations : consultations.slice(0, 5);
+  const appointmentsToShow = showAllAppointments ? appointments : appointments.slice(0, 5);
 
   return (
     <section
       ref={printRef}
-      className="w-full px-6 sm:px-10 md:px-16 py-10 bg-white min-h-screen"
+      className="w-full px-4 sm:px-6 md:px-8 py-6 bg-white rounded-2xl shadow-md"
     >
-      <div className="flex justify-between items-center mb-10">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <div>
-          <h2 className="text-4xl font-bold tracking-tight text-slate-800">Карточка пациента</h2>
-          <p className="text-sm text-gray-500">Информация на {formatDate(new Date().toISOString())}</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-800">Карточка пациента</h2>
+          <p className="text-xs text-gray-400 mt-1">Информация на {formatDate(new Date().toISOString())}</p>
         </div>
-        <div className="flex gap-3 print:hidden">
+        <div className="flex gap-2">
           <button
             onClick={() => (isEditing ? saveProfile() : setIsEditing(true))}
-            className="px-4 py-2 text-sm font-semibold text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-700 rounded-lg transition"
+            className="flex items-center gap-1 px-3 py-1.5 text-xs sm:text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-full shadow transition"
           >
-            <FontAwesomeIcon icon={isEditing ? faSave : faEdit} className="mr-2" />
+            <FontAwesomeIcon icon={isEditing ? faSave : faEdit} />
             {isEditing ? "Сохранить" : "Редактировать"}
           </button>
           <button
             onClick={downloadPDF}
-            className="px-4 py-2 text-sm font-semibold text-red-700 hover:text-white border border-red-700 hover:bg-red-700 rounded-lg transition"
+            className="flex items-center gap-1 px-3 py-1.5 text-xs sm:text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-full shadow transition"
           >
-            <FontAwesomeIcon icon={faFilePdf} className="mr-2" /> Скачать PDF
+            <FontAwesomeIcon icon={faFilePdf} /> PDF
           </button>
         </div>
       </div>
 
-      <div className="flex flex-col gap-10">
-        <div className="bg-white shadow border border-gray-200 rounded-2xl p-6">
-          <h3 className="text-xl font-semibold text-slate-700 mb-6 flex items-center gap-2">
-            <FontAwesomeIcon icon={faUser} /> Основная информация
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <InfoField
-              label="ФИО"
-              value={`${editValues.first_name} ${editValues.last_name}`}
-              editable={isEditing}
-              onChange={(val) => {
-                const [first, last] = val.split(" ");
-                setEditValues({ ...editValues, first_name: first || "", last_name: last || "" });
-              }}
-            />
-            <InfoField
-              label="Электронная почта"
-              value={editValues.email}
-              editable={isEditing}
-              onChange={(val) => setEditValues({ ...editValues, email: val })}
-            />
-          </div>
+      {loading ? (
+        <div className="text-center text-gray-400">Загрузка данных...</div>
+      ) : (
+        <div className="flex flex-col gap-6">
+          <InfoBlock
+            title="Основная информация"
+            icon={faUser}
+            fields={[
+              { label: "Имя", value: editValues.first_name, editable: isEditing, onChange: (val) => setEditValues({ ...editValues, first_name: val }) },
+              { label: "Фамилия", value: editValues.last_name, editable: isEditing, onChange: (val) => setEditValues({ ...editValues, last_name: val }) },
+              { label: "Электронная почта", value: editValues.email, editable: isEditing, onChange: (val) => setEditValues({ ...editValues, email: val }) },
+            ]}
+          />
+
+          <TimelineBlock
+            title="Последние консультации"
+            icon={faClipboardList}
+            items={consultationsToShow.map((c) => ({
+              date: c.created_at,
+              text: `${c.doctor_first_name} ${c.doctor_last_name} ${c.doctor_specialty ? `(${c.doctor_specialty})` : ""}`,
+            }))}
+            showAll={showAllConsultations}
+            toggleShow={() => setShowAllConsultations(true)}
+            total={consultations.length}
+          />
+
+          <TimelineBlock
+            title="Последние домашние визиты"
+            icon={faHome}
+            items={appointmentsToShow.map((a) => ({
+              date: a.appointment_time,
+              text: `${a.doctor_name} — ${a.status}`,
+              color: getStatusColor(a.status),
+            }))}
+            showAll={showAllAppointments}
+            toggleShow={() => setShowAllAppointments(true)}
+            total={appointments.length}
+          />
         </div>
-
-        <TimelineBlock
-          title="Последние консультации"
-          icon={faClipboardList}
-          items={limitedConsultations.map((c) => ({
-            date: c.created_at,
-            text: `${c.doctor_first_name} ${c.doctor_last_name} ${c.doctor_specialty ? `(${c.doctor_specialty})` : ""}`,
-          }))}
-          showAll={showAllConsultations}
-          toggleShow={() => setShowAllConsultations(true)}
-          total={consultations.length}
-        />
-
-        <TimelineBlock
-          title="Домашние визиты"
-          icon={faHome}
-          items={limitedAppointments.map((a) => ({
-            date: a.appointment_time,
-            text: `${a.doctor_name} — ${a.status}`,
-            color: getStatusColor(a.status),
-          }))}
-          showAll={showAllAppointments}
-          toggleShow={() => setShowAllAppointments(true)}
-          total={appointments.length}
-        />
-      </div>
+      )}
     </section>
   );
 };
 
-const InfoField = ({ label, value, editable, onChange }: {
+const InfoBlock = ({
+  title,
+  icon,
+  fields,
+}: {
+  title: string;
+  icon: any;
+  fields: { label: string; value: string; editable: boolean; onChange: (val: string) => void }[];
+}) => (
+  <div className="bg-gray-50 p-4 sm:p-5 rounded-2xl shadow-inner">
+    <h3 className="flex items-center gap-2 text-base sm:text-lg font-semibold text-slate-700 mb-3">
+      <FontAwesomeIcon icon={icon} /> {title}
+    </h3>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {fields.map((field, idx) => (
+        <InfoField key={idx} {...field} />
+      ))}
+    </div>
+  </div>
+);
+
+const InfoField = ({
+  label,
+  value,
+  editable,
+  onChange,
+}: {
   label: string;
   value: string;
   editable: boolean;
   onChange: (val: string) => void;
 }) => (
   <div>
-    <label className="block text-sm font-medium text-gray-500 mb-1">{label}</label>
+    <label className="block text-xs font-medium text-gray-500">{label}</label>
     {editable ? (
       <input
-        className="w-full bg-transparent border-b border-gray-300 focus:outline-none focus:border-blue-500 transition px-1 py-1 text-sm"
+        className="w-full bg-transparent border-b border-gray-300 focus:border-blue-500 text-sm px-1 py-1 outline-none"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
     ) : (
-      <p className="text-base font-medium text-gray-800">{value}</p>
+      <p className="text-sm font-medium text-gray-800">{value || "—"}</p>
     )}
   </div>
 );
@@ -235,27 +254,23 @@ const TimelineBlock = ({
   toggleShow: () => void;
   total: number;
 }) => (
-  <div className="bg-white shadow border border-gray-200 rounded-2xl p-6">
-    <h3 className="text-xl font-semibold text-slate-700 mb-6 flex items-center gap-2">
+  <div className="bg-gray-50 p-4 sm:p-5 rounded-2xl shadow-inner">
+    <h3 className="flex items-center gap-2 text-base sm:text-lg font-semibold text-slate-700 mb-3">
       <FontAwesomeIcon icon={icon} /> {title}
     </h3>
     <div className="relative border-l-2 border-blue-200 ml-3">
-      {items.map((item, i) => (
-        <div key={i} className="mb-6 ml-6">
-          <div className="absolute w-3 h-3 bg-gradient-to-br from-blue-600 to-blue-300 rounded-full -left-1.5 top-1" />
-          <p className="text-sm text-gray-500">{new Intl.DateTimeFormat("ru-RU").format(new Date(item.date))}</p>
-          <p className={classNames("text-base mt-1", item.color)}>{item.text}</p>
-        </div>
-      ))}
+      {items.length === 0 ? (
+        <p className="text-gray-400 text-xs italic mt-2 ml-4">Нет данных</p>
+      ) : (
+        items.map((item, i) => (
+          <div key={i} className="mb-4 ml-6">
+            <div className="absolute w-3 h-3 bg-blue-500 rounded-full -left-1.5 top-1" />
+            <p className="text-xs text-gray-400">{new Intl.DateTimeFormat("ru-RU").format(new Date(item.date))}</p>
+            <p className={classNames("text-sm font-medium mt-0.5", item.color)}>{item.text}</p>
+          </div>
+        ))
+      )}
     </div>
-    {!showAll && total > 5 && (
-      <button
-        onClick={toggleShow}
-        className="mt-4 text-blue-600 text-sm underline hover:text-blue-800 transition print:hidden"
-      >
-        Показать все
-      </button>
-    )}
   </div>
 );
 
