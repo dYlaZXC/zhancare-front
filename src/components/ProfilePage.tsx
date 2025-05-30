@@ -1,3 +1,4 @@
+// src/components/ProfilePage.tsx
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
@@ -22,7 +23,7 @@ const ProfilePage = () => {
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState("profile");
-  const [sidebarOpen, setSidebarOpen] = useState(false); // ✅ Контроль sidebar
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && user?.role === "doctor") {
@@ -43,7 +44,9 @@ const ProfilePage = () => {
 
   if (!user) return null;
 
+  // ✅ Добавляем id в объект userProfile
   const userProfile = {
+    id: user.id || 0,
     first_name: user.first_name || "",
     last_name: user.last_name || "",
     email: user.email || "",
@@ -91,9 +94,7 @@ const ProfilePage = () => {
           <Breadcrumb activeTab={activeTab} />
 
           {/* Animated Content */}
-          <MainContent activeTab={activeTab}>
-            {renderContent()}
-          </MainContent>
+          <MainContent activeTab={activeTab}>{renderContent()}</MainContent>
         </main>
       </div>
     </div>
