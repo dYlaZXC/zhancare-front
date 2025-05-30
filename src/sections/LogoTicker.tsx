@@ -9,6 +9,7 @@ import Logo2 from "@/assets/aqniet.png";
 import Logo1 from "@/assets/kazakhemblem.png"; // Emblem
 import Logo4 from "@/assets/astanamua.png";
 import Logo5 from "@/assets/kazakhemblem.png"; // Emblem again
+import Logo6 from "@/assets/enactus.png"; // Emblem again
 
 export const LogoTicker = () => {
   const [isPaused, setIsPaused] = useState(false);
@@ -27,6 +28,7 @@ export const LogoTicker = () => {
       text: ["МЦРиАП", "Республики Казахстан"]
     },
     { src: Logo4, alt: "Logo4" },
+    { src: Logo6, alt: "Logo6" },
     {
       src: Logo5,
       alt: "Ministry of Health Kazakhstan",
