@@ -40,7 +40,6 @@ const AuthPopup = () => {
     setLoading(true);
     setError("");
 
-    // ✅ Password check for registration
     if (activeTab === "register" && formData.password !== formData.confirmPassword) {
       const passwordError = "❌ Пароли не совпадают!";
       setError(passwordError);
@@ -74,7 +73,6 @@ const AuthPopup = () => {
         toast.success("✅ Регистрация прошла успешно!");
       }
 
-      // ✅ Clear form and close modal
       setFormData({
         email: "",
         phone: "",
@@ -86,45 +84,46 @@ const AuthPopup = () => {
       setIsAuthOpen(false);
     } catch (err: any) {
       const errorData = err?.response?.data;
-      const fieldErrors: string[] = [];
+      console.log("🚨 errorData:", errorData);
 
-      // ✅ Support for "error" field
-      if (errorData?.error) {
-        fieldErrors.push(errorData.error);
-      }
+      let errorMessage = "Произошла ошибка. Попробуйте снова.";
 
-      if (errorData?.detail) {
-        let detailError = errorData.detail;
-        if (detailError.includes("No active account")) {
-          detailError = "Неверный email или пароль.";
+      if (activeTab === "login" && err?.response?.status === 401) {
+        // Show friendly login error for invalid credentials
+        errorMessage = "Неправильный E-mail или пароль. Пожалуйста, проверьте данные и попробуйте снова.";
+      } else {
+        const fieldErrors: string[] = [];
+        const details = errorData?.details ?? errorData;
+
+        if (details && typeof details === "object") {
+          for (const field in details) {
+            const messages = details[field];
+            if (Array.isArray(messages)) {
+              messages.forEach((msg: string) => {
+                if (msg.includes("with this") || msg.includes("уже существует")) {
+                  const friendlyMessage =
+                    field === "phone"
+                      ? "Пользователь с таким телефоном уже существует."
+                      : field === "email"
+                      ? "Пользователь с таким email уже существует."
+                      : msg;
+                  fieldErrors.push(friendlyMessage);
+                } else {
+                  fieldErrors.push(msg);
+                }
+              });
+            }
+          }
         }
-        fieldErrors.push(detailError);
-      }
 
-      if (errorData?.phone) {
-        let phoneError = errorData.phone[0];
-        if (phoneError.includes("with this")) {
-          phoneError = "Пользователь с таким телефоном уже существует.";
+        if (errorData?.detail) {
+          fieldErrors.push(errorData.detail);
         }
-        fieldErrors.push(phoneError);
-      }
 
-      if (errorData?.email) {
-        let emailError = errorData.email[0];
-        if (emailError.includes("with this")) {
-          emailError = "Пользователь с таким email уже существует.";
+        if (fieldErrors.length > 0) {
+          errorMessage = fieldErrors.join(". ");
         }
-        fieldErrors.push(emailError);
       }
-
-      if (errorData?.non_field_errors) {
-        fieldErrors.push(errorData.non_field_errors[0]);
-      }
-
-      const errorMessage =
-        fieldErrors.join(". ") ||
-        errorData?.error ||
-        "Произошла ошибка. Попробуйте снова.";
 
       setError(errorMessage);
       toast.error(`❌ Ошибка: ${errorMessage}`);
@@ -158,12 +157,8 @@ const AuthPopup = () => {
                 <div className="flex justify-center md:justify-start mb-4">
                   <Image src={Logo} alt="Logo" width={100} height={100} />
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  {translations.welcome}
-                </h2>
-                <p className="text-gray-600 mt-2 md:mt-6 text-sm">
-                  {translations.description}
-                </p>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">{translations.welcome}</h2>
+                <p className="text-gray-600 mt-2 md:mt-6 text-sm">{translations.description}</p>
               </div>
 
               <div className="w-full md:w-1/2">
