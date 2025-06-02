@@ -65,7 +65,7 @@ const statsItemAnimation = {
 };
 
 export const Hero = () => {
-  const { isAuthOpen, setIsAuthOpen, user, logoutUser } = useAuth();
+  const { setIsAuthOpen, user, logoutUser } = useAuth();
   const { language, setLanguage } = useLanguage();
   const translations = language === "ru" ? ru.hero : kz.hero;
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -161,7 +161,10 @@ export const Hero = () => {
               {translations.content.heroDescription}
             </motion.p>
             <motion.div className="flex gap-4 items-center mt-6 md:mt-8">
-              <button className="bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white px-6 py-3 rounded-lg" onClick={() => handleScrollToSection("modules")}>
+              <button
+                className="bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white px-6 py-3 rounded-lg"
+                onClick={() => setIsAuthOpen(true)}
+              >
                 {translations.content.openDataButton}
               </button>
             </motion.div>

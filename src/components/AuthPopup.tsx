@@ -11,11 +11,13 @@ import "react-toastify/dist/ReactToastify.css";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import { api } from "@/utils/api";
+import { AlertTriangle } from "lucide-react";
 
 const AuthPopup = () => {
   const { isAuthOpen, setIsAuthOpen, loginUser } = useAuth();
   const { language } = useLanguage();
   const translations = language === "ru" ? ru.auth : kz.auth;
+
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
   const [formData, setFormData] = useState({
     email: "",
@@ -38,9 +40,11 @@ const AuthPopup = () => {
     setLoading(true);
     setError("");
 
+    // ✅ Password check for registration
     if (activeTab === "register" && formData.password !== formData.confirmPassword) {
-      setError("Пароли не совпадают.");
-      toast.error("❌ Пароли не совпадают!");
+      const passwordError = "❌ Пароли не совпадают!";
+      setError(passwordError);
+      toast.error(passwordError);
       setLoading(false);
       return;
     }
@@ -64,16 +68,13 @@ const AuthPopup = () => {
       if (activeTab === "login") {
         loginUser(data.access_token, data.refresh_token, data.user);
         toast.success("✅ Вы успешно вошли!");
-      
-        // 🚀 Redirect to appropriate profile page (no delay)
         const redirectTo = data.user.role === "doctor" ? "/doctor-profile" : "/profile";
         window.location.href = redirectTo;
       } else {
         toast.success("✅ Регистрация прошла успешно!");
       }
-      
 
-      // Reset form and close modal
+      // ✅ Clear form and close modal
       setFormData({
         email: "",
         phone: "",
@@ -82,14 +83,49 @@ const AuthPopup = () => {
         first_name: "",
         last_name: "",
       });
-      setError("");
       setIsAuthOpen(false);
     } catch (err: any) {
+      const errorData = err?.response?.data;
+      const fieldErrors: string[] = [];
+
+      // ✅ Support for "error" field
+      if (errorData?.error) {
+        fieldErrors.push(errorData.error);
+      }
+
+      if (errorData?.detail) {
+        let detailError = errorData.detail;
+        if (detailError.includes("No active account")) {
+          detailError = "Неверный email или пароль.";
+        }
+        fieldErrors.push(detailError);
+      }
+
+      if (errorData?.phone) {
+        let phoneError = errorData.phone[0];
+        if (phoneError.includes("with this")) {
+          phoneError = "Пользователь с таким телефоном уже существует.";
+        }
+        fieldErrors.push(phoneError);
+      }
+
+      if (errorData?.email) {
+        let emailError = errorData.email[0];
+        if (emailError.includes("with this")) {
+          emailError = "Пользователь с таким email уже существует.";
+        }
+        fieldErrors.push(emailError);
+      }
+
+      if (errorData?.non_field_errors) {
+        fieldErrors.push(errorData.non_field_errors[0]);
+      }
+
       const errorMessage =
-        err?.response?.data?.error ||
-        err?.response?.data?.non_field_errors?.[0] ||
-        err?.message ||
+        fieldErrors.join(". ") ||
+        errorData?.error ||
         "Произошла ошибка. Попробуйте снова.";
+
       setError(errorMessage);
       toast.error(`❌ Ошибка: ${errorMessage}`);
     } finally {
@@ -110,7 +146,6 @@ const AuthPopup = () => {
             transition={{ duration: 0.2 }}
             className="bg-white p-6 rounded-xl shadow-lg w-full max-w-[90%] sm:max-w-[450px] md:max-w-[750px] relative"
           >
-            {/* Close Button */}
             <button
               className="absolute top-3 right-3 text-gray-600 hover:text-gray-800 text-3xl"
               onClick={() => setIsAuthOpen(false)}
@@ -119,7 +154,6 @@ const AuthPopup = () => {
             </button>
 
             <div className="flex flex-col md:flex-row p-4 md:p-8 gap-6 md:gap-8 items-center">
-              {/* Left Section */}
               <div className="text-center md:text-left w-full md:w-1/2">
                 <div className="flex justify-center md:justify-start mb-4">
                   <Image src={Logo} alt="Logo" width={100} height={100} />
@@ -132,9 +166,7 @@ const AuthPopup = () => {
                 </p>
               </div>
 
-              {/* Right Section */}
               <div className="w-full md:w-1/2">
-                {/* Tabs */}
                 <div className="flex border-b mb-4 w-full">
                   <button
                     className={`flex-1 text-center py-2 font-medium ${
@@ -158,7 +190,6 @@ const AuthPopup = () => {
                   </button>
                 </div>
 
-                {/* Forms */}
                 <form onSubmit={handleSubmit} className="text-black mt-4 md:mt-6">
                   {activeTab === "login" ? (
                     <>
@@ -200,7 +231,6 @@ const AuthPopup = () => {
                     </>
                   ) : (
                     <>
-                      {/* Registration */}
                       <input
                         name="last_name"
                         type="text"
@@ -269,7 +299,17 @@ const AuthPopup = () => {
                     </>
                   )}
                 </form>
-                {error && <p className="text-red-500 text-center mt-3">{error}</p>}
+
+                {error && (
+                  <div className="bg-red-100 text-red-700 rounded-lg p-3 mt-3 text-sm shadow-sm">
+                    {error.split(/[.]\s*/).filter(Boolean).map((line, index) => (
+                      <p key={index} className="flex items-start gap-2">
+                        <AlertTriangle size={16} className="text-red-500" />
+                        {line.trim()}
+                      </p>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>

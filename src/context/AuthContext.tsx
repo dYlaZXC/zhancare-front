@@ -22,7 +22,17 @@ interface AuthContextProps {
   logoutUser: (showMessage?: boolean) => void;
 }
 
-const AuthContext = createContext<AuthContextProps | undefined>(undefined);
+const defaultAuthContext: AuthContextProps = {
+  isAuthOpen: false,
+  setIsAuthOpen: () => {},
+  user: null,
+  token: null,
+  loading: true,
+  loginUser: () => {},
+  logoutUser: () => {},
+};
+
+const AuthContext = createContext<AuthContextProps>(defaultAuthContext);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -49,6 +59,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setToken(storedAccessToken);
         setUser(JSON.parse(storedUser));
         setAuthHeader(storedAccessToken);
+      } else {
+        // 🟦 Clear header if no token found
+        setAuthHeader(null);
       }
     }
     setLoading(false);
@@ -78,6 +91,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     if (showMessage) {
       toast.warning("⏳ Ваша сессия истекла. Пожалуйста, войдите снова.");
+    } else {
+      toast.info("🚪 Вы вышли из системы.");
     }
   };
 
