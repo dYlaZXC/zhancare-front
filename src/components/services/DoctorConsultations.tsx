@@ -18,6 +18,7 @@ const statusTranslations: Record<string, string> = {
 
 interface Consultation {
   id: number;
+  meeting_id: string;
   patient_name: string;
   patient_email: string | null;
   status: "pending" | "ongoing" | "completed" | "cancelled";
@@ -89,10 +90,10 @@ const DoctorConsultations: React.FC = () => {
     }
   };
 
-  const acceptConsultation = async (id: number) => {
+  const acceptConsultation = async (meeting_id: string) => {
     stopSound();
     try {
-      const { data } = await api.post<{ meeting_id: string }>(`/consultations/${id}/accept/`, {});
+      const { data } = await api.post<{ meeting_id: string }>(`/consultations/${meeting_id}/accept/`, {});
       toast.success("Консультация принята");
       router.push(`/video-call?meetingId=${data.meeting_id}`);
     } catch {
@@ -102,10 +103,10 @@ const DoctorConsultations: React.FC = () => {
     fetchConsultations();
   };
 
-  const rejectConsultation = async (id: number) => {
+  const rejectConsultation = async (meeting_id: string) => {
     stopSound();
     try {
-      await api.post(`/consultations/${id}/reject/`, {});
+      await api.post(`/consultations/${meeting_id}/reject/`, {});
       toast.info("Консультация отклонена");
     } catch {
       toast.error("Ошибка при отклонении консультации");
@@ -148,14 +149,14 @@ const DoctorConsultations: React.FC = () => {
 
               <div className="flex flex-col sm:flex-row gap-3 pt-4">
                 <button
-                  onClick={() => acceptConsultation(newConsultation.id)}
+                  onClick={() => acceptConsultation(newConsultation.meeting_id)}
                   className="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg flex-1"
                 >
                   <FontAwesomeIcon icon={faCheckCircle} className="mr-2" />
                   Принять
                 </button>
                 <button
-                  onClick={() => rejectConsultation(newConsultation.id)}
+                  onClick={() => rejectConsultation(newConsultation.meeting_id)}
                   className="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg flex-1"
                 >
                   <FontAwesomeIcon icon={faTimesCircle} className="mr-2" />
@@ -181,9 +182,7 @@ const DoctorConsultations: React.FC = () => {
             Загрузка консультаций...
           </div>
         ) : consultations.length === 0 ? (
-          <div className="text-center py-20 text-gray-500">
-            Консультаций нет
-          </div>
+          <div className="text-center py-20 text-gray-500">Консультаций нет</div>
         ) : (
           <table className="w-full border-collapse mt-4 min-w-[600px] text-sm">
             <thead>
@@ -207,7 +206,7 @@ const DoctorConsultations: React.FC = () => {
                   <td className="border p-3">
                     {c.status === "pending" && (
                       <button
-                        onClick={() => acceptConsultation(c.id)}
+                        onClick={() => acceptConsultation(c.meeting_id)}
                         className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded-md"
                       >
                         Принять
