@@ -1,5 +1,10 @@
 // types/consultation.ts
-export type ConsultationStatus = "pending" | "ongoing" | "completed" | "cancelled";
+export type ConsultationStatus =
+  | "pending"
+  | "ongoing"
+  | "completed"
+  | "cancelled"
+  | "missed"; // 🆕 добавлен пропущенный статус
 
 export interface Consultation {
   id: number;
