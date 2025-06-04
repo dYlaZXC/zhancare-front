@@ -1,16 +1,18 @@
+// utils/axiosInstance.ts
+
 import axios from "axios";
 import * as Sentry from "@sentry/nextjs";
 import { logoutUser } from "@/utils/auth";
 
-const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-export const baseURLImg = process.env.NEXT_PUBLIC_API_IMG_URL || "http://localhost:8000/api/v1";
+const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1";
+export const baseURLImg = process.env.NEXT_PUBLIC_API_IMG_URL || "http://127.0.0.1:8000/api/v1";
 
 const axiosInstance = axios.create({
   baseURL,
   paramsSerializer: (params: any) => new URLSearchParams(params).toString(),
 });
 
-// Request Interceptor — Attach access token
+// ✅ Request Interceptor — Attach access token
 axiosInstance.interceptors.request.use(
   (config) => {
     if (typeof window !== "undefined") {
@@ -24,23 +26,24 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor — Handle 401 + Refresh logic
+// ✅ Response Interceptor — Handle 401 refresh (excluding login/register)
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // Check if access token is expired (401)
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // ⛔ Skip refresh logic for login and register requests
+    const isAuthRequest =
+      originalRequest.url?.includes("/auth/login/") ||
+      originalRequest.url?.includes("/auth/register/");
+
+    if (error.response?.status === 401 && !isAuthRequest && !originalRequest._retry) {
       originalRequest._retry = true;
 
       try {
         const refresh_token = localStorage.getItem("refresh_token");
-        if (!refresh_token) {
-          throw new Error("No refresh token found.");
-        }
+        if (!refresh_token) throw new Error("No refresh token found.");
 
-        // Attempt to refresh the access token
         const { data } = await axios.post(`${baseURL}/auth/refresh/`, {
           refresh_token,
         });
@@ -48,18 +51,17 @@ axiosInstance.interceptors.response.use(
         const newAccessToken = data.access_token;
         localStorage.setItem("access_token", newAccessToken);
 
-        // Retry original request with new token
+        // Set new token on original request and retry it
         originalRequest.headers.Authorization = `Token ${newAccessToken}`;
         return axiosInstance(originalRequest);
       } catch (refreshError) {
         console.warn("🔐 Refresh token failed. Logging out...");
-
         logoutUser("⏳ Ваша сессия истекла. Пожалуйста, войдите снова.");
         return Promise.reject(refreshError);
       }
     }
 
-    // Sentry error logging
+    // 🔎 Report to Sentry
     if (error.response) {
       Sentry.captureException(error, {
         extra: {
@@ -79,7 +81,7 @@ axiosInstance.interceptors.response.use(
   }
 );
 
-// Optional manual logout helper
+// ✅ Manual logout handler
 export const logout = async () => {
   try {
     await axiosInstance.post("/auth/logout/");
