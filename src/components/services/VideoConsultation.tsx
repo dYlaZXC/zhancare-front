@@ -35,7 +35,7 @@ const VideoConsultation: React.FC = () => {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [selectedDoctorId, setSelectedDoctorId] = useState<number | null>(null);
   const [meetingId, setMeetingId] = useState<string | null>(null);
-  const [recommendedDoctor, setRecommendedDoctor] = useState<RecommendedDoctor | undefined>();
+  const [recommendedDoctor, setRecommendedDoctor] = useState<RecommendedDoctor>();
   const [loadingAI, setLoadingAI] = useState(false);
   const [loadingCall, setLoadingCall] = useState(false);
   const [fetchingDoctors, setFetchingDoctors] = useState(true);
@@ -43,8 +43,12 @@ const VideoConsultation: React.FC = () => {
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    if (!token) {
+      toast.error("❌ Вы не авторизованы. Пожалуйста, войдите.");
+      return;
+    }
     fetchDoctors();
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     if (waiting && meetingId) {
@@ -61,12 +65,14 @@ const VideoConsultation: React.FC = () => {
   const fetchDoctors = async () => {
     setFetchingDoctors(true);
     try {
-      const res = await api.get("/auth/doctor/available/");
+      const res = await api.get("/auth/doctor/available/", {
+        headers: { Authorization: `Token ${token}` },
+      });
       const filtered = res.data?.doctors?.filter(
         (doc: Doctor) => doc.doctor_type !== "Сестринское дело"
       );
       setDoctors(filtered || []);
-    } catch {
+    } catch (err) {
       toast.error("⚠️ Ошибка загрузки врачей.");
     } finally {
       setFetchingDoctors(false);
@@ -74,30 +80,28 @@ const VideoConsultation: React.FC = () => {
   };
 
   const handleAIRecommend = async () => {
-    if (loadingAI) return;
+    if (loadingAI || !token) return;
+
     setLoadingAI(true);
     try {
-      const res = await api.post("/consultations/ai-recommend/", {
-        symptoms,
-        language: "ru",
-      });
+      const res = await api.post(
+        "/consultations/ai-recommend/",
+        { symptoms, language: "ru" },
+        { headers: { Authorization: `Token ${token}` } }
+      );
 
       const doctor = res.data?.recommended_doctor;
       if (doctor?.id && doctor.reason) {
-        setRecommendedDoctor({
-          id: doctor.id,
-          name: doctor.name,
-          doctor_type: doctor.doctor_type,
-          reason: doctor.reason,
-        });
+        setRecommendedDoctor(doctor);
         setSelectedDoctorId(doctor.id);
         toast.success(`🤖 AI рекомендовал врача: ${doctor.name}`);
       } else {
         setRecommendedDoctor(undefined);
         toast.warn("⚠️ AI не смог подобрать врача.");
       }
-    } catch {
+    } catch (err) {
       toast.warn("⚠️ Ошибка AI.");
+      console.warn(err);
     } finally {
       setLoadingAI(false);
       setStep(2);
@@ -105,7 +109,7 @@ const VideoConsultation: React.FC = () => {
   };
 
   const handleStartCall = async () => {
-    if (!selectedDoctorId) {
+    if (!selectedDoctorId || !token) {
       toast.error("⚠️ Пожалуйста, выберите врача.");
       containerRef.current?.scrollIntoView({ behavior: "smooth" });
       return;
@@ -114,18 +118,21 @@ const VideoConsultation: React.FC = () => {
     setLoadingCall(true);
     setWaiting(true);
     try {
-      const res = await api.post("/consultations/start/", {
-        doctor_id: selectedDoctorId,
-        symptoms,
-      });
+      const res = await api.post(
+        "/consultations/start/",
+        { doctor_id: selectedDoctorId, symptoms },
+        { headers: { Authorization: `Token ${token}` } }
+      );
+
       if (res.data?.meeting_id) {
         setMeetingId(res.data.meeting_id);
         toast.success("⏳ Ожидаем ответа врача...");
       } else {
         throw new Error("Invalid meeting ID response");
       }
-    } catch {
+    } catch (err) {
       toast.error("⚠️ Не удалось начать консультацию.");
+      console.error(err);
       setWaiting(false);
     } finally {
       setLoadingCall(false);
@@ -147,7 +154,7 @@ const VideoConsultation: React.FC = () => {
     const maxWait = 2 * 60 * 1000;
 
     return setInterval(async () => {
-      if (!meetingId) return;
+      if (!meetingId || !token) return;
 
       if (Date.now() - start > maxWait) {
         toast.error("⏳ Время ожидания истекло.");
@@ -157,6 +164,7 @@ const VideoConsultation: React.FC = () => {
 
       try {
         const res = await api.get("/consultations/status/", {
+          headers: { Authorization: `Token ${token}` },
           params: { meeting_id: meetingId },
         });
 
