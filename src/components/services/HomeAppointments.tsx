@@ -3,7 +3,14 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-toastify";
-import { Loader2, CalendarCheck, UserCircle, CheckCircle2, AlertCircle, MapPin } from "lucide-react";
+import {
+  Loader2,
+  CalendarCheck,
+  UserCircle,
+  CheckCircle2,
+  AlertCircle,
+  MapPin,
+} from "lucide-react";
 import { api } from "@/utils/api";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -13,8 +20,8 @@ const HomeAppointments = () => {
   const [selectedDoctor, setSelectedDoctor] = useState<number | null>(null);
   const [appointmentTime, setAppointmentTime] = useState<string>("");
   const [address, setAddress] = useState<string>("");
-  const [symptoms, setSymptoms] = useState<string>("");  // ✅ added
-  const [notes, setNotes] = useState<string>("");        // ✅ added
+  const [symptoms, setSymptoms] = useState<string>("");
+  const [notes, setNotes] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [fetchingDoctors, setFetchingDoctors] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,8 +76,8 @@ const HomeAppointments = () => {
         setSelectedDoctor(null);
         setAppointmentTime("");
         setAddress("");
-        setSymptoms(""); // reset
-        setNotes("");    // reset
+        setSymptoms("");
+        setNotes("");
         setSuccess(true);
       } else {
         toast.error("❌ Не удалось создать вызов.");
@@ -83,10 +90,10 @@ const HomeAppointments = () => {
   };
 
   return (
-    <div className="w-full px-6 py-8">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+    <div className="w-full px-4 sm:px-6 pt-4 md:pt-8">
+      <div className="max-w-6xl mx-auto grid grid-cols-1 xl:grid-cols-3 gap-6 md:gap-8">
         {/* Left Info Panel */}
-        <div className="space-y-6 md:col-span-1">
+        <div className="space-y-6">
           <div className="flex items-center space-x-4 bg-white rounded-2xl p-4 shadow border border-gray-100">
             <UserCircle className="w-12 h-12 text-[#001E80]" />
             <div>
@@ -99,7 +106,8 @@ const HomeAppointments = () => {
 
           <div className="bg-white rounded-2xl p-4 shadow border border-gray-100 space-y-2">
             <h3 className="text-md font-semibold text-[#001E80] flex items-center gap-2">
-              <CalendarCheck className="w-5 h-5" /> Советы перед вызовом врача
+              <CalendarCheck className="w-5 h-5" />
+              Советы перед вызовом врача
             </h3>
             <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
               <li>Укажите правильный адрес</li>
@@ -110,16 +118,14 @@ const HomeAppointments = () => {
         </div>
 
         {/* Right Form Panel */}
-        <div className="md:col-span-2 space-y-8">
+        <div className="w-full max-w-xl mx-auto space-y-8 xl:col-span-2">
           <div className="flex items-center space-x-3">
             <MapPin className="w-8 h-8 text-[#001E80]" />
             <h1 className="text-3xl font-extrabold text-[#001E80]">
               Вызов врача на дом
             </h1>
           </div>
-          <p className="text-gray-600">
-            Заполните форму, чтобы вызвать врача к себе домой.
-          </p>
+          <p className="text-gray-600">Заполните форму, чтобы вызвать врача к себе домой.</p>
 
           {error && (
             <p className="text-red-500 bg-red-50 border border-red-200 rounded-md p-3 flex items-center gap-2">
@@ -138,7 +144,7 @@ const HomeAppointments = () => {
                 transition={{ duration: 0.4 }}
                 className="bg-white shadow rounded-2xl p-6 space-y-6 border border-gray-100"
               >
-                {/* Doctor Selection */}
+                {/* Doctor selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     🩺 Выберите медсестру:
@@ -161,15 +167,15 @@ const HomeAppointments = () => {
                       </option>
                     )}
                   </select>
-
                   {fetchingDoctors && (
                     <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
-                      <Loader2 className="animate-spin w-4 h-4" /> Загрузка списка врачей...
+                      <Loader2 className="animate-spin w-4 h-4" />
+                      Загрузка списка врачей...
                     </p>
                   )}
                 </div>
 
-                {/* Address Input */}
+                {/* Address */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     📍 Адрес вызова:
@@ -183,7 +189,7 @@ const HomeAppointments = () => {
                   />
                 </div>
 
-                {/* Symptoms Input */}
+                {/* Symptoms */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     🤒 Симптомы (необязательно):
@@ -197,7 +203,7 @@ const HomeAppointments = () => {
                   />
                 </div>
 
-                {/* Notes Input */}
+                {/* Notes */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     📝 Заметки (необязательно):
@@ -211,7 +217,7 @@ const HomeAppointments = () => {
                   />
                 </div>
 
-                {/* Appointment Time */}
+                {/* Appointment time */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     🕒 Дата и время:
@@ -225,7 +231,7 @@ const HomeAppointments = () => {
                   />
                 </div>
 
-                {/* Submit Button */}
+                {/* Submit */}
                 <button
                   onClick={handleBeforeSubmit}
                   disabled={loading}
@@ -266,12 +272,10 @@ const HomeAppointments = () => {
 
       {/* Confirmation Modal */}
       {confirmModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4 sm:px-6 md:px-8">
           <div className="bg-white rounded-lg p-6 w-full max-w-md space-y-4">
             <h3 className="text-xl font-semibold text-gray-900">Подтверждение вызова</h3>
-            <p className="text-gray-700">
-              Вы уверены, что хотите оформить вызов на дом?
-            </p>
+            <p className="text-gray-700">Вы уверены, что хотите оформить вызов на дом?</p>
             <div className="flex justify-end gap-3 mt-4">
               <button
                 onClick={() => setConfirmModal(false)}
