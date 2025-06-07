@@ -99,9 +99,33 @@ const VideoConsultation: React.FC = () => {
         setRecommendedDoctor(undefined);
         toast.warn("⚠️ AI не смог подобрать врача.");
       }
-    } catch (err) {
-      toast.warn("⚠️ Ошибка AI.");
-      console.warn(err);
+    } catch (err: any) {
+      console.warn("AI recommendation error:", err);
+
+      if (err?.response?.status === 404) {
+        toast.info(
+          "🤖 Пока нет врача нужной специализации. Мы пригласим специалиста в ближайшее время. Вас может принять терапевт."
+        );
+
+        const generalDoctor = doctors.find((doc) =>
+          doc.doctor_type.toLowerCase().includes("терапевт")
+        );
+
+        if (generalDoctor) {
+          setRecommendedDoctor({
+            id: generalDoctor.id,
+            name: generalDoctor.name,
+            doctor_type: generalDoctor.doctor_type,
+            reason:
+              "Врач общей практики поможет оценить состояние и при необходимости направит к узкому специалисту.",
+          });
+          setSelectedDoctorId(generalDoctor.id);
+        } else {
+          toast.error("⚠️ Терапевт тоже временно недоступен.");
+        }
+      } else {
+        toast.warn("⚠️ Ошибка AI.");
+      }
     } finally {
       setLoadingAI(false);
       setStep(2);
