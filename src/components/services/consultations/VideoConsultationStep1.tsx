@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
-import { motion } from "framer-motion";
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Sparkles, Info, ClipboardPaste } from "lucide-react";
 
 interface Step1Props {
   symptoms: string;
@@ -17,78 +18,111 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
   loading = false,
 }) => {
   const isNextDisabled = !symptoms.trim() || loading;
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  const insertExample = () => {
+    onChange("Головная боль, температура 38.5, слабость, першение в горле");
+  };
 
   return (
     <motion.div
-      className="space-y-6 p-6 bg-white shadow-xl rounded-2xl border border-gray-200"
+      className="space-y-6 p-6 bg-gradient-to-br from-white to-[#f6f9ff] shadow-2xl rounded-2xl border border-blue-100"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
+      {/* Прогресс */}
+      <div className="text-xs text-gray-500 uppercase tracking-wide">Шаг 1 из 3</div>
+
+      {/* Заголовок и описание */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
       >
-        <h2 className="text-2xl font-semibold text-gray-800">Опишите свои симптомы</h2>
-        <p className="mt-1 text-sm text-gray-500">
-          Это поможет нам порекомендовать подходящего врача. Укажите все важные детали:
-          например, когда начались симптомы, как часто возникают и насколько они сильные,
-          а самое главное — какие симптомы сейчас вы наблюдаете у себя или у своих близких.
+        <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+          <Sparkles className="text-blue-600" size={28} />
+          Расскажите о симптомах
+        </h2>
+        <p className="mt-2 text-sm text-gray-600 leading-relaxed">
+          Это поможет нам рекомендовать подходящего врача. Укажите: когда начались симптомы, что
+          беспокоит больше всего, и насколько часто это происходит.
         </p>
       </motion.div>
 
+      {/* Текстовое поле */}
       <motion.textarea
-        className="w-full h-40 p-4 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 resize-none"
-        placeholder="Например: головная боль, жар, кашель, слабость..."
+        className="w-full h-40 p-4 rounded-xl border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-500 text-gray-800 resize-none transition-all"
+        placeholder="📝 Например: головная боль, жар, слабость..."
         value={symptoms}
         onChange={(e) => onChange(e.target.value)}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+        initial={{ opacity: 0, y: 10, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ delay: 0.2 }}
       />
 
-      <div className="flex justify-end pt-4">
+      {/* Вставить пример */}
+      <div className="text-right">
+        <button
+          onClick={insertExample}
+          className="flex items-center gap-1 text-sm text-blue-600 hover:underline transition"
+        >
+          <ClipboardPaste className="w-4 h-4" />
+          Вставить пример
+        </button>
+      </div>
+
+      {/* Подсказка */}
+      <AnimatePresence>
+        {!symptoms.trim() && (
+          <motion.div
+            className="text-sm text-blue-500 italic flex items-center gap-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <Info size={16} />
+            💡 Опишите симптомы как можно точнее — это ускорит помощь.
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Кнопка */}
+      <div className="flex justify-end pt-4 relative">
         <motion.button
           onClick={onNext}
           disabled={isNextDisabled}
+          onMouseEnter={() => setShowTooltip(isNextDisabled)}
+          onMouseLeave={() => setShowTooltip(false)}
           whileTap={!isNextDisabled ? { scale: 0.97 } : {}}
-          whileHover={!isNextDisabled ? { scale: 1.02 } : {}}
+          whileHover={!isNextDisabled ? { scale: 1.03 } : {}}
           transition={{ type: "spring", stiffness: 300 }}
-          className={`px-5 py-3 rounded-xl font-semibold flex items-center justify-center transition shadow-sm ${
+          className={`px-5 py-3 rounded-xl font-semibold flex items-center justify-center transition-all duration-300 ease-out shadow-md ${
             isNextDisabled
               ? "bg-gradient-to-r from-[#001E80] to-[#3A50FF] opacity-50 cursor-not-allowed text-white"
-              : "bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white hover:shadow-lg"
+              : "bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white hover:shadow-2xl"
           }`}
         >
           {loading ? (
             <>
-              <svg
-                className="animate-spin h-5 w-5 mr-2 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8v8H4z"
-                />
-              </svg>
+              <span className="relative flex h-3 w-3 mr-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+              </span>
               AI думает...
             </>
           ) : (
             "Далее ➡"
           )}
         </motion.button>
+
+        {/* Tooltip */}
+        {showTooltip && isNextDisabled && (
+          <div className="absolute -top-8 right-0 text-xs bg-gray-800 text-white px-3 py-1 rounded-md shadow">
+            Пожалуйста, опишите симптомы перед продолжением
+          </div>
+        )}
       </div>
     </motion.div>
   );

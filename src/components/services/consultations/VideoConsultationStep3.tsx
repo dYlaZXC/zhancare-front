@@ -3,6 +3,7 @@
 import React from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import CallButton from "./CallButton";
+import { Sparkles, User, Stethoscope } from "lucide-react";
 
 interface Step3Props {
   symptoms: string;
@@ -31,45 +32,64 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
 
   return (
     <motion.div
-      className="space-y-6 p-6 bg-white shadow-xl rounded-2xl border border-gray-200"
+      className="space-y-6 p-6 bg-gradient-to-br from-white to-[#f6f9ff] shadow-2xl rounded-2xl border border-blue-100"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
+      {/* Step indicator */}
+      <div className="text-xs text-gray-500 uppercase tracking-wide">Шаг 3 из 3</div>
+
+      {/* Header */}
       <motion.h2
-        className="text-2xl font-semibold text-gray-800"
+        className="text-3xl font-bold text-gray-900 flex items-center gap-2"
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
       >
+        <Sparkles className="text-blue-600" size={28} />
         Подтверждение консультации
       </motion.h2>
 
+      {/* Summary Blocks */}
       <motion.div
-        className="space-y-3 text-sm text-gray-700"
+        className="space-y-4 text-sm text-gray-800"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
       >
-        <p>
-          <strong>📝 Ваши симптомы:</strong><br />
-          <span className="inline-block mt-1 bg-gray-100 p-2 rounded text-gray-800 whitespace-pre-wrap">
-            {symptoms}
-          </span>
-        </p>
-        <p>
-          <strong>👨‍⚕️ Выбранный врач:</strong>{" "}
-          {doctorName} {doctorType && `(${doctorType})`}
-        </p>
+        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm space-y-1">
+          <div className="flex items-center gap-2 text-blue-600 font-semibold">
+            <User size={16} />
+            Ваши симптомы
+          </div>
+          <p className="whitespace-pre-wrap text-gray-700">{symptoms}</p>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm space-y-1">
+          <div className="flex items-center gap-2 text-blue-600 font-semibold">
+            <Stethoscope size={16} />
+            Выбранный врач
+          </div>
+          <p className="text-gray-700">
+            {doctorName} {doctorType && `(${doctorType})`}
+          </p>
+        </div>
       </motion.div>
 
+      {/* Controls */}
       <div className="flex justify-between items-center pt-4">
-        <button
+        {/* Styled Back Button */}
+        <motion.button
           onClick={onBack}
-          className="text-blue-600 underline text-sm"
+          whileHover={{ x: -3 }}
+          whileTap={{ scale: 0.95 }}
+          className="px-5 py-3 rounded-xl font-semibold flex items-center justify-center transition shadow-md bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 hover:shadow-lg"
         >
           ⬅ Назад
-        </button>
+        </motion.button>
+
+        {/* Call */}
         <CallButton
           onClick={onCall}
           disabled={loading || !selectedDoctorId || waiting}
@@ -78,6 +98,7 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
         />
       </div>
 
+      {/* Waiting Block */}
       <AnimatePresence>
         {waiting && (
           <motion.div
@@ -89,7 +110,7 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
             <p className="animate-pulse">⏳ Ждём подключения врача...</p>
             <button
               onClick={onCancel}
-              className="text-red-500 underline mt-2 text-xs"
+              className="text-red-500 underline mt-2 text-xs hover:text-red-700 transition"
             >
               Отменить запрос
             </button>

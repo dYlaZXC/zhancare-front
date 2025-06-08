@@ -10,6 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import Step1 from "./consultations/VideoConsultationStep1";
 import Step2 from "./consultations/VideoConsultationStep2";
 import Step3 from "./consultations/VideoConsultationStep3";
+import TipsPanel from "./consultations/TipsPanel";
 
 interface Doctor {
   id: number;
@@ -25,6 +26,12 @@ interface RecommendedDoctor {
   reason: string;
 }
 
+interface AIErrorData {
+  specialty: string;
+  reason: string;
+  raw: string;
+}
+
 const VideoConsultation: React.FC = () => {
   const { token } = useAuth();
   const router = useRouter();
@@ -36,6 +43,9 @@ const VideoConsultation: React.FC = () => {
   const [selectedDoctorId, setSelectedDoctorId] = useState<number | null>(null);
   const [meetingId, setMeetingId] = useState<string | null>(null);
   const [recommendedDoctor, setRecommendedDoctor] = useState<RecommendedDoctor>();
+  const [aiErrorData, setAiErrorData] = useState<AIErrorData | undefined>();
+  const [fallbackUsed, setFallbackUsed] = useState(false);
+
   const [loadingAI, setLoadingAI] = useState(false);
   const [loadingCall, setLoadingCall] = useState(false);
   const [fetchingDoctors, setFetchingDoctors] = useState(true);
@@ -72,7 +82,7 @@ const VideoConsultation: React.FC = () => {
         (doc: Doctor) => doc.doctor_type !== "Сестринское дело"
       );
       setDoctors(filtered || []);
-    } catch (err) {
+    } catch {
       toast.error("⚠️ Ошибка загрузки врачей.");
     } finally {
       setFetchingDoctors(false);
@@ -82,7 +92,16 @@ const VideoConsultation: React.FC = () => {
   const handleAIRecommend = async () => {
     if (loadingAI || !token) return;
 
+    if (!symptoms.trim()) {
+      toast.warn("⚠️ Пожалуйста, опишите симптомы.");
+      return;
+    }
+
     setLoadingAI(true);
+    setRecommendedDoctor(undefined);
+    setAiErrorData(undefined);
+    setFallbackUsed(false);
+
     try {
       const res = await api.post(
         "/consultations/ai-recommend/",
@@ -90,42 +109,33 @@ const VideoConsultation: React.FC = () => {
         { headers: { Authorization: `Token ${token}` } }
       );
 
-      const doctor = res.data?.recommended_doctor;
-      if (doctor?.id && doctor.reason) {
+      if (res.data.success && res.data.recommended_doctor) {
+        const doctor = res.data.recommended_doctor;
         setRecommendedDoctor(doctor);
         setSelectedDoctorId(doctor.id);
         toast.success(`🤖 AI рекомендовал врача: ${doctor.name}`);
-      } else {
-        setRecommendedDoctor(undefined);
-        toast.warn("⚠️ AI не смог подобрать врача.");
-      }
-    } catch (err: any) {
-      console.warn("AI recommendation error:", err);
-
-      if (err?.response?.status === 404) {
-        toast.info(
-          "🤖 Пока нет врача нужной специализации. Мы пригласим специалиста в ближайшее время. Вас может принять терапевт."
+      } else if (!res.data.success && res.data.ai_data) {
+        const fallback = doctors.find((d) =>
+          d.doctor_type.toLowerCase().includes("терапевт")
         );
-
-        const generalDoctor = doctors.find((doc) =>
-          doc.doctor_type.toLowerCase().includes("терапевт")
-        );
-
-        if (generalDoctor) {
+        if (fallback) {
           setRecommendedDoctor({
-            id: generalDoctor.id,
-            name: generalDoctor.name,
-            doctor_type: generalDoctor.doctor_type,
-            reason:
-              "Врач общей практики поможет оценить состояние и при необходимости направит к узкому специалисту.",
+            id: fallback.id,
+            name: fallback.name,
+            doctor_type: fallback.doctor_type,
+            reason: "Врач общей практики поможет оценить состояние.",
           });
-          setSelectedDoctorId(generalDoctor.id);
+          setSelectedDoctorId(fallback.id);
+          setAiErrorData(res.data.ai_data);
+          setFallbackUsed(true);
+          toast.info("❌ Специалист не найден. Назначен терапевт.");
         } else {
-          toast.error("⚠️ Терапевт тоже временно недоступен.");
+          setAiErrorData(res.data.ai_data);
+          toast.warn("❌ AI дал рекомендацию, но подходящих врачей не найдено.");
         }
-      } else {
-        toast.warn("⚠️ Ошибка AI.");
       }
+    } catch (err) {
+      toast.error("⚠️ Ошибка AI.");
     } finally {
       setLoadingAI(false);
       setStep(2);
@@ -156,7 +166,6 @@ const VideoConsultation: React.FC = () => {
       }
     } catch (err) {
       toast.error("⚠️ Не удалось начать консультацию.");
-      console.error(err);
       setWaiting(false);
     } finally {
       setLoadingCall(false);
@@ -164,10 +173,7 @@ const VideoConsultation: React.FC = () => {
   };
 
   const cancelConsultation = () => {
-    if (pollingRef.current) {
-      clearInterval(pollingRef.current);
-      pollingRef.current = null;
-    }
+    if (pollingRef.current) clearInterval(pollingRef.current);
     setWaiting(false);
     setMeetingId(null);
     toast.info("🚫 Консультация отменена.");
@@ -175,12 +181,11 @@ const VideoConsultation: React.FC = () => {
 
   const startPolling = () => {
     const start = Date.now();
-    const maxWait = 2 * 60 * 1000;
+    const timeout = 2 * 60 * 1000;
 
     return setInterval(async () => {
       if (!meetingId || !token) return;
-
-      if (Date.now() - start > maxWait) {
+      if (Date.now() - start > timeout) {
         toast.error("⏳ Время ожидания истекло.");
         cancelConsultation();
         return;
@@ -193,13 +198,9 @@ const VideoConsultation: React.FC = () => {
         });
 
         const status = res.data?.status;
-
         if (status === "ongoing") {
           toast.success("✅ Доктор подключился.");
-          if (pollingRef.current) {
-            clearInterval(pollingRef.current);
-            pollingRef.current = null;
-          }
+          clearInterval(pollingRef.current!);
           setWaiting(false);
           router.push(`/video-call?meetingId=${meetingId}`);
         } else if (status === "cancelled") {
@@ -213,52 +214,70 @@ const VideoConsultation: React.FC = () => {
   };
 
   return (
-    <motion.div
-      ref={containerRef}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6 }}
-      className="w-full max-w-3xl mx-auto p-8 sm:p-10 bg-white/80 backdrop-blur rounded-3xl shadow-2xl border"
-    >
-      <h2 className="text-3xl font-extrabold text-[#001E80] mb-2">Видео консультация</h2>
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 px-4 sm:px-6 py-8 sm:py-10">
+      <motion.div
+        ref={containerRef}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="lg:col-span-8 w-full bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl ring-1 ring-blue-100 p-6 sm:p-8"
+      >
+        <h2 className="text-3xl font-extrabold text-[#001E80] mb-4">Видео консультация</h2>
 
-      <div className="space-y-6">
-        {step === 1 && (
-          <Step1
-            symptoms={symptoms}
-            onChange={setSymptoms}
-            onNext={handleAIRecommend}
-            loading={loadingAI}
+        <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
+          <div
+            className={`h-full transition-all duration-500 rounded-full ${
+              step === 1
+                ? "w-1/3 bg-blue-600"
+                : step === 2
+                ? "w-2/3 bg-blue-600"
+                : "w-full bg-blue-600"
+            }`}
           />
-        )}
+        </div>
 
-        {step === 2 && (
-          <Step2
-            doctors={doctors}
-            selectedDoctorId={selectedDoctorId}
-            onSelect={setSelectedDoctorId}
-            loading={fetchingDoctors}
-            onBack={() => setStep(1)}
-            onNext={() => setStep(3)}
-            symptoms={symptoms}
-            recommendedDoctor={recommendedDoctor}
-          />
-        )}
+        <div className="space-y-6">
+          {step === 1 && (
+            <Step1
+              symptoms={symptoms}
+              onChange={setSymptoms}
+              onNext={handleAIRecommend}
+              loading={loadingAI}
+            />
+          )}
+          {step === 2 && (
+            <Step2
+              doctors={doctors}
+              selectedDoctorId={selectedDoctorId}
+              onSelect={setSelectedDoctorId}
+              loading={fetchingDoctors}
+              onBack={() => setStep(1)}
+              onNext={() => setStep(3)}
+              symptoms={symptoms}
+              recommendedDoctor={recommendedDoctor}
+              aiErrorData={aiErrorData}
+              fallbackUsed={fallbackUsed}
+            />
+          )}
+          {step === 3 && (
+            <Step3
+              symptoms={symptoms}
+              doctors={doctors}
+              selectedDoctorId={selectedDoctorId}
+              onBack={() => setStep(2)}
+              onCall={handleStartCall}
+              onCancel={cancelConsultation}
+              loading={loadingCall}
+              waiting={waiting}
+            />
+          )}
+        </div>
+      </motion.div>
 
-        {step === 3 && (
-          <Step3
-            symptoms={symptoms}
-            doctors={doctors}
-            selectedDoctorId={selectedDoctorId}
-            onBack={() => setStep(2)}
-            onCall={handleStartCall}
-            onCancel={cancelConsultation}
-            loading={loadingCall}
-            waiting={waiting}
-          />
-        )}
+      <div className="lg:col-span-4">
+        <TipsPanel step={step} />
       </div>
-    </motion.div>
+    </div>
   );
 };
 

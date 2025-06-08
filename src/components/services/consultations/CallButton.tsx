@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
@@ -12,22 +14,27 @@ interface CallButtonProps {
 const CallButton: React.FC<CallButtonProps> = ({ onClick, disabled, loading, waiting }) => {
   return (
     <motion.button
-      whileTap={{ scale: 0.97 }}
-      whileHover={{ scale: 1.02 }}
-      transition={{ type: "spring", stiffness: 300 }}
       onClick={onClick}
       disabled={disabled}
-      className={`w-full py-3 rounded-xl font-semibold flex items-center justify-center transition shadow-sm ${
+      whileTap={{ scale: 0.97 }}
+      whileHover={!disabled ? { scale: 1.02 } : {}}
+      transition={{ type: "spring", stiffness: 300 }}
+      className={`px-6 py-3 rounded-xl font-semibold text-white text-sm transition-all duration-300 ease-out ${
         disabled
-          ? "bg-gradient-to-r from-[#001E80] to-[#3A50FF] opacity-50 cursor-not-allowed"
-          : "bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white hover:shadow-lg"
+          ? "bg-gradient-to-r from-blue-800 to-blue-500 opacity-50 cursor-not-allowed"
+          : "bg-gradient-to-r from-blue-800 to-blue-500 hover:shadow-md"
       }`}
     >
       {waiting ? (
-        <>
-          <Loader2 className="animate-spin w-5 h-5 mr-2" />
+        <span className="flex items-center gap-2">
+          <Loader2 className="animate-spin w-4 h-4" />
           Ожидание врача...
-        </>
+        </span>
+      ) : loading ? (
+        <span className="flex items-center gap-2">
+          <Loader2 className="animate-spin w-4 h-4" />
+          Загружаем...
+        </span>
       ) : (
         "Начать звонок"
       )}

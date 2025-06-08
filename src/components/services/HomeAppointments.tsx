@@ -1,32 +1,42 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { useAuth } from "@/context/AuthContext";
-import { toast } from "react-toastify";
-import {
-  Loader2,
-  CalendarCheck,
-  UserCircle,
-  CheckCircle2,
-  AlertCircle,
-  MapPin,
-} from "lucide-react";
-import { api } from "@/utils/api";
+import React, { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "react-toastify";
+import { MapPin, AlertCircle } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { api } from "@/utils/api";
 
-const HomeAppointments = () => {
+// Шаги
+import Step1 from "./homeAppointments/Step1";
+import Step2 from "./homeAppointments/Step2";
+import Step3 from "./homeAppointments/Step3";
+import TipsPanel from "./homeAppointments/TipsPanel";
+import Confirmation from "./homeAppointments/Confirmation";
+
+interface Doctor {
+  id: number;
+  name: string;
+  email: string;
+}
+
+const HomeAppointments: React.FC = () => {
   const { user } = useAuth();
-  const [doctors, setDoctors] = useState<{ id: number; name: string; email: string }[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [selectedDoctor, setSelectedDoctor] = useState<number | null>(null);
   const [appointmentTime, setAppointmentTime] = useState<string>("");
   const [address, setAddress] = useState<string>("");
   const [symptoms, setSymptoms] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
+
   const [loading, setLoading] = useState(false);
   const [fetchingDoctors, setFetchingDoctors] = useState(false);
+  const [confirmModal, setConfirmModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [confirmModal, setConfirmModal] = useState(false);
 
   useEffect(() => {
     fetchDoctors();
@@ -35,8 +45,8 @@ const HomeAppointments = () => {
   const fetchDoctors = async () => {
     setFetchingDoctors(true);
     try {
-      const response = await api.get("/appointments/available-doctors-sestrinskoe-delo/");
-      setDoctors(response.data.doctors || []);
+      const res = await api.get("/appointments/available-doctors-sestrinskoe-delo/");
+      setDoctors(res.data?.doctors || []);
     } catch (err) {
       console.error("Ошибка загрузки врачей:", err);
       setError("⚠️ Не удалось загрузить список врачей.");
@@ -45,9 +55,9 @@ const HomeAppointments = () => {
     }
   };
 
-  const handleBeforeSubmit = () => {
+  const handleFinalCheck = () => {
     if (!selectedDoctor || !appointmentTime || !address.trim()) {
-      toast.error("Пожалуйста, заполните все обязательные поля: врача, адрес и время приема.");
+      toast.error("Пожалуйста, заполните все обязательные поля.");
       return;
     }
 
@@ -62,8 +72,9 @@ const HomeAppointments = () => {
   const handleSubmit = async () => {
     setConfirmModal(false);
     setLoading(true);
+
     try {
-      const response = await api.post("/appointments/", {
+      const res = await api.post("/appointments/", {
         doctor: selectedDoctor,
         appointment_time: appointmentTime,
         address: address.trim(),
@@ -71,228 +82,126 @@ const HomeAppointments = () => {
         notes: notes.trim() || null,
       });
 
-      if (response.status === 201 || response.status === 200) {
+      if (res.status === 201 || res.status === 200) {
         toast.success("✅ Вызов успешно создан!");
+        setSuccess(true);
+        setStep(1);
         setSelectedDoctor(null);
         setAppointmentTime("");
         setAddress("");
         setSymptoms("");
         setNotes("");
-        setSuccess(true);
       } else {
         toast.error("❌ Не удалось создать вызов.");
       }
     } catch (err: any) {
-      console.error("Ошибка создания вызова:", err);
+      console.error("Ошибка при создании:", err);
       toast.error(err?.response?.data?.error || "Ошибка сервера.");
     }
+
     setLoading(false);
   };
 
   return (
-    <div className="w-full px-4 sm:px-6 pt-4 md:pt-8">
-      <div className="max-w-6xl mx-auto grid grid-cols-1 xl:grid-cols-3 gap-6 md:gap-8">
-        {/* Left Info Panel */}
-        <div className="space-y-6">
-          <div className="flex items-center space-x-4 bg-white rounded-2xl p-4 shadow border border-gray-100">
-            <UserCircle className="w-12 h-12 text-[#001E80]" />
-            <div>
-              <h2 className="text-lg font-semibold text-gray-800">
-                {user?.first_name} {user?.last_name || ""}
-              </h2>
-              <p className="text-sm text-gray-500">{user?.email}</p>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-4 shadow border border-gray-100 space-y-2">
-            <h3 className="text-md font-semibold text-[#001E80] flex items-center gap-2">
-              <CalendarCheck className="w-5 h-5" />
-              Советы перед вызовом врача
-            </h3>
-            <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
-              <li>Укажите правильный адрес</li>
-              <li>Доктор приедет в выбранное время</li>
-              <li>Будьте на связи для подтверждения</li>
-            </ul>
-          </div>
-        </div>
-
-        {/* Right Form Panel */}
-        <div className="w-full max-w-xl mx-auto space-y-8 xl:col-span-2">
-          <div className="flex items-center space-x-3">
+    <div className="w-full px-4 sm:px-6 py-6">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <motion.div
+          ref={containerRef}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="lg:col-span-8 w-full bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl ring-1 ring-blue-100 p-6 sm:p-8"
+        >
+          <div className="flex items-center gap-3 mb-6">
             <MapPin className="w-8 h-8 text-[#001E80]" />
-            <h1 className="text-3xl font-extrabold text-[#001E80]">
-              Вызов врача на дом
-            </h1>
+            <h1 className="text-3xl font-extrabold text-[#001E80]">Вызов врача на дом</h1>
           </div>
-          <p className="text-gray-600">Заполните форму, чтобы вызвать врача к себе домой.</p>
+          <p className="text-gray-600 mb-4">Заполните шаги ниже, чтобы оформить вызов.</p>
+
+          <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${
+                step === 1
+                  ? "w-1/3 bg-blue-600"
+                  : step === 2
+                  ? "w-2/3 bg-blue-600"
+                  : "w-full bg-blue-600"
+              }`}
+            />
+          </div>
 
           {error && (
-            <p className="text-red-500 bg-red-50 border border-red-200 rounded-md p-3 flex items-center gap-2">
+            <p className="text-red-500 bg-red-50 border border-red-200 rounded-md p-3 flex items-center gap-2 mb-4">
               <AlertCircle className="w-5 h-5" />
               {error}
             </p>
           )}
 
-          <AnimatePresence mode="wait">
-            {!success ? (
-              <motion.div
-                key="form"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.4 }}
-                className="bg-white shadow rounded-2xl p-6 space-y-6 border border-gray-100"
-              >
-                {/* Doctor selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    🩺 Выберите медсестру:
-                  </label>
-                  <select
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                    value={selectedDoctor || ""}
-                    onChange={(e) => setSelectedDoctor(Number(e.target.value))}
-                  >
-                    <option value="">-- Выберите специалиста --</option>
-                    {doctors.length > 0 ? (
-                      doctors.map((doc) => (
-                        <option key={doc.id} value={doc.id}>
-                          {doc.name}
-                        </option>
-                      ))
-                    ) : (
-                      <option value="" disabled>
-                        Нет доступных специалистов
-                      </option>
-                    )}
-                  </select>
-                  {fetchingDoctors && (
-                    <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
-                      <Loader2 className="animate-spin w-4 h-4" />
-                      Загрузка списка врачей...
-                    </p>
-                  )}
-                </div>
+          {!success && (
+            <AnimatePresence mode="wait">
+              {step === 1 && (
+                <Step1
+                  address={address}
+                  symptoms={symptoms}
+                  onChangeAddress={setAddress}
+                  onChangeSymptoms={setSymptoms}
+                  onNext={() => setStep(2)}
+                  loading={loading}
+                />
+              )}
+              {step === 2 && (
+                <Step2
+                  doctors={doctors}
+                  selectedDoctorId={selectedDoctor}
+                  onSelectDoctor={setSelectedDoctor}
+                  appointmentTime={appointmentTime}
+                  onChangeTime={setAppointmentTime}
+                  onBack={() => setStep(1)}
+                  onNext={() => setStep(3)}
+                  loading={loading}
+                  fetchingDoctors={fetchingDoctors}
+                />
+              )}
+              {step === 3 && (
+                <Step3
+                  doctors={doctors}
+                  selectedDoctorId={selectedDoctor}
+                  appointmentTime={appointmentTime}
+                  address={address}
+                  symptoms={symptoms}
+                  notes={notes}
+                  onBack={() => setStep(2)}
+                  onSubmit={handleFinalCheck}
+                  loading={loading}
+                />
+              )}
+            </AnimatePresence>
+          )}
 
-                {/* Address */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    📍 Адрес вызова:
-                  </label>
-                  <input
-                    type="text"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Введите полный адрес"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                  />
-                </div>
+          {success && (
+            <motion.div
+              key="success"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4 }}
+              className="text-center text-green-700 bg-green-50 border border-green-200 p-6 rounded-xl"
+            >
+              ✅ Вызов успешно создан! Мы свяжемся с вами в ближайшее время.
+            </motion.div>
+          )}
+        </motion.div>
 
-                {/* Symptoms */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    🤒 Симптомы (необязательно):
-                  </label>
-                  <textarea
-                    value={symptoms}
-                    onChange={(e) => setSymptoms(e.target.value)}
-                    placeholder="Опишите симптомы..."
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                    rows={3}
-                  />
-                </div>
-
-                {/* Notes */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    📝 Заметки (необязательно):
-                  </label>
-                  <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Дополнительные замечания..."
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                    rows={2}
-                  />
-                </div>
-
-                {/* Appointment time */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    🕒 Дата и время:
-                  </label>
-                  <input
-                    type="datetime-local"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                    value={appointmentTime}
-                    onChange={(e) => setAppointmentTime(e.target.value)}
-                    min={new Date().toISOString().slice(0, 16)}
-                  />
-                </div>
-
-                {/* Submit */}
-                <button
-                  onClick={handleBeforeSubmit}
-                  disabled={loading}
-                  className={`w-full text-white py-3 rounded-lg font-medium transition flex items-center justify-center ${
-                    loading
-                      ? "bg-[#001E80] opacity-50 cursor-not-allowed"
-                      : "bg-gradient-to-r from-[#001E80] to-[#3A50FF] hover:opacity-90"
-                  }`}
-                >
-                  {loading ? (
-                    <Loader2 className="animate-spin w-5 h-5" />
-                  ) : (
-                    "Вызвать врача"
-                  )}
-                </button>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="success"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.4 }}
-                className="bg-green-50 border border-green-200 rounded-2xl p-6 text-center"
-              >
-                <CheckCircle2 className="w-12 h-12 text-green-600 mx-auto mb-4" />
-                <h2 className="text-2xl font-bold text-green-700 mb-2">
-                  Вызов успешно оформлен!
-                </h2>
-                <p className="text-green-700">
-                  Ожидайте прибытия специалиста в выбранное время.
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
+        <div className="lg:col-span-4">
+          <TipsPanel step={step} />
         </div>
       </div>
 
-      {/* Confirmation Modal */}
-      {confirmModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4 sm:px-6 md:px-8">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md space-y-4">
-            <h3 className="text-xl font-semibold text-gray-900">Подтверждение вызова</h3>
-            <p className="text-gray-700">Вы уверены, что хотите оформить вызов на дом?</p>
-            <div className="flex justify-end gap-3 mt-4">
-              <button
-                onClick={() => setConfirmModal(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
-              >
-                Отмена
-              </button>
-              <button
-                onClick={handleSubmit}
-                className="px-4 py-2 bg-[#001E80] text-white rounded-lg hover:opacity-90 transition"
-              >
-                Подтвердить
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Confirmation
+        isOpen={confirmModal}
+        onCancel={() => setConfirmModal(false)}
+        onConfirm={handleSubmit}
+      />
     </div>
   );
 };
