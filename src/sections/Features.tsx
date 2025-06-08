@@ -12,18 +12,19 @@ import { ShieldCheck, Stethoscope, HeartPulse, Hospital } from "lucide-react";
 
 const iconMap = [ShieldCheck, Stethoscope, HeartPulse, Hospital];
 
+// ✅ Вынесено вне компонента — больше нет ошибки useEffect deps
+const messages = [
+  "Ищу информацию по симптомам...",
+  "Поиск завершен... ",
+  "Передаю информацию врачу..."
+];
+
 const Features = () => {
   const { language } = useLanguage();
   const translations = language === "ru" ? ru.features : kz.features;
 
   const [messageIndex, setMessageIndex] = React.useState(0);
   const [particles, setParticles] = React.useState<any[]>([]);
-
-  const messages = [
-    "Ищу информацию по симптомам...",
-    "Поиск завершен... ",
-    "Передаю информацию врачу..."
-  ];
 
   React.useEffect(() => {
     const interval = setInterval(() => {
@@ -32,7 +33,6 @@ const Features = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Safe client-only random style generation
   React.useEffect(() => {
     const generated = Array.from({ length: 8 }).map((_, i) => ({
       size: Math.random() * 5 + 3,
@@ -48,11 +48,9 @@ const Features = () => {
       id="features"
       className="relative overflow-hidden bg-gradient-radial from-[#1E34A0] to-[#1C212C] text-white py-16 px-6 sm:px-10"
     >
-      {/* Background Glow */}
       <div className="absolute -top-32 -left-32 w-96 h-96 bg-blue-900 rounded-full blur-3xl opacity-30 z-0" />
 
       <div className="relative z-10 max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-12">
-        {/* Left Column */}
         <motion.div
           className="flex-1 max-w-xl space-y-6"
           initial={{ opacity: 0, y: 20 }}
@@ -74,7 +72,6 @@ const Features = () => {
             {translations?.buttonText}
           </Link>
 
-          {/* Feature List with Icons */}
           <div className="space-y-5 pt-4">
             {translations?.featuresList?.map((feature, index) => {
               const Icon = iconMap[index % iconMap.length];
@@ -98,7 +95,6 @@ const Features = () => {
           </div>
         </motion.div>
 
-        {/* Right Column: Robot Image */}
         <motion.div
           className="flex-1 flex justify-center items-center relative"
           initial={{ opacity: 0, scale: 0.95 }}
@@ -106,7 +102,6 @@ const Features = () => {
           transition={{ duration: 0.6, delay: 0.3 }}
           viewport={{ once: true }}
         >
-          {/* ✨ Sparkling particles */}
           {particles.map((p, i) => (
             <div
               key={i}
@@ -125,10 +120,8 @@ const Features = () => {
             />
           ))}
 
-          {/* Hover Platform */}
           <div className="absolute bottom-2 w-52 h-10 rounded-full z-0 bg-gradient-to-t from-blue-600/50 to-transparent blur-[6px] animate-pulse-platform shadow-xl" />
 
-          {/* Robot + Chat Bubble */}
           <div className="relative z-10 animate-floating-strong">
             <div className="absolute -top-6 sm:-top-10 left-1/2 transform -translate-x-1/2 bg-white text-black text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl shadow-md flex items-center gap-2 max-w-[85vw] sm:max-w-none bubble-speech">
               <span className="opacity-70">{messages[messageIndex]}</span>
@@ -151,7 +144,6 @@ const Features = () => {
         </motion.div>
       </div>
 
-      {/* Animations */}
       <style jsx>{`
         @keyframes floating-strong {
           0% {

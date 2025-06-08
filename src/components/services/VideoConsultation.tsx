@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
@@ -12,6 +12,7 @@ import Step2 from "./consultations/VideoConsultationStep2";
 import Step3 from "./consultations/VideoConsultationStep3";
 import TipsPanel from "./consultations/TipsPanel";
 
+// interfaces remain unchanged
 interface Doctor {
   id: number;
   name: string;
@@ -36,6 +37,7 @@ const VideoConsultation: React.FC = () => {
   const { token } = useAuth();
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [symptoms, setSymptoms] = useState("");
@@ -50,29 +52,8 @@ const VideoConsultation: React.FC = () => {
   const [loadingCall, setLoadingCall] = useState(false);
   const [fetchingDoctors, setFetchingDoctors] = useState(true);
   const [waiting, setWaiting] = useState(false);
-  const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    if (!token) {
-      toast.error("❌ Вы не авторизованы. Пожалуйста, войдите.");
-      return;
-    }
-    fetchDoctors();
-  }, [token]);
-
-  useEffect(() => {
-    if (waiting && meetingId) {
-      pollingRef.current = startPolling();
-    }
-    return () => {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-        pollingRef.current = null;
-      }
-    };
-  }, [waiting, meetingId]);
-
-  const fetchDoctors = async () => {
+  const fetchDoctors = useCallback(async () => {
     setFetchingDoctors(true);
     try {
       const res = await api.get("/auth/doctor/available/", {
@@ -87,11 +68,71 @@ const VideoConsultation: React.FC = () => {
     } finally {
       setFetchingDoctors(false);
     }
-  };
+  }, [token]);
+
+  const cancelConsultation = useCallback(() => {
+    if (pollingRef.current) clearInterval(pollingRef.current);
+    setWaiting(false);
+    setMeetingId(null);
+    toast.info("🚫 Консультация отменена.");
+  }, []);
+
+  const startPolling = useCallback(() => {
+    const start = Date.now();
+    const timeout = 2 * 60 * 1000;
+
+    return setInterval(async () => {
+      if (!meetingId || !token) return;
+      if (Date.now() - start > timeout) {
+        toast.error("⏳ Время ожидания истекло.");
+        cancelConsultation();
+        return;
+      }
+
+      try {
+        const res = await api.get("/consultations/status/", {
+          headers: { Authorization: `Token ${token}` },
+          params: { meeting_id: meetingId },
+        });
+
+        const status = res.data?.status;
+        if (status === "ongoing") {
+          toast.success("✅ Доктор подключился.");
+          clearInterval(pollingRef.current!);
+          setWaiting(false);
+          router.push(`/video-call?meetingId=${meetingId}`);
+        } else if (status === "cancelled") {
+          toast.error("❌ Запрос отклонён.");
+          cancelConsultation();
+        }
+      } catch (err) {
+        console.error("Ошибка при проверке статуса:", err);
+      }
+    }, 3000);
+  }, [cancelConsultation, meetingId, token, router]);
+
+  useEffect(() => {
+    if (!token) {
+      toast.error("❌ Вы не авторизованы. Пожалуйста, войдите.");
+      return;
+    }
+    fetchDoctors();
+  }, [token, fetchDoctors]);
+
+  useEffect(() => {
+    if (waiting && meetingId) {
+      pollingRef.current = startPolling();
+    }
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, [waiting, meetingId, startPolling]);
 
   const handleAIRecommend = async () => {
     if (loadingAI || !token) return;
-
     if (!symptoms.trim()) {
       toast.warn("⚠️ Пожалуйста, опишите симптомы.");
       return;
@@ -134,7 +175,7 @@ const VideoConsultation: React.FC = () => {
           toast.warn("❌ AI дал рекомендацию, но подходящих врачей не найдено.");
         }
       }
-    } catch (err) {
+    } catch {
       toast.error("⚠️ Ошибка AI.");
     } finally {
       setLoadingAI(false);
@@ -151,6 +192,7 @@ const VideoConsultation: React.FC = () => {
 
     setLoadingCall(true);
     setWaiting(true);
+
     try {
       const res = await api.post(
         "/consultations/start/",
@@ -164,53 +206,12 @@ const VideoConsultation: React.FC = () => {
       } else {
         throw new Error("Invalid meeting ID response");
       }
-    } catch (err) {
+    } catch {
       toast.error("⚠️ Не удалось начать консультацию.");
       setWaiting(false);
     } finally {
       setLoadingCall(false);
     }
-  };
-
-  const cancelConsultation = () => {
-    if (pollingRef.current) clearInterval(pollingRef.current);
-    setWaiting(false);
-    setMeetingId(null);
-    toast.info("🚫 Консультация отменена.");
-  };
-
-  const startPolling = () => {
-    const start = Date.now();
-    const timeout = 2 * 60 * 1000;
-
-    return setInterval(async () => {
-      if (!meetingId || !token) return;
-      if (Date.now() - start > timeout) {
-        toast.error("⏳ Время ожидания истекло.");
-        cancelConsultation();
-        return;
-      }
-
-      try {
-        const res = await api.get("/consultations/status/", {
-          headers: { Authorization: `Token ${token}` },
-          params: { meeting_id: meetingId },
-        });
-
-        const status = res.data?.status;
-        if (status === "ongoing") {
-          toast.success("✅ Доктор подключился.");
-          clearInterval(pollingRef.current!);
-          setWaiting(false);
-          router.push(`/video-call?meetingId=${meetingId}`);
-        } else if (status === "cancelled") {
-          toast.error("❌ Запрос отклонён.");
-          cancelConsultation();
-        }
-      } catch (err) {
-        console.error("Ошибка при проверке статуса:", err);
-      }
-    }, 3000);
   };
 
   return (

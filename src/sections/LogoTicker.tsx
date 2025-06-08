@@ -2,14 +2,14 @@
 
 import Image from "next/image";
 import { motion, useAnimation } from "framer-motion";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 
 import Logo3 from "@/assets/ahlogo.png";
 import Logo2 from "@/assets/aqniet.png";
-import Logo1 from "@/assets/kazakhemblem.png"; // Emblem
+import Logo1 from "@/assets/kazakhemblem.png";
 import Logo4 from "@/assets/astanamua.png";
-import Logo5 from "@/assets/kazakhemblem.png"; // Emblem again
-import Logo6 from "@/assets/enactus.png"; // Emblem again
+import Logo5 from "@/assets/kazakhemblem.png";
+import Logo6 from "@/assets/enactus.png";
 
 export const LogoTicker = () => {
   const [isPaused, setIsPaused] = useState(false);
@@ -36,7 +36,7 @@ export const LogoTicker = () => {
     },
   ], []);
 
-  const startAnimation = () => {
+  const startAnimation = useCallback(() => {
     controls.start({
       x: ["0%", "-100%"],
       transition: {
@@ -45,11 +45,11 @@ export const LogoTicker = () => {
         ease: "linear",
       },
     });
-  };
+  }, [controls]);
 
   useEffect(() => {
     startAnimation();
-  }, [controls]);
+  }, [startAnimation]);
 
   useEffect(() => {
     if (isPaused) {
@@ -57,7 +57,7 @@ export const LogoTicker = () => {
     } else {
       startAnimation();
     }
-  }, [isPaused, controls]);
+  }, [isPaused, controls, startAnimation]);
 
   return (
     <div className="py-16 bg-gradient-to-b from-[#1D1D2F] to-[#1D1D2F] relative overflow-hidden">
@@ -86,9 +86,9 @@ export const LogoTicker = () => {
                     aria-hidden="true"
                   />
                   <div className="flex flex-col text-xs md:text-sm leading-tight">
-                  {logo.text.map((line: string, idx: number) => (
+                    {logo.text.map((line: string, idx: number) => (
                       <span key={idx}>{line}</span>
-                  ))}
+                    ))}
                   </div>
                 </div>
               ) : (
