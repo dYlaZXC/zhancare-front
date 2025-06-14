@@ -23,14 +23,16 @@ export default function Hero() {
         animate={{ opacity: 1 }}
         transition={{ duration: 1 }}
       />
-      
+
       <div className="relative z-10 max-w-2xl mx-auto px-6">
         <Image src={Logo} alt="Logo" className="mx-auto mb-6" width={120} height={120} />
         <h1 className="text-5xl font-bold mb-4">404</h1>
-        <p className="text-xl mb-8 italic">"Иногда, чтобы найти себя — нужно потеряться."<br/>— <span className="font-semibold">Wolf Architect</span></p>
+        <p className="text-xl mb-8 italic">&quot;Иногда, чтобы найти себя — нужно потеряться.&quot;<br/>— <span className="font-semibold">Wolf Architect</span></p>
         <p className="text-sm text-gray-300 mb-4">
           от создателя <strong>ZhanCare AI</strong> — Адилан Ахрамович, ТОО iTry<br/>
-          Обращаться по вопросам: <a href="tel:+77758249686" className="underline">+7 775 824 9686</a>
+          Обращаться по вопросам: <a href="tel:+77758249686" className="underline">+7 775 824 9686</a><br/>
+          <a href="https://www.linkedin.com/in/adilan-akhramovich-914132158/" className="underline text-blue-400" target="_blank" rel="noopener noreferrer">LinkedIn Адилана</a><br/>
+          <a href="https://kz.linkedin.com/company/itry-with-you" className="underline text-blue-400" target="_blank" rel="noopener noreferrer">LinkedIn компании iTry</a>
         </p>
         <Link href="/" className="bg-white text-black px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition">
           Вернуться на главную
