@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { CallToAction } from "@/sections/CallToAction";
 import { Footer } from "@/sections/Footer";
-import Hero  from "@/sections/Hero";
+import { Hero }  from "@/sections/Hero";
 import Features from "@/sections/Features";
 import { Services } from "@/sections/Services";
 import { LogoTicker } from "@/sections/LogoTicker";
@@ -27,28 +27,28 @@ export default function Home() {
       {/* Hero Section */}
       <Hero />
       {/* Services Section */}
-      {/* <Services /> */}
+      <Services />
       
       {/* Features Section */}
-      {/* <Features /> */}
-      {/* <DoctorsCarousel /> */}
-      {/* <ImpactSection /> */}
+      <Features />
+      <DoctorsCarousel />
+      <ImpactSection />
       
       {/* Product Showcase Section */}
-      {/* <ProductShowcase /> */}
+      <ProductShowcase />
       {/* Call To Action Section */}
-      {/* <CallToAction /> */}
+      <CallToAction />
 
       
       {/* <Pricing /> */}
       {/* Logo Ticker Section */}
-      {/* <LogoTicker /> */}
+      <LogoTicker />
       {/* Chat Button */}
-      {/* <ChatButton onToggle={() => setIsChatOpen((prev) => !prev)} /> */}
-      {/* {isChatOpen && <ChatComponent onClose={() => setIsChatOpen(false)} />} */}
+      <ChatButton onToggle={() => setIsChatOpen((prev) => !prev)} />
+      {isChatOpen && <ChatComponent onClose={() => setIsChatOpen(false)} />}
       {/* Footer */}
       {/* <MobileApp /> */}
-      {/* <Footer /> */}
+      <Footer />
     </div>
   );
 }
