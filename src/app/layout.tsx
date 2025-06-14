@@ -28,6 +28,9 @@ export const metadata: Metadata = {
     "мониторинг пациентов",
     "медицинские технологии",
   ],
+  authors: [{ name: "Adilan Akhramovich", url: "https://www.linkedin.com/in/adilan-akhramovich-914132158/" }],
+  creator: "Adilan Akhramovich",
+  publisher: "ТОО iTry, Алматы",
   openGraph: {
     title: "ZhanCare.AI - Будущее телемедицины",
     description:
