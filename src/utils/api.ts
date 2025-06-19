@@ -4,8 +4,8 @@ import axios from "axios";
 import * as Sentry from "@sentry/nextjs";
 import { logoutUser } from "@/utils/auth";
 
-const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1";
-export const baseURLImg = process.env.NEXT_PUBLIC_API_IMG_URL || "http://127.0.0.1:8000/api/v1";
+const baseURL = process.env.NEXT_PUBLIC_API_URL || "https://exp-admin.smartalmaty.kz/api/v1";
+export const baseURLImg = process.env.NEXT_PUBLIC_API_IMG_URL || "https://exp-admin.smartalmaty.kz/api/v1";
 
 const axiosInstance = axios.create({
   baseURL,
