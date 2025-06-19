@@ -2,16 +2,21 @@
 
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import Logo from "@/assets/logoLogin.png";
 import { motion, AnimatePresence } from "framer-motion";
+import gsap from "gsap";
 import { toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import { api } from "@/utils/api";
-import { AlertTriangle } from "lucide-react";
+import Logo from "@/assets/logoLogin.png";
+
+import LoginForm from "@/components/auth/LoginForm";
+import RegisterForm from "@/components/auth/RegisterForm";
+import AuthTabs from "@/components/auth/AuthTabs";
+import ErrorAlert from "@/components/auth/ErrorAlert";
+import ForgotPasswordPopup from "@/components/auth/ForgotPasswordPopup";
 
 const AuthPopup = () => {
   const { isAuthOpen, setIsAuthOpen, loginUser } = useAuth();
@@ -19,6 +24,10 @@ const AuthPopup = () => {
   const translations = language === "ru" ? ru.auth : kz.auth;
 
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
+  const [isForgotOpen, setIsForgotOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
   const [formData, setFormData] = useState({
     email: "",
     phone: "",
@@ -28,8 +37,38 @@ const AuthPopup = () => {
     last_name: "",
   });
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLDivElement>(null);
+
+  // Set initial height
+  useEffect(() => {
+    if (formRef.current && wrapperRef.current) {
+      wrapperRef.current.style.height = `${formRef.current.offsetHeight}px`;
+    }
+  }, []);
+
+  // Animate on tab change
+  useEffect(() => {
+    if (formRef.current && wrapperRef.current) {
+      requestAnimationFrame(() => {
+        const formHeight = formRef.current!.offsetHeight;
+
+        gsap.to(wrapperRef.current, {
+          height: formHeight,
+          duration: 0.45,
+          ease: "power2.out",
+        });
+
+        gsap.fromTo(
+          formRef.current,
+          { opacity: 0, y: 30, autoAlpha: 0 },
+          { opacity: 1, y: 0, autoAlpha: 1, duration: 0.4, ease: "power3.out" }
+        );
+      });
+    }
+  }, [activeTab]);
+
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -41,9 +80,9 @@ const AuthPopup = () => {
     setError("");
 
     if (activeTab === "register" && formData.password !== formData.confirmPassword) {
-      const passwordError = "❌ Пароли не совпадают!";
-      setError(passwordError);
-      toast.error(passwordError);
+      const msg = "❌ Пароли не совпадают!";
+      toast.error(msg);
+      setError(msg);
       setLoading(false);
       return;
     }
@@ -67,10 +106,10 @@ const AuthPopup = () => {
       if (activeTab === "login") {
         loginUser(data.access_token, data.refresh_token, data.user);
         toast.success("✅ Вы успешно вошли!");
-        const redirectTo = data.user.role === "doctor" ? "/doctor-profile" : "/profile";
-        window.location.href = redirectTo;
+        window.location.href = data.user.role === "doctor" ? "/doctor-profile" : "/profile";
       } else {
         toast.success("✅ Регистрация прошла успешно!");
+        setActiveTab("login");
       }
 
       setFormData({
@@ -81,16 +120,14 @@ const AuthPopup = () => {
         first_name: "",
         last_name: "",
       });
+
       setIsAuthOpen(false);
     } catch (err: any) {
       const errorData = err?.response?.data;
-      console.log("🚨 errorData:", errorData);
-
       let errorMessage = "Произошла ошибка. Попробуйте снова.";
 
       if (activeTab === "login" && err?.response?.status === 401) {
-        // Show friendly login error for invalid credentials
-        errorMessage = "Неправильный E-mail или пароль. Пожалуйста, проверьте данные и попробуйте снова.";
+        errorMessage = "Неправильный E-mail или пароль.";
       } else {
         const fieldErrors: string[] = [];
         const details = errorData?.details ?? errorData;
@@ -100,17 +137,13 @@ const AuthPopup = () => {
             const messages = details[field];
             if (Array.isArray(messages)) {
               messages.forEach((msg: string) => {
-                if (msg.includes("with this") || msg.includes("уже существует")) {
-                  const friendlyMessage =
-                    field === "phone"
-                      ? "Пользователь с таким телефоном уже существует."
-                      : field === "email"
-                      ? "Пользователь с таким email уже существует."
-                      : msg;
-                  fieldErrors.push(friendlyMessage);
-                } else {
-                  fieldErrors.push(msg);
-                }
+                const friendlyMessage =
+                  field === "phone" && msg.includes("существует")
+                    ? "Пользователь с таким телефоном уже существует."
+                    : field === "email" && msg.includes("существует")
+                    ? "Пользователь с таким email уже существует."
+                    : msg;
+                fieldErrors.push(friendlyMessage);
               });
             }
           }
@@ -125,8 +158,8 @@ const AuthPopup = () => {
         }
       }
 
-      setError(errorMessage);
       toast.error(`❌ Ошибка: ${errorMessage}`);
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -135,19 +168,24 @@ const AuthPopup = () => {
   if (!isAuthOpen) return null;
 
   return (
-    <AnimatePresence>
-      {isAuthOpen && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 px-4">
+    <>
+      <AnimatePresence>
+        <motion.div
+          className="fixed inset-0 flex items-center justify-center bg-black/50 z-50 px-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ duration: 0.2 }}
             className="bg-white p-6 rounded-xl shadow-lg w-full max-w-[90%] sm:max-w-[450px] md:max-w-[750px] relative"
+            initial={{ scale: 0.9 }}
+            animate={{ scale: 1 }}
+            exit={{ scale: 0.9 }}
+            transition={{ duration: 0.2 }}
           >
             <button
-              className="absolute top-3 right-3 text-gray-600 hover:text-gray-800 text-3xl"
               onClick={() => setIsAuthOpen(false)}
+              className="absolute top-3 right-3 text-gray-600 hover:text-gray-800 text-3xl"
             >
               &times;
             </button>
@@ -162,155 +200,41 @@ const AuthPopup = () => {
               </div>
 
               <div className="w-full md:w-1/2">
-                <div className="flex border-b mb-4 w-full">
-                  <button
-                    className={`flex-1 text-center py-2 font-medium ${
-                      activeTab === "login"
-                        ? "border-b-2 border-black text-black"
-                        : "text-gray-500 hover:text-black"
-                    }`}
-                    onClick={() => setActiveTab("login")}
-                  >
-                    {translations.login}
-                  </button>
-                  <button
-                    className={`flex-1 text-center py-2 font-medium ${
-                      activeTab === "register"
-                        ? "border-b-2 text-black border-black"
-                        : "text-gray-500 hover:text-black"
-                    }`}
-                    onClick={() => setActiveTab("register")}
-                  >
-                    {translations.register}
-                  </button>
+                <AuthTabs activeTab={activeTab} onTabChange={setActiveTab} translations={translations} />
+
+                {/* 🌟 Smooth GSAP form transition and height animation */}
+                <div ref={wrapperRef} className="relative overflow-hidden transition-all duration-300">
+                  <div ref={formRef} className="pb-6 min-h-[260px]">
+                    {activeTab === "login" ? (
+                      <LoginForm
+                        formData={formData}
+                        onChange={handleChange}
+                        onSubmit={handleSubmit}
+                        loading={loading}
+                        translations={translations}
+                        onForgotPassword={() => setIsForgotOpen(true)}
+                      />
+                    ) : (
+                      <RegisterForm
+                        formData={formData}
+                        onChange={handleChange}
+                        onSubmit={handleSubmit}
+                        loading={loading}
+                        translations={translations}
+                      />
+                    )}
+                  </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="text-black mt-4 md:mt-6">
-                  {activeTab === "login" ? (
-                    <>
-                      <input
-                        name="email"
-                        type="email"
-                        placeholder={translations.email}
-                        value={formData.email}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 md:py-4 rounded-lg mb-3 bg-gray-100 border border-gray-300 focus:outline-none"
-                        required
-                        autoComplete="email"
-                      />
-                      <input
-                        name="password"
-                        type="password"
-                        placeholder={translations.password}
-                        value={formData.password}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 md:py-4 rounded-lg mb-3 bg-gray-100 border border-gray-300 focus:outline-none"
-                        required
-                        autoComplete="current-password"
-                      />
-                      <div className="text-right text-sm mb-4">
-                        <a href="#" className="text-gray-500 hover:underline">
-                          {translations.forgotPassword}
-                        </a>
-                      </div>
-                      <button
-                        type="submit"
-                        className="w-full bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white py-3 md:py-4 rounded-lg font-medium hover:opacity-85 transition flex justify-center items-center gap-2"
-                      >
-                        {loading ? (
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          translations.loginButton
-                        )}
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <input
-                        name="last_name"
-                        type="text"
-                        autoFocus
-                        placeholder={translations.lastName}
-                        value={formData.last_name}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 md:py-4 rounded-lg mb-3 bg-gray-100 border border-gray-300 focus:outline-none"
-                        required
-                      />
-                      <input
-                        name="first_name"
-                        type="text"
-                        placeholder={translations.firstName}
-                        value={formData.first_name}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 md:py-4 rounded-lg mb-3 bg-gray-100 border border-gray-300 focus:outline-none"
-                        required
-                      />
-                      <input
-                        name="email"
-                        type="email"
-                        placeholder={translations.email}
-                        value={formData.email}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 md:py-4 rounded-lg mb-3 bg-gray-100 border border-gray-300 focus:outline-none"
-                        required
-                      />
-                      <input
-                        name="phone"
-                        type="tel"
-                        placeholder={translations.phone}
-                        value={formData.phone}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 md:py-4 rounded-lg mb-3 bg-gray-100 border border-gray-300 focus:outline-none"
-                      />
-                      <input
-                        name="password"
-                        type="password"
-                        placeholder={translations.password}
-                        value={formData.password}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 md:py-4 rounded-lg mb-3 bg-gray-100 border border-gray-300 focus:outline-none"
-                        required
-                        autoComplete="new-password"
-                      />
-                      <input
-                        name="confirmPassword"
-                        type="password"
-                        placeholder={translations.confirmPassword}
-                        value={formData.confirmPassword}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 md:py-4 rounded-lg mb-3 bg-gray-100 border border-gray-300 focus:outline-none"
-                        required
-                      />
-                      <button
-                        type="submit"
-                        className="w-full bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white py-3 md:py-4 rounded-lg font-medium hover:opacity-85 transition flex justify-center items-center gap-2"
-                      >
-                        {loading ? (
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          translations.registerButton
-                        )}
-                      </button>
-                    </>
-                  )}
-                </form>
-
-                {error && (
-                  <div className="bg-red-100 text-red-700 rounded-lg p-3 mt-3 text-sm shadow-sm">
-                    {error.split(/[.]\s*/).filter(Boolean).map((line, index) => (
-                      <p key={index} className="flex items-start gap-2">
-                        <AlertTriangle size={16} className="text-red-500" />
-                        {line.trim()}
-                      </p>
-                    ))}
-                  </div>
-                )}
+                <ErrorAlert error={error} />
               </div>
             </div>
           </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
+        </motion.div>
+      </AnimatePresence>
+
+      {isForgotOpen && <ForgotPasswordPopup onClose={() => setIsForgotOpen(false)} />}
+    </>
   );
 };
 
