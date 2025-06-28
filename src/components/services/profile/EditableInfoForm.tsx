@@ -2,6 +2,7 @@
 
 import React from "react";
 import InfoBlock from "./InfoBLock";
+import { faUser } from "@fortawesome/free-solid-svg-icons";
 
 interface EditableInfoFormProps {
   first_name: string;
@@ -23,7 +24,7 @@ const EditableInfoForm: React.FC<EditableInfoFormProps> = ({
   return (
     <InfoBlock
       title="Основная информация"
-      icon="user"
+      icon={faUser}
       fields={[
         {
           label: "Имя",

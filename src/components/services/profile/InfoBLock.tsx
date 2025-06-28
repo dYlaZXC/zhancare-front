@@ -1,6 +1,8 @@
 "use client";
+
 import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import InfoField from "./InfoField";
 
 interface Field {
@@ -13,7 +15,7 @@ interface Field {
 
 interface Props {
   title: string;
-  icon: any;
+  icon: IconDefinition;
   fields: Field[];
 }
 
