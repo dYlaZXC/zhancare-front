@@ -10,6 +10,7 @@ import Logo1 from "@/assets/kazakhemblem.png";
 import Logo4 from "@/assets/astanamua.png";
 import Logo5 from "@/assets/kazakhemblem.png";
 import Logo6 from "@/assets/enactus.png";
+import Logo7 from "@/assets/omron.png";
 
 export const LogoTicker = () => {
   const [isPaused, setIsPaused] = useState(false);
@@ -17,11 +18,12 @@ export const LogoTicker = () => {
 
   const logos = useMemo(() => [
     { src: Logo3, alt: "Logo3" },
-    {
-      src: Logo2,
-      alt: "Aqniet Käsipodağy",
-      text: ["AQNIET", "KÄSIPODAĞY"],
-    },
+    // {
+    //   src: Logo2,
+    //   alt: "Aqniet Käsipodağy",
+    //   text: ["AQNIET", "KÄSIPODAĞY"],
+    // },
+    { src: Logo7, alt: "Logo7" },
     {
       src: Logo1,
       alt: "Ministry of Digital Kazakhstan",
