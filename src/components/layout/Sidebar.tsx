@@ -81,10 +81,9 @@ export const Sidebar = ({
       )}
 
       <aside
-        className={`fixed z-50 sm:relative top-0 left-0 h-screen w-64 bg-gradient-to-b from-[#001E80] to-[#3A50FF] text-white transform transition-transform duration-300 flex flex-col ${
-          isOpen || sidebarOpen ? "translate-x-0" : "-translate-x-full sm:translate-x-0"
-        }`}
-      >
+  className="sticky top-0 h-screen w-64 bg-gradient-to-b from-[#001E80] to-[#3A50FF] text-white flex flex-col"
+>
+
         {/* Mobile Close Button */}
         <div className="flex justify-between items-center px-4 py-3 sm:hidden">
           <Link href="/" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2">
