@@ -9,7 +9,7 @@ import gsap from "gsap";
 import { toast } from "react-toastify";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
-import { api } from "@/utils/api";
+import { api, initCsrf } from "@/utils/api";
 import Logo from "@/assets/logoLogin.png";
 
 import LoginForm from "@/components/auth/LoginForm";
@@ -40,6 +40,13 @@ const AuthPopup = () => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
 
+  // ✅ Trigger CSRF cookie set when popup opens
+  useEffect(() => {
+    if (isAuthOpen) {
+      initCsrf();
+    }
+  }, [isAuthOpen]);
+
   // Set initial height
   useEffect(() => {
     if (formRef.current && wrapperRef.current) {
@@ -67,8 +74,6 @@ const AuthPopup = () => {
       });
     }
   }, [activeTab]);
-
-
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -202,7 +207,6 @@ const AuthPopup = () => {
               <div className="w-full md:w-1/2">
                 <AuthTabs activeTab={activeTab} onTabChange={setActiveTab} translations={translations} />
 
-                {/* 🌟 Smooth GSAP form transition and height animation */}
                 <div ref={wrapperRef} className="relative overflow-hidden transition-all duration-300">
                   <div ref={formRef} className="pb-6 min-h-[260px]">
                     {activeTab === "login" ? (
