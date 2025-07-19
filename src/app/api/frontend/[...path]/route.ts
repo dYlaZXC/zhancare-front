@@ -1,12 +1,13 @@
 import { NextRequest } from "next/server";
 import axios from "axios";
 
-// Fallback to localhost backend
+// Fallback to prod backend
 const BACKEND_URL = process.env.BACKEND_API_URL || "https://exp-admin.smartalmaty.kz/api/v1"; // prod
+
+// Fallback to localhost backend
 // const BACKEND_URL = process.env.BACKEND_API_URL || "http://127.0.0.1:8000/api/v1"; // Local
 
 // 🛡️ Proxy all frontend requests through Next.js API route
-// ✅ Build full backend URL from actual request path
 function buildBackendUrl(path: string[], req: NextRequest): string {
   const frontendPrefix = "/api/frontend";
   const backendPrefix = BACKEND_URL.replace(/\/$/, "");
@@ -23,16 +24,15 @@ function buildBackendUrl(path: string[], req: NextRequest): string {
   return query ? `${endpoint}?${query}` : endpoint;
 }
 
-
+// Forward request to the backend
 async function forwardRequest(
   method: "GET" | "POST" | "PUT" | "DELETE",
   req: NextRequest,
-  context: { params: { path: string[] } }
+  context: { params?: { path?: string[] } } // ✅ Loosened typing
 ): Promise<Response> {
-  const { path } = context.params;
+  const path = context.params?.path || [];
   const url = buildBackendUrl(path, req);
 
-  // Prepare headers to forward
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -46,7 +46,6 @@ async function forwardRequest(
   const csrf = req.headers.get("x-csrftoken");
   if (csrf) headers["X-CSRFToken"] = csrf;
 
-  // Forward body only if needed
   const body = ["POST", "PUT"].includes(method) ? await req.json() : undefined;
 
   try {
@@ -55,10 +54,9 @@ async function forwardRequest(
       url,
       headers,
       data: body,
-      withCredentials: true, // 🔐 Required for CSRF + session cookies
+      withCredentials: true,
     });
 
-    // Handle backend response cookies
     const resHeaders = new Headers({
       "Content-Type": "application/json",
     });
@@ -92,19 +90,19 @@ async function forwardRequest(
   }
 }
 
-// Dynamic route handlers for all methods
-export async function GET(req: NextRequest, context: { params: { path: string[] } }) {
+// ✅ Route handlers with relaxed typing to avoid Next.js error
+export async function GET(req: NextRequest, context: any) {
   return forwardRequest("GET", req, context);
 }
 
-export async function POST(req: NextRequest, context: { params: { path: string[] } }) {
+export async function POST(req: NextRequest, context: any) {
   return forwardRequest("POST", req, context);
 }
 
-export async function PUT(req: NextRequest, context: { params: { path: string[] } }) {
+export async function PUT(req: NextRequest, context: any) {
   return forwardRequest("PUT", req, context);
 }
 
-export async function DELETE(req: NextRequest, context: { params: { path: string[] } }) {
+export async function DELETE(req: NextRequest, context: any) {
   return forwardRequest("DELETE", req, context);
 }
