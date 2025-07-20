@@ -50,6 +50,7 @@ async function forwardRequest(
   const csrf = req.headers.get("x-csrftoken");
   if (csrf) headers["X-CSRFToken"] = csrf;
 
+  // Body for POST/PUT requests
   const body = ["POST", "PUT"].includes(method) ? await req.json() : undefined;
 
   try {
@@ -58,13 +59,14 @@ async function forwardRequest(
       url,
       headers,
       data: body,
-      withCredentials: true,
+      withCredentials: true, // Ensure cookies are sent
     });
 
     const resHeaders = new Headers({
       "Content-Type": "application/json",
     });
 
+    // Handle Set-Cookie response header from the backend
     const setCookie = response.headers["set-cookie"];
     if (setCookie) {
       if (Array.isArray(setCookie)) {
@@ -76,11 +78,13 @@ async function forwardRequest(
       }
     }
 
+    // Return the response data with the appropriate headers
     return new Response(JSON.stringify(response.data), {
       status: response.status,
       headers: resHeaders,
     });
   } catch (error: any) {
+    // Handle errors and respond with the error message
     return new Response(
       JSON.stringify({
         error: error.message,
@@ -96,7 +100,7 @@ async function forwardRequest(
 
 // ✅ Route handlers with proper async-safe access
 export async function GET(req: NextRequest, context: { params: any }) {
-  const path = await context.params?.path ?? [];  // Await the `params` access here
+  const path = await context.params?.path ?? [];  // Await params to ensure it's properly resolved
   return forwardRequest("GET", req, path);
 }
 
