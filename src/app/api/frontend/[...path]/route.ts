@@ -13,22 +13,24 @@ const BACKEND_URL =
 // 🛡️ Construct backend URL from request
 function buildBackendUrl(path: string[], req: NextRequest): string {
   const frontendPrefix = "/api/frontend";
-  const backendPrefix = "https://exp-admin.smartalmaty.kz/api/v1";  // Use the production backend URL
+  const backendPrefix = BACKEND_URL.replace(/\/$/, "");
 
+  // Extract path suffix by removing frontendPrefix from the request path
   let pathSuffix = req.nextUrl.pathname.replace(frontendPrefix, "");
 
+  // Ensure the backend URL ends with a slash to avoid misrouting
   if (!pathSuffix.endsWith("/")) {
     pathSuffix += "/";
   }
 
+  // Construct the final backend URL
   const endpoint = `${backendPrefix}${pathSuffix}`;
-  const query = req.nextUrl.searchParams.toString();
 
-  console.log("🔁 Final backend URL:", endpoint);  // Log the final URL
+  // Add query parameters if any exist in the request
+  const query = req.nextUrl.searchParams.toString();
 
   return query ? `${endpoint}?${query}` : endpoint;
 }
-
 
 // 🔁 Forward the request
 async function forwardRequest(

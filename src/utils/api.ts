@@ -1,16 +1,14 @@
+// utils/axiosInstance.ts
+
 import axios from "axios";
 import * as Sentry from "@sentry/nextjs";
 import { logoutUser } from "@/utils/auth";
-import Cookies from "js-cookie"; // ✅ Optional if you need to handle CSRF tokens
 
-// 🛡️ Proxy all frontend requests through Next.js API route
-const baseURL = "/api/frontend";  // This will point to the Next.js API route that proxies to your backend
-export const baseURLImg = "/api/frontend"; // Same for image requests if needed
+const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1";
+export const baseURLImg = process.env.NEXT_PUBLIC_API_IMG_URL || "http://127.0.0.1:8000/api/v1";
 
-// ✅ Axios instance for proxied backend requests
 const axiosInstance = axios.create({
-  baseURL, // Proxying requests through the Next.js API
-  withCredentials: true, // 🔐 Required for cookies
+  baseURL,
   paramsSerializer: (params: any) => new URLSearchParams(params).toString(),
 });
 
@@ -28,7 +26,7 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ✅ Response Interceptor — Handle 401 token refresh logic
+// ✅ Response Interceptor — Handle 401 refresh (excluding login/register)
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -46,11 +44,9 @@ axiosInstance.interceptors.response.use(
         const refresh_token = localStorage.getItem("refresh_token");
         if (!refresh_token) throw new Error("No refresh token found.");
 
-        const { data } = await axios.post(
-          `${baseURL}/auth/refresh/`, // Same proxy endpoint
-          { refresh_token },
-          { withCredentials: true } // CSRF-safe if needed
-        );
+        const { data } = await axios.post(`${baseURL}/auth/refresh/`, {
+          refresh_token,
+        });
 
         const newAccessToken = data.access_token;
         localStorage.setItem("access_token", newAccessToken);
@@ -66,14 +62,20 @@ axiosInstance.interceptors.response.use(
     }
 
     // 🔎 Report to Sentry
-    Sentry.captureException(error, {
-      extra: {
-        status: error.response?.status,
-        url: originalRequest?.url,
-        method: originalRequest?.method,
-        data: error.response?.data,
-      },
-    });
+    if (error.response) {
+      Sentry.captureException(error, {
+        extra: {
+          status: error.response.status,
+          url: error.config?.url,
+          method: error.config?.method,
+          data: error.response.data,
+        },
+      });
+    } else {
+      Sentry.captureException(error, {
+        extra: { message: "No server response", originalError: error.message },
+      });
+    }
 
     return Promise.reject(error);
   }
@@ -82,7 +84,7 @@ axiosInstance.interceptors.response.use(
 // ✅ Manual logout handler
 export const logout = async () => {
   try {
-    await axiosInstance.post("/auth/logout/"); // Proxy logout request as well
+    await axiosInstance.post("/auth/logout/");
   } catch (err) {
     console.warn("🔐 Manual logout error or already logged out");
   } finally {

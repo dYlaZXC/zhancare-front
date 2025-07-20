@@ -1,0 +1,93 @@
+import axios from "axios";
+import * as Sentry from "@sentry/nextjs";
+import { logoutUser } from "@/utils/auth";
+import Cookies from "js-cookie"; // ✅ Optional if you need to handle CSRF tokens
+
+// 🛡️ Proxy all frontend requests through Next.js API route
+const baseURL = "/api/frontend";  // This will point to the Next.js API route that proxies to your backend
+export const baseURLImg = "/api/frontend"; // Same for image requests if needed
+
+// ✅ Axios instance for proxied backend requests
+const axiosInstance = axios.create({
+  baseURL, // Proxying requests through the Next.js API
+  withCredentials: true, // 🔐 Required for cookies
+  paramsSerializer: (params: any) => new URLSearchParams(params).toString(),
+});
+
+// ✅ Request Interceptor — Attach access token
+axiosInstance.interceptors.request.use(
+  (config) => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("access_token");
+      if (token) {
+        config.headers.Authorization = `Token ${token}`;
+      }
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// ✅ Response Interceptor — Handle 401 token refresh logic
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    // ⛔ Skip refresh logic for login and register requests
+    const isAuthRequest =
+      originalRequest.url?.includes("/auth/login/") ||
+      originalRequest.url?.includes("/auth/register/");
+
+    if (error.response?.status === 401 && !isAuthRequest && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const refresh_token = localStorage.getItem("refresh_token");
+        if (!refresh_token) throw new Error("No refresh token found.");
+
+        const { data } = await axios.post(
+          `${baseURL}/auth/refresh/`, // Same proxy endpoint
+          { refresh_token },
+          { withCredentials: true } // CSRF-safe if needed
+        );
+
+        const newAccessToken = data.access_token;
+        localStorage.setItem("access_token", newAccessToken);
+
+        // Set new token on original request and retry it
+        originalRequest.headers.Authorization = `Token ${newAccessToken}`;
+        return axiosInstance(originalRequest);
+      } catch (refreshError) {
+        console.warn("🔐 Refresh token failed. Logging out...");
+        logoutUser("⏳ Ваша сессия истекла. Пожалуйста, войдите снова.");
+        return Promise.reject(refreshError);
+      }
+    }
+
+    // 🔎 Report to Sentry
+    Sentry.captureException(error, {
+      extra: {
+        status: error.response?.status,
+        url: originalRequest?.url,
+        method: originalRequest?.method,
+        data: error.response?.data,
+      },
+    });
+
+    return Promise.reject(error);
+  }
+);
+
+// ✅ Manual logout handler
+export const logout = async () => {
+  try {
+    await axiosInstance.post("/auth/logout/"); // Proxy logout request as well
+  } catch (err) {
+    console.warn("🔐 Manual logout error or already logged out");
+  } finally {
+    logoutUser("🚪 Вы вышли из системы.");
+  }
+};
+
+export const api = axiosInstance;
