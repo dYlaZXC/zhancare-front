@@ -1,15 +1,15 @@
 import axios from "axios";
 import * as Sentry from "@sentry/nextjs";
 import { logoutUser } from "@/utils/auth";
-import Cookies from "js-cookie"; // ✅ Required to read CSRF cookie
+import Cookies from "js-cookie"; // ✅ Optional if you need to handle CSRF tokens
 
 // 🛡️ Proxy all frontend requests through Next.js API route
-const baseURL = "/api/frontend";
-export const baseURLImg = "/api/frontend";
+const baseURL = "/api/frontend";  // This will point to the Next.js API route that proxies to your backend
+export const baseURLImg = "/api/frontend"; // Same for image requests if needed
 
 // ✅ Axios instance for proxied backend requests
 const axiosInstance = axios.create({
-  baseURL,
+  baseURL, // Proxying requests through the Next.js API
   withCredentials: true, // 🔐 Required for cookies
   paramsSerializer: (params: any) => new URLSearchParams(params).toString(),
 });
@@ -34,6 +34,7 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // ⛔ Skip refresh logic for login and register requests
     const isAuthRequest =
       originalRequest.url?.includes("/auth/login/") ||
       originalRequest.url?.includes("/auth/register/");
@@ -46,14 +47,15 @@ axiosInstance.interceptors.response.use(
         if (!refresh_token) throw new Error("No refresh token found.");
 
         const { data } = await axios.post(
-          `${baseURL}/auth/refresh/`,
+          `${baseURL}/auth/refresh/`, // Same proxy endpoint
           { refresh_token },
-          { withCredentials: true } // 🚨 CSRF-safe
+          { withCredentials: true } // CSRF-safe if needed
         );
 
         const newAccessToken = data.access_token;
         localStorage.setItem("access_token", newAccessToken);
 
+        // Set new token on original request and retry it
         originalRequest.headers.Authorization = `Token ${newAccessToken}`;
         return axiosInstance(originalRequest);
       } catch (refreshError) {
@@ -80,7 +82,7 @@ axiosInstance.interceptors.response.use(
 // ✅ Manual logout handler
 export const logout = async () => {
   try {
-    await axiosInstance.post("/auth/logout/");
+    await axiosInstance.post("/auth/logout/"); // Proxy logout request as well
   } catch (err) {
     console.warn("🔐 Manual logout error or already logged out");
   } finally {

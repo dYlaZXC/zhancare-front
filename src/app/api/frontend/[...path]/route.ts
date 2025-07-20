@@ -97,21 +97,21 @@ async function forwardRequest(
 
 // ✅ Route handlers with proper async-safe access
 export async function GET(req: NextRequest, context: { params: any }) {
-  const path = await context.params?.path || []; // Await params to ensure it's properly resolved
+  const path = await context.params?.path ?? [];  // Ensure params are awaited here
   return forwardRequest("GET", req, path);
 }
 
 export async function POST(req: NextRequest, context: { params: any }) {
-  const path = await context.params?.path || [];
+  const path = await context.params?.path ?? [];
   return forwardRequest("POST", req, path);
 }
 
 export async function PUT(req: NextRequest, context: { params: any }) {
-  const path = await context.params?.path || [];
+  const path = await context.params?.path ?? [];
   return forwardRequest("PUT", req, path);
 }
 
 export async function DELETE(req: NextRequest, context: { params: any }) {
-  const path = await context.params?.path || [];
+  const path = await context.params?.path ?? [];
   return forwardRequest("DELETE", req, path);
 }
