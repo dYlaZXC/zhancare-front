@@ -47,9 +47,6 @@ async function forwardRequest(
   const cookie = req.headers.get("cookie");
   if (cookie) headers["Cookie"] = cookie;
 
-  const csrf = req.headers.get("x-csrftoken");
-  if (csrf) headers["X-CSRFToken"] = csrf;
-
   // Body for POST/PUT requests
   const body = ["POST", "PUT"].includes(method) ? await req.json() : undefined;
 
@@ -100,21 +97,21 @@ async function forwardRequest(
 
 // ✅ Route handlers with proper async-safe access
 export async function GET(req: NextRequest, context: { params: any }) {
-  const path = await context.params?.path ?? [];  // Await params to ensure it's properly resolved
+  const path = await context.params?.path || []; // Await params to ensure it's properly resolved
   return forwardRequest("GET", req, path);
 }
 
 export async function POST(req: NextRequest, context: { params: any }) {
-  const path = await context.params?.path ?? [];
+  const path = await context.params?.path || [];
   return forwardRequest("POST", req, path);
 }
 
 export async function PUT(req: NextRequest, context: { params: any }) {
-  const path = await context.params?.path ?? [];
+  const path = await context.params?.path || [];
   return forwardRequest("PUT", req, path);
 }
 
 export async function DELETE(req: NextRequest, context: { params: any }) {
-  const path = await context.params?.path ?? [];
+  const path = await context.params?.path || [];
   return forwardRequest("DELETE", req, path);
 }

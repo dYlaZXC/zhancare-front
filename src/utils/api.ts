@@ -10,26 +10,17 @@ export const baseURLImg = "/api/frontend";
 // ✅ Axios instance for proxied backend requests
 const axiosInstance = axios.create({
   baseURL,
-  withCredentials: true, // 🔐 Required for CSRF + cookies
+  withCredentials: true, // 🔐 Required for cookies
   paramsSerializer: (params: any) => new URLSearchParams(params).toString(),
 });
 
-// ✅ Request Interceptor — Attach access token and CSRF token
+// ✅ Request Interceptor — Attach access token
 axiosInstance.interceptors.request.use(
   (config) => {
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("access_token");
       if (token) {
         config.headers.Authorization = `Token ${token}`;
-      }
-
-      // 🔐 Attach CSRF token from cookie for non-GET requests
-      const csrfToken = Cookies.get("csrftoken");
-      if (csrfToken && config.method && config.method.toLowerCase() !== "get") {
-        config.headers["X-CSRFToken"] = csrfToken;
-      } else {
-        // Log or handle missing CSRF token for non-GET requests
-        console.warn("⚠️ CSRF token is missing for non-GET request");
       }
     }
     return config;
@@ -94,16 +85,6 @@ export const logout = async () => {
     console.warn("🔐 Manual logout error or already logged out");
   } finally {
     logoutUser("🚪 Вы вышли из системы.");
-  }
-};
-
-// ✅ CSRF initializer to call once before POST/PUT/DELETE
-export const initCsrf = async () => {
-  try {
-    await axios.get("/api/frontend/auth/csrf/", { withCredentials: true });
-    console.log("✅ CSRF cookie set");
-  } catch (err) {
-    console.warn("⚠️ Failed to initialize CSRF cookie", err);
   }
 };
 

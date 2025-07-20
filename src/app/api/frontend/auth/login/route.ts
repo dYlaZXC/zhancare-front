@@ -20,12 +20,14 @@ async function forwardLoginRequest(
     "Content-Type": "application/json",
   };
 
+  // Get authorization and cookies from the request
   const auth = req.headers.get("authorization");
   if (auth) headers["Authorization"] = auth;
 
   const cookie = req.headers.get("cookie");
   if (cookie) headers["Cookie"] = cookie;
 
+  // Get CSRF token from the request header
   const csrf = req.headers.get("x-csrftoken");
   if (csrf) headers["X-CSRFToken"] = csrf;
 
@@ -33,6 +35,7 @@ async function forwardLoginRequest(
   const body = await req.json();
 
   try {
+    // Make the request to the backend
     const response = await axios({
       method,
       url,
@@ -41,11 +44,12 @@ async function forwardLoginRequest(
       withCredentials: true, // Ensure cookies are sent
     });
 
+    // Set the response headers
     const resHeaders = new Headers({
       "Content-Type": "application/json",
     });
 
-    // Handle Set-Cookie response header from backend (e.g., setting the authentication cookie)
+    // Handle Set-Cookie response header from backend (authentication cookie)
     const setCookie = response.headers["set-cookie"];
     if (setCookie) {
       if (Array.isArray(setCookie)) {
@@ -63,7 +67,7 @@ async function forwardLoginRequest(
       headers: resHeaders,
     });
   } catch (error: any) {
-    // Handle any errors and return a response
+    // Handle errors and return a response
     return new Response(
       JSON.stringify({
         error: error.message,

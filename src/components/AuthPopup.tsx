@@ -1,6 +1,5 @@
 "use client";
 
-import Cookies from 'js-cookie';
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { useEffect, useRef, useState } from "react";
@@ -10,7 +9,7 @@ import gsap from "gsap";
 import { toast } from "react-toastify";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
-import { api, initCsrf } from "@/utils/api";  // Make sure initCsrf is being imported here
+import { api } from "@/utils/api";
 import Logo from "@/assets/logoLogin.png";
 
 import LoginForm from "@/components/auth/LoginForm";
@@ -41,14 +40,7 @@ const AuthPopup = () => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
 
-  // ✅ Trigger CSRF cookie set when popup opens
-  useEffect(() => {
-    if (isAuthOpen) {
-      initCsrf();  // Ensure CSRF cookie is set on component mount
-    }
-  }, [isAuthOpen]);
-
-  // Set initial height of form
+  // Set initial height
   useEffect(() => {
     if (formRef.current && wrapperRef.current) {
       wrapperRef.current.style.height = `${formRef.current.offsetHeight}px`;
@@ -76,12 +68,10 @@ const AuthPopup = () => {
     }
   }, [activeTab]);
 
-  // Handle input changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Handle form submission (login/register)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -108,13 +98,7 @@ const AuthPopup = () => {
           };
 
     try {
-      const csrfToken = Cookies.get("csrftoken");  // Fetch CSRF token from cookies
-      const headers = {
-        "Content-Type": "application/json",
-        "X-CSRFToken": csrfToken,  // Attach CSRF token to headers
-      };
-
-      const response = await api.post(apiUrl, payload, { headers });  // Add headers here
+      const response = await api.post(apiUrl, payload);
       const data = response.data;
 
       if (activeTab === "login") {
@@ -182,70 +166,72 @@ const AuthPopup = () => {
   if (!isAuthOpen) return null;
 
   return (
-    <AnimatePresence>
-      <motion.div
-        className="fixed inset-0 flex items-center justify-center bg-black/50 z-50 px-4"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-      >
+    <>
+      <AnimatePresence>
         <motion.div
-          className="bg-white p-6 rounded-xl shadow-lg w-full max-w-[90%] sm:max-w-[450px] md:max-w-[750px] relative"
-          initial={{ scale: 0.9 }}
-          animate={{ scale: 1 }}
-          exit={{ scale: 0.9 }}
-          transition={{ duration: 0.2 }}
+          className="fixed inset-0 flex items-center justify-center bg-black/50 z-50 px-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
         >
-          <button
-            onClick={() => setIsAuthOpen(false)}
-            className="absolute top-3 right-3 text-gray-600 hover:text-gray-800 text-3xl"
+          <motion.div
+            className="bg-white p-6 rounded-xl shadow-lg w-full max-w-[90%] sm:max-w-[450px] md:max-w-[750px] relative"
+            initial={{ scale: 0.9 }}
+            animate={{ scale: 1 }}
+            exit={{ scale: 0.9 }}
+            transition={{ duration: 0.2 }}
           >
-            &times;
-          </button>
+            <button
+              onClick={() => setIsAuthOpen(false)}
+              className="absolute top-3 right-3 text-gray-600 hover:text-gray-800 text-3xl"
+            >
+              &times;
+            </button>
 
-          <div className="flex flex-col md:flex-row p-4 md:p-8 gap-6 md:gap-8 items-center">
-            <div className="text-center md:text-left w-full md:w-1/2">
-              <div className="flex justify-center md:justify-start mb-4">
-                <Image src={Logo} alt="Logo" width={100} height={100} />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">{translations.welcome}</h2>
-              <p className="text-gray-600 mt-2 md:mt-6 text-sm">{translations.description}</p>
-            </div>
-
-            <div className="w-full md:w-1/2">
-              <AuthTabs activeTab={activeTab} onTabChange={setActiveTab} translations={translations} />
-
-              <div ref={wrapperRef} className="relative overflow-hidden transition-all duration-300">
-                <div ref={formRef} className="pb-6 min-h-[260px]">
-                  {activeTab === "login" ? (
-                    <LoginForm
-                      formData={formData}
-                      onChange={handleChange}
-                      onSubmit={handleSubmit}
-                      loading={loading}
-                      translations={translations}
-                      onForgotPassword={() => setIsForgotOpen(true)}
-                    />
-                  ) : (
-                    <RegisterForm
-                      formData={formData}
-                      onChange={handleChange}
-                      onSubmit={handleSubmit}
-                      loading={loading}
-                      translations={translations}
-                    />
-                  )}
+            <div className="flex flex-col md:flex-row p-4 md:p-8 gap-6 md:gap-8 items-center">
+              <div className="text-center md:text-left w-full md:w-1/2">
+                <div className="flex justify-center md:justify-start mb-4">
+                  <Image src={Logo} alt="Logo" width={100} height={100} />
                 </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">{translations.welcome}</h2>
+                <p className="text-gray-600 mt-2 md:mt-6 text-sm">{translations.description}</p>
               </div>
 
-              <ErrorAlert error={error} />
+              <div className="w-full md:w-1/2">
+                <AuthTabs activeTab={activeTab} onTabChange={setActiveTab} translations={translations} />
+
+                <div ref={wrapperRef} className="relative overflow-hidden transition-all duration-300">
+                  <div ref={formRef} className="pb-6 min-h-[260px]">
+                    {activeTab === "login" ? (
+                      <LoginForm
+                        formData={formData}
+                        onChange={handleChange}
+                        onSubmit={handleSubmit}
+                        loading={loading}
+                        translations={translations}
+                        onForgotPassword={() => setIsForgotOpen(true)}
+                      />
+                    ) : (
+                      <RegisterForm
+                        formData={formData}
+                        onChange={handleChange}
+                        onSubmit={handleSubmit}
+                        loading={loading}
+                        translations={translations}
+                      />
+                    )}
+                  </div>
+                </div>
+
+                <ErrorAlert error={error} />
+              </div>
             </div>
-          </div>
+          </motion.div>
         </motion.div>
-      </motion.div>
+      </AnimatePresence>
 
       {isForgotOpen && <ForgotPasswordPopup onClose={() => setIsForgotOpen(false)} />}
-    </AnimatePresence>
+    </>
   );
 };
 
