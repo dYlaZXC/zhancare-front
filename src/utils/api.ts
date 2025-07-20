@@ -4,8 +4,8 @@ import { logoutUser } from "@/utils/auth";
 import Cookies from "js-cookie"; // ✅ Required to read CSRF cookie
 
 // 🛡️ Proxy all frontend requests through Next.js API route
-const baseURL = "/api/frontend";
-export const baseURLImg = "/api/frontend";
+const baseURL = "/api";
+export const baseURLImg = "/api";
 
 // ✅ Axios instance for proxied backend requests
 const axiosInstance = axios.create({
@@ -97,7 +97,7 @@ export const logout = async () => {
 // ✅ CSRF initializer to call once before POST/PUT/DELETE
 export const initCsrf = async () => {
   try {
-    await axios.get("/api/frontend/auth/csrf/", { withCredentials: true });
+    await axios.get("/api/auth/csrf/", { withCredentials: true });
     console.log("✅ CSRF cookie set");
   } catch (err) {
     console.warn("⚠️ Failed to initialize CSRF cookie", err);

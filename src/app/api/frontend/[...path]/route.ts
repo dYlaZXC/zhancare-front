@@ -2,10 +2,11 @@ import { NextRequest } from "next/server";
 import axios from "axios";
 
 // Fallback to prod backend
-const BACKEND_URL = process.env.BACKEND_API_URL || "https://exp-admin.smartalmaty.kz/api/v1"; // prod
+const BACKEND_URL = "https://exp-admin.smartalmaty.kz/api/v1"; // production backend
+
 
 // Fallback to localhost backend
-// const BACKEND_URL = process.env.BACKEND_API_URL || "http://127.0.0.1:8000/api/v1"; // Local
+// const BACKEND_URL = "http://127.0.0.1:8000/api/v1"; // development backend
 
 // 🛡️ Proxy all frontend requests through Next.js API route
 function buildBackendUrl(path: string[], req: NextRequest): string {
