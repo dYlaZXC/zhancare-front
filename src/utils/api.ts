@@ -27,6 +27,9 @@ axiosInstance.interceptors.request.use(
       const csrfToken = Cookies.get("csrftoken");
       if (csrfToken && config.method && config.method.toLowerCase() !== "get") {
         config.headers["X-CSRFToken"] = csrfToken;
+      } else {
+        // Log or handle missing CSRF token for non-GET requests
+        console.warn("⚠️ CSRF token is missing for non-GET request");
       }
     }
     return config;

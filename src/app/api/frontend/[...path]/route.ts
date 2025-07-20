@@ -1,11 +1,7 @@
 import { NextRequest } from "next/server";
 import axios from "axios";
 
-// Fallback to prod backend
-// const BACKEND_URL = "https://exp-admin.smartalmaty.kz/api/v1"; // production backend
-
-
-// Fallback to localhost backend
+// 🟢 Backend URL resolution
 const BACKEND_URL =
   process.env.BACKEND_API_URL ||
   (process.env.NODE_ENV === "production"
@@ -14,32 +10,33 @@ const BACKEND_URL =
       })()
     : "http://127.0.0.1:8000/api/v1");
 
-// 🛡️ Proxy all frontend requests through Next.js API route
+// 🛡️ Construct backend URL from request
 function buildBackendUrl(path: string[], req: NextRequest): string {
   const frontendPrefix = "/api/frontend";
   const backendPrefix = BACKEND_URL.replace(/\/$/, "");
 
   let pathSuffix = req.nextUrl.pathname.replace(frontendPrefix, "");
 
-  // ✅ ensure trailing slash ONLY on backend target
+  // Ensure backend URL ends with a slash
   if (!pathSuffix.endsWith("/")) {
     pathSuffix += "/";
   }
 
   const endpoint = `${backendPrefix}${pathSuffix}`;
   const query = req.nextUrl.searchParams.toString();
+
   return query ? `${endpoint}?${query}` : endpoint;
 }
 
-// Forward request to the backend
+// 🔁 Forward the request
 async function forwardRequest(
   method: "GET" | "POST" | "PUT" | "DELETE",
   req: NextRequest,
-  context: { params?: { path?: string[] } } // ✅ Loosened typing
+  path: string[]
 ): Promise<Response> {
-  const path = context.params?.path || [];
   const url = buildBackendUrl(path, req);
   console.log("🔁 Proxying to:", url);
+
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -97,19 +94,23 @@ async function forwardRequest(
   }
 }
 
-// ✅ Route handlers with relaxed typing to avoid Next.js error
-export async function GET(req: NextRequest, context: any) {
-  return forwardRequest("GET", req, context);
+// ✅ Route handlers with proper async-safe access
+export async function GET(req: NextRequest, context: { params: any }) {
+  const path = await context.params?.path ?? [];  // Await the `params` access here
+  return forwardRequest("GET", req, path);
 }
 
-export async function POST(req: NextRequest, context: any) {
-  return forwardRequest("POST", req, context);
+export async function POST(req: NextRequest, context: { params: any }) {
+  const path = await context.params?.path ?? [];
+  return forwardRequest("POST", req, path);
 }
 
-export async function PUT(req: NextRequest, context: any) {
-  return forwardRequest("PUT", req, context);
+export async function PUT(req: NextRequest, context: { params: any }) {
+  const path = await context.params?.path ?? [];
+  return forwardRequest("PUT", req, path);
 }
 
-export async function DELETE(req: NextRequest, context: any) {
-  return forwardRequest("DELETE", req, context);
+export async function DELETE(req: NextRequest, context: { params: any }) {
+  const path = await context.params?.path ?? [];
+  return forwardRequest("DELETE", req, path);
 }
