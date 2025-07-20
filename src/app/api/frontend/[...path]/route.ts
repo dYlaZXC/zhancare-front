@@ -8,7 +8,7 @@ const BACKEND_URL =
     ? (() => {
         throw new Error("❌ BACKEND_API_URL is not set in production");
       })()
-    : "http://127.0.0.1:8000/api/v1");
+    : "https://exp-admin.smartalmaty.kz/api/v1");
 
 // 🛡️ Construct backend URL from request
 function buildBackendUrl(path: string[], req: NextRequest): string {
