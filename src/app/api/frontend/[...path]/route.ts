@@ -8,21 +8,25 @@ const BACKEND_URL =
     ? (() => {
         throw new Error("❌ BACKEND_API_URL is not set in production");
       })()
-    : "https://exp-admin.smartalmaty.kz/api/v1");
+    : "http://127.0.0.1:8000/api/v1");
 
 // 🛡️ Construct backend URL from request
 function buildBackendUrl(path: string[], req: NextRequest): string {
   const frontendPrefix = "/api/frontend";
   const backendPrefix = BACKEND_URL.replace(/\/$/, "");
 
+  // Extract path suffix by removing frontendPrefix from the request path
   let pathSuffix = req.nextUrl.pathname.replace(frontendPrefix, "");
 
-  // Ensure backend URL ends with a slash
+  // Ensure the backend URL ends with a slash to avoid misrouting
   if (!pathSuffix.endsWith("/")) {
     pathSuffix += "/";
   }
 
+  // Construct the final backend URL
   const endpoint = `${backendPrefix}${pathSuffix}`;
+
+  // Add query parameters if any exist in the request
   const query = req.nextUrl.searchParams.toString();
 
   return query ? `${endpoint}?${query}` : endpoint;
@@ -37,6 +41,7 @@ async function forwardRequest(
   const url = buildBackendUrl(path, req);
   console.log("🔁 Proxying to:", url);
 
+  // Prepare headers to forward the request with cookies and authorization
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -51,6 +56,7 @@ async function forwardRequest(
   const body = ["POST", "PUT"].includes(method) ? await req.json() : undefined;
 
   try {
+    // Send the request to the backend via axios
     const response = await axios({
       method,
       url,
@@ -59,11 +65,12 @@ async function forwardRequest(
       withCredentials: true, // Ensure cookies are sent
     });
 
+    // Prepare response headers for Set-Cookie
     const resHeaders = new Headers({
       "Content-Type": "application/json",
     });
 
-    // Handle Set-Cookie response header from the backend
+    // Handle Set-Cookie header if any from the backend
     const setCookie = response.headers["set-cookie"];
     if (setCookie) {
       if (Array.isArray(setCookie)) {
@@ -75,13 +82,15 @@ async function forwardRequest(
       }
     }
 
-    // Return the response data with the appropriate headers
+    // Return the response data with status and headers
     return new Response(JSON.stringify(response.data), {
       status: response.status,
       headers: resHeaders,
     });
   } catch (error: any) {
     // Handle errors and respond with the error message
+    console.error("Error while proxying request:", error);
+
     return new Response(
       JSON.stringify({
         error: error.message,
@@ -97,7 +106,7 @@ async function forwardRequest(
 
 // ✅ Route handlers with proper async-safe access
 export async function GET(req: NextRequest, context: { params: any }) {
-  const path = await context.params?.path ?? [];  // Ensure params are awaited here
+  const path = await context.params?.path ?? []; // Await params to ensure they're resolved properly
   return forwardRequest("GET", req, path);
 }
 
