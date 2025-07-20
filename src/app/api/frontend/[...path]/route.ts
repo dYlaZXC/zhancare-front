@@ -39,7 +39,7 @@ async function forwardRequest(
 ): Promise<Response> {
   const path = context.params?.path || [];
   const url = buildBackendUrl(path, req);
-
+  console.log("🔁 Proxying to:", url);
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
