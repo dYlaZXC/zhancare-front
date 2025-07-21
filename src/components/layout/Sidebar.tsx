@@ -53,18 +53,19 @@ export const Sidebar = ({
     toast.success("Вы успешно вышли!", { position: "top-right", autoClose: 3000 });
     setTimeout(() => {
       logoutUser();
-      router.replace("/");
+      router.replace("/"); 
     }, 1000);
   };
 
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
-    onClose(); // Закрываем на мобиле
+    onClose(); // Close the sidebar on mobile when tab changes
+    setSidebarOpen(false); // Close sidebar on mobile or tablet when a menu item is selected
   };
 
   return (
     <>
-      {/* Mobile Menu Button */}
+      {/* Mobile and Tablet Menu Button */}
       <button
         onClick={() => setSidebarOpen(true)}
         className="sm:hidden fixed top-4 left-4 z-50 bg-[#001E80] text-white p-2 rounded-full shadow-lg"
@@ -76,14 +77,15 @@ export const Sidebar = ({
       {(sidebarOpen || isOpen) && (
         <div
           className="fixed inset-0 bg-black bg-opacity-40 z-40 sm:hidden"
-          onClick={() => setSidebarOpen(false)}
+          onClick={() => setSidebarOpen(false)} // Close sidebar on overlay click
         />
       )}
 
       <aside
-  className="sticky top-0 h-screen w-64 bg-gradient-to-b from-[#001E80] to-[#3A50FF] text-white flex flex-col"
->
-
+        className={`${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        } sm:hidden fixed top-0 left-0 h-screen w-64 bg-gradient-to-b from-[#001E80] to-[#3A50FF] text-white flex flex-col transition-transform duration-300 ease-in-out transform z-50 md:sticky md:left-0 md:top-0 md:h-screen md:flex md:translate-x-0 md:relative`}
+      >
         {/* Mobile Close Button */}
         <div className="flex justify-between items-center px-4 py-3 sm:hidden">
           <Link href="/" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2">
@@ -95,7 +97,7 @@ export const Sidebar = ({
         </div>
 
         {/* Desktop Logo */}
-        <div className="hidden sm:flex items-center justify-center px-6 py-6">
+        <div className="hidden md:flex items-center justify-center px-6 py-6">
           <Link href="/" className="transition-transform duration-300 hover:scale-105">
             <Image src={Logo} alt="Logo" width={260} height={50} priority />
           </Link>

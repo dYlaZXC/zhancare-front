@@ -57,7 +57,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
 
   return (
     <motion.div
-      className="space-y-6 p-6 bg-gradient-to-br from-white to-[#f6f9ff] shadow-2xl rounded-2xl border border-blue-100"
+      className="p-6 bg-gradient-to-br from-white to-[#f6f9ff] shadow-2xl rounded-2xl border border-blue-100 space-y-6"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
@@ -91,7 +91,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
         >
           <p
             className={clsx(
-              "font-semibold",
+              "font-semibold text-lg",
               fallbackUsed
                 ? "text-yellow-800"
                 : recommendedDoctor
@@ -102,13 +102,13 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
             🤖 Рекомендация AI
           </p>
 
-          <div className="bg-white border border-gray-200 rounded p-3 text-sm space-y-1">
+          <div className="bg-white border border-gray-200 rounded-lg p-4 text-sm space-y-2 shadow-md">
             <p className="font-medium text-gray-900">Вы описали симптомы:</p>
             <p className="whitespace-pre-wrap text-gray-700">{symptoms}</p>
           </div>
 
           {aiErrorData && (
-            <div className="bg-white border border-gray-200 rounded p-3 text-sm text-gray-700 space-y-1">
+            <div className="bg-white border border-gray-200 rounded-lg p-4 text-sm text-gray-700 space-y-2">
               <p className="font-medium text-gray-900">AI порекомендовал:</p>
               <p>
                 <strong>Специализация:</strong> {aiErrorData.specialty}
@@ -121,31 +121,30 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
           )}
 
           {recommendedDoctor && (
-            <div className="bg-white border border-gray-200 rounded p-3 text-sm text-gray-700 space-y-2">
+            <div className="bg-white border border-gray-200 rounded-lg p-4 text-sm text-gray-700 space-y-2">
               <p>
                 {fallbackUsed ? (
-                  <>
+                  <span>
                     Назначен врач общей практики —{" "}
                     <strong>{recommendedDoctor.name}</strong> (
                     <em>{recommendedDoctor.doctor_type}</em>).
-                  </>
+                  </span>
                 ) : (
-                  <>
+                  <span>
                     AI рекомендовал врача: <strong>{recommendedDoctor.name}</strong> (
                     <em>{recommendedDoctor.doctor_type}</em>).
-                  </>
+                  </span>
                 )}
               </p>
               <p className="text-gray-600 italic">{recommendedDoctor.reason}</p>
 
               <button
                 onClick={() => onSelect(recommendedDoctor.id)}
-                className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold text-sm"
+                className="mt-4 w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold text-sm"
               >
                 ✅ Выбрать этого врача
               </button>
 
-              {/* Enhanced Fallback Block */}
               {fallbackUsed && aiErrorData && (
                 <div className="mt-4 flex items-start gap-3 border border-yellow-300 bg-yellow-100 text-yellow-900 rounded-xl p-4 shadow-sm text-sm">
                   <div className="flex-shrink-0 bg-yellow-200 rounded-full p-2">
@@ -192,13 +191,13 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
         </motion.div>
       )}
 
-      <div className="flex justify-between items-center pt-4 relative">
+      <div className="flex justify-between items-center pt-4 relative flex-col sm:flex-row">
         <motion.button
           onClick={onBack}
           whileTap={{ scale: 0.96 }}
           whileHover={{ scale: 1.02 }}
           transition={{ type: "spring", stiffness: 300 }}
-          className="px-5 py-3 rounded-xl font-semibold flex items-center justify-center transition shadow-md bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 hover:shadow-lg"
+          className="w-full sm:w-auto px-5 py-3 rounded-xl font-semibold flex items-center justify-center transition shadow-md bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 hover:shadow-lg"
         >
           ⬅ Назад
         </motion.button>
@@ -212,7 +211,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
           onMouseLeave={() => setShowTooltip(false)}
           transition={{ type: "spring", stiffness: 300 }}
           className={clsx(
-            "px-5 py-3 rounded-xl font-semibold flex items-center justify-center transition shadow-md",
+            "w-full sm:w-auto px-5 py-3 rounded-xl font-semibold flex items-center justify-center transition shadow-md",
             selectedDoctorId
               ? "bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white hover:shadow-xl"
               : "bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white opacity-50 cursor-not-allowed"
