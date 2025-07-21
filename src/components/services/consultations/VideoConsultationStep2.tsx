@@ -48,6 +48,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
   fallbackUsed,
 }) => {
   const [showTooltip, setShowTooltip] = useState(false);
+
   const selectedDoctor = useMemo(
     () => doctors.find((doc) => doc.id === selectedDoctorId),
     [doctors, selectedDoctorId]
@@ -57,7 +58,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
 
   return (
     <motion.div
-      className="p-6 bg-gradient-to-br from-white to-[#f6f9ff] shadow-2xl rounded-2xl border border-blue-100 space-y-6"
+      className="space-y-6"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
@@ -70,20 +71,19 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
           Выбор врача
         </h2>
         <p className="text-gray-600 text-sm leading-relaxed">
-          Мы используем AI, чтобы рекомендовать врача на основе ваших симптомов. Вы можете
-          воспользоваться рекомендацией или выбрать другого врача вручную.
+          Мы используем AI, чтобы рекомендовать врача на основе ваших симптомов.
         </p>
       </div>
 
       {showAIBlock && (
         <motion.div
           className={clsx(
-            "p-4 rounded-lg shadow space-y-4",
+            "p-4 space-y-4",
             fallbackUsed
-              ? "border-yellow-300 bg-yellow-50"
+              ? "bg-yellow-50"
               : recommendedDoctor
-              ? "border-blue-200 bg-blue-50"
-              : "border-red-300 bg-red-50"
+              ? "bg-blue-50"
+              : "bg-red-50"
           )}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -102,51 +102,27 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
             🤖 Рекомендация AI
           </p>
 
-          <div className="bg-white border border-gray-200 rounded-lg p-4 text-sm space-y-2 shadow-md">
-            <p className="font-medium text-gray-900">Вы описали симптомы:</p>
-            <p className="whitespace-pre-wrap text-gray-700">{symptoms}</p>
-          </div>
-
           {aiErrorData && (
-            <div className="bg-white border border-gray-200 rounded-lg p-4 text-sm text-gray-700 space-y-2">
+            <div className="p-4 text-sm text-gray-700 space-y-2 bg-white border border-gray-200 rounded-lg">
               <p className="font-medium text-gray-900">AI порекомендовал:</p>
-              <p>
-                <strong>Специализация:</strong> {aiErrorData.specialty}
-              </p>
-              <p>
-                <strong>Пояснение:</strong>{" "}
-                <span className="italic text-gray-600">{aiErrorData.reason}</span>
-              </p>
+              <p><strong>Специализация:</strong> {aiErrorData.specialty}</p>
+              <p><strong>Пояснение:</strong> <span className="italic text-gray-600">{aiErrorData.reason}</span></p>
             </div>
           )}
 
           {recommendedDoctor && (
-            <div className="bg-white border border-gray-200 rounded-lg p-4 text-sm text-gray-700 space-y-2">
+            <div className="p-4 text-sm text-gray-700 space-y-2 bg-white border border-gray-200 rounded-lg">
               <p>
                 {fallbackUsed ? (
-                  <span>
-                    Назначен врач общей практики —{" "}
-                    <strong>{recommendedDoctor.name}</strong> (
-                    <em>{recommendedDoctor.doctor_type}</em>).
-                  </span>
+                  <>Назначен врач общей практики — <strong>{recommendedDoctor.name}</strong> (<em>{recommendedDoctor.doctor_type}</em>).</>
                 ) : (
-                  <span>
-                    AI рекомендовал врача: <strong>{recommendedDoctor.name}</strong> (
-                    <em>{recommendedDoctor.doctor_type}</em>).
-                  </span>
+                  <>Рекомендация AI: <strong>{recommendedDoctor.name}</strong> (<em>{recommendedDoctor.doctor_type}</em>).</>
                 )}
               </p>
               <p className="text-gray-600 italic">{recommendedDoctor.reason}</p>
 
-              <button
-                onClick={() => onSelect(recommendedDoctor.id)}
-                className="mt-4 w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold text-sm"
-              >
-                ✅ Выбрать этого врача
-              </button>
-
               {fallbackUsed && aiErrorData && (
-                <div className="mt-4 flex items-start gap-3 border border-yellow-300 bg-yellow-100 text-yellow-900 rounded-xl p-4 shadow-sm text-sm">
+                <div className="mt-4 flex items-start gap-3 p-4 bg-yellow-100 text-yellow-900 rounded-xl text-sm">
                   <div className="flex-shrink-0 bg-yellow-200 rounded-full p-2">
                     <Smile className="text-yellow-700" size={20} />
                   </div>
@@ -181,47 +157,52 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="border border-green-200 bg-green-50 rounded-lg p-4 shadow-sm mt-2"
+          className="p-1 mt-2 bg-green-50 text-green-800 rounded-lg"
         >
-          <p className="text-green-800 font-semibold">✅ Вы выбрали врача:</p>
+          {/* <p className="font-semibold">✅ Вы выбрали врача:</p>
           <p className="text-sm text-gray-800 mt-1">
-            <strong>{selectedDoctor.name}</strong>{" "}
-            <em>({selectedDoctor.doctor_type || "специализация не указана"})</em>
-          </p>
+            <strong>{selectedDoctor.name}</strong> <em>({selectedDoctor.doctor_type || "специализация не указана"})</em>
+          </p> */}
         </motion.div>
       )}
 
-      <div className="flex justify-between items-center pt-4 relative flex-col sm:flex-row">
-        <motion.button
-          onClick={onBack}
-          whileTap={{ scale: 0.96 }}
-          whileHover={{ scale: 1.02 }}
-          transition={{ type: "spring", stiffness: 300 }}
-          className="w-full sm:w-auto px-5 py-3 rounded-xl font-semibold flex items-center justify-center transition shadow-md bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 hover:shadow-lg"
-        >
-          ⬅ Назад
-        </motion.button>
+      {/* Buttons aligned left and right */}
+      <div className="w-full pt-2">
+        <div className="flex justify-between items-center w-full gap-4">
+          {/* Назад */}
+          <motion.button
+            onClick={onBack}
+            whileTap={{ scale: 0.96 }}
+            whileHover={{ scale: 1.02 }}
+            transition={{ type: "spring", stiffness: 300 }}
+            className="min-w-[120px] px-5 py-3 rounded-xl font-semibold flex items-center justify-center bg-gray-200 text-gray-800"
+          >
+            ⬅ Назад
+          </motion.button>
 
-        <motion.button
-          onClick={onNext}
-          disabled={!selectedDoctorId}
-          whileTap={selectedDoctorId ? { scale: 0.97 } : {}}
-          whileHover={selectedDoctorId ? { scale: 1.02 } : {}}
-          onMouseEnter={() => setShowTooltip(!selectedDoctorId)}
-          onMouseLeave={() => setShowTooltip(false)}
-          transition={{ type: "spring", stiffness: 300 }}
-          className={clsx(
-            "w-full sm:w-auto px-5 py-3 rounded-xl font-semibold flex items-center justify-center transition shadow-md",
-            selectedDoctorId
-              ? "bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white hover:shadow-xl"
-              : "bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white opacity-50 cursor-not-allowed"
-          )}
-        >
-          Далее ➡
-        </motion.button>
+          {/* Далее */}
+          <motion.button
+            onClick={onNext}
+            disabled={!selectedDoctorId}
+            whileTap={selectedDoctorId ? { scale: 0.97 } : {}}
+            whileHover={selectedDoctorId ? { scale: 1.02 } : {}}
+            onMouseEnter={() => setShowTooltip(!selectedDoctorId)}
+            onMouseLeave={() => setShowTooltip(false)}
+            transition={{ type: "spring", stiffness: 300 }}
+            className={clsx(
+              "min-w-[120px] px-5 py-3 rounded-xl font-semibold flex items-center justify-center",
+              selectedDoctorId
+                ? "bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white hover:shadow-md"
+                : "bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white opacity-50 cursor-not-allowed"
+            )}
+          >
+            Далее ➡
+          </motion.button>
+        </div>
 
+        {/* Tooltip */}
         {showTooltip && !selectedDoctorId && (
-          <div className="absolute -top-8 right-0 text-xs bg-gray-800 text-white px-3 py-1 rounded-md shadow">
+          <div className="mt-2 text-xs bg-gray-800 text-white px-3 py-1 rounded-md shadow text-center">
             Пожалуйста, выберите врача
           </div>
         )}

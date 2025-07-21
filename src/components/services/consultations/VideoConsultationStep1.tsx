@@ -26,15 +26,14 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
 
   return (
     <motion.div
-      className="space-y-6 p-6 bg-gradient-to-br from-white to-[#f6f9ff] shadow-2xl rounded-2xl border border-blue-100"
+      className="space-y-6"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
-      {/* Прогресс */}
+      {/* Шаг и заголовок */}
       <div className="text-xs text-gray-500 uppercase tracking-wide">Шаг 1 из 3</div>
 
-      {/* Заголовок и описание */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -50,7 +49,7 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
         </p>
       </motion.div>
 
-      {/* Текстовое поле */}
+      {/* Поле ввода */}
       <motion.textarea
         className="w-full h-40 p-4 rounded-xl border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-500 text-gray-800 resize-none transition-all"
         placeholder="📝 Например: головная боль, жар, слабость..."
@@ -88,7 +87,7 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
         )}
       </AnimatePresence>
 
-      {/* Кнопка */}
+      {/* Кнопка Далее */}
       <div className="flex justify-end pt-4 relative">
         <motion.button
           onClick={onNext}
@@ -98,10 +97,10 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
           whileTap={!isNextDisabled ? { scale: 0.97 } : {}}
           whileHover={!isNextDisabled ? { scale: 1.03 } : {}}
           transition={{ type: "spring", stiffness: 300 }}
-          className={`px-5 py-3 rounded-xl font-semibold flex items-center justify-center transition-all duration-300 ease-out shadow-md ${
+          className={`px-5 py-3 rounded-xl font-semibold flex items-center justify-center transition-all duration-300 ease-out ${
             isNextDisabled
               ? "bg-gradient-to-r from-[#001E80] to-[#3A50FF] opacity-50 cursor-not-allowed text-white"
-              : "bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white hover:shadow-2xl"
+              : "bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white hover:shadow-md"
           }`}
         >
           {loading ? (
@@ -117,7 +116,6 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
           )}
         </motion.button>
 
-        {/* Tooltip */}
         {showTooltip && isNextDisabled && (
           <div className="absolute -top-8 right-0 text-xs bg-gray-800 text-white px-3 py-1 rounded-md shadow">
             Пожалуйста, опишите симптомы перед продолжением

@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import { api } from "@/utils/api";
 import { useAuth } from "@/context/AuthContext";
@@ -12,7 +11,6 @@ import Step2 from "./consultations/VideoConsultationStep2";
 import Step3 from "./consultations/VideoConsultationStep3";
 import TipsPanel from "./consultations/TipsPanel";
 
-// interfaces remain unchanged
 interface Doctor {
   id: number;
   name: string;
@@ -37,10 +35,9 @@ const VideoConsultation: React.FC = () => {
   const { token } = useAuth();
   const router = useRouter();
 
-  // Initialize containerRef here
   const containerRef = useRef<HTMLDivElement>(null);
-
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
+
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [symptoms, setSymptoms] = useState("");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -55,7 +52,6 @@ const VideoConsultation: React.FC = () => {
   const [fetchingDoctors, setFetchingDoctors] = useState(true);
   const [waiting, setWaiting] = useState(false);
 
-  // Fetch available doctors
   const fetchDoctors = useCallback(async () => {
     setFetchingDoctors(true);
     try {
@@ -73,14 +69,12 @@ const VideoConsultation: React.FC = () => {
     }
   }, [token]);
 
-  // Cancel consultation
   const cancelConsultation = useCallback(() => {
     setWaiting(false);
     setMeetingId(null);
     toast.info("🚫 Консультация отменена.");
   }, []);
 
-  // Start polling for the meeting status
   const startPolling = useCallback(() => {
     const start = Date.now();
     const timeout = 2 * 60 * 1000;
@@ -135,7 +129,6 @@ const VideoConsultation: React.FC = () => {
     };
   }, [waiting, meetingId, startPolling]);
 
-  // AI recommendation
   const handleAIRecommend = async () => {
     if (loadingAI || !token) return;
     if (!symptoms.trim()) {
@@ -188,7 +181,6 @@ const VideoConsultation: React.FC = () => {
     }
   };
 
-  // Start the consultation call
   const handleStartCall = async () => {
     if (!selectedDoctorId || !token) {
       toast.error("⚠️ Пожалуйста, выберите врача.");
@@ -222,19 +214,18 @@ const VideoConsultation: React.FC = () => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 px-4 sm:px-6 py-8 sm:py-10">
-      {/* Main content */}
-      <motion.div
-        ref={containerRef}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="lg:col-span-8 w-full bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl ring-1 ring-blue-100 p-6 sm:p-8"
-      >
+      <div ref={containerRef} className="lg:col-span-8 w-full">
         <h2 className="text-3xl font-extrabold text-[#001E80] mb-4">Видео консультация</h2>
 
         <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
           <div
-            className={`h-full transition-all duration-500 rounded-full ${step === 1 ? "w-1/3 bg-blue-600" : step === 2 ? "w-2/3 bg-blue-600" : "w-full bg-blue-600"}`}
+            className={`h-full transition-all duration-500 rounded-full ${
+              step === 1
+                ? "w-1/3 bg-blue-600"
+                : step === 2
+                ? "w-2/3 bg-blue-600"
+                : "w-full bg-blue-600"
+            }`}
           />
         </div>
 
@@ -274,11 +265,16 @@ const VideoConsultation: React.FC = () => {
             />
           )}
         </div>
-      </motion.div>
+      </div>
 
-      {/* Tips Panel */}
       <div className="lg:col-span-4">
-        <TipsPanel step={step} />
+        <TipsPanel
+          step={step}
+          onInsertExample={() => setSymptoms("Головная боль, температура 38.5, слабость, першение в горле")}
+          recommendedDoctor={recommendedDoctor}
+          aiErrorData={aiErrorData}
+          fallbackUsed={fallbackUsed}
+        />
       </div>
     </div>
   );
