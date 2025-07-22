@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Sparkles, Smile } from "lucide-react";
@@ -26,6 +24,7 @@ interface Step2Props {
     name: string;
     doctor_type: string;
     reason: string;
+    urgency: string;
   };
   aiErrorData?: {
     specialty: string;
@@ -56,6 +55,23 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
 
   const showAIBlock = recommendedDoctor || aiErrorData;
 
+  const getUrgencyIndicator = (urgency: string) => {
+    console.log("Urgency value passed to getUrgencyIndicator:", urgency); // Debugging line
+    if (urgency === "urgent") {
+      return (
+        <div className="flex items-center bg-red-600 text-white px-3 py-1 rounded-full text-xs font-medium">
+          Экстренно
+        </div>
+      );
+    } else {
+      return (
+        <div className="flex items-center bg-green-600 text-white px-3 py-1 rounded-full text-xs font-medium">
+          Не экстренно
+        </div>
+      );
+    }
+  };
+
   return (
     <motion.div
       className="space-y-6"
@@ -64,7 +80,6 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
       transition={{ duration: 0.4 }}
     >
       <div className="text-xs text-gray-500 uppercase tracking-wide">Шаг 2 из 3</div>
-
       <div className="space-y-2">
         <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
           <Sparkles className="text-blue-600" size={28} />
@@ -121,6 +136,13 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
               </p>
               <p className="text-gray-600 italic">{recommendedDoctor.reason}</p>
 
+              {/* Display urgency indicator */}
+              {recommendedDoctor.urgency && (
+                <div className="mt-2">
+                  {getUrgencyIndicator(recommendedDoctor.urgency)}
+                </div>
+              )}
+
               {fallbackUsed && aiErrorData && (
                 <div className="mt-4 flex items-start gap-3 p-4 bg-yellow-100 text-yellow-900 rounded-xl text-sm">
                   <div className="flex-shrink-0 bg-yellow-200 rounded-full p-2">
@@ -158,12 +180,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
           className="p-1 mt-2 bg-green-50 text-green-800 rounded-lg"
-        >
-          {/* <p className="font-semibold">✅ Вы выбрали врача:</p>
-          <p className="text-sm text-gray-800 mt-1">
-            <strong>{selectedDoctor.name}</strong> <em>({selectedDoctor.doctor_type || "специализация не указана"})</em>
-          </p> */}
-        </motion.div>
+        ></motion.div>
       )}
 
       {/* Buttons aligned left and right */}

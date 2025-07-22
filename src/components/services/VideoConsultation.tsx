@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
@@ -23,6 +21,7 @@ interface RecommendedDoctor {
   name: string;
   doctor_type: string;
   reason: string;
+  urgency: "urgent" | "non_urgent"; // Add urgency here
 }
 
 interface AIErrorData {
@@ -43,7 +42,7 @@ const VideoConsultation: React.FC = () => {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [selectedDoctorId, setSelectedDoctorId] = useState<number | null>(null);
   const [meetingId, setMeetingId] = useState<string | null>(null);
-  const [recommendedDoctor, setRecommendedDoctor] = useState<RecommendedDoctor>();
+  const [recommendedDoctor, setRecommendedDoctor] = useState<RecommendedDoctor | undefined>(undefined);
   const [aiErrorData, setAiErrorData] = useState<AIErrorData | undefined>();
   const [fallbackUsed, setFallbackUsed] = useState(false);
 
@@ -150,7 +149,12 @@ const VideoConsultation: React.FC = () => {
 
       if (res.data.success && res.data.recommended_doctor) {
         const doctor = res.data.recommended_doctor;
-        setRecommendedDoctor(doctor);
+        // Set urgency based on the response or set a default
+        const urgency = res.data.urgency || "non_urgent"; // Assume AI response provides 'urgency'
+        setRecommendedDoctor({
+          ...doctor,
+          urgency, // Add urgency to the recommended doctor
+        });
         setSelectedDoctorId(doctor.id);
         toast.success(`🤖 AI рекомендовал врача: ${doctor.name}`);
       } else if (!res.data.success && res.data.ai_data) {
@@ -163,6 +167,7 @@ const VideoConsultation: React.FC = () => {
             name: fallback.name,
             doctor_type: fallback.doctor_type,
             reason: "Врач общей практики поможет оценить состояние.",
+            urgency: "non_urgent", // Set default urgency for fallback
           });
           setSelectedDoctorId(fallback.id);
           setAiErrorData(res.data.ai_data);
@@ -219,13 +224,11 @@ const VideoConsultation: React.FC = () => {
 
         <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
           <div
-            className={`h-full transition-all duration-500 rounded-full ${
-              step === 1
+            className={`h-full transition-all duration-500 rounded-full ${step === 1
                 ? "w-1/3 bg-blue-600"
                 : step === 2
                 ? "w-2/3 bg-blue-600"
-                : "w-full bg-blue-600"
-            }`}
+                : "w-full bg-blue-600"}`}
           />
         </div>
 
