@@ -129,87 +129,83 @@ const VideoConsultation: React.FC = () => {
   }, [waiting, meetingId, startPolling]);
 
   const handleAIRecommend = async () => {
-  if (loadingAI || !token) return;
-  if (!symptoms.trim()) {
-    toast.warn("⚠️ Пожалуйста, опишите симптомы.");
-    return;
-  }
-
-  setLoadingAI(true);
-  setRecommendedDoctor(undefined);
-  setAiErrorData(undefined);
-  setFallbackUsed(false);
-
-  try {
-    const res = await api.post(
-      "/consultations/ai-recommend/",
-      { symptoms, language: "ru" },
-      { headers: { Authorization: `Token ${token}` } }
-    );
-
-    console.log("AI response:", res.data);
-
-    // If doctor is recommended successfully
-    if (res.data.success && res.data.recommended_doctor) {
-      const doctor = res.data.recommended_doctor;
-
-      // Properly extract urgency from doctor object
-      const urgency = doctor.urgency === "urgent" ? "urgent" : "non_urgent";
-      console.log("Urgency extracted from recommended_doctor:", urgency);
-
-      setRecommendedDoctor({
-        ...doctor,
-        urgency,
-      });
-
-      setSelectedDoctorId(doctor.id);
-      toast.success(`🤖 AI рекомендовал врача: ${doctor.name}`);
+    if (loadingAI || !token) return;
+    if (!symptoms.trim()) {
+      toast.warn("⚠️ Пожалуйста, опишите симптомы.");
+      return;
     }
 
-    // Fallback scenario: AI gave a specialty but no matching doctor found
-    else if (!res.data.success && res.data.ai_data) {
-      const fallback = doctors.find((d) =>
-        d.doctor_type.toLowerCase().includes("терапевт")
+    setLoadingAI(true);
+    setRecommendedDoctor(undefined);
+    setAiErrorData(undefined);
+    setFallbackUsed(false);
+
+    try {
+      const res = await api.post(
+        "/consultations/ai-recommend/",
+        { symptoms, language: "ru" },
+        { headers: { Authorization: `Token ${token}` } }
       );
 
-      if (fallback) {
-        // Try to extract urgency from ai_data (if provided), otherwise assume urgent
-        const urgency =
-          res.data.ai_data?.urgency === "non_urgent" ? "non_urgent" : "urgent";
+      console.log("AI response:", res.data);
 
-        console.log("Fallback urgency (from ai_data or default):", urgency);
+      // If doctor is recommended successfully
+      if (res.data.success && res.data.recommended_doctor) {
+        const doctor = res.data.recommended_doctor;
+
+        // Properly extract urgency from doctor object
+        const urgency = doctor.urgency === "urgent" ? "urgent" : "non_urgent";
+        console.log("Urgency extracted from recommended_doctor:", urgency);
 
         setRecommendedDoctor({
-          id: fallback.id,
-          name: fallback.name,
-          doctor_type: fallback.doctor_type,
-          reason: "Врач общей практики поможет оценить состояние.",
+          ...doctor,
           urgency,
         });
 
-        setSelectedDoctorId(fallback.id);
-        setAiErrorData(res.data.ai_data);
-        setFallbackUsed(true);
-
-        toast.info("❌ Специалист не найден. Назначен терапевт.");
-      } else {
-        // No fallback therapist found either
-        setAiErrorData(res.data.ai_data);
-        toast.warn("❌ AI дал рекомендацию, но подходящих врачей не найдено.");
+        setSelectedDoctorId(doctor.id);
+        toast.success(`🤖 AI рекомендовал врача: ${doctor.name}`);
       }
+
+      // Fallback scenario: AI gave a specialty but no matching doctor found
+      else if (!res.data.success && res.data.ai_data) {
+        const fallback = doctors.find((d) =>
+          d.doctor_type.toLowerCase().includes("терапевт")
+        );
+
+        if (fallback) {
+          // Try to extract urgency from ai_data (if provided), otherwise assume urgent
+          const urgency =
+            res.data.ai_data?.urgency === "non_urgent" ? "non_urgent" : "urgent";
+
+          console.log("Fallback urgency (from ai_data or default):", urgency);
+
+          setRecommendedDoctor({
+            id: fallback.id,
+            name: fallback.name,
+            doctor_type: fallback.doctor_type,
+            reason: "Врач общей практики поможет оценить состояние.",
+            urgency,
+          });
+
+          setSelectedDoctorId(fallback.id);
+          setAiErrorData(res.data.ai_data);
+          setFallbackUsed(true);
+
+          toast.info("❌ Специалист не найден. Назначен терапевт.");
+        } else {
+          // No fallback therapist found either
+          setAiErrorData(res.data.ai_data);
+          toast.warn("❌ AI дал рекомендацию, но подходящих врачей не найдено.");
+        }
+      }
+    } catch (error) {
+      toast.error("⚠️ Ошибка AI.");
+      console.error("AI Recommendation Error:", error);
+    } finally {
+      setLoadingAI(false);
+      setStep(2);
     }
-  } catch (error) {
-    toast.error("⚠️ Ошибка AI.");
-    console.error("AI Recommendation Error:", error);
-  } finally {
-    setLoadingAI(false);
-    setStep(2);
-  }
-};
-
-
-
-
+  };
 
   const handleStartCall = async () => {
     if (!selectedDoctorId || !token) {
