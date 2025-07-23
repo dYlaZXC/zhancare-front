@@ -57,20 +57,30 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
 
   const getUrgencyIndicator = (urgency: string) => {
     console.log("Urgency value passed to getUrgencyIndicator:", urgency); // Debugging line
+
     if (urgency === "urgent") {
       return (
         <div className="flex items-center bg-red-600 text-white px-3 py-1 rounded-full text-xs font-medium">
           Экстренно
         </div>
       );
-    } else {
+    } else if (urgency === "non_urgent") {
       return (
         <div className="flex items-center bg-green-600 text-white px-3 py-1 rounded-full text-xs font-medium">
           Не экстренно
         </div>
       );
+    } else {
+      console.warn("Unexpected urgency value:", urgency); // Debugging unexpected values
+      return (
+        <div className="flex items-center bg-gray-500 text-white px-3 py-1 rounded-full text-xs font-medium">
+          Неизвестно
+        </div>
+      );
     }
   };
+
+  console.log("Recommended Doctor State:", recommendedDoctor); // Debugging line
 
   return (
     <motion.div
