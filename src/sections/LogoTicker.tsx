@@ -4,6 +4,7 @@ import Image from "next/image";
 import { motion, useAnimation } from "framer-motion";
 import { useEffect, useState, useMemo, useCallback } from "react";
 
+import Logo0 from "@/assets/itry.png";
 import Logo3 from "@/assets/ahlogo.png";
 import Logo2 from "@/assets/aqniet.png";
 import Logo1 from "@/assets/kazakhemblem.png";
@@ -17,6 +18,7 @@ export const LogoTicker = () => {
   const controls = useAnimation();
 
   const logos = useMemo(() => [
+    { src: Logo0, alt: "Logo0" },
     { src: Logo3, alt: "Logo3" },
     // {
     //   src: Logo2,
