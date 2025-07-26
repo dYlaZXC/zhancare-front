@@ -15,6 +15,7 @@ import { ChatComponent } from "@/components/ChatComponent";
 import { useLanguage } from "@/context/LanguageContext";
 import { DoctorsCarousel } from "@/sections/DoctorsCarousel";
 import { MobileApp } from "@/sections/MobileApp";
+import  Hero404  from "@/sections/Hero404";
 
 
 export default function Home() {
@@ -24,31 +25,44 @@ export default function Home() {
   return (
     <div>
 
+      <Hero404/>
       {/* Hero Section */}
-      <Hero />
+      {/* <Hero /> */}
+
       {/* Services Section */}
-      <Services />
+      {/* <Services /> */}
       
       {/* Features Section */}
-      <Features />
-      <DoctorsCarousel />
-      <ImpactSection />
+      {/* <Features /> */}
+      
+      {/* DoctorsCarousel Section */}
+      {/* <DoctorsCarousel /> */}
+      
+      {/* Impact Section */}
+      {/* <ImpactSection /> */}
       
       {/* Product Showcase Section */}
-      <ProductShowcase />
+      {/* <ProductShowcase /> */}
+
       {/* Call To Action Section */}
-      <CallToAction />
+      {/* <CallToAction /> */}
 
       
       {/* <Pricing /> */}
+      
       {/* Logo Ticker Section */}
-      <LogoTicker />
+      {/* <LogoTicker /> */}
+      
       {/* Chat Button */}
-      <ChatButton onToggle={() => setIsChatOpen((prev) => !prev)} />
-      {isChatOpen && <ChatComponent onClose={() => setIsChatOpen(false)} />}
-      {/* Footer */}
+      {/* <ChatButton onToggle={() => setIsChatOpen((prev) => !prev)} />
+      {isChatOpen && <ChatComponent onClose={() => setIsChatOpen(false)} />} */}
+      
+      
+      {/* MobileApp */}
       {/* <MobileApp /> */}
-      <Footer />
+
+      {/* Footer */}
+      {/* <Footer /> */}
     </div>
   );
 }
