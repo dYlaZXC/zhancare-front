@@ -27,7 +27,7 @@ export const ChatInput = ({
 
   return (
     <div className="p-3 bg-gradient-to-r from-blue-600 to-blue-800">
-      <div className="flex items-end gap-2">
+      <div className="flex items-end gap-2 w-full max-w-4xl mx-auto">
         <textarea
           ref={inputRef}
           rows={1}
@@ -35,8 +35,12 @@ export const ChatInput = ({
           onChange={(e) => setUserInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={translations.placeholder}
-          className="flex-1 resize-none border border-gray-300 rounded-xl p-3 text-sm focus:outline-none focus:ring focus:ring-blue-300 bg-white text-black max-h-40 overflow-y-auto"
+          className="flex-1 resize-none border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring focus:ring-blue-300 bg-white text-black max-h-32 overflow-y-auto w-full"
           disabled={loading}
+          style={{
+            wordWrap: "break-word",
+            whiteSpace: "pre-wrap",
+          }}
         />
 
         <motion.button
@@ -44,7 +48,7 @@ export const ChatInput = ({
           whileHover={!loading ? { scale: 1.05 } : {}}
           disabled={loading || !userInput.trim()}
           onClick={onSend}
-          className={`flex items-center gap-1 px-4 py-2 rounded-xl font-semibold transition-all duration-200 ${
+          className={`flex items-center gap-1 px-3 py-2 rounded-xl font-semibold transition-all duration-200 ${
             loading || !userInput.trim()
               ? "bg-gray-400 cursor-not-allowed"
               : "bg-white text-black border border-blue-600 hover:bg-blue-100"
