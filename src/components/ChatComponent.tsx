@@ -1,43 +1,48 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
-import { useLanguage } from "@/context/LanguageContext"; // Assuming a LanguageContext exists
-
-// Translation files
+import { useLanguage } from "@/context/LanguageContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
+import { ChatHeader } from "./ChatHeader";
+import { ChatMessages } from "./ChatMessages";
+import { ChatInput } from "./ChatInput";
+import { motion, AnimatePresence } from "framer-motion";
+
+const API_KEY = "QqkMxELY0YVGkCx17Vya04Sq9nGvCahu";
+const ENDPOINT = "https://api.mistral.ai/v1/chat/completions";
 
 export const ChatComponent = ({ onClose }: { onClose: () => void }) => {
   const [userInput, setUserInput] = useState("");
-  const [messages, setMessages] = useState<{ user: string; response: string }[]>([]);
+  const [messages, setMessages] = useState<
+    { user: string; response: string; timestamp: string }[]
+  >([]);
+  const [streamedResponse, setStreamedResponse] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const messageContainerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const typingInterval = useRef<NodeJS.Timeout | null>(null);
 
   const { language } = useLanguage();
   const translations = language === "ru" ? ru.chat : kz.chat;
 
-  const API_KEY = "QqkMxELY0YVGkCx17Vya04Sq9nGvCahu";
-  const ENDPOINT = "https://api.mistral.ai/v1/chat/completions";
-
   const sendMessage = async () => {
     if (!userInput.trim()) return;
+    const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-    const newMessage = { user: userInput, response: "" };
+    const newMessage = { user: userInput, response: "", timestamp };
     setMessages((prev) => [...prev, newMessage]);
     setLoading(true);
     setError("");
 
     try {
-      const assistant_instruction = translations.assistantInstruction;
-
       const payload = {
         model: "open-mistral-nemo",
         temperature: 0.3,
         top_p: 1,
         max_tokens: 500,
         messages: [
-          { role: "system", content: assistant_instruction },
+          { role: "system", content: translations.assistantInstruction },
           { role: "user", content: userInput },
         ],
       };
@@ -51,123 +56,81 @@ export const ChatComponent = ({ onClose }: { onClose: () => void }) => {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        const errorDetails = await res.json();
-        throw new Error(translations.fetchError);
-      }
+      if (!res.ok) throw new Error(translations.fetchError);
 
       const data = await res.json();
+      const aiText = data.choices[0].message.content;
 
-      setMessages((prev) => {
-        const lastMessage = prev[prev.length - 1];
-        return [...prev.slice(0, -1), { ...lastMessage, response: data.choices[0].message.content }];
-      });
-    } catch (err) {
+      let index = 0;
+      setStreamedResponse("");
+
+      typingInterval.current = setInterval(() => {
+        index++;
+        const currentText = aiText.slice(0, index);
+        setStreamedResponse(currentText);
+
+        if (index >= aiText.length) {
+          clearInterval(typingInterval.current!);
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            return [...prev.slice(0, -1), { ...last, response: aiText }];
+          });
+          setStreamedResponse("");
+          setLoading(false);
+        }
+      }, 15);
+    } catch {
       setError(translations.genericError);
+      setLoading(false);
     } finally {
       setUserInput("");
-      setLoading(false);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      sendMessage();
     }
   };
 
   useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.focus();
-    }
+    if (inputRef.current) inputRef.current.focus();
   }, [loading]);
 
   useEffect(() => {
     if (messageContainerRef.current) {
       messageContainerRef.current.scrollTop = messageContainerRef.current.scrollHeight;
     }
-  }, [messages, loading]);
+  }, [messages, streamedResponse, loading]);
+
+  useEffect(() => {
+    return () => {
+      if (typingInterval.current) clearInterval(typingInterval.current);
+    };
+  }, []);
 
   return (
-    <div
-      className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 w-[90%] max-w-xs sm:max-w-lg bg-white shadow-lg rounded-lg overflow-hidden z-50"
-      style={{ maxHeight: "60vh" }}
-    >
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-2 sm:p-3 flex justify-between items-center rounded-t-lg">
-        <h2 className="text-xs sm:text-lg font-semibold">{translations.title}</h2>
-        <button className="text-white hover:text-gray-300 text-sm sm:text-lg" onClick={onClose}>
-          ✕
-        </button>
-      </div>
-
-      <div ref={messageContainerRef} className="h-[40vh] overflow-y-auto p-2 sm:p-4 bg-gray-50">
-        {messages.map((msg, index) => (
-          <div key={index} className="mb-2">
-            <div className="flex justify-end">
-              <div className="bg-blue-500 text-white p-2 sm:p-3 rounded-lg max-w-[70%] text-xs sm:text-sm">
-                {msg.user}
-              </div>
-            </div>
-            {msg.response && (
-              <div className="flex justify-start mt-2">
-                <div
-                  className="text-white p-2 sm:p-3 rounded-lg max-w-[70%] text-xs sm:text-sm"
-                  style={{
-                    background: "linear-gradient(to right, #001E80, #3A50FF)",
-                  }}
-                >
-                  {msg.response}
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
-        {loading && (
-          <div className="flex justify-start mt-2">
-            <div
-              className="text-white p-2 sm:p-3 rounded-lg max-w-[70%] flex items-center"
-              style={{
-                background: "linear-gradient(to right, #001E80, #3A50FF)",
-              }}
-            >
-              <span>{translations.typing}</span>
-              <span className="ml-2 flex space-x-1">
-                <span className="animate-bounce w-1.5 h-1.5 bg-white rounded-full"></span>
-                <span className="animate-bounce delay-150 w-1.5 h-1.5 bg-white rounded-full"></span>
-                <span className="animate-bounce delay-300 w-1.5 h-1.5 bg-white rounded-full"></span>
-              </span>
-            </div>
-          </div>
-        )}
-        {error && <p className="text-red-500 text-xs">{error}</p>}
-      </div>
-
-      <div className="border-t p-2 sm:p-4 bg-white">
-        <div className="flex items-center space-x-2">
-          <input
-            type="text"
-            value={userInput}
-            onChange={(e) => setUserInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            ref={inputRef}
-            placeholder={translations.placeholder}
-            className="flex-1 border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring focus:ring-blue-300 text-xs sm:text-sm"
-            disabled={loading}
-          />
-          <button
-            className={`px-3 py-1 sm:px-4 sm:py-2 rounded-lg text-white font-semibold ${
-              loading
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700"
-            }`}
-            onClick={sendMessage}
-            disabled={loading}
-          >
-            {loading ? translations.sending : translations.sendButton}
-          </button>
-        </div>
-      </div>
-    </div>
+    <AnimatePresence>
+      <motion.div
+        key="chat"
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 30 }}
+        transition={{ duration: 0.3 }}
+        className="fixed bottom-4 right-4 w-[90%] max-w-xs sm:max-w-lg bg-white dark:bg-gray-900 shadow-xl rounded-xl z-50 flex flex-col overflow-hidden max-h-[80vh]"
+      >
+        <ChatHeader title={translations.title} onClose={onClose} />
+        <ChatMessages
+          messages={messages}
+          loading={loading}
+          error={error}
+          translations={translations}
+          containerRef={messageContainerRef}
+          streamedResponse={streamedResponse}
+        />
+        <ChatInput
+          userInput={userInput}
+          setUserInput={setUserInput}
+          onSend={sendMessage}
+          loading={loading}
+          translations={translations}
+          inputRef={inputRef}
+        />
+      </motion.div>
+    </AnimatePresence>
   );
 };
