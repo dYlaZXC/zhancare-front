@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
@@ -23,6 +21,7 @@ interface RecommendedDoctor {
   name: string;
   doctor_type: string;
   reason: string;
+  urgency: "urgent" | "non_urgent"; // Add urgency here
 }
 
 interface AIErrorData {
@@ -43,7 +42,7 @@ const VideoConsultation: React.FC = () => {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [selectedDoctorId, setSelectedDoctorId] = useState<number | null>(null);
   const [meetingId, setMeetingId] = useState<string | null>(null);
-  const [recommendedDoctor, setRecommendedDoctor] = useState<RecommendedDoctor>();
+  const [recommendedDoctor, setRecommendedDoctor] = useState<RecommendedDoctor | undefined>(undefined);
   const [aiErrorData, setAiErrorData] = useState<AIErrorData | undefined>();
   const [fallbackUsed, setFallbackUsed] = useState(false);
 
@@ -148,33 +147,60 @@ const VideoConsultation: React.FC = () => {
         { headers: { Authorization: `Token ${token}` } }
       );
 
+      console.log("AI response:", res.data);
+
+      // If doctor is recommended successfully
       if (res.data.success && res.data.recommended_doctor) {
         const doctor = res.data.recommended_doctor;
-        setRecommendedDoctor(doctor);
+
+        // Properly extract urgency from doctor object
+        const urgency = doctor.urgency === "urgent" ? "urgent" : "non_urgent";
+        console.log("Urgency extracted from recommended_doctor:", urgency);
+
+        setRecommendedDoctor({
+          ...doctor,
+          urgency,
+        });
+
         setSelectedDoctorId(doctor.id);
         toast.success(`🤖 AI рекомендовал врача: ${doctor.name}`);
-      } else if (!res.data.success && res.data.ai_data) {
+      }
+
+      // Fallback scenario: AI gave a specialty but no matching doctor found
+      else if (!res.data.success && res.data.ai_data) {
         const fallback = doctors.find((d) =>
           d.doctor_type.toLowerCase().includes("терапевт")
         );
+
         if (fallback) {
+          // Try to extract urgency from ai_data (if provided), otherwise assume urgent
+          const urgency =
+            res.data.ai_data?.urgency === "non_urgent" ? "non_urgent" : "urgent";
+
+          console.log("Fallback urgency (from ai_data or default):", urgency);
+
           setRecommendedDoctor({
             id: fallback.id,
             name: fallback.name,
             doctor_type: fallback.doctor_type,
             reason: "Врач общей практики поможет оценить состояние.",
+            urgency,
           });
+
           setSelectedDoctorId(fallback.id);
           setAiErrorData(res.data.ai_data);
           setFallbackUsed(true);
+
           toast.info("❌ Специалист не найден. Назначен терапевт.");
         } else {
+          // No fallback therapist found either
           setAiErrorData(res.data.ai_data);
           toast.warn("❌ AI дал рекомендацию, но подходящих врачей не найдено.");
         }
       }
-    } catch {
+    } catch (error) {
       toast.error("⚠️ Ошибка AI.");
+      console.error("AI Recommendation Error:", error);
     } finally {
       setLoadingAI(false);
       setStep(2);
@@ -219,13 +245,11 @@ const VideoConsultation: React.FC = () => {
 
         <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
           <div
-            className={`h-full transition-all duration-500 rounded-full ${
-              step === 1
+            className={`h-full transition-all duration-500 rounded-full ${step === 1
                 ? "w-1/3 bg-blue-600"
                 : step === 2
                 ? "w-2/3 bg-blue-600"
-                : "w-full bg-blue-600"
-            }`}
+                : "w-full bg-blue-600"}`}
           />
         </div>
 
