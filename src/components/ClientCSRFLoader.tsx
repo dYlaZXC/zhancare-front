@@ -8,7 +8,7 @@ export function ClientCSRFLoader() {
     // ✅ Uses axiosInstance with proper baseURL and credentials
     api.get("/csrf/")
       .then(() => {
-        console.debug("✅ CSRF cookie set");
+        // console.debug("✅ CSRF cookie set");
       })
       .catch((err) => {
         console.warn("❌ Failed to set CSRF cookie", err);
