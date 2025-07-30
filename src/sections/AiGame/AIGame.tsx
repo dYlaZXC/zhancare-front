@@ -66,26 +66,30 @@ export default function AIGame() {
     setSelected(null);
     setDisplayedSymptoms("");
     setTypedOptions([]);
-
+    
     try {
+      // Send the API request
       const response = await api.post("/sessions/generate_question/");
-      const parsed = JSON.parse(response.data); // Response is raw JSON string
-      const { symptoms, correct_answer, wrong_answers } = parsed;
-
+    
+      // The response is now already a valid Question object, no need for JSON.parse
+      const { symptoms, correct_answer, wrong_answers } = response.data;
+    
+      // Shuffle the options, ensuring the correct answer is included
       const options = shuffleArray(
         Array.from(new Set([correct_answer, ...wrong_answers]))
       ).slice(0, 3);
-
+    
       if (!options.includes(correct_answer)) {
         options[Math.floor(Math.random() * 3)] = correct_answer;
       }
-
+    
+      // Prepare the question object for display
       const q: Question = {
         symptoms: symptoms.trim(),
         answer: correct_answer,
         options,
       };
-
+    
       setQuestion(q);
       simulateTyping(q.symptoms, q.options);
     } catch (err) {
@@ -95,6 +99,7 @@ export default function AIGame() {
       setLoading(false);
     }
   };
+
 
   const handleSelect = (option: string) => {
     if (selected || typing) return;
