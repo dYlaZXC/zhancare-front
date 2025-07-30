@@ -74,8 +74,8 @@ export default function Hero404() {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6, duration: 0.6 }}
             >
-              <p>
-                Создано в <strong>ZhanCare AI</strong> — <span className="text-white">Адилан Ахрамович</span>, ТОО iTry
+              {/* <p>
+                Создано в <strong>ZhanCare AI</strong> — <span className="text-white">C любовью и заботой о вашем здоровье</span>
               </p>
               <p>
                 📞 <a href="tel:+77758249686" className="underline">+7 775 824 9686</a>
@@ -97,9 +97,9 @@ export default function Hero404() {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  LinkedIn компании iTry
+                  LinkedIn компании
                 </a>
-              </p>
+              </p> */}
             </motion.div>
 
             <motion.button
