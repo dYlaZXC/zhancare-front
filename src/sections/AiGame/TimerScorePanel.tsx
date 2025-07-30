@@ -1,4 +1,4 @@
-import {TimerScorePanelProps} from "./types"
+import {TimerScorePanelProps} from "./types";
 
 export function TimerScorePanel({ timeLeft, score }: TimerScorePanelProps) {
   return (

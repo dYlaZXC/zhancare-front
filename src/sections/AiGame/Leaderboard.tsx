@@ -1,3 +1,5 @@
+import {LeaderboardProps} from "./types";
+
 export function Leaderboard({ score, nickname, leaderboard, onRestart }: LeaderboardProps) {
   return (
     <div className="text-white text-center mt-20 max-w-xl mx-auto">

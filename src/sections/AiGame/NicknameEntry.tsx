@@ -1,4 +1,4 @@
-import {NicknameEntryProps} from "./types"
+import {NicknameEntryProps} from "./types";
 
 export function NicknameEntry({
   nickname,

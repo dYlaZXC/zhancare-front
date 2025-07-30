@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import {QuestionDisplayProps} from "./types"
+import {QuestionDisplayProps} from "./types";
 
 export function QuestionDisplay({
   symptoms,
