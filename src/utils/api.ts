@@ -4,15 +4,23 @@ import axios from "axios";
 import * as Sentry from "@sentry/nextjs";
 import { logoutUser } from "@/utils/auth";
 
-const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1";
-export const baseURLImg = process.env.NEXT_PUBLIC_API_IMG_URL || "http://127.0.0.1:8000/api/v1";
+const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+export const baseURLImg = process.env.NEXT_PUBLIC_API_IMG_URL || "http://localhost:8000/api/v1";
 
 const axiosInstance = axios.create({
   baseURL,
+  withCredentials: true, // ✅ Include cookies like csrftoken in requests
   paramsSerializer: (params: any) => new URLSearchParams(params).toString(),
 });
 
-// ✅ Request Interceptor — Attach access token
+// ✅ Helper: Extract CSRF token from cookies
+function getCSRFToken(): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(/csrftoken=([^;]+)/);
+  return match ? match[1] : null;
+}
+
+// ✅ Request Interceptor — Attach token + CSRF
 axiosInstance.interceptors.request.use(
   (config) => {
     if (typeof window !== "undefined") {
@@ -20,19 +28,28 @@ axiosInstance.interceptors.request.use(
       if (token) {
         config.headers.Authorization = `Token ${token}`;
       }
+
+      const method = config.method?.toLowerCase();
+      const csrfToken = getCSRFToken();
+
+      if (csrfToken && ["post", "put", "patch", "delete"].includes(method || "")) {
+        config.headers["X-CSRFToken"] = csrfToken;
+      }
+
+      config.withCredentials = true;
     }
+
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// ✅ Response Interceptor — Handle 401 refresh (excluding login/register)
+// ✅ Response Interceptor — Handle 401 refresh
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // ⛔ Skip refresh logic for login and register requests
     const isAuthRequest =
       originalRequest.url?.includes("/auth/login/") ||
       originalRequest.url?.includes("/auth/register/");
@@ -51,7 +68,6 @@ axiosInstance.interceptors.response.use(
         const newAccessToken = data.access_token;
         localStorage.setItem("access_token", newAccessToken);
 
-        // Set new token on original request and retry it
         originalRequest.headers.Authorization = `Token ${newAccessToken}`;
         return axiosInstance(originalRequest);
       } catch (refreshError) {
@@ -81,7 +97,7 @@ axiosInstance.interceptors.response.use(
   }
 );
 
-// ✅ Manual logout handler
+// ✅ Manual logout
 export const logout = async () => {
   try {
     await axiosInstance.post("/auth/logout/");

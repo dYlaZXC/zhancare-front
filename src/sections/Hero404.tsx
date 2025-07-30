@@ -5,7 +5,7 @@ import heroVideo from "@/assets/hero-video.mp4";
 import Image from "next/image";
 import Logo from "@/assets/logosaas.png";
 import { motion } from "framer-motion";
-import AIGame from "@/sections/AIGame";
+import AIGame from "@/sections/AiGame/AIGame";
 
 export default function Hero404() {
   const [gameStarted, setGameStarted] = useState(false);
