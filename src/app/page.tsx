@@ -25,34 +25,34 @@ export default function Home() {
   return (
     <div>
       {/* Hero404 Section */}
-      <Hero404/>
+      {/* <Hero404/> */}
 
       {/* Hero Section */}
-      {/* <Hero /> */}
+      <Hero />
 
       {/* Services Section */}
-      {/* <Services /> */}
+      <Services />
       
       {/* Features Section */}
-      {/* <Features /> */}
+      <Features />
       
       {/* DoctorsCarousel Section */}
-      {/* <DoctorsCarousel /> */}
+      <DoctorsCarousel />
       
       {/* Impact Section */}
-      {/* <ImpactSection /> */}
+      <ImpactSection />
       
       {/* Product Showcase Section */}
-      {/* <ProductShowcase /> */}
+      <ProductShowcase />
 
       {/* Call To Action Section */}
-      {/* <CallToAction /> */}
+      <CallToAction />
 
       
       {/* <Pricing /> */}
       
       {/* Logo Ticker Section */}
-      {/* <LogoTicker /> */}
+      <LogoTicker />
       
       {/* Chat Button */}
       <ChatButton onToggle={() => setIsChatOpen((prev) => !prev)} />
@@ -63,7 +63,7 @@ export default function Home() {
       {/* <MobileApp /> */}
 
       {/* Footer */}
-      {/* <Footer /> */}
+      <Footer />
     </div>
   );
 }
