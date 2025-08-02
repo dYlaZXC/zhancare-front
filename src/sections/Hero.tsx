@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import heroVideo from "@/assets/hero-video.mp4";
 import Header from "@/sections/Hero/Header";
 import HeroContent from "@/sections/Hero/HeroContent";
+import HeroChat from "@/sections/Hero/HeroChat";
 import HeroStats from "@/sections/Hero/HeroStats";
 
 const ToastContainer = dynamic(
@@ -46,6 +47,7 @@ export default function Hero() {
       {/* Hero Main Content */}
       <div className="relative z-10 container mx-auto text-white px-4">
         <HeroContent />
+        {/* <HeroChat /> */}
         <HeroStats />
       </div>
 
