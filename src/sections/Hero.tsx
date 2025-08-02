@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import heroVideo from "@/assets/hero-video.mp4";
 import Header from "@/sections/Hero/Header";
 import HeroContent from "@/sections/Hero/HeroContent";
-import HeroChat from "@/sections/Hero/HeroChat";
+// import HeroChat from "@/sections/Hero/HeroChat";
 import HeroStats from "@/sections/Hero/HeroStats";
 
 const ToastContainer = dynamic(
