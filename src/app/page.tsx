@@ -14,6 +14,7 @@ import { ChatButton } from "@/sections/ChatButton";
 import { ChatComponent } from "@/components/ChatComponent";
 import { useLanguage } from "@/context/LanguageContext";
 import { DoctorsCarousel } from "@/sections/DoctorsCarousel";
+import { ChatSection } from "@/sections/ChatSection";
 import { MobileApp } from "@/sections/MobileApp";
 import  Hero404  from "@/sections/Hero404";
 
@@ -29,6 +30,9 @@ export default function Home() {
 
       {/* Hero Section */}
       <Hero />
+
+      {/* Chat Section */}
+      <ChatSection />
 
       {/* Services Section */}
       <Services />
