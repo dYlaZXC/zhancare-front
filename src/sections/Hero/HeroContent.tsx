@@ -1,35 +1,88 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { useRef, useMemo } from "react";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
+import en from "@/locales/en.json";
+import HeroText from "./HeroText";
+import HeroVisualization from "./HeroVisualization";
+
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.2,
+      delayChildren: 0.3
+    }
+  }
+};
 
 export default function HeroContent() {
   const { setIsAuthOpen } = useAuth();
   const { language } = useLanguage();
-  const translations = language === "ru" ? ru.hero : kz.hero;
+  
+  // Fixed translations logic to handle all 3 languages
+  const translations = useMemo(() => {
+    switch (language) {
+      case "ru": return ru.hero;
+      case "en": return en.hero;
+      case "kz": return kz.hero;
+      default: return ru.hero;
+    }
+  }, [language]);
+  
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isInView = useInView(containerRef, { once: true, margin: "-100px" });
+  
+  // Scroll-based animations
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start end", "end start"]
+  });
+  
+  const y = useTransform(scrollYProgress, [0, 1], [0, -50]);
+  const opacity = useTransform(scrollYProgress, [0, 0.3, 0.7, 1], [1, 1, 1, 0.8]);
+
+  const handleBookAppointment = () => {
+    setIsAuthOpen(true);
+  };
+
+  const handleLearnMore = () => {
+    const servicesSection = document.getElementById('services');
+    if (servicesSection) {
+      servicesSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   return (
-    <motion.div className="md:flex items-center">
-      <div className="md:w-1/2 pt-20 pb-20">
-        <motion.h1 className="text-3xl md:text-5xl font-light tracking-tighter leading-tight mt-10 md:mt-20">
-          {translations.content.heroHeading}
-        </motion.h1>
-        <motion.p className="text-lg md:text-xl mt-4 md:mt-6 font-extralight leading-relaxed">
-          {translations.content.heroDescription}
-        </motion.p>
-        <motion.div className="flex gap-4 items-center mt-6 md:mt-8">
-          <button
-            className="bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white px-6 py-3 rounded-lg"
-            onClick={() => setIsAuthOpen(true)}
-          >
-            {translations.content.openDataButton}
-          </button>
+    <motion.div 
+      ref={containerRef}
+      className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8"
+      style={{ y, opacity }}
+    >
+      <div className="max-w-7xl mx-auto">
+        <motion.div 
+          className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center"
+          variants={containerVariants}
+          initial="hidden"
+          animate={isInView ? "visible" : "hidden"}
+        >
+          <HeroText 
+            translations={translations}
+            language={language}
+            isInView={isInView}
+            onBookAppointment={handleBookAppointment}
+            onLearnMore={handleLearnMore}
+          />
+          
+          <HeroVisualization isInView={isInView} />
         </motion.div>
       </div>
     </motion.div>
   );
 }
-

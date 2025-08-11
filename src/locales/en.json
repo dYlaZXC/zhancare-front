@@ -1,0 +1,271 @@
+{
+    "auth": {
+      "welcome": "Welcome to ZhanCare.AI!",
+      "description": "Log in if you're already registered, or create an account in just a few clicks!",
+      "login": "Log in",
+      "register": "Register",
+      "email": "Email",
+      "password": "Password",
+      "forgotPassword": "Forgot password?",
+      "loginButton": "Log in",
+      "lastName": "Last Name",
+      "firstName": "First Name",
+      "phone": "Phone",
+      "confirmPassword": "Confirm Password",
+      "registerButton": "Register"
+    },
+    "hero": {
+      "navigation": {
+        "hero": "Home",
+        "ai-chat": "AI Chat",
+        "services": "Services",
+        "specialists": "Specialists",
+        "modules": "Modules",
+        "contacts": "Contacts"
+      },
+      "content": {
+        "heroHeading": "Next-generation telemedicine – health at one click!",
+        "heroDescription": "We provide remote medical consultations, AI tools for doctors, and convenient connection between patients and physicians.",
+        "videoNotSupported": "Your browser does not support video.",
+        "openDataButton": "Book an appointment"
+      },
+      "statistics": [
+        { "value": "700+", "description": "Consultations per month" },
+        { "value": "100+", "description": "Home doctor visits" },
+        { "value": "24/7", "description": "Access to medical consultations" },
+        { "value": "AI", "description": "AI analytics for doctors" }
+      ]
+    },
+
+    "services": {
+    "servicesHeader": "ZhanCare.AI Main Services:",
+    "servicesDescription": "Our services provide convenient access to medical care, improving interaction between patients and doctors.",
+    "list": [
+      {
+        "icon": "faPlane",
+        "title": "Medical Tourism",
+        "description": "Organizing trips abroad for diagnostics, treatment, and wellness.",
+        "details": [
+          "Clinic and doctor selection",
+          "Trip organization",
+          "Patient accompaniment"
+        ]
+      },
+      {
+        "icon": "faVideo",
+        "title": "Telemedicine",
+        "description": "Remote medical consultations anytime.",
+        "details": ["Secure connection", "High-quality video", "Consultations with certified doctors"]
+      },
+      {
+        "icon": "faHouse",
+        "title": "Home Doctor Visits",
+        "description": "Prompt qualified doctor visits at home.",
+        "details": [
+          "Examination and diagnosis",
+          "Treatment prescription",
+          "Home testing services"
+        ]
+      },
+      {
+        "icon": "faBell",
+        "title": "Reminders and Notifications",
+        "description": "Automated reminders for appointments and medications.",
+        "details": ["System notifications", "Calendar integration", "Personalized reminders"]
+      },
+      {
+        "icon": "faUserMd",
+        "title": "Doctor Support",
+        "description": "Tools for doctors to improve work efficiency.",
+        "details": ["Treatment recommendations", "Patient analytics", "Automated reports"]
+      },
+      {
+        "icon": "faHeartbeat",
+        "title": "Health Monitoring",
+        "description": "Real-time patient condition analysis.",
+        "details": ["Wearable device integration", "Automatic health metrics analysis", "Health recommendations"]
+      },
+      {
+        "icon": "faPills",
+        "title": "Medication Recommendations",
+        "description": "Personalized medication intake recommendations.",
+        "details": ["Drug compatibility analysis", "Dosage recommendations", "Treatment compliance monitoring"]
+      },
+      {
+        "icon": "faClinicMedical",
+        "title": "Telemedicine for Remote Areas",
+        "description": "Access to medical services in hard-to-reach places.",
+        "details": ["Mobile network connections", "Remote examinations", "Specialist consultations"]
+      },
+      {
+        "icon": "faChartLine",
+        "title": "Medical Data Analytics",
+        "description": "Using big data to improve medical decisions.",
+        "details": ["Disease outbreak prediction", "Doctor workload optimization", "Automated trend analysis"]
+      }
+    ]
+  },
+
+    "features": {
+      "title": "ZhanCare.AI Capabilities",
+      "description": "Our platform uses cutting-edge technologies to improve diagnostics, doctor-patient communication, and enhance medical service quality.",
+      "buttonText": "Learn more",
+      "featuresList": [
+        {
+          "title": "AI Diagnostics and Recommendations",
+          "description": "Using artificial intelligence to analyze medical data and provide doctors with accurate recommendations."
+        },
+        {
+          "title": "Video Consultations",
+          "description": "Secure video calls with doctors, providing access to medical care from anywhere in the world."
+        },
+        {
+          "title": "Electronic Medical Records",
+          "description": "Storing medical history, tests, and prescriptions in secure digital format with convenient access."
+        }
+      ]
+    },
+
+    "productShowcase": {
+      "title": "Innovative interface for telemedicine and diagnostics",
+      "description": "ZhanCare.AI provides a convenient interface for doctors and patients, ensuring quick access to medical data, video consultations, and AI analytics tools.",
+      "contentData": [
+        {
+          "id": 1,
+          "title": "AI Diagnostics and Data Analysis",
+          "description": "Automated analysis of medical data with recommendations for doctors and disease prediction.",
+          "imageSrc": "hero1212"
+        },
+        {
+          "id": 2,
+          "title": "Patient Condition Monitoring",
+          "description": "Continuous collection and analysis of patient data for prompt response and personalized treatment.",
+          "imageSrc": "hero1213"
+        },
+        {
+          "id": 3,
+          "title": "Video Consultations with Doctors",
+          "description": "Secure video calls with certified specialists for remote medical consultations.",
+          "imageSrc": "hero1214"
+        },
+        {
+          "id": 4,
+          "title": "Electronic Medical Records",
+          "description": "Centralized storage of medical data with convenient access for doctors and patients.",
+          "imageSrc": "hero1215"
+        }
+      ]
+    },
+
+    "callToAction": {
+      "title": "Contact Us",
+      "description": "We're ready to answer your questions and provide additional information.",
+      "form": {
+        "nameLabel": "Name",
+        "emailLabel": "Email",
+        "messageLabel": "Message",
+        "submitButton": "Send message",
+        "contactButton": "Contact us"
+      },
+      "alertMessage": "Your message has been sent!"
+    },
+
+    "footer": {
+      "companyTagline": "Combining technology and care for better health.",
+      "learnMore": "Learn more",
+      "navigation": {
+        "title": "Navigation",
+        "links": ["Home", "About", "AI Chat", "Services", "Features", "Contacts"]
+      },
+      "contact": {
+        "title": "Contact",
+        "address": "",
+        "email": "support@zhancare.ai",
+        "contactUs": "Contact us"
+      },
+      "map": {
+        "title": "Map"
+      },
+      "social": {
+        "title": "Follow us"
+      },
+      "rights": "ZhanCare.AI. All rights reserved."
+    },
+
+    "chat": {
+      "title": "Chat with ZhanBot.AI",
+      "assistantInstruction": "You are a virtual medical assistant. Help users get health information, appointment reminders, and self-care advice.",
+      "placeholder": "Ask a question...",
+      "sendButton": "Send",
+      "sending": "Sending...",
+      "typing": " Thinking...",
+      "fetchError": "Error getting response from server.",
+      "genericError": "An error occurred. Please try again."
+    },
+    
+    "impactSection": {
+    "title": "Why choose ZhanCare.AI?",
+    "description": "We scale smart healthcare with AI.",
+    
+    "statistics": [
+      { "value": 1500, "description": "Duty doctor consultation", "icon": "faVideo", "currency": "₸" },
+      { "value": 30, "description": "Certified doctors", "icon": "faUserMd" },
+      { "value": 2, "description": "Countries aware of ZhanCare.AI", "icon": "faClinicMedical" },
+      { "value": 95, "description": "Faster diagnosis with AI", "icon": "faChartLine", "percent": true }
+    ],
+
+    "features": {
+      "title": "AI that's changing medicine",
+      "description": "Intelligent, automated, and accessible healthcare.",
+      "list": [
+        {
+          "title": "AI Diagnostics",
+          "description": "Instant symptom analysis for accelerated decision-making.",
+          "icon": "faStethoscope"
+        },
+        {
+          "title": "Real-time Health Monitoring",
+          "description": "24/7 tracking of patient vital signs.",
+          "icon": "faHeartbeat"
+        },
+        {
+          "title": "Secure Digital Medical Records",
+          "description": "Encrypted cloud access to medical history.",
+          "icon": "faNotesMedical"
+        },
+        {
+          "title": "Smart Reminders",
+          "description": "Automatic notifications for appointments and medications.",
+          "icon": "faBell"
+        },
+        {
+          "title": "Personalized Medication Recommendations",
+          "description": "AI analysis of dosage and drug compatibility.",
+          "icon": "faPills"
+        },
+        {
+          "title": "Automated Reports for Doctors",
+          "description": "Generation of detailed medical reports based on patient data.",
+          "icon": "faChartLine"
+        }
+      ]
+    },
+
+    "successStories": {
+      "title": "Real Results",
+      "description": "How ZhanCare.AI is transforming healthcare.",
+      "stories": [
+        {
+          "icon": "faClock",
+          "title": "Doctors save 20+ hours per week",
+          "description": "AI automation reduces time on administrative tasks, allowing doctors to focus on patients."
+        },
+        {
+          "icon": "faGlobe",
+          "title": "3x faster access to doctors in remote areas",
+          "description": "Telemedicine eliminates healthcare gaps, helping patients get medical care from anywhere."
+        }
+      ]
+    }
+  }
+}

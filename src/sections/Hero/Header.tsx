@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
+import en from "@/locales/en.json";
 import LanguageSwitcher from "./LanguageSwitcher";
 import UserDropdown from "./UserDropdown";
 import MobileMenu from "./MobileMenu";
@@ -20,11 +21,20 @@ export default function Header() {
   const { setIsAuthOpen, user, logoutUser } = useAuth();
   const { language, setLanguage } = useLanguage();
   
+  // Debug: Log language changes
+  useEffect(() => {
+    console.log(`Header component language changed to: ${language}`);
+  }, [language]);
+  
   // Memoize translations to prevent unnecessary re-renders
-  const translations = useMemo(() => 
-    language === "ru" ? ru.hero : kz.hero, 
-    [language]
-  );
+  const translations = useMemo(() => {
+    switch (language) {
+      case "ru": return ru.hero;
+      case "en": return en.hero;
+      case "kz": return kz.hero;
+      default: return ru.hero;
+    }
+  }, [language]);
   
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -48,10 +58,23 @@ export default function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [handleScroll]);
 
-  // Close mobile menu when clicking outside
+  // IMPROVED: More specific outside click handler that excludes language switcher
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (isMenuOpen && !(event.target as Element).closest('[data-mobile-menu]')) {
+      const target = event.target as Element;
+      
+      // Don't close if clicking on language dropdown elements
+      if (target.closest('[data-language-dropdown]')) {
+        return;
+      }
+      
+      // Don't close if clicking on mobile menu elements
+      if (target.closest('[data-mobile-menu]')) {
+        return;
+      }
+      
+      // Close menu if clicking outside
+      if (isMenuOpen) {
         setIsMenuOpen(false);
       }
     };
@@ -103,9 +126,49 @@ export default function Header() {
     logoutUser();
   }, [logoutUser]);
 
+  // Simple cycling function for backwards compatibility
   const toggleLanguage = useCallback(() => {
-    setLanguage(language === "ru" ? "kz" : "ru");
+    const currentIndex = languages.findIndex(lang => lang.code === language);
+    const nextIndex = (currentIndex + 1) % languages.length;
+    setLanguage(languages[nextIndex].code as "ru" | "en" | "kz");
   }, [language, setLanguage]);
+
+  // Define languages array for cycling
+  const languages = [
+    { code: "ru", name: "Русский" },
+    { code: "en", name: "English" },
+    { code: "kz", name: "Қазақша" }
+  ];
+
+  // Get auth button text for current language
+  const getAuthButtonText = useCallback(() => {
+    switch (language) {
+      case "ru": return "Войти";
+      case "en": return "Sign In";
+      case "kz": return "Кіру";
+      default: return "Sign In";
+    }
+  }, [language]);
+
+  // Get menu aria label for current language
+  const getMenuAriaLabel = useCallback(() => {
+    switch (language) {
+      case "ru": return isMenuOpen ? "Закрыть меню" : "Открыть меню";
+      case "en": return isMenuOpen ? "Close menu" : "Open menu";
+      case "kz": return isMenuOpen ? "Мәзірді жабу" : "Мәзірді ашу";
+      default: return isMenuOpen ? "Close menu" : "Open menu";
+    }
+  }, [language, isMenuOpen]);
+
+  // Get navigation aria label for current language
+  const getNavAriaLabel = useCallback(() => {
+    switch (language) {
+      case "ru": return "Основная навигация";
+      case "en": return "Main navigation";
+      case "kz": return "Негізгі навигация";
+      default: return "Main navigation";
+    }
+  }, [language]);
 
   // Memoize navigation keys
   const navigationKeys = useMemo(() => 
@@ -144,9 +207,9 @@ export default function Header() {
             <button
               className="md:hidden text-white p-2 rounded-lg hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 flex-shrink-0"
               onClick={toggleMenu}
-              aria-label={isMenuOpen ? "Закрыть меню" : "Открыть меню"}
+              aria-label={getMenuAriaLabel()}
               aria-expanded={isMenuOpen}
-              data-mobile-menu
+              data-mobile-menu="trigger"
             >
               <MenuIcon 
                 className={`h-6 w-6 transition-transform duration-200 ${
@@ -159,7 +222,7 @@ export default function Header() {
             <nav 
               className="hidden md:flex flex-wrap items-center gap-1 lg:gap-2 xl:gap-3 text-white text-xs sm:text-sm lg:text-base flex-shrink-0"
               role="navigation"
-              aria-label="Основная навигация"
+              aria-label={getNavAriaLabel()}
             >
               <div className="flex flex-wrap items-center gap-1 lg:gap-2">
                 {navigationKeys.map((key) => (
@@ -177,8 +240,8 @@ export default function Header() {
               <div className="flex items-center gap-1 lg:gap-2 ml-1 lg:ml-2">
                 {/* Language switcher */}
                 <LanguageSwitcher
-                  toggleLanguage={toggleLanguage}
                   currentLanguage={language}
+                  setLanguage={setLanguage}
                 />
 
                 {/* Authentication */}
@@ -190,7 +253,7 @@ export default function Header() {
                     className="group bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white rounded-lg px-3 py-1.5 lg:px-4 lg:py-2 font-medium hover:opacity-90 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300 relative overflow-hidden text-xs lg:text-sm whitespace-nowrap"
                   >
                     <span className="relative z-10">
-                      {language === "ru" ? "Войти" : "Кіру"}
+                      {getAuthButtonText()}
                     </span>
                     <div className="absolute inset-0 bg-gradient-to-r from-[#0029A3] to-[#4A5DFF] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
                   </button>
@@ -212,21 +275,12 @@ export default function Header() {
         )}
       </header>
 
-      {/* Mobile menu */}
+      {/* Mobile menu - handles its own overlay */}
       <MobileMenu
         isOpen={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
         onScrollToSection={handleScrollToSection}
       />
-
-      {/* Overlay for mobile menu */}
-      {isMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
-          onClick={() => setIsMenuOpen(false)}
-          aria-hidden="true"
-        />
-      )}
     </>
   );
 }

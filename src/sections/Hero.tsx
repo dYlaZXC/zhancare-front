@@ -48,7 +48,7 @@ export default function Hero() {
       <div className="relative z-10 container mx-auto text-white px-4">
         <HeroContent />
         {/* <HeroChat /> */}
-        <HeroStats />
+        {/* <HeroStats /> */}
       </div>
 
       {/* Toast Notification */}
