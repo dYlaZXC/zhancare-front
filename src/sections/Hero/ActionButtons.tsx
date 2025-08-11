@@ -46,7 +46,7 @@ const buttonVariants = {
     }
   },
   hover: {
-    scale: 1.05,
+    scale: 1.02,
     y: -2,
     transition: {
       type: "spring",
@@ -70,18 +70,20 @@ export default function ActionButtons({
 }: ActionButtonsProps) {
   return (
     <motion.div variants={itemVariants}>
-      <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start max-w-md mx-auto lg:mx-0">
+      <div className="flex flex-col xs:flex-row gap-3 xs:gap-4 justify-center lg:justify-start max-w-xs xs:max-w-md sm:max-w-lg mx-auto lg:mx-0">
         <motion.button
-          className="group relative bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white px-8 py-4 rounded-xl font-medium text-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow"
+          className="group relative bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white px-4 xs:px-6 sm:px-8 py-3 xs:py-3.5 sm:py-4 rounded-xl font-medium text-sm xs:text-base sm:text-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow w-full xs:w-auto"
           onClick={onBookAppointment}
           variants={buttonVariants}
           whileHover="hover"
           whileTap="tap"
         >
           <span className="relative z-10 flex items-center justify-center">
-            {translations.content.openDataButton}
+            <span className="truncate">
+              {translations.content.openDataButton}
+            </span>
             <motion.svg
-              className="ml-2 w-5 h-5"
+              className="ml-2 w-4 h-4 xs:w-5 xs:h-5 flex-shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -94,15 +96,17 @@ export default function ActionButtons({
           </span>
           <div className="absolute inset-0 bg-gradient-to-r from-[#0029A3] to-[#4A5DFF] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
         </motion.button>
-
+        
         <motion.button
-          className="group px-8 py-4 rounded-xl border border-white/20 text-white font-medium text-lg hover:bg-white/5 transition-all duration-300"
+          className="group px-4 xs:px-6 sm:px-8 py-3 xs:py-3.5 sm:py-4 rounded-xl border border-white/20 text-white font-medium text-sm xs:text-base sm:text-lg hover:bg-white/5 transition-all duration-300 w-full xs:w-auto"
           onClick={onLearnMore}
           variants={buttonVariants}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
-          {language === "ru" ? "Узнать больше" : "Көбірек білу"}
+          <span className="truncate">
+            {language === "ru" ? "Узнать больше" : "Көбірек білу"}
+          </span>
         </motion.button>
       </div>
     </motion.div>

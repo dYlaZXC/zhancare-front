@@ -48,7 +48,6 @@ const features = [
   }
 ];
 
-// Helper function to get the correct translation
 const getFeatureText = (feature: typeof features[0], language: string): string => {
   switch (language) {
     case "ru": return feature.ru;
@@ -61,14 +60,38 @@ const getFeatureText = (feature: typeof features[0], language: string): string =
 export default function FeatureHighlights({ language }: FeatureHighlightsProps) {
   return (
     <motion.div variants={itemVariants}>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4 max-w-2xl mx-auto lg:mx-0">
+      {/* All screens: Single column, 4 rows */}
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 max-w-sm sm:max-w-md mx-auto lg:mx-0">
         {features.map((feature, index) => (
-          <div key={index} className="flex items-center justify-center lg:justify-start space-x-3">
-            <div className="w-2 h-2 bg-gradient-to-r from-[#001E80] to-[#3A50FF] rounded-full"></div>
-            <span className="text-gray-300 text-sm sm:text-base">
+          <motion.div 
+            key={index} 
+            className="flex items-center space-x-3 px-4 sm:px-5 py-3 sm:py-3.5 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg hover:bg-white/10 hover:border-white/20 transition-all duration-300 group cursor-pointer"
+            whileHover={{ 
+              scale: 1.02,
+              x: 5,
+              transition: { type: "spring", stiffness: 400, damping: 10 }
+            }}
+            whileTap={{ scale: 0.98 }}
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: index * 0.15, duration: 0.6 }}
+          >
+            <motion.div 
+              className="w-2.5 h-2.5 bg-gradient-to-r from-[#001E80] to-[#3A50FF] rounded-full flex-shrink-0"
+              animate={{
+                scale: [1, 1.2, 1],
+                opacity: [0.8, 1, 0.8]
+              }}
+              transition={{
+                duration: 2.5,
+                repeat: Infinity,
+                delay: index * 0.4
+              }}
+            />
+            <span className="text-gray-300 text-sm sm:text-base font-normal leading-tight group-hover:text-white transition-colors duration-300">
               {getFeatureText(feature, language)}
             </span>
-          </div>
+          </motion.div>
         ))}
       </div>
     </motion.div>

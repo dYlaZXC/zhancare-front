@@ -42,7 +42,7 @@ export default function HeroText({
   onLearnMore 
 }: HeroTextProps) {
   return (
-    <div className="space-y-6 lg:space-y-8 text-center lg:text-left">
+    <div className="space-y-4 xs:space-y-5 sm:space-y-6 lg:space-y-8 text-center lg:text-left px-2 sm:px-0">
       <TypingHeading 
         text={translations.content.heroHeading}
         isInView={isInView}
@@ -51,7 +51,7 @@ export default function HeroText({
 
       {/* Description */}
       <motion.div variants={itemVariants}>
-        <p className="text-lg sm:text-xl lg:text-2xl text-gray-300 font-light leading-relaxed max-w-2xl mx-auto lg:mx-0">
+        <p className="text-base xs:text-lg sm:text-xl lg:text-2xl text-gray-300 font-light leading-relaxed max-w-xs xs:max-w-sm sm:max-w-2xl mx-auto lg:mx-0">
           {translations.content.heroDescription}
         </p>
       </motion.div>

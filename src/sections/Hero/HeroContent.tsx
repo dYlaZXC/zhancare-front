@@ -62,12 +62,12 @@ export default function HeroContent() {
   return (
     <motion.div 
       ref={containerRef}
-      className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8"
+      className="min-h-screen flex items-center justify-center px-3 xs:px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16"
       style={{ y, opacity }}
     >
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto w-full">
         <motion.div 
-          className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center"
+          className="grid lg:grid-cols-2 gap-8 xs:gap-10 sm:gap-12 lg:gap-16 items-center"
           variants={containerVariants}
           initial="hidden"
           animate={isInView ? "visible" : "hidden"}
@@ -80,7 +80,9 @@ export default function HeroContent() {
             onLearnMore={handleLearnMore}
           />
           
-          <HeroVisualization isInView={isInView} />
+          <div className="order-first lg:order-last">
+            <HeroVisualization isInView={isInView} />
+          </div>
         </motion.div>
       </div>
     </motion.div>

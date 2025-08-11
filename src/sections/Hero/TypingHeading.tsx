@@ -54,11 +54,11 @@ export default function TypingHeading({ text, isInView, language }: TypingHeadin
 
   return (
     <motion.div variants={itemVariants}>
-      <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-light tracking-tight leading-[1.1] text-white">
+      <h1 className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl lg:text-5xl xl:text-6xl 2xl:text-6xl font-light tracking-tight leading-tight xs:leading-[1.1] text-white">
         <span className="block">
           {displayedText}
           <motion.span
-            className="inline-block w-0.5 h-12 sm:h-16 lg:h-20 xl:h-24 bg-gradient-to-b from-[#3A50FF] to-[#001E80] ml-1"
+            className="inline-block w-0.5 h-8 xs:h-10 sm:h-12 md:h-16 lg:h-16 xl:h-20 2xl:h-20 bg-gradient-to-b from-[#3A50FF] to-[#001E80] ml-1"
             animate={{ opacity: [0, 1, 0] }}
             transition={{ duration: 1, repeat: Infinity }}
           />
