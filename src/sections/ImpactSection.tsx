@@ -60,15 +60,18 @@ export const ImpactSection = () => {
   const translations = getTranslations();
 
   return (
-    <section id="impact" className="relative py-32 px-6 md:px-12 bg-gradient-to-b from-[#d2dcff] via-[#d2dcff] to-white text-center overflow-hidden">
-      {/* Floating Background */}
-      <div className="absolute top-[-0px] left-[-150px] w-[300px] h-[300px] bg-blue-300 opacity-20 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-[-40%] right-[-150px] w-[300px] h-[300px] bg-pink-300 opacity-20 rounded-full blur-3xl"></div>
+    <section 
+      id="impact" 
+      className="relative py-16 sm:py-20 md:py-24 lg:py-28 xl:py-32 laptop-hd:py-24 desktop-fhd:py-32 desktop-qhd:py-40 desktop-4k:py-48 px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 laptop-hd:px-8 desktop-fhd:px-12 desktop-qhd:px-16 desktop-4k:px-24 bg-gradient-to-b from-[#d2dcff] via-[#d2dcff] to-white text-center overflow-hidden"
+    >
+      {/* Responsive Floating Background */}
+      <div className="absolute top-[-50px] sm:top-[-100px] lg:top-[-150px] left-[-75px] sm:left-[-100px] lg:left-[-150px] w-[150px] sm:w-[200px] lg:w-[300px] desktop-qhd:w-[400px] desktop-4k:w-[500px] h-[150px] sm:h-[200px] lg:h-[300px] desktop-qhd:h-[400px] desktop-4k:h-[500px] bg-blue-300 opacity-20 rounded-full blur-2xl sm:blur-3xl"></div>
+      <div className="absolute bottom-[-20%] sm:bottom-[-30%] lg:bottom-[-40%] right-[-75px] sm:right-[-100px] lg:right-[-150px] w-[150px] sm:w-[200px] lg:w-[300px] desktop-qhd:w-[400px] desktop-4k:w-[500px] h-[150px] sm:h-[200px] lg:h-[300px] desktop-qhd:h-[400px] desktop-4k:h-[500px] bg-pink-300 opacity-20 rounded-full blur-2xl sm:blur-3xl"></div>
 
-      <div className="container mx-auto relative z-10">
-        {/* Title */}
+      <div className="container mx-auto relative z-10 max-w-7xl laptop-hd:max-w-6xl desktop-fhd:max-w-7xl desktop-qhd:max-w-8xl desktop-4k:max-w-9xl">
+        {/* Responsive Title */}
         <motion.h2
-          className="text-5xl font-extrabold tracking-tight text-[#001E80] mb-6"
+          className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl laptop-hd:text-4xl desktop-fhd:text-5xl desktop-qhd:text-6xl desktop-4k:text-7xl font-extrabold tracking-tight text-[#001E80] mb-4 sm:mb-6 lg:mb-8"
           initial={{ opacity: 0, y: -30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -76,13 +79,13 @@ export const ImpactSection = () => {
         >
           {translations.title}
         </motion.h2>
-        <p className="text-gray-600 max-w-2xl mx-auto text-lg mb-16">
+        <p className="text-gray-600 max-w-xl sm:max-w-2xl lg:max-w-3xl desktop-qhd:max-w-4xl desktop-4k:max-w-5xl mx-auto text-sm sm:text-base lg:text-lg desktop-qhd:text-xl desktop-4k:text-2xl mb-12 sm:mb-16 lg:mb-20 desktop-qhd:mb-24 desktop-4k:mb-28">
           {translations.description}
         </p>
 
-        {/* Statistics Grid */}
+        {/* Responsive Statistics Grid */}
         <motion.div
-          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10 mb-24"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8 lg:gap-10 desktop-qhd:gap-12 desktop-4k:gap-16 mb-16 sm:mb-20 lg:mb-24 desktop-qhd:mb-28 desktop-4k:mb-32"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
@@ -96,36 +99,40 @@ export const ImpactSection = () => {
             return (
               <motion.div
                 key={index}
-                className="group p-8 bg-white backdrop-blur-md border border-white/20 rounded-3xl shadow-md hover:shadow-2xl transition-transform duration-300 ease-out hover:-translate-y-3 flex flex-col items-center"
+                className="group p-4 sm:p-6 lg:p-8 desktop-qhd:p-10 desktop-4k:p-12 bg-white backdrop-blur-md border border-white/20 rounded-2xl lg:rounded-3xl shadow-md hover:shadow-2xl transition-all duration-300 ease-out hover:-translate-y-2 lg:hover:-translate-y-3 flex flex-col items-center"
                 variants={{ hidden: { opacity: 0, y: 40 }, visible: { opacity: 1, y: 0 } }}
                 transition={{ type: "spring", stiffness: 150, damping: 20 }}
               >
-                <div className="flex justify-center items-center w-16 h-16 mb-6 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 group-hover:scale-110 transition-all duration-300">
-                  <FontAwesomeIcon icon={icon} className="text-3xl text-white" />
+                <div className="flex justify-center items-center w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 desktop-qhd:w-20 desktop-qhd:h-20 desktop-4k:w-24 desktop-4k:h-24 mb-4 sm:mb-6 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 group-hover:scale-110 transition-all duration-300">
+                  <FontAwesomeIcon icon={icon} className="text-xl sm:text-2xl lg:text-3xl desktop-qhd:text-4xl desktop-4k:text-5xl text-white" />
                 </div>
-                <h3 className="text-4xl font-bold text-[#001E80] mb-2">
+                <h3 className="text-2xl sm:text-3xl lg:text-4xl desktop-qhd:text-5xl desktop-4k:text-6xl font-bold text-[#001E80] mb-2">
                   <CountUp end={stat.value} duration={2} />{stat.currency ? stat.currency : stat.percent ? "%" : "+"}
                 </h3>
-                <p className="text-gray-600 text-base mt-2">{stat.description}</p>
+                <p className="text-gray-600 text-xs sm:text-sm lg:text-base desktop-qhd:text-lg desktop-4k:text-xl mt-2 text-center leading-relaxed">{stat.description}</p>
               </motion.div>
             );
           })}
         </motion.div>
 
-        {/* Features Section */}
+        {/* Responsive Features Section */}
         <motion.div
           initial={{ opacity: 0, y: -30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
-          className="text-center mb-16"
+          className="text-center mb-12 sm:mb-16 lg:mb-20 desktop-qhd:mb-24 desktop-4k:mb-28"
         >
-          <h2 className="text-4xl font-extrabold text-[#001E80] mb-6">{translations.features.title}</h2>
-          <p className="text-gray-600 max-w-2xl mx-auto text-lg">{translations.features.description}</p>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl desktop-qhd:text-5xl desktop-4k:text-6xl font-extrabold text-[#001E80] mb-4 sm:mb-6">
+            {translations.features.title}
+          </h2>
+          <p className="text-gray-600 max-w-xl sm:max-w-2xl lg:max-w-3xl desktop-qhd:max-w-4xl desktop-4k:max-w-5xl mx-auto text-sm sm:text-base lg:text-lg desktop-qhd:text-xl desktop-4k:text-2xl">
+            {translations.features.description}
+          </p>
         </motion.div>
 
         <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-10 desktop-qhd:gap-12 desktop-4k:gap-16 mb-16 sm:mb-20 lg:mb-24 desktop-qhd:mb-28 desktop-4k:mb-32"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
@@ -139,34 +146,42 @@ export const ImpactSection = () => {
             return (
               <motion.div
                 key={index}
-                className="p-8 bg-white backdrop-blur-md border border-white/20 rounded-3xl shadow-md hover:shadow-2xl transition-transform duration-300 ease-out hover:-translate-y-3 flex flex-col items-center text-center"
+                className="p-4 sm:p-6 lg:p-8 desktop-qhd:p-10 desktop-4k:p-12 bg-white backdrop-blur-md border border-white/20 rounded-2xl lg:rounded-3xl shadow-md hover:shadow-2xl transition-all duration-300 ease-out hover:-translate-y-2 lg:hover:-translate-y-3 flex flex-col items-center text-center"
                 variants={{ hidden: { opacity: 0, y: 40 }, visible: { opacity: 1, y: 0 } }}
                 transition={{ type: "spring", stiffness: 150, damping: 20 }}
               >
-                <div className="flex justify-center items-center w-16 h-16 mb-6 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600">
-                  <FontAwesomeIcon icon={icon} className="text-3xl text-white" />
+                <div className="flex justify-center items-center w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 desktop-qhd:w-20 desktop-qhd:h-20 desktop-4k:w-24 desktop-4k:h-24 mb-4 sm:mb-6 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600">
+                  <FontAwesomeIcon icon={icon} className="text-xl sm:text-2xl lg:text-3xl desktop-qhd:text-4xl desktop-4k:text-5xl text-white" />
                 </div>
-                <h3 className="text-2xl font-bold mb-2">{feature.title}</h3>
-                <p className="text-gray-600 text-base">{feature.description}</p>
+                <h3 className="text-lg sm:text-xl lg:text-2xl desktop-qhd:text-3xl desktop-4k:text-4xl font-bold mb-2 sm:mb-3 lg:mb-4">
+                  {feature.title}
+                </h3>
+                <p className="text-gray-600 text-xs sm:text-sm lg:text-base desktop-qhd:text-lg desktop-4k:text-xl leading-relaxed">
+                  {feature.description}
+                </p>
               </motion.div>
             );
           })}
         </motion.div>
 
-        {/* Success Stories Section */}
+        {/* Responsive Success Stories Section */}
         <motion.div
           initial={{ opacity: 0, y: -30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
-          className="text-center mt-24 mb-16"
+          className="text-center mb-12 sm:mb-16 lg:mb-20 desktop-qhd:mb-24 desktop-4k:mb-28"
         >
-          <h2 className="text-4xl font-extrabold text-[#001E80] mb-6">{translations.successStories.title}</h2>
-          <p className="text-gray-600 max-w-2xl mx-auto text-lg">{translations.successStories.description}</p>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl desktop-qhd:text-5xl desktop-4k:text-6xl font-extrabold text-[#001E80] mb-4 sm:mb-6">
+            {translations.successStories.title}
+          </h2>
+          <p className="text-gray-600 max-w-xl sm:max-w-2xl lg:max-w-3xl desktop-qhd:max-w-4xl desktop-4k:max-w-5xl mx-auto text-sm sm:text-base lg:text-lg desktop-qhd:text-xl desktop-4k:text-2xl">
+            {translations.successStories.description}
+          </p>
         </motion.div>
 
         <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 gap-10"
+          className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-10 desktop-qhd:gap-12 desktop-4k:gap-16"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
@@ -180,16 +195,20 @@ export const ImpactSection = () => {
             return (
               <motion.div
                 key={index}
-                className="flex flex-col sm:flex-row items-center gap-6 p-8 bg-white backdrop-blur-md border border-white/20 rounded-3xl shadow-md hover:shadow-2xl transition-transform duration-300 ease-out hover:-translate-y-3"
+                className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 lg:gap-8 desktop-qhd:gap-10 desktop-4k:gap-12 p-4 sm:p-6 lg:p-8 desktop-qhd:p-10 desktop-4k:p-12 bg-white backdrop-blur-md border border-white/20 rounded-2xl lg:rounded-3xl shadow-md hover:shadow-2xl transition-all duration-300 ease-out hover:-translate-y-2 lg:hover:-translate-y-3"
                 variants={{ hidden: { opacity: 0, y: 40 }, visible: { opacity: 1, y: 0 } }}
                 transition={{ type: "spring", stiffness: 150, damping: 20 }}
               >
-                <div className="flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white">
-                  <FontAwesomeIcon icon={icon} className="text-2xl" />
+                <div className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 desktop-qhd:w-20 desktop-qhd:h-20 desktop-4k:w-24 desktop-4k:h-24 flex-shrink-0 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white">
+                  <FontAwesomeIcon icon={icon} className="text-lg sm:text-xl lg:text-2xl desktop-qhd:text-3xl desktop-4k:text-4xl" />
                 </div>
-                <div className="text-center sm:text-left">
-                  <h3 className="text-lg font-bold mb-1">{story.title}</h3>
-                  <p className="text-gray-600 text-base">{story.description}</p>
+                <div className="text-center sm:text-left flex-1">
+                  <h3 className="text-base sm:text-lg lg:text-xl desktop-qhd:text-2xl desktop-4k:text-3xl font-bold mb-1 sm:mb-2">
+                    {story.title}
+                  </h3>
+                  <p className="text-gray-600 text-xs sm:text-sm lg:text-base desktop-qhd:text-lg desktop-4k:text-xl leading-relaxed">
+                    {story.description}
+                  </p>
                 </div>
               </motion.div>
             );
