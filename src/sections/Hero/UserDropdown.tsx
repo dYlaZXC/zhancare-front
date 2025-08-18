@@ -32,34 +32,84 @@ export default function UserDropdown({ user, onLogout }: Props) {
   const { language } = useLanguage();
 
   // Multi-language translations
-  const translations = {
-    ru: {
-      profile: "Личный кабинет",
-      dashboard: "Панель управления", 
-      appointments: "Записи",
-      settings: "Настройки",
-      logout: "Выйти",
-      online: "В сети"
-    },
-    en: {
-      profile: "Profile",
-      dashboard: "Dashboard",
-      appointments: "Appointments", 
-      settings: "Settings",
-      logout: "Sign Out",
-      online: "Online"
-    },
-    kz: {
-      profile: "Жеке кабинет",
-      dashboard: "Басқару панелі",
-      appointments: "Жазылулар",
-      settings: "Баптаулар", 
-      logout: "Шығу",
-      online: "Желіде"
+  const getTranslations = () => {
+    switch (language) {
+      case "ru":
+        return {
+          profile: "Личный кабинет",
+          dashboard: "Панель управления", 
+          appointments: "Записи",
+          settings: "Настройки",
+          logout: "Выйти",
+          online: "В сети",
+          doctor: "Врач",
+          patient: "Пациент",
+          doctorProfileDesc: "Управление профилем врача",
+          personalInfoDesc: "Личная информация",
+          statisticsDesc: "Статистика и аналитика",
+          doctorScheduleDesc: "Управление расписанием",
+          patientAppointmentsDesc: "Мои записи к врачам",
+          accountSettingsDesc: "Настройки аккаунта",
+          endSessionDesc: "Завершить сеанс"
+        };
+      case "kz":
+        return {
+          profile: "Жеке кабинет",
+          dashboard: "Басқару панелі",
+          appointments: "Жазылулар",
+          settings: "Баптаулар", 
+          logout: "Шығу",
+          online: "Желіде",
+          doctor: "Дәрігер",
+          patient: "Пациент",
+          doctorProfileDesc: "Дәрігер профилін басқару",
+          personalInfoDesc: "Жеке ақпарат",
+          statisticsDesc: "Статистика және аналитика",
+          doctorScheduleDesc: "Кесте басқару",
+          patientAppointmentsDesc: "Дәрігерге жазылуларым",
+          accountSettingsDesc: "Аккаунт баптаулары",
+          endSessionDesc: "Сеансты аяқтау"
+        };
+      case "en":
+        return {
+          profile: "Profile",
+          dashboard: "Dashboard",
+          appointments: "Appointments", 
+          settings: "Settings",
+          logout: "Sign Out",
+          online: "Online",
+          doctor: "Doctor",
+          patient: "Patient",
+          doctorProfileDesc: "Manage doctor profile",
+          personalInfoDesc: "Personal information",
+          statisticsDesc: "Statistics and analytics",
+          doctorScheduleDesc: "Schedule management",
+          patientAppointmentsDesc: "My doctor appointments",
+          accountSettingsDesc: "Account settings",
+          endSessionDesc: "End session"
+        };
+      default:
+        return {
+          profile: "Profile",
+          dashboard: "Dashboard",
+          appointments: "Appointments", 
+          settings: "Settings",
+          logout: "Sign Out",
+          online: "Online",
+          doctor: "Doctor",
+          patient: "Patient",
+          doctorProfileDesc: "Manage doctor profile",
+          personalInfoDesc: "Personal information",
+          statisticsDesc: "Statistics and analytics",
+          doctorScheduleDesc: "Schedule management",
+          patientAppointmentsDesc: "My doctor appointments",
+          accountSettingsDesc: "Account settings",
+          endSessionDesc: "End session"
+        };
     }
   };
 
-  const t = translations[language as keyof typeof translations] || translations.ru;
+  const t = getTranslations();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -97,33 +147,35 @@ export default function UserDropdown({ user, onLogout }: Props) {
     return user.role === "doctor" ? "/doctor-profile" : "/profile";
   };
 
-  // Menu items configuration
-  const menuItems = [
+  // Menu items configuration with dynamic translations
+  const getMenuItems = () => [
     {
       icon: faUser,
       label: t.profile,
       href: getProfilePath(),
-      description: user.role === "doctor" ? "Управление профилем врача" : "Личная информация"
+      description: user.role === "doctor" ? t.doctorProfileDesc : t.personalInfoDesc
     },
     ...(user.role === "doctor" ? [{
       icon: faChartLine,
       label: t.dashboard,
       href: "/doctor-dashboard", 
-      description: "Статистика и аналитика"
+      description: t.statisticsDesc
     }] : []),
     {
       icon: faCalendarAlt,
       label: t.appointments,
       href: user.role === "doctor" ? "/doctor-appointments" : "/my-appointments",
-      description: user.role === "doctor" ? "Управление расписанием" : "Мои записи к врачам"
+      description: user.role === "doctor" ? t.doctorScheduleDesc : t.patientAppointmentsDesc
     },
     {
       icon: faCog,
       label: t.settings,
       href: "/settings",
-      description: "Настройки аккаунта"
+      description: t.accountSettingsDesc
     }
   ];
+
+  const menuItems = getMenuItems();
 
   // Animation variants
   const dropdownVariants = {
@@ -207,7 +259,7 @@ export default function UserDropdown({ user, onLogout }: Props) {
             {user.first_name}
           </span>
           <span className="text-xs text-white/70 truncate">
-            {user.role === "doctor" ? "Врач" : "Пациент"}
+            {user.role === "doctor" ? t.doctor : t.patient}
           </span>
         </div>
 
@@ -318,7 +370,7 @@ export default function UserDropdown({ user, onLogout }: Props) {
                     {t.logout}
                   </div>
                   <div className="text-sm text-red-400">
-                    Завершить сеанс
+                    {t.endSessionDesc}
                   </div>
                 </div>
               </motion.button>
