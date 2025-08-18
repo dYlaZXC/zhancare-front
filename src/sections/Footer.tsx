@@ -254,10 +254,10 @@ export const Footer = () => {
             {/* Copyright */}
             <div className="flex items-center gap-2 text-gray-500 text-xs sm:text-sm lg:text-base desktop-qhd:text-lg desktop-4k:text-xl">
               <span>&copy; {new Date().getFullYear()} {translations.rights}</span>
-              <span className="hidden sm:inline">•</span>
-              <span className="hidden sm:inline flex items-center gap-1">
+              {/* <span className="hidden sm:inline">•</span> */}
+              {/* <span className="hidden sm:inline flex items-center gap-1">
                 Made with <Heart className="w-3 h-3 lg:w-4 lg:h-4 desktop-qhd:w-5 desktop-qhd:h-5 desktop-4k:w-6 desktop-4k:h-6 text-red-500" fill="currentColor" /> by ZhanCare.AI
-              </span>
+              </span> */}
             </div>
           </motion.div>
         </motion.div>
