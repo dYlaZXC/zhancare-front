@@ -68,11 +68,15 @@ module.exports = {
       screens: {
         // Custom breakpoints for specific display sizes
         'laptop-hd': {'raw': '(min-width: 1366px) and (max-width: 1440px) and (min-height: 700px) and (max-height: 800px)'},
-        'desktop-fhd': {'raw': '(min-width: 1920px) and (min-height: 1000px)'},
+        'desktop-fhd': {'raw': '(min-width: 1920px) and (min-height: 1000px) and (max-width: 2559px)'},
+        'desktop-qhd': {'raw': '(min-width: 2560px) and (min-height: 1400px) and (max-width: 3839px)'},
+        'desktop-4k': {'raw': '(min-width: 3840px) and (min-height: 2000px)'},
         
         // Additional helpful breakpoints
         '1366': '1366px',
         '1920': '1920px',
+        '2560': '2560px',
+        '3840': '3840px',
       },
       spacing: {
         // Custom spacing for specific display sizes
@@ -80,16 +84,23 @@ module.exports = {
         '22': '5.5rem',   // 88px
         '26': '6.5rem',   // 104px
         '30': '7.5rem',   // 120px
+        '34': '8.5rem',   // 136px
+        '38': '9.5rem',   // 152px
+        '42': '10.5rem',  // 168px
       },
       height: {
         // Custom heights for video optimization
         '768': '768px',
         '1080': '1080px',
+        '1440': '1440px',
+        '2160': '2160px',
       },
       maxWidth: {
         // Content width optimization
         '8xl': '88rem',   // 1408px
         '9xl': '96rem',   // 1536px
+        '10xl': '120rem', // 1920px
+        '11xl': '160rem', // 2560px
       }
     },
   },

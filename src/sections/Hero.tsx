@@ -19,7 +19,7 @@ export default function Hero() {
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true }}
-      className="relative overflow-hidden min-h-screen laptop-hd:min-h-[768px] laptop-hd:h-[768px] desktop-fhd:min-h-[1080px] desktop-fhd:h-[1080px] pb-20 md:pb-10 laptop-hd:pb-8 desktop-fhd:pb-12"
+      className="relative overflow-hidden min-h-screen laptop-hd:min-h-[768px] laptop-hd:h-[768px] desktop-fhd:min-h-[1080px] desktop-fhd:h-[1080px] desktop-qhd:min-h-[1440px] desktop-qhd:h-[1440px] desktop-4k:min-h-[2160px] desktop-4k:h-[2160px] pb-20 md:pb-10 laptop-hd:pb-8 desktop-fhd:pb-12 desktop-qhd:pb-16 desktop-4k:pb-24"
       id="hero"
     >
       {/* Background Video */}
@@ -28,7 +28,7 @@ export default function Hero() {
         muted
         loop
         playsInline
-        className="absolute inset-0 w-full h-full min-h-screen laptop-hd:min-h-[768px] desktop-fhd:min-h-[1080px] object-cover -z-10 scale-105"
+        className="absolute inset-0 w-full h-full min-h-screen laptop-hd:min-h-[768px] desktop-fhd:min-h-[1080px] desktop-qhd:min-h-[1440px] desktop-4k:min-h-[2160px] object-cover -z-10 scale-105"
       >
         <source src={heroVideo} type="video/mp4" />
       </video>
@@ -38,7 +38,7 @@ export default function Hero() {
 
       {/* Black Overlay */}
       <motion.div
-        className="absolute inset-0 bg-black/60 laptop-hd:bg-black/65 desktop-fhd:bg-black/50 -z-9"
+        className="absolute inset-0 bg-black/60 laptop-hd:bg-black/65 desktop-fhd:bg-black/50 desktop-qhd:bg-black/45 desktop-4k:bg-black/40 -z-9"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 1 }}
@@ -48,9 +48,9 @@ export default function Hero() {
       <Header />
 
       {/* Hero Main Content */}
-      <div className="relative z-10 container mx-auto text-white px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 laptop-hd:px-6 laptop-hd:max-w-none desktop-fhd:px-8 desktop-fhd:max-w-none">
-        <div className="pt-8 sm:pt-12 md:pt-16 lg:pt-20 xl:pt-24 laptop-hd:pt-12 desktop-fhd:pt-16">
-          <div className="laptop-hd:transform laptop-hd:scale-90 laptop-hd:origin-top-left desktop-fhd:transform desktop-fhd:scale-100 desktop-fhd:origin-top">
+      <div className="relative z-10 container mx-auto text-white px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 laptop-hd:px-6 laptop-hd:max-w-none desktop-fhd:px-8 desktop-fhd:max-w-none desktop-qhd:px-12 desktop-qhd:max-w-none desktop-4k:px-16 desktop-4k:max-w-none">
+        <div className="pt-8 sm:pt-12 md:pt-16 lg:pt-20 xl:pt-24 laptop-hd:pt-12 desktop-fhd:pt-16 desktop-qhd:pt-20 desktop-4k:pt-32">
+          <div className="laptop-hd:transform laptop-hd:scale-90 laptop-hd:origin-top-left desktop-fhd:transform desktop-fhd:scale-100 desktop-fhd:origin-top desktop-qhd:transform desktop-qhd:scale-110 desktop-qhd:origin-top desktop-4k:transform desktop-4k:scale-125 desktop-4k:origin-top">
             <HeroContent />
             {/* <HeroChat /> */}
             {/* <HeroStats /> */}
