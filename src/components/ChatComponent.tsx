@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
+import en from "@/locales/en.json";
 import { ChatHeader } from "./ChatHeader";
 import { ChatMessages } from "./ChatMessages";
 import { ChatInput } from "./ChatInput";
@@ -24,7 +25,20 @@ export const ChatComponent = ({ onClose }: { onClose: () => void }) => {
   const typingInterval = useRef<NodeJS.Timeout | null>(null);
 
   const { language } = useLanguage();
-  const translations = language === "ru" ? ru.chat : kz.chat;
+  
+  // Fixed: Properly handle all three languages with fallback
+  const translations = React.useMemo(() => {
+    switch (language) {
+      case "ru":
+        return ru.chat;
+      case "en":
+        return en.chat;
+      case "kz":
+        return kz.chat;
+      default:
+        return ru.chat; // Fallback to Russian
+    }
+  }, [language]);
 
   const sendMessage = async () => {
     if (!userInput.trim()) return;
@@ -111,7 +125,7 @@ export const ChatComponent = ({ onClose }: { onClose: () => void }) => {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 30 }}
         transition={{ duration: 0.3 }}
-        className="fixed bottom-4 right-4 w-[90%] max-w-xs sm:max-w-lg bg-white dark:bg-gray-900 shadow-xl rounded-xl z-50 flex flex-col overflow-hidden max-h-[80vh]"
+        className="fixed bottom-4 right-4 w-[90%] max-w-xs sm:max-w-lg laptop-hd:max-w-md laptop-hd:bottom-6 laptop-hd:right-6 desktop-fhd:max-w-lg desktop-fhd:bottom-8 desktop-fhd:right-8 bg-white dark:bg-gray-900 shadow-xl rounded-xl z-50 flex flex-col overflow-hidden max-h-[80vh] laptop-hd:max-h-[70vh] desktop-fhd:max-h-[75vh]"
       >
         <ChatHeader title={translations.title} onClose={onClose} />
         <ChatMessages
