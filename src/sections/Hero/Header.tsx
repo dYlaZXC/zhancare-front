@@ -189,14 +189,14 @@ export default function Header() {
   return (
     <>
       <header className={headerClasses} role="banner">
-        <div className="py-3 md:py-4">
-          <div className="container mx-auto flex items-center justify-between px-4 max-w-7xl">
+        <div className="py-2 sm:py-3 md:py-3 laptop-hd:py-2 desktop-fhd:py-3">
+          <div className="container mx-auto flex items-center justify-between px-4 max-w-7xl laptop-hd:max-w-none desktop-fhd:max-w-none laptop-hd:px-6 desktop-fhd:px-8">
             {/* Logo */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-shrink-0">
               <Image
                 src={Logo}
                 alt="ZhanCare.AI logo"
-                className="h-8 w-auto md:h-20 transition-transform hover:scale-105"
+                className="h-6 w-auto sm:h-8 md:h-10 lg:h-12 laptop-hd:h-8 desktop-fhd:h-10 transition-transform hover:scale-105"
                 priority
                 width={140}
                 height={140}
@@ -212,7 +212,7 @@ export default function Header() {
               data-mobile-menu="trigger"
             >
               <MenuIcon 
-                className={`h-6 w-6 transition-transform duration-200 ${
+                className={`h-5 w-5 sm:h-6 sm:w-6 transition-transform duration-200 ${
                   isMenuOpen ? 'rotate-90' : 'rotate-0'
                 }`} 
               />
@@ -220,16 +220,16 @@ export default function Header() {
 
             {/* Desktop navigation */}
             <nav 
-              className="hidden md:flex flex-wrap items-center gap-1 lg:gap-2 xl:gap-3 text-white text-xs sm:text-sm lg:text-base flex-shrink-0"
+              className="hidden md:flex flex-wrap items-center gap-1 lg:gap-2 xl:gap-3 laptop-hd:gap-1.5 desktop-fhd:gap-2 text-white text-xs sm:text-sm lg:text-base laptop-hd:text-sm desktop-fhd:text-base flex-shrink-0"
               role="navigation"
               aria-label={getNavAriaLabel()}
             >
-              <div className="flex flex-wrap items-center gap-1 lg:gap-2">
+              <div className="flex flex-wrap items-center gap-1 lg:gap-2 laptop-hd:gap-1.5 desktop-fhd:gap-2">
                 {navigationKeys.map((key) => (
                   <button
                     key={key}
                     onClick={() => handleScrollToSection(key)}
-                    className="group relative px-2 py-1 lg:px-3 lg:py-1.5 rounded-full border border-white/30 hover:bg-white hover:text-[#1D1D2F] transition-all duration-200 whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-white/50 text-xs lg:text-sm"
+                    className="group relative px-2 py-1 lg:px-3 lg:py-1.5 laptop-hd:px-2.5 laptop-hd:py-1 desktop-fhd:px-3 desktop-fhd:py-1.5 rounded-full border border-white/30 hover:bg-white hover:text-[#1D1D2F] transition-all duration-200 whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-white/50 text-xs lg:text-sm laptop-hd:text-xs desktop-fhd:text-sm"
                   >
                     <span className="relative z-10">{translations.navigation[key]}</span>
                     <div className="absolute inset-0 bg-white rounded-full transform scale-0 group-hover:scale-100 transition-transform duration-200" />
@@ -237,20 +237,24 @@ export default function Header() {
                 ))}
               </div>
 
-              <div className="flex items-center gap-1 lg:gap-2 ml-1 lg:ml-2">
+              <div className="flex items-center gap-1 lg:gap-2 laptop-hd:gap-1.5 desktop-fhd:gap-2 ml-1 lg:ml-2 laptop-hd:ml-1.5 desktop-fhd:ml-2">
                 {/* Language switcher */}
-                <LanguageSwitcher
-                  currentLanguage={language}
-                  setLanguage={setLanguage}
-                />
+                <div className="laptop-hd:scale-90 desktop-fhd:scale-100">
+                  <LanguageSwitcher
+                    currentLanguage={language}
+                    setLanguage={setLanguage}
+                  />
+                </div>
 
                 {/* Authentication */}
                 {user ? (
-                  <UserDropdown user={user} onLogout={handleLogout} />
+                  <div className="laptop-hd:scale-90 desktop-fhd:scale-100">
+                    <UserDropdown user={user} onLogout={handleLogout} />
+                  </div>
                 ) : (
                   <button
                     onClick={() => setIsAuthOpen(true)}
-                    className="group bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white rounded-lg px-3 py-1.5 lg:px-4 lg:py-2 font-medium hover:opacity-90 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300 relative overflow-hidden text-xs lg:text-sm whitespace-nowrap"
+                    className="group bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white rounded-lg px-2.5 py-1.5 lg:px-4 lg:py-2 laptop-hd:px-3 laptop-hd:py-1.5 desktop-fhd:px-4 desktop-fhd:py-2 font-medium hover:opacity-90 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300 relative overflow-hidden text-xs lg:text-sm laptop-hd:text-xs desktop-fhd:text-sm whitespace-nowrap"
                   >
                     <span className="relative z-10">
                       {getAuthButtonText()}
