@@ -122,7 +122,7 @@ export const Services = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.7 }}
           >
-            <h1 className="text-4xl font-extrabold text-[#001E80]">{translations.servicesHeader}</h1>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl laptop-hd:text-4xl desktop-fhd:text-5xl desktop-qhd:text-6xl desktop-4k:text-7xl font-extrabold tracking-tight text-[#001E80] mb-4 sm:mb-6 lg:mb-8">{translations.servicesHeader}</h1>
             <p className="text-lg text-gray-600 mt-4">{translations.servicesDescription}</p>
           </motion.div>
 

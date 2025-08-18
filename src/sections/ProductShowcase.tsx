@@ -100,7 +100,7 @@ export const ProductShowcase = () => {
         {/* Heading */}
         <div className="text-center mb-12">
           <motion.h2
-            className="text-4xl md:text-5xl font-bold text-[#001E80]"
+            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl laptop-hd:text-4xl desktop-fhd:text-5xl desktop-qhd:text-6xl desktop-4k:text-7xl font-extrabold tracking-tight text-[#001E80] mb-4 sm:mb-6 lg:mb-8"
             initial={{ opacity: 0, y: -30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}

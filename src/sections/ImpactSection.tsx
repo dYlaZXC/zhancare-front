@@ -123,7 +123,7 @@ export const ImpactSection = () => {
           transition={{ duration: 0.8 }}
           className="text-center mb-12 sm:mb-16 lg:mb-20 desktop-qhd:mb-24 desktop-4k:mb-28"
         >
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl desktop-qhd:text-5xl desktop-4k:text-6xl font-extrabold text-[#001E80] mb-4 sm:mb-6">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl laptop-hd:text-4xl desktop-fhd:text-5xl desktop-qhd:text-6xl desktop-4k:text-7xl font-extrabold tracking-tight text-[#001E80] mb-4 sm:mb-6 lg:mb-8">
             {translations.features.title}
           </h2>
           <p className="text-gray-600 max-w-xl sm:max-w-2xl lg:max-w-3xl desktop-qhd:max-w-4xl desktop-4k:max-w-5xl mx-auto text-sm sm:text-base lg:text-lg desktop-qhd:text-xl desktop-4k:text-2xl">
@@ -172,7 +172,7 @@ export const ImpactSection = () => {
           transition={{ duration: 0.8 }}
           className="text-center mb-12 sm:mb-16 lg:mb-20 desktop-qhd:mb-24 desktop-4k:mb-28"
         >
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl desktop-qhd:text-5xl desktop-4k:text-6xl font-extrabold text-[#001E80] mb-4 sm:mb-6">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl laptop-hd:text-4xl desktop-fhd:text-5xl desktop-qhd:text-6xl desktop-4k:text-7xl font-extrabold tracking-tight text-[#001E80] mb-4 sm:mb-6 lg:mb-8">
             {translations.successStories.title}
           </h2>
           <p className="text-gray-600 max-w-xl sm:max-w-2xl lg:max-w-3xl desktop-qhd:max-w-4xl desktop-4k:max-w-5xl mx-auto text-sm sm:text-base lg:text-lg desktop-qhd:text-xl desktop-4k:text-2xl">
