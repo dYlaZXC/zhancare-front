@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { motion, useAnimation } from "framer-motion";
 import { useEffect, useState, useMemo, useCallback } from "react";
+import { useLanguage } from "@/context/LanguageContext";
 
 import Logo0 from "@/assets/itry.png";
 import Logo3 from "@/assets/ahlogo.png";
@@ -14,8 +15,37 @@ import Logo6 from "@/assets/enactus.png";
 import Logo7 from "@/assets/omron.png";
 
 export const LogoTicker = () => {
+  const { language } = useLanguage();
   const [isPaused, setIsPaused] = useState(false);
   const controls = useAnimation();
+
+  // Get translations for organization text based on language
+  const getOrganizationTexts = () => {
+    switch (language) {
+      case "ru":
+        return {
+          digitalMinistry: ["МЦРиАП", "Республики Казахстан"],
+          healthMinistry: ["Министерство", "Здравоохранения РК"]
+        };
+      case "kz":
+        return {
+          digitalMinistry: ["ҚР СААЖ", "Министрлігі"],
+          healthMinistry: ["ҚР Денсаулық", "сақтау министрлігі"]
+        };
+      case "en":
+        return {
+          digitalMinistry: ["Ministry of Digital", "Development of Kazakhstan"],
+          healthMinistry: ["Ministry of Health", "of Kazakhstan"]
+        };
+      default:
+        return {
+          digitalMinistry: ["Ministry of Digital", "Development of Kazakhstan"],
+          healthMinistry: ["Ministry of Health", "of Kazakhstan"]
+        };
+    }
+  };
+
+  const organizationTexts = getOrganizationTexts();
 
   const logos = useMemo(() => [
     { src: Logo0, alt: "Logo0" },
@@ -29,16 +59,16 @@ export const LogoTicker = () => {
     {
       src: Logo1,
       alt: "Ministry of Digital Kazakhstan",
-      text: ["МЦРиАП", "Республики Казахстан"]
+      text: organizationTexts.digitalMinistry
     },
     { src: Logo4, alt: "Logo4" },
     { src: Logo6, alt: "Logo6" },
     {
       src: Logo5,
       alt: "Ministry of Health Kazakhstan",
-      text: ["Министерство", "Здравоохранения РК"]
+      text: organizationTexts.healthMinistry
     },
-  ], []);
+  ], [organizationTexts]);
 
   const startAnimation = useCallback(() => {
     controls.start({
