@@ -4,6 +4,10 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-toastify";
 import { api } from "@/utils/api";
+import { useLanguage } from "@/context/LanguageContext";
+import ru from "@/locales/ru.json";
+import kz from "@/locales/kz.json";
+import en from "@/locales/en.json";
 
 interface ForgotPasswordPopupProps {
   onClose: () => void;
@@ -13,6 +17,7 @@ const CODE_LENGTH = 6;
 const CODE_EXPIRATION_SECONDS = 15 * 60;
 
 const ForgotPasswordPopup: React.FC<ForgotPasswordPopupProps> = ({ onClose }) => {
+  const { language } = useLanguage();
   const [email, setEmail] = useState("");
   const [code, setCode] = useState(Array(CODE_LENGTH).fill(""));
   const [newPassword, setNewPassword] = useState("");
@@ -23,6 +28,98 @@ const ForgotPasswordPopup: React.FC<ForgotPasswordPopupProps> = ({ onClose }) =>
   const [codeError, setCodeError] = useState<string | null>(null);
 
   const codeRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Get translations based on language
+  const getTranslations = () => {
+    switch (language) {
+      case "ru":
+        return {
+          title: "Восстановление пароля",
+          enterEmail: "Введите ваш email",
+          sendCode: "Отправить код на почту",
+          sending: "Отправка...",
+          codeSent: "📧 Код отправлен на вашу почту",
+          failedToSend: "Не удалось отправить код",
+          incorrectCode: "Неверный код. Попробуйте снова.",
+          codeExpiresIn: "Код истечёт через:",
+          codeExpired: "Код истёк",
+          sendAgain: "Отправить снова",
+          newPassword: "Новый пароль",
+          confirmPassword: "Подтвердите пароль",
+          resetPassword: "Сбросить пароль",
+          updating: "Обновление...",
+          passwordUpdated: "✅ Пароль обновлён",
+          resetError: "Ошибка при сбросе пароля",
+          fillAllFields: "Заполните все поля",
+          passwordsMismatch: "Пароли не совпадают"
+        };
+      case "kz":
+        return {
+          title: "Құпия сөзді қалпына келтіру",
+          enterEmail: "Электрондық поштаңызды енгізіңіз",
+          sendCode: "Поштаға код жіберу",
+          sending: "Жіберілуде...",
+          codeSent: "📧 Код поштаңызға жіберілді",
+          failedToSend: "Код жіберу мүмкін болмады",
+          incorrectCode: "Қате код. Қайталап көріңіз.",
+          codeExpiresIn: "Код мерзімі бітеді:",
+          codeExpired: "Код мерзімі бітті",
+          sendAgain: "Қайта жіберу",
+          newPassword: "Жаңа құпия сөз",
+          confirmPassword: "Құпия сөзді растаңыз",
+          resetPassword: "Құпия сөзді қалпына келтіру",
+          updating: "Жаңартылуда...",
+          passwordUpdated: "✅ Құпия сөз жаңартылды",
+          resetError: "Құпия сөзді қалпына келтіру қатесі",
+          fillAllFields: "Барлық өрістерді толтырыңыз",
+          passwordsMismatch: "Құпия сөздер сәйкес келмейді"
+        };
+      case "en":
+        return {
+          title: "Password Recovery",
+          enterEmail: "Enter your email",
+          sendCode: "Send code to email",
+          sending: "Sending...",
+          codeSent: "📧 Code sent to your email",
+          failedToSend: "Failed to send code",
+          incorrectCode: "Incorrect code. Try again.",
+          codeExpiresIn: "Code expires in:",
+          codeExpired: "Code expired",
+          sendAgain: "Send again",
+          newPassword: "New password",
+          confirmPassword: "Confirm password",
+          resetPassword: "Reset password",
+          updating: "Updating...",
+          passwordUpdated: "✅ Password updated",
+          resetError: "Error resetting password",
+          fillAllFields: "Fill all fields",
+          passwordsMismatch: "Passwords don't match"
+        };
+      default:
+        return {
+          title: "Password Recovery",
+          enterEmail: "Enter your email",
+          sendCode: "Send code to email",
+          sending: "Sending...",
+          codeSent: "📧 Code sent to your email",
+          failedToSend: "Failed to send code",
+          incorrectCode: "Incorrect code. Try again.",
+          codeExpiresIn: "Code expires in:",
+          codeExpired: "Code expired",
+          sendAgain: "Send again",
+          newPassword: "New password",
+          confirmPassword: "Confirm password",
+          resetPassword: "Reset password",
+          updating: "Updating...",
+          passwordUpdated: "✅ Password updated",
+          resetError: "Error resetting password",
+          fillAllFields: "Fill all fields",
+          passwordsMismatch: "Passwords don't match"
+        };
+    }
+  };
+
+  const translations = getTranslations();
 
   useEffect(() => {
     if (step !== "code" || countdown === null) return;
@@ -45,17 +142,17 @@ const ForgotPasswordPopup: React.FC<ForgotPasswordPopupProps> = ({ onClose }) =>
   };
 
   const handleSendCode = async () => {
-    if (!email) return toast.error("Введите ваш email");
+    if (!email) return toast.error(translations.enterEmail);
     try {
       setLoading(true);
       await api.post("/auth/forgot-password/", { email });
-      toast.success("📧 Код отправлен на вашу почту");
+      toast.success(translations.codeSent);
       setStep("code");
       setCountdown(CODE_EXPIRATION_SECONDS);
       setCode(Array(CODE_LENGTH).fill(""));
       codeRefs.current[0]?.focus();
     } catch {
-      toast.error("Не удалось отправить код");
+      toast.error(translations.failedToSend);
     } finally {
       setLoading(false);
     }
@@ -87,7 +184,7 @@ const ForgotPasswordPopup: React.FC<ForgotPasswordPopupProps> = ({ onClose }) =>
       setStep("password");
     } catch {
       setCode(Array(CODE_LENGTH).fill(""));
-      setCodeError("Неверный код. Попробуйте снова.");
+      setCodeError(translations.incorrectCode);
       codeRefs.current[0]?.focus();
     } finally {
       setLoading(false);
@@ -96,8 +193,8 @@ const ForgotPasswordPopup: React.FC<ForgotPasswordPopupProps> = ({ onClose }) =>
 
   const handleResetPassword = async () => {
     const fullCode = code.join("");
-    if (!newPassword || !confirmPassword) return toast.error("Заполните все поля");
-    if (newPassword !== confirmPassword) return toast.error("Пароли не совпадают");
+    if (!newPassword || !confirmPassword) return toast.error(translations.fillAllFields);
+    if (newPassword !== confirmPassword) return toast.error(translations.passwordsMismatch);
 
     try {
       setLoading(true);
@@ -106,10 +203,10 @@ const ForgotPasswordPopup: React.FC<ForgotPasswordPopupProps> = ({ onClose }) =>
         reset_code: fullCode,
         new_password: newPassword,
       });
-      toast.success("✅ Пароль обновлён");
+      toast.success(translations.passwordUpdated);
       setTimeout(() => onClose(), 2000);
     } catch {
-      toast.error("Ошибка при сбросе пароля");
+      toast.error(translations.resetError);
     } finally {
       setLoading(false);
     }
@@ -136,7 +233,7 @@ const ForgotPasswordPopup: React.FC<ForgotPasswordPopupProps> = ({ onClose }) =>
             &times;
           </button>
 
-          <h2 className="text-xl font-semibold mb-6 text-gray-800">Восстановление пароля</h2>
+          <h2 className="text-xl font-semibold mb-6 text-gray-800">{translations.title}</h2>
 
           {step === "email" && (
             <>
@@ -144,14 +241,14 @@ const ForgotPasswordPopup: React.FC<ForgotPasswordPopupProps> = ({ onClose }) =>
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Введите ваш email"
+                placeholder={translations.enterEmail}
                 className="w-full px-4 py-3 mb-4 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none"
               />
               <button
                 onClick={handleSendCode}
                 className="w-full bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white py-3 rounded-lg font-medium hover:opacity-90 transition"
               >
-                {loading ? "Отправка..." : "Отправить код на почту"}
+                {loading ? translations.sending : translations.sendCode}
               </button>
             </>
           )}
@@ -180,16 +277,16 @@ const ForgotPasswordPopup: React.FC<ForgotPasswordPopupProps> = ({ onClose }) =>
 
               <div className="flex justify-between text-sm text-gray-600 mb-4">
                 {countdown !== null ? (
-                  <span>Код истечёт через: {formatCountdown(countdown)}</span>
+                  <span>{translations.codeExpiresIn} {formatCountdown(countdown)}</span>
                 ) : (
-                  <span className="text-red-500">Код истёк</span>
+                  <span className="text-red-500">{translations.codeExpired}</span>
                 )}
                 <button
                   onClick={handleSendCode}
                   className="text-blue-600 hover:underline font-medium"
                   disabled={loading}
                 >
-                  Отправить снова
+                  {translations.sendAgain}
                 </button>
               </div>
             </>
@@ -199,14 +296,14 @@ const ForgotPasswordPopup: React.FC<ForgotPasswordPopupProps> = ({ onClose }) =>
             <>
               <input
                 type="password"
-                placeholder="Новый пароль"
+                placeholder={translations.newPassword}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="w-full px-4 py-3 mb-3 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none"
               />
               <input
                 type="password"
-                placeholder="Подтвердите пароль"
+                placeholder={translations.confirmPassword}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="w-full px-4 py-3 mb-4 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none"
@@ -215,7 +312,7 @@ const ForgotPasswordPopup: React.FC<ForgotPasswordPopupProps> = ({ onClose }) =>
                 onClick={handleResetPassword}
                 className="w-full bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white py-3 rounded-lg font-medium hover:opacity-90 transition"
               >
-                {loading ? "Обновление..." : "Сбросить пароль"}
+                {loading ? translations.updating : translations.resetPassword}
               </button>
             </>
           )}

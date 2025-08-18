@@ -6,6 +6,7 @@ import DataBars from "./DataBars";
 
 interface HeroVisualizationProps {
   isInView: boolean;
+  language?: string;
 }
 
 const itemVariants = {
@@ -27,7 +28,38 @@ const itemVariants = {
   }
 };
 
-export default function HeroVisualization({ isInView }: HeroVisualizationProps) {
+export default function HeroVisualization({ isInView, language = "en" }: HeroVisualizationProps) {
+  const getTranslations = () => {
+    switch (language) {
+      case "ru":
+        return {
+          aiAccuracy: "Точность ИИ",
+          responseTime: "Время отклика",
+          processing: "Обработка"
+        };
+      case "kz":
+        return {
+          aiAccuracy: "ЖИ дәлдігі",
+          responseTime: "Жауап уақыты",
+          processing: "Өңдеу"
+        };
+      case "en":
+        return {
+          aiAccuracy: "AI Accuracy",
+          responseTime: "Response Time",
+          processing: "Processing"
+        };
+      default:
+        return {
+          aiAccuracy: "AI Accuracy",
+          responseTime: "Response Time",
+          processing: "Processing"
+        };
+    }
+  };
+
+  const translations = getTranslations();
+
   return (
     <motion.div 
       className="relative hidden lg:block"
@@ -93,13 +125,13 @@ export default function HeroVisualization({ isInView }: HeroVisualizationProps) 
             {/* Верхняя сетка стеклянных карточек */}
             <div className="grid grid-cols-2 gap-4">
               <GlassmorphismCard 
-                title="Точность ИИ"
+                title={translations.aiAccuracy}
                 value="98.7%"
                 trend="+2.3%"
                 delay={0.5}
               />
               <GlassmorphismCard 
-                title="Время отклика"
+                title={translations.responseTime}
                 value="1.2мс"
                 trend="-0.8мс"
                 delay={0.8}
@@ -161,7 +193,7 @@ export default function HeroVisualization({ isInView }: HeroVisualizationProps) 
                     <div className="text-2xl font-bold bg-gradient-to-r from-[#001E80] to-[#3A50FF] bg-clip-text text-transparent">
                       Ai
                     </div>
-                    <div className="text-xs text-white/60">Обработка</div>
+                    <div className="text-xs text-white/60">{translations.processing}</div>
                   </motion.div>
                 </div>
               </div>
@@ -174,7 +206,7 @@ export default function HeroVisualization({ isInView }: HeroVisualizationProps) 
               animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
               transition={{ delay: 1.8, duration: 0.6 }}
             >
-              <DataBars showLabels={true} containerDelay={2} />
+              <DataBars showLabels={true} containerDelay={2} language={language} />
             </motion.div>
           </div>
 

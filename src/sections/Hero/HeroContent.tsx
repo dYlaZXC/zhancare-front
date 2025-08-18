@@ -81,7 +81,7 @@ export default function HeroContent() {
           />
           
           <div className="order-first lg:order-last">
-            <HeroVisualization isInView={isInView} />
+            <HeroVisualization isInView={isInView} language={language} />
           </div>
         </motion.div>
       </div>

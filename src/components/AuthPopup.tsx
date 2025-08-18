@@ -9,6 +9,7 @@ import gsap from "gsap";
 import { toast } from "react-toastify";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
+import en from "@/locales/en.json";
 import { api } from "@/utils/api";
 import Logo from "@/assets/logoLogin.png";
 
@@ -21,7 +22,74 @@ import ForgotPasswordPopup from "@/components/auth/ForgotPasswordPopup";
 const AuthPopup = () => {
   const { isAuthOpen, setIsAuthOpen, loginUser } = useAuth();
   const { language } = useLanguage();
-  const translations = language === "ru" ? ru.auth : kz.auth;
+  
+  // Get translations based on language
+  const getTranslations = () => {
+    switch (language) {
+      case "ru":
+        return ru.auth;
+      case "kz":
+        return kz.auth;
+      case "en":
+        return en.auth;
+      default:
+        return en.auth;
+    }
+  };
+
+  const translations = getTranslations();
+
+  // Get error message translations
+  const getErrorMessages = () => {
+    switch (language) {
+      case "ru":
+        return {
+          passwordsMismatch: "❌ Пароли не совпадают!",
+          loginSuccess: "✅ Вы успешно вошли!",
+          registerSuccess: "✅ Регистрация прошла успешно!",
+          generalError: "Произошла ошибка. Попробуйте снова.",
+          invalidCredentials: "Неправильный E-mail или пароль.",
+          phoneExists: "Пользователь с таким телефоном уже существует.",
+          emailExists: "Пользователь с таким email уже существует.",
+          errorPrefix: "❌ Ошибка:"
+        };
+      case "kz":
+        return {
+          passwordsMismatch: "❌ Құпия сөздер сәйкес келмейді!",
+          loginSuccess: "✅ Сіз сәтті кірдіңіз!",
+          registerSuccess: "✅ Тіркелу сәтті өтті!",
+          generalError: "Қате орын алды. Қайталап көріңіз.",
+          invalidCredentials: "Қате E-mail немесе құпия сөз.",
+          phoneExists: "Осы телефонмен қолданушы бұрын тіркелген.",
+          emailExists: "Осы email-мен қолданушы бұрын тіркелген.",
+          errorPrefix: "❌ Қате:"
+        };
+      case "en":
+        return {
+          passwordsMismatch: "❌ Passwords do not match!",
+          loginSuccess: "✅ You have successfully logged in!",
+          registerSuccess: "✅ Registration completed successfully!",
+          generalError: "An error occurred. Please try again.",
+          invalidCredentials: "Invalid E-mail or password.",
+          phoneExists: "User with this phone number already exists.",
+          emailExists: "User with this email already exists.",
+          errorPrefix: "❌ Error:"
+        };
+      default:
+        return {
+          passwordsMismatch: "❌ Passwords do not match!",
+          loginSuccess: "✅ You have successfully logged in!",
+          registerSuccess: "✅ Registration completed successfully!",
+          generalError: "An error occurred. Please try again.",
+          invalidCredentials: "Invalid E-mail or password.",
+          phoneExists: "User with this phone number already exists.",
+          emailExists: "User with this email already exists.",
+          errorPrefix: "❌ Error:"
+        };
+    }
+  };
+
+  const errorMessages = getErrorMessages();
 
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
   const [isForgotOpen, setIsForgotOpen] = useState(false);
@@ -78,9 +146,8 @@ const AuthPopup = () => {
     setError("");
 
     if (activeTab === "register" && formData.password !== formData.confirmPassword) {
-      const msg = "❌ Пароли не совпадают!";
-      toast.error(msg);
-      setError(msg);
+      toast.error(errorMessages.passwordsMismatch);
+      setError(errorMessages.passwordsMismatch);
       setLoading(false);
       return;
     }
@@ -103,10 +170,10 @@ const AuthPopup = () => {
 
       if (activeTab === "login") {
         loginUser(data.access_token, data.refresh_token, data.user);
-        toast.success("✅ Вы успешно вошли!");
+        toast.success(errorMessages.loginSuccess);
         window.location.href = data.user.role === "doctor" ? "/doctor-profile" : "/profile";
       } else {
-        toast.success("✅ Регистрация прошла успешно!");
+        toast.success(errorMessages.registerSuccess);
         setActiveTab("login");
       }
 
@@ -122,10 +189,10 @@ const AuthPopup = () => {
       setIsAuthOpen(false);
     } catch (err: any) {
       const errorData = err?.response?.data;
-      let errorMessage = "Произошла ошибка. Попробуйте снова.";
+      let errorMessage = errorMessages.generalError;
 
       if (activeTab === "login" && err?.response?.status === 401) {
-        errorMessage = "Неправильный E-mail или пароль.";
+        errorMessage = errorMessages.invalidCredentials;
       } else {
         const fieldErrors: string[] = [];
         const details = errorData?.details ?? errorData;
@@ -137,9 +204,9 @@ const AuthPopup = () => {
               messages.forEach((msg: string) => {
                 const friendlyMessage =
                   field === "phone" && msg.includes("существует")
-                    ? "Пользователь с таким телефоном уже существует."
+                    ? errorMessages.phoneExists
                     : field === "email" && msg.includes("существует")
-                    ? "Пользователь с таким email уже существует."
+                    ? errorMessages.emailExists
                     : msg;
                 fieldErrors.push(friendlyMessage);
               });
@@ -156,7 +223,7 @@ const AuthPopup = () => {
         }
       }
 
-      toast.error(`❌ Ошибка: ${errorMessage}`);
+      toast.error(`${errorMessages.errorPrefix} ${errorMessage}`);
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -198,7 +265,7 @@ const AuthPopup = () => {
               </div>
 
               <div className="w-full md:w-1/2">
-                <AuthTabs activeTab={activeTab} onTabChange={setActiveTab} translations={translations} />
+                <AuthTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
                 <div ref={wrapperRef} className="relative overflow-hidden transition-all duration-300">
                   <div ref={formRef} className="pb-6 min-h-[260px]">
@@ -208,7 +275,6 @@ const AuthPopup = () => {
                         onChange={handleChange}
                         onSubmit={handleSubmit}
                         loading={loading}
-                        translations={translations}
                         onForgotPassword={() => setIsForgotOpen(true)}
                       />
                     ) : (
@@ -217,7 +283,6 @@ const AuthPopup = () => {
                         onChange={handleChange}
                         onSubmit={handleSubmit}
                         loading={loading}
-                        translations={translations}
                       />
                     )}
                   </div>

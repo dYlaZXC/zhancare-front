@@ -1,5 +1,4 @@
 "use client";
-
 import { motion } from "framer-motion";
 
 interface StatisticsProps {
@@ -8,9 +7,9 @@ interface StatisticsProps {
 }
 
 const itemVariants = {
-  hidden: { 
-    opacity: 0, 
-    y: 30,
+  hidden: {
+     opacity: 0,
+     y: 30,
     scale: 0.95
   },
   visible: {
@@ -31,7 +30,8 @@ const statsData = [
     value: "700+",
     label: {
       ru: "Консультаций",
-      kz: "Консультация"
+      kz: "Консультация",
+      en: "Consultations"
     },
     delay: 1.2
   },
@@ -39,7 +39,8 @@ const statsData = [
     value: "100+",
     label: {
       ru: "Врачей",
-      kz: "Дәрігер"
+      kz: "Дәрігер",
+      en: "Doctors"
     },
     delay: 1.4
   },
@@ -47,13 +48,27 @@ const statsData = [
     value: "24/7",
     label: {
       ru: "Поддержка",
-      kz: "Қолдау"
+      kz: "Қолдау",
+      en: "Support"
     },
     delay: 1.6
   }
 ];
 
 export default function Statistics({ language, isInView }: StatisticsProps) {
+  const getLabel = (stat: typeof statsData[0]) => {
+    switch (language) {
+      case "ru":
+        return stat.label.ru;
+      case "kz":
+        return stat.label.kz;
+      case "en":
+        return stat.label.en;
+      default:
+        return stat.label.en; // Default to English
+    }
+  };
+
   return (
     <motion.div variants={itemVariants}>
       <div className="grid grid-cols-3 gap-6 max-w-lg mx-auto lg:mx-0 pt-8 border-t border-white/10">
@@ -68,7 +83,7 @@ export default function Statistics({ language, isInView }: StatisticsProps) {
               {stat.value}
             </motion.div>
             <div className="text-xs sm:text-sm text-gray-400 mt-1">
-              {language === "ru" ? stat.label.ru : stat.label.kz}
+              {getLabel(stat)}
             </div>
           </div>
         ))}

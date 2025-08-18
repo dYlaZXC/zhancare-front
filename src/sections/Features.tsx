@@ -8,20 +8,61 @@ import robotImage from "@/assets/robosit.png";
 import { useLanguage } from "@/context/LanguageContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
+import en from "@/locales/en.json";
 import { ShieldCheck, Stethoscope, HeartPulse, Hospital } from "lucide-react";
 
 const iconMap = [ShieldCheck, Stethoscope, HeartPulse, Hospital];
 
-// ✅ Вынесено вне компонента — больше нет ошибки useEffect deps
-const messages = [
-  "Ищу информацию по симптомам...",
-  "Поиск завершен... ",
-  "Передаю информацию врачу..."
-];
-
 const Features = () => {
   const { language } = useLanguage();
-  const translations = language === "ru" ? ru.features : kz.features;
+  
+  // Get translations based on language
+  const getTranslations = () => {
+    switch (language) {
+      case "ru":
+        return ru.features;
+      case "kz":
+        return kz.features;
+      case "en":
+        return en.features;
+      default:
+        return en.features;
+    }
+  };
+
+  const translations = getTranslations();
+
+  // Get chat messages based on language
+  const getMessages = () => {
+    switch (language) {
+      case "ru":
+        return [
+          "Ищу информацию по симптомам...",
+          "Поиск завершен...",
+          "Передаю информацию врачу..."
+        ];
+      case "kz":
+        return [
+          "Симптомдар бойынша ақпарат іздеп жатырмын...",
+          "Іздеу аяқталды...",
+          "Дәрігерге ақпарат жіберемін..."
+        ];
+      case "en":
+        return [
+          "Searching for symptom information...",
+          "Search completed...",
+          "Transmitting information to doctor..."
+        ];
+      default:
+        return [
+          "Searching for symptom information...",
+          "Search completed...",
+          "Transmitting information to doctor..."
+        ];
+    }
+  };
+
+  const messages = getMessages();
 
   const [messageIndex, setMessageIndex] = React.useState(0);
   const [particles, setParticles] = React.useState<any[]>([]);
@@ -31,7 +72,7 @@ const Features = () => {
       setMessageIndex((prev) => (prev + 1) % messages.length);
     }, 4000);
     return () => clearInterval(interval);
-  }, []);
+  }, [messages.length]);
 
   React.useEffect(() => {
     const generated = Array.from({ length: 8 }).map((_, i) => ({

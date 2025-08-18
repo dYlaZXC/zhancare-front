@@ -11,6 +11,7 @@ import product4 from "@/assets/hero1215.png";
 import { useLanguage } from "@/context/LanguageContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
+import en from "@/locales/en.json";
 
 const images = {
   hero1212: product1.src,
@@ -39,10 +40,28 @@ const mapTranslations = (contentData: any[]): ContentData[] => {
 
 export const ProductShowcase = () => {
   const { language } = useLanguage();
-  const rawTranslations = language === "ru" ? ru.productShowcase : kz.productShowcase;
-  const contentData: ContentData[] = mapTranslations(rawTranslations.contentData);
+  
+  // Get translations based on language
+  const getTranslations = () => {
+    switch (language) {
+      case "ru":
+        return ru.productShowcase;
+      case "kz":
+        return kz.productShowcase;
+      case "en":
+        return en.productShowcase;
+      default:
+        return en.productShowcase;
+    }
+  };
 
-  const [activeContent, setActiveContent] = useState<ContentData>(contentData[0]);
+  const rawTranslations = getTranslations();
+  const contentData: ContentData[] = React.useMemo(() => 
+    mapTranslations(rawTranslations.contentData), 
+    [rawTranslations.contentData]
+  );
+
+  const [activeContent, setActiveContent] = useState<ContentData>(() => contentData[0]);
   const sectionRef = useRef(null);
 
   const { scrollYProgress } = useScroll({
@@ -58,6 +77,15 @@ export const ProductShowcase = () => {
       setActiveContent(selected);
     }
   };
+
+  // Update active content when language changes
+  React.useEffect(() => {
+    if (contentData.length > 0) {
+      const currentId = activeContent.id;
+      const newActiveContent = contentData.find(c => c.id === currentId) || contentData[0];
+      setActiveContent(newActiveContent);
+    }
+  }, [language]);
 
   return (
     <section

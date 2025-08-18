@@ -1,17 +1,47 @@
 "use client";
 
 import React from "react";
+import { useLanguage } from "@/context/LanguageContext";
+import ru from "@/locales/ru.json";
+import kz from "@/locales/kz.json";
+import en from "@/locales/en.json";
 
 interface AuthTabsProps {
   activeTab: "login" | "register";
   onTabChange: (tab: "login" | "register") => void;
-  translations: {
-    login: string;
-    register: string;
-  };
 }
 
-const AuthTabs: React.FC<AuthTabsProps> = ({ activeTab, onTabChange, translations }) => {
+const AuthTabs: React.FC<AuthTabsProps> = ({ activeTab, onTabChange }) => {
+  const { language } = useLanguage();
+
+  // Get translations based on language
+  const getTranslations = () => {
+    switch (language) {
+      case "ru":
+        return {
+          login: ru.auth.login,
+          register: ru.auth.register
+        };
+      case "kz":
+        return {
+          login: kz.auth.login,
+          register: kz.auth.register
+        };
+      case "en":
+        return {
+          login: en.auth.login,
+          register: en.auth.register
+        };
+      default:
+        return {
+          login: en.auth.login,
+          register: en.auth.register
+        };
+    }
+  };
+
+  const translations = getTranslations();
+
   return (
     <div className="flex border-b mb-4 w-full">
       <button

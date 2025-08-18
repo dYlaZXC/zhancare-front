@@ -1,6 +1,10 @@
 "use client";
 
 import React from "react";
+import { useLanguage } from "@/context/LanguageContext";
+import ru from "@/locales/ru.json";
+import kz from "@/locales/kz.json";
+import en from "@/locales/en.json";
 
 interface Props {
   formData: {
@@ -14,18 +18,64 @@ interface Props {
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSubmit: (e: React.FormEvent) => void;
   loading: boolean;
-  translations: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    password: string;
-    confirmPassword: string;
-    registerButton: string;
-  };
 }
 
-const RegisterForm: React.FC<Props> = ({ formData, onChange, onSubmit, loading, translations }) => {
+const RegisterForm: React.FC<Props> = ({ 
+  formData, 
+  onChange, 
+  onSubmit, 
+  loading 
+}) => {
+  const { language } = useLanguage();
+
+  // Get translations based on language
+  const getTranslations = () => {
+    switch (language) {
+      case "ru":
+        return {
+          firstName: ru.auth.firstName,
+          lastName: ru.auth.lastName,
+          email: ru.auth.email,
+          phone: ru.auth.phone,
+          password: ru.auth.password,
+          confirmPassword: ru.auth.confirmPassword,
+          registerButton: ru.auth.registerButton
+        };
+      case "kz":
+        return {
+          firstName: kz.auth.firstName,
+          lastName: kz.auth.lastName,
+          email: kz.auth.email,
+          phone: kz.auth.phone,
+          password: kz.auth.password,
+          confirmPassword: kz.auth.confirmPassword,
+          registerButton: kz.auth.registerButton
+        };
+      case "en":
+        return {
+          firstName: en.auth.firstName,
+          lastName: en.auth.lastName,
+          email: en.auth.email,
+          phone: en.auth.phone,
+          password: en.auth.password,
+          confirmPassword: en.auth.confirmPassword,
+          registerButton: en.auth.registerButton
+        };
+      default:
+        return {
+          firstName: en.auth.firstName,
+          lastName: en.auth.lastName,
+          email: en.auth.email,
+          phone: en.auth.phone,
+          password: en.auth.password,
+          confirmPassword: en.auth.confirmPassword,
+          registerButton: en.auth.registerButton
+        };
+    }
+  };
+
+  const translations = getTranslations();
+
   return (
     <form onSubmit={onSubmit} className="text-black mt-4 md:mt-6">
       <input

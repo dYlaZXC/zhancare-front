@@ -19,6 +19,7 @@ import {
 import { useLanguage } from "@/context/LanguageContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
+import en from "@/locales/en.json";
 
 const iconMapping = {
   faVideo, faStethoscope, faNotesMedical, faBell,
@@ -37,7 +38,54 @@ interface Service {
 
 export const Services = () => {
   const { language } = useLanguage();
-  const translations = language === "ru" ? ru.services : kz.services;
+  
+  // Get translations based on language
+  const getTranslations = () => {
+    switch (language) {
+      case "ru":
+        return ru.services;
+      case "kz":
+        return kz.services;
+      case "en":
+        return en.services;
+      default:
+        return en.services;
+    }
+  };
+
+  const translations = getTranslations();
+  
+  // Get static text translations
+  const getStaticTranslations = () => {
+    switch (language) {
+      case "ru":
+        return {
+          learnMore: "Подробнее",
+          whatIncluded: "Что включено:",
+          back: "← Назад"
+        };
+      case "kz":
+        return {
+          learnMore: "Толығырақ",
+          whatIncluded: "Не кіреді:",
+          back: "← Артқа"
+        };
+      case "en":
+        return {
+          learnMore: "Learn More",
+          whatIncluded: "What's included:",
+          back: "← Back"
+        };
+      default:
+        return {
+          learnMore: "Learn More",
+          whatIncluded: "What's included:",
+          back: "← Back"
+        };
+    }
+  };
+
+  const staticTranslations = getStaticTranslations();
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
 
   // Take only first 3 services
@@ -113,7 +161,10 @@ export const Services = () => {
                   {/* Front of Card */}
                   <div
                     className="absolute inset-0 w-full h-full bg-white shadow-lg rounded-2xl p-8 text-center group hover:scale-[1.05] hover:shadow-2xl hover:-rotate-1 transition-all duration-500"
-                    style={{ backfaceVisibility: "hidden" }}
+                    style={{ 
+                      backfaceVisibility: "hidden",
+                      transform: "rotateY(0deg)"
+                    }}
                   >
                     <div className="flex flex-col items-center space-y-4 h-full justify-center">
                       <div className="p-6 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-full shadow-md group-hover:scale-110 transition-all duration-300">
@@ -122,7 +173,7 @@ export const Services = () => {
                       <h5 className="text-2xl font-bold text-gray-800">{service.title}</h5>
                       <p className="text-gray-500 leading-relaxed">{service.description}</p>
                       
-                      {/* Подробнее Button */}
+                      {/* Learn More Button */}
                       <motion.div
                         className="mt-6"
                         initial={{ opacity: 0, y: 10 }}
@@ -148,7 +199,7 @@ export const Services = () => {
                           
                           {/* Button content */}
                           <span className="relative z-10 flex items-center space-x-2">
-                            <span>Подробнее</span>
+                            <span>{staticTranslations.learnMore}</span>
                             <motion.span
                               className="inline-block"
                               animate={{ x: [0, 3, 0] }}
@@ -196,7 +247,7 @@ export const Services = () => {
                       {/* Details List */}
                       <div className="flex-1">
                         <h6 className="text-sm font-semibold text-white/80 uppercase tracking-wider mb-4">
-                          Что включено:
+                          {staticTranslations.whatIncluded}
                         </h6>
                         <ul className="space-y-3">
                           {service.details.map((detail, i) => (
@@ -229,7 +280,7 @@ export const Services = () => {
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                         >
-                          ← Назад
+                          {staticTranslations.back}
                         </motion.button>
                       </div>
                     </div>
@@ -250,6 +301,15 @@ export const Services = () => {
         [style*="transform-style: preserve-3d"] {
           -webkit-transform-style: preserve-3d;
           transform-style: preserve-3d;
+        }
+        
+        /* Ensure proper 3D rendering */
+        .group [style*="rotateY(0deg)"] {
+          transform: rotateY(0deg);
+        }
+        
+        .group [style*="rotateY(180deg)"] {
+          transform: rotateY(180deg);
         }
       `}</style>
     </>

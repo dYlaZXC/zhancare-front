@@ -6,13 +6,45 @@ import SocialLinkedin from "@/assets/social-linkedin.svg";
 import SocialPin from "@/assets/social-pin.svg";
 import SocialYoutube from "@/assets/social-youtube.svg";
 import Image from "next/image";
-import { useLanguage } from "@/context/LanguageContext"; // Import Language Context
+import { useLanguage } from "@/context/LanguageContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
+import en from "@/locales/en.json";
 
 export const Footer = () => {
-  const { language } = useLanguage(); // Get current language from context
-  const translations = language === "ru" ? ru.footer : kz.footer; // Select appropriate translations
+  const { language } = useLanguage();
+  
+  // Get translations based on language
+  const getTranslations = () => {
+    switch (language) {
+      case "ru":
+        return ru.footer;
+      case "kz":
+        return kz.footer;
+      case "en":
+        return en.footer;
+      default:
+        return en.footer;
+    }
+  };
+
+  const translations = getTranslations();
+
+  // Get address label translation
+  const getAddressLabel = () => {
+    switch (language) {
+      case "ru":
+        return "Адрес:";
+      case "kz":
+        return "Мекен-жай:";
+      case "en":
+        return "Address:";
+      default:
+        return "Address:";
+    }
+  };
+
+  const addressLabel = getAddressLabel();
 
   return (
     <footer className="bg-gradient-to-br from-[#1D1D2F] to-[#1A1A2E] text-gray-400 text-sm py-10">
@@ -27,7 +59,6 @@ export const Footer = () => {
             <a href="#hero">{translations.learnMore}</a>
           </p>
         </div>
-
 
         {/* Navigation Links */}
         <nav>
@@ -51,7 +82,7 @@ export const Footer = () => {
             {translations.contact.title}
           </h4>
           <p className="text-gray-400 leading-6">
-            <span className="font-semibold">Адрес:</span> {translations.contact.address}
+            <span className="font-semibold">{addressLabel}</span> {translations.contact.address}
           </p>
           <p className="text-gray-400 mt-4">
             <span className="font-semibold">Email:</span>{" "}

@@ -4,13 +4,29 @@ import starImage from "@/assets/star.png";
 import springImage from "@/assets/spring.png";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
-import { useLanguage } from "@/context/LanguageContext"; // Import Language Context
+import { useLanguage } from "@/context/LanguageContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
+import en from "@/locales/en.json";
 
 export const CallToAction = () => {
-  const { language } = useLanguage(); // Get current language from context
-  const translations = language === "ru" ? ru.callToAction : kz.callToAction; // Select appropriate translations
+  const { language } = useLanguage();
+  
+  // Get translations based on language
+  const getTranslations = () => {
+    switch (language) {
+      case "ru":
+        return ru.callToAction;
+      case "kz":
+        return kz.callToAction;
+      case "en":
+        return en.callToAction;
+      default:
+        return en.callToAction;
+    }
+  };
+
+  const translations = getTranslations();
 
   const sectionRef = useRef(null);
   const { scrollYProgress } = useScroll({
@@ -21,21 +37,20 @@ export const CallToAction = () => {
   const translateY = useTransform(scrollYProgress, [0, 1], [150, -150]);
 
   const handleEmailRedirect = () => {
-    window.location.href = "mailto:example@example.com"; // Replace with your email address
+    window.location.href = "mailto:support@zhancare.ai"; // Updated with actual email
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    alert(translations.alertMessage); // Display translated alert message
+    alert(translations.alertMessage);
   };
 
   return (
     <section
-  id="contacts"
-  ref={sectionRef}
-  className="bg-gradient-to-b from-[#d2dcff] to-[#1d1d2f] py-16 sm:py-24 overflow-x-clip relative"
->
-
+      id="contacts"
+      ref={sectionRef}
+      className="bg-gradient-to-b from-[#d2dcff] to-[#1d1d2f] py-16 sm:py-24 overflow-x-clip relative"
+    >
       <div className="container mx-auto px-4 sm:px-6">
         {/* Section Heading */}
         <div className="section-heading relative text-center mb-8 sm:mb-10">

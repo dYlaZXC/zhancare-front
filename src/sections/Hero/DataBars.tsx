@@ -10,62 +10,11 @@ interface DataBar {
   duration: number;
   delay: number;
   gradientDirection: "normal" | "reverse";
-  label?: string;
+  labelKey: string;
   icon?: string;
   value?: string;
   color?: "primary" | "secondary" | "accent";
 }
-
-const dataBars: DataBar[] = [
-  {
-    width: "w-full",
-    backgroundOpacity: 15,
-    animationValues: [0.2, 0.95, 0.7, 0.85],
-    duration: 4,
-    delay: 0,
-    gradientDirection: "normal",
-    label: "Анализ нейронной сети",
-    icon: "🧠",
-    value: "94%",
-    color: "primary"
-  },
-  {
-    width: "w-5/6",
-    backgroundOpacity: 12,
-    animationValues: [0.3, 0.85, 0.6, 0.75],
-    duration: 4.5,
-    delay: 0.4,
-    gradientDirection: "reverse",
-    label: "Обработка данных",
-    icon: "⚡",
-    value: "87%",
-    color: "secondary"
-  },
-  {
-    width: "w-3/4",
-    backgroundOpacity: 10,
-    animationValues: [0.1, 0.78, 0.5, 0.68],
-    duration: 5,
-    delay: 0.8,
-    gradientDirection: "normal",
-    label: "Распознавание образов",
-    icon: "🎯",
-    value: "81%",
-    color: "accent"
-  },
-  {
-    width: "w-2/3",
-    backgroundOpacity: 8,
-    animationValues: [0.15, 0.72, 0.45, 0.62],
-    duration: 5.5,
-    delay: 1.2,
-    gradientDirection: "reverse",
-    label: "Прогнозное моделирование",
-    icon: "📊",
-    value: "76%",
-    color: "primary"
-  }
-];
 
 interface DataBarsProps {
   showLabels?: boolean;
@@ -74,6 +23,7 @@ interface DataBarsProps {
   containerDelay?: number;
   variant?: "default" | "glassmorphism" | "minimal";
   interactive?: boolean;
+  language?: string;
 }
 
 export default function DataBars({ 
@@ -82,12 +32,107 @@ export default function DataBars({
   showIcons = false,
   containerDelay = 0,
   variant = "glassmorphism",
-  interactive = true
+  interactive = true,
+  language = "en"
 }: DataBarsProps) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-50px" });
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [completedBars, setCompletedBars] = useState<Set<number>>(new Set());
+
+  const getTranslations = () => {
+    switch (language) {
+      case "ru":
+        return {
+          neuralAnalysis: "Анализ нейронной сети",
+          dataProcessing: "Обработка данных",
+          patternRecognition: "Распознавание образов",
+          predictiveModeling: "Прогнозное моделирование",
+          systemPerformance: "Производительность системы ИИ:",
+          modulesActive: "модулей активно"
+        };
+      case "kz":
+        return {
+          neuralAnalysis: "Нейрондық желіні талдау",
+          dataProcessing: "Деректерді өңдеу",
+          patternRecognition: "Үлгіні тану",
+          predictiveModeling: "Болжамды модельдеу",
+          systemPerformance: "ЖИ жүйесінің өнімділігі:",
+          modulesActive: "модуль белсенді"
+        };
+      case "en":
+        return {
+          neuralAnalysis: "Neural Network Analysis",
+          dataProcessing: "Data Processing",
+          patternRecognition: "Pattern Recognition",
+          predictiveModeling: "Predictive Modeling",
+          systemPerformance: "AI System Performance:",
+          modulesActive: "modules active"
+        };
+      default:
+        return {
+          neuralAnalysis: "Neural Network Analysis",
+          dataProcessing: "Data Processing",
+          patternRecognition: "Pattern Recognition",
+          predictiveModeling: "Predictive Modeling",
+          systemPerformance: "AI System Performance:",
+          modulesActive: "modules active"
+        };
+    }
+  };
+
+  const translations = getTranslations();
+
+  const dataBars: DataBar[] = [
+    {
+      width: "w-full",
+      backgroundOpacity: 15,
+      animationValues: [0.2, 0.95, 0.7, 0.85],
+      duration: 4,
+      delay: 0,
+      gradientDirection: "normal",
+      labelKey: "neuralAnalysis",
+      icon: "🧠",
+      value: "94%",
+      color: "primary"
+    },
+    {
+      width: "w-5/6",
+      backgroundOpacity: 12,
+      animationValues: [0.3, 0.85, 0.6, 0.75],
+      duration: 4.5,
+      delay: 0.4,
+      gradientDirection: "reverse",
+      labelKey: "dataProcessing",
+      icon: "⚡",
+      value: "87%",
+      color: "secondary"
+    },
+    {
+      width: "w-3/4",
+      backgroundOpacity: 10,
+      animationValues: [0.1, 0.78, 0.5, 0.68],
+      duration: 5,
+      delay: 0.8,
+      gradientDirection: "normal",
+      labelKey: "patternRecognition",
+      icon: "🎯",
+      value: "81%",
+      color: "accent"
+    },
+    {
+      width: "w-2/3",
+      backgroundOpacity: 8,
+      animationValues: [0.15, 0.72, 0.45, 0.62],
+      duration: 5.5,
+      delay: 1.2,
+      gradientDirection: "reverse",
+      labelKey: "predictiveModeling",
+      icon: "📊",
+      value: "76%",
+      color: "primary"
+    }
+  ];
 
   const getColorGradients = (color: "primary" | "secondary" | "accent", direction: "normal" | "reverse") => {
     const colors = {
@@ -112,6 +157,10 @@ export default function DataBars({
   const getBackgroundGradient = (color: "primary" | "secondary" | "accent", direction: "normal" | "reverse", opacity: number) => {
     const colorGrads = getColorGradients(color, direction);
     return `from-[${colorGrads.from}]/${opacity} to-[${colorGrads.to}]/${opacity}`;
+  };
+
+  const getLabel = (labelKey: string) => {
+    return translations[labelKey as keyof typeof translations] || labelKey;
   };
 
   useEffect(() => {
@@ -188,9 +237,9 @@ export default function DataBars({
                     {bar.icon}
                   </motion.span>
                 )}
-                {showLabels && bar.label && (
+                {showLabels && (
                   <span className="text-xs text-white/70 font-medium">
-                    {bar.label}
+                    {getLabel(bar.labelKey)}
                   </span>
                 )}
               </div>
@@ -368,7 +417,7 @@ export default function DataBars({
         transition={{ delay: containerDelay + 3 }}
       >
         <div className="text-xs text-white/50">
-          Производительность системы ИИ: {completedBars.size}/{dataBars.length} модулей активно
+          {translations.systemPerformance} {completedBars.size}/{dataBars.length} {translations.modulesActive}
         </div>
       </motion.div>
     </motion.div>

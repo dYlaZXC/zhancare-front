@@ -20,6 +20,7 @@ import CountUp from "react-countup";
 import { useLanguage } from "@/context/LanguageContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
+import en from "@/locales/en.json";
 
 type IconName =
   | "faUserMd"
@@ -41,7 +42,22 @@ const iconMapping: Record<IconName, any> = {
 
 export const ImpactSection = () => {
   const { language } = useLanguage();
-  const translations = language === "kz" ? kz.impactSection : ru.impactSection;
+  
+  // Get translations based on language
+  const getTranslations = () => {
+    switch (language) {
+      case "ru":
+        return ru.impactSection;
+      case "kz":
+        return kz.impactSection;
+      case "en":
+        return en.impactSection;
+      default:
+        return en.impactSection;
+    }
+  };
+
+  const translations = getTranslations();
 
   return (
     <section id="impact" className="relative py-32 px-6 md:px-12 bg-gradient-to-b from-[#d2dcff] via-[#d2dcff] to-white text-center overflow-hidden">

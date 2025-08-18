@@ -195,6 +195,19 @@ export default function ActionButtons({
   const primaryButtonRef = useRef<HTMLButtonElement>(null);
   const secondaryButtonRef = useRef<HTMLButtonElement>(null);
 
+  const getSecondaryButtonText = () => {
+    switch (language) {
+      case "ru":
+        return "Узнать больше";
+      case "kz":
+        return "Көбірек білу";
+      case "en":
+        return "Learn More";
+      default:
+        return "Learn More"; // Default to English
+    }
+  };
+
   return (
     <motion.div variants={itemVariants}>
       <div className="flex flex-col xs:flex-row gap-3 xs:gap-4 justify-center lg:justify-start max-w-xs xs:max-w-md sm:max-w-lg mx-auto lg:mx-0">
@@ -246,7 +259,7 @@ export default function ActionButtons({
           </div>
 
           <span className="relative z-10 truncate">
-            {language === "ru" ? "Узнать больше" : "Көбірек білу"}
+            {getSecondaryButtonText()}
           </span>
         </motion.button>
       </div>
