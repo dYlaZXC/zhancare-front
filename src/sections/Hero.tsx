@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 import heroVideo from "@/assets/hero-video.mp4";
 import Header from "@/sections/Hero/Header";
 import HeroContent from "@/sections/Hero/HeroContent";
@@ -14,12 +15,140 @@ const ToastContainer = dynamic(
 );
 
 export default function Hero() {
+  const [screenType, setScreenType] = useState<string>('default');
+
+  useEffect(() => {
+    const detectScreenType = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+
+      // More reliable screen detection without complex media queries
+      if (width >= 3840 && height >= 2000) {
+        setScreenType('4k');
+      } else if (width >= 2560 && height >= 1400) {
+        setScreenType('qhd');
+      } else if (width >= 1920 && height >= 1000) {
+        setScreenType('fhd');
+      } else if (width >= 1366 && width <= 1440 && height >= 700 && height <= 800) {
+        setScreenType('laptop-hd');
+      } else {
+        setScreenType('default');
+      }
+    };
+
+    detectScreenType();
+    window.addEventListener('resize', detectScreenType);
+    
+    return () => window.removeEventListener('resize', detectScreenType);
+  }, []);
+
+  // Dynamic classes based on screen type
+  const getResponsiveClasses = () => {
+    const baseClasses = "relative overflow-hidden min-h-screen pb-20 md:pb-10";
+    
+    switch (screenType) {
+      case 'laptop-hd':
+        return `${baseClasses} min-h-[768px] h-[768px] pb-8`;
+      case 'fhd':
+        return `${baseClasses} min-h-[1080px] h-[1080px] pb-12`;
+      case 'qhd':
+        return `${baseClasses} min-h-[1440px] h-[1440px] pb-16`;
+      case '4k':
+        return `${baseClasses} min-h-[2160px] h-[2160px] pb-24`;
+      default:
+        return baseClasses;
+    }
+  };
+
+  const getVideoClasses = () => {
+    const baseClasses = "absolute inset-0 w-full h-full min-h-screen object-cover -z-10 scale-105";
+    
+    switch (screenType) {
+      case 'laptop-hd':
+        return `${baseClasses} min-h-[768px]`;
+      case 'fhd':
+        return `${baseClasses} min-h-[1080px]`;
+      case 'qhd':
+        return `${baseClasses} min-h-[1440px]`;
+      case '4k':
+        return `${baseClasses} min-h-[2160px]`;
+      default:
+        return baseClasses;
+    }
+  };
+
+  const getOverlayClasses = () => {
+    const baseClasses = "absolute inset-0 -z-9";
+    
+    switch (screenType) {
+      case 'laptop-hd':
+        return `${baseClasses} bg-black/65`;
+      case 'fhd':
+        return `${baseClasses} bg-black/50`;
+      case 'qhd':
+        return `${baseClasses} bg-black/45`;
+      case '4k':
+        return `${baseClasses} bg-black/40`;
+      default:
+        return `${baseClasses} bg-black/60`;
+    }
+  };
+
+  const getContentClasses = () => {
+    const baseClasses = "relative z-10 container mx-auto text-white px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16";
+    
+    switch (screenType) {
+      case 'laptop-hd':
+        return `${baseClasses} px-6 max-w-none`;
+      case 'fhd':
+        return `${baseClasses} px-8 max-w-none`;
+      case 'qhd':
+        return `${baseClasses} px-12 max-w-none`;
+      case '4k':
+        return `${baseClasses} px-16 max-w-none`;
+      default:
+        return baseClasses;
+    }
+  };
+
+  const getPaddingClasses = () => {
+    const baseClasses = "pt-8 sm:pt-12 md:pt-16 lg:pt-20 xl:pt-24";
+    
+    switch (screenType) {
+      case 'laptop-hd':
+        return "pt-12";
+      case 'fhd':
+        return "pt-16";
+      case 'qhd':
+        return "pt-20";
+      case '4k':
+        return "pt-32";
+      default:
+        return baseClasses;
+    }
+  };
+
+  const getScaleClasses = () => {
+    switch (screenType) {
+      case 'laptop-hd':
+        return "transform scale-90 origin-top-left";
+      case 'fhd':
+        return "transform scale-100 origin-top";
+      case 'qhd':
+        return "transform scale-110 origin-top";
+      case '4k':
+        return "transform scale-125 origin-top";
+      default:
+        return "";
+    }
+  };
+
   return (
     <motion.section
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true }}
-      className="relative overflow-hidden min-h-screen laptop-hd:min-h-[768px] laptop-hd:h-[768px] desktop-fhd:min-h-[1080px] desktop-fhd:h-[1080px] desktop-qhd:min-h-[1440px] desktop-qhd:h-[1440px] desktop-4k:min-h-[2160px] desktop-4k:h-[2160px] pb-20 md:pb-10 laptop-hd:pb-8 desktop-fhd:pb-12 desktop-qhd:pb-16 desktop-4k:pb-24"
+      className={getResponsiveClasses()}
       id="hero"
     >
       {/* Background Video */}
@@ -28,7 +157,7 @@ export default function Hero() {
         muted
         loop
         playsInline
-        className="absolute inset-0 w-full h-full min-h-screen laptop-hd:min-h-[768px] desktop-fhd:min-h-[1080px] desktop-qhd:min-h-[1440px] desktop-4k:min-h-[2160px] object-cover -z-10 scale-105"
+        className={getVideoClasses()}
       >
         <source src={heroVideo} type="video/mp4" />
       </video>
@@ -38,7 +167,7 @@ export default function Hero() {
 
       {/* Black Overlay */}
       <motion.div
-        className="absolute inset-0 bg-black/60 laptop-hd:bg-black/65 desktop-fhd:bg-black/50 desktop-qhd:bg-black/45 desktop-4k:bg-black/40 -z-9"
+        className={getOverlayClasses()}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 1 }}
@@ -48,9 +177,9 @@ export default function Hero() {
       <Header />
 
       {/* Hero Main Content */}
-      <div className="relative z-10 container mx-auto text-white px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 laptop-hd:px-6 laptop-hd:max-w-none desktop-fhd:px-8 desktop-fhd:max-w-none desktop-qhd:px-12 desktop-qhd:max-w-none desktop-4k:px-16 desktop-4k:max-w-none">
-        <div className="pt-8 sm:pt-12 md:pt-16 lg:pt-20 xl:pt-24 laptop-hd:pt-12 desktop-fhd:pt-16 desktop-qhd:pt-20 desktop-4k:pt-32">
-          <div className="laptop-hd:transform laptop-hd:scale-90 laptop-hd:origin-top-left desktop-fhd:transform desktop-fhd:scale-100 desktop-fhd:origin-top desktop-qhd:transform desktop-qhd:scale-110 desktop-qhd:origin-top desktop-4k:transform desktop-4k:scale-125 desktop-4k:origin-top">
+      <div className={getContentClasses()}>
+        <div className={getPaddingClasses()}>
+          <div className={getScaleClasses()}>
             <HeroContent />
             {/* <HeroChat /> */}
             {/* <HeroStats /> */}
