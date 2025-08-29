@@ -2,13 +2,23 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTimes, faUserMd } from "@fortawesome/free-solid-svg-icons";
+import { 
+  faTimes, 
+  faHome,
+  faGlobe,
+  faHospital,
+  faRobot,
+  faStethoscope,
+  faCubes,
+  faPhone
+} from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import en from "@/locales/en.json";
 import LanguageSwitcher from "./LanguageSwitcher";
+import UserDropdown from "./UserDropdown";
 import { motion, AnimatePresence } from "framer-motion";
 import { FocusTrap } from "focus-trap-react";
 
@@ -19,7 +29,7 @@ type Props = {
 };
 
 export default function MobileMenu({ isOpen, onClose, onScrollToSection }: Props) {
-  const { setIsAuthOpen, user } = useAuth();
+  const { setIsAuthOpen, user, logoutUser } = useAuth();
   const { language, setLanguage } = useLanguage();
   
   // Get translations based on current language
@@ -34,6 +44,20 @@ export default function MobileMenu({ isOpen, onClose, onScrollToSection }: Props
 
   const navigationKeys = Object.keys(translations.navigation) as Array<keyof typeof translations.navigation>;
 
+  // Navigation icons mapping
+  const getNavigationIcon = (key: string) => {
+    const iconMap: Record<string, any> = {
+      hero: faHome,
+      "ai-chat": faRobot,
+      services: faHospital,
+      specialists: faStethoscope,
+      modules: faCubes,
+      contacts: faPhone,
+      default: faGlobe
+    };
+    return iconMap[key] || iconMap.default;
+  };
+
   const trapRef = useRef<HTMLDivElement>(null);
   const menuPanelRef = useRef<HTMLDivElement>(null);
 
@@ -41,16 +65,17 @@ export default function MobileMenu({ isOpen, onClose, onScrollToSection }: Props
     if (e.key === "Escape") onClose();
   }, [onClose]);
 
-  // IMPROVED: Handle overlay clicks with language switcher exception
   const handleOverlayClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as Element;
     
-    // Don't close if clicking on language dropdown
     if (target.closest('[data-language-dropdown]')) {
       return;
     }
     
-    // Only close if clicking directly on the overlay
+    if (target.closest('[data-user-dropdown]')) {
+      return;
+    }
+    
     if (e.target === e.currentTarget) {
       onClose();
     }
@@ -107,9 +132,10 @@ export default function MobileMenu({ isOpen, onClose, onScrollToSection }: Props
     }
   }, [language]);
 
-  const getProfilePath = useCallback(() => {
-    return user?.role === "doctor" ? "/doctor-profile" : "/profile";
-  }, [user]);
+  const handleLogout = useCallback(() => {
+    logoutUser();
+    onClose();
+  }, [logoutUser, onClose]);
 
   // Animation variants
   const menuVariants = {
@@ -141,143 +167,191 @@ export default function MobileMenu({ isOpen, onClose, onScrollToSection }: Props
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, x: 20 },
+    hidden: { opacity: 0, x: 30 },
     visible: (i: number) => ({
       opacity: 1,
       x: 0,
       transition: {
         delay: i * 0.1,
-        duration: 0.3
+        duration: 0.4,
+        type: "spring",
+        damping: 20
       }
     })
+  };
+
+  const headerVariants = {
+    hidden: { opacity: 0, y: -20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.4,
+        ease: "easeOut"
+      }
+    }
   };
 
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* SIMPLIFIED: Basic overlay */}
+          {/* Enhanced Overlay with blur effect */}
           <motion.div
             variants={overlayVariants}
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="fixed inset-0 bg-black z-40"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999]"
             aria-hidden="true"
             onClick={handleOverlayClick}
           />
 
-          {/* Menu Panel */}
+          {/* Enhanced Menu Panel */}
           <motion.div
             ref={menuPanelRef}
             variants={menuVariants}
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="fixed top-0 right-0 w-4/5 max-w-sm h-full z-50 bg-gradient-to-br from-[#1D1D2F]/95 to-[#2A2A3A]/95 backdrop-blur-xl border-l border-white/10 shadow-2xl text-white flex flex-col"
+            className="fixed top-0 right-0 w-5/6 xs:w-4/5 max-w-sm h-full z-[10000] bg-gradient-to-br from-[#0A0A1A]/98 via-[#1A1A2E]/98 to-[#16213E]/98 backdrop-blur-2xl border-l border-white/10 shadow-2xl text-white flex flex-col"
+            data-mobile-menu="true"
+            style={{
+              boxShadow: `
+                -20px 0 60px rgba(74, 93, 255, 0.1),
+                -10px 0 30px rgba(74, 93, 255, 0.05),
+                inset 1px 0 1px rgba(255, 255, 255, 0.1)
+              `
+            }}
             role="dialog"
             aria-modal="true"
             aria-label={getMenuAriaLabel()}
             id="mobile-menu"
           >
-            {/* SIMPLIFIED: More permissive FocusTrap */}
             <FocusTrap
               focusTrapOptions={{
                 allowOutsideClick: true,
                 clickOutsideDeactivates: false,
                 returnFocusOnDeactivate: true,
                 escapeDeactivates: true,
-                // Don't interfere with dropdowns
                 tabbableOptions: {
                   displayCheck: 'none'
                 }
               }}
             >
-              <div ref={trapRef} className="p-6 h-full flex flex-col">
-                {/* Close Button */}
-                <motion.button
-                  initial={{ opacity: 0, rotate: -90 }}
-                  animate={{ opacity: 1, rotate: 0 }}
-                  transition={{ delay: 0.2 }}
-                  aria-label={getCloseAriaLabel()}
-                  className="self-end mb-6 text-white p-2 rounded-lg hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-white/20"
-                  onClick={onClose}
+              <div ref={trapRef} className="h-full flex flex-col">
+                {/* Enhanced Header */}
+                <motion.div 
+                  variants={headerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className="relative p-4 sm:p-6 border-b border-white/10"
                 >
-                  <FontAwesomeIcon icon={faTimes} className="text-xl" />
-                </motion.button>
+                  {/* Decorative gradient */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-[#001E80]/20 to-[#3A50FF]/20" />
+                  
+                  <div className="relative flex items-center justify-between gap-4">
+                    {user ? (
+                      <div className="flex-1 mr-3">
+                        <UserDropdown user={user} onLogout={handleLogout} disableClickOutside={true} isMobile={true} />
+                      </div>
+                    ) : (
+                      <motion.button
+                        onClick={() => {
+                          setIsAuthOpen(true);
+                          onClose();
+                        }}
+                        className="group flex-1 mr-2 sm:mr-3 bg-gradient-to-r from-[#001E80] to-[#3A50FF] rounded-lg sm:rounded-xl p-3 sm:p-4 font-medium hover:from-[#0029A3] hover:to-[#4A5DFF] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-white/20 relative overflow-hidden flex items-center gap-2 sm:gap-3"
+                        style={{
+                          boxShadow: `
+                            0 0 20px rgba(74, 93, 255, 0.3),
+                            0 0 40px rgba(74, 93, 255, 0.1),
+                            inset 0 1px 1px rgba(255, 255, 255, 0.1)
+                          `
+                        }}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        {/* Neon glow effect */}
+                        <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-[#4A5DFF]/20 to-[#6B7DFF]/20 blur-lg" />
+                        
+                        <div className="relative flex items-center gap-2 sm:gap-3 w-full justify-center">
+                          <span className="text-base sm:text-lg font-semibold">{getAuthButtonText()}</span>
+                        </div>
+                      </motion.button>
+                    )}
+                    
+                    <motion.button
+                      aria-label={getCloseAriaLabel()}
+                      className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/20 group"
+                      onClick={onClose}
+                      whileHover={{ scale: 1.05, rotate: 90 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <FontAwesomeIcon 
+                        icon={faTimes} 
+                        className="text-base sm:text-lg group-hover:text-white transition-colors duration-200" 
+                      />
+                    </motion.button>
+                  </div>
+                </motion.div>
 
                 {/* Screen Reader Hint */}
                 <span className="sr-only">{getNavigationHint()}</span>
 
-                {/* Navigation */}
-                <nav className="flex flex-col gap-4 text-lg font-medium flex-1">
-                  {navigationKeys.map((key, index) => (
-                    <motion.button
-                      key={key}
-                      custom={index}
-                      variants={itemVariants}
-                      initial="hidden"
-                      animate="visible"
-                      onClick={() => onScrollToSection(key)}
-                      className="group text-left py-3 px-4 rounded-xl hover:bg-white/10 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/20 border border-transparent hover:border-white/20"
-                    >
-                      <span className="group-hover:translate-x-2 transition-transform duration-200 inline-block">
-                        {translations.navigation[key]}
-                      </span>
-                    </motion.button>
-                  ))}
+                {/* Enhanced Navigation */}
+                <div className="flex-1 p-4 sm:p-6 overflow-y-auto">
+                  <nav className="space-y-2 sm:space-y-3">
+                    {navigationKeys.map((key, index) => (
+                      <motion.button
+                        key={key}
+                        custom={index}
+                        variants={itemVariants}
+                        initial="hidden"
+                        animate="visible"
+                        onClick={() => onScrollToSection(key)}
+                        className="group w-full text-left p-3 sm:p-4 rounded-lg sm:rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-white/20 relative overflow-hidden"
+                        whileHover={{ x: 4 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        {/* Hover effect */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#001E80]/20 to-[#3A50FF]/20 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
+                        
+                        <div className="relative flex items-center gap-3 sm:gap-4">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-white/10 flex items-center justify-center group-hover:bg-white/15 transition-all duration-200 group-hover:scale-110">
+                            <FontAwesomeIcon 
+                              icon={getNavigationIcon(key)} 
+                              className="text-white/80 group-hover:text-white transition-colors duration-200" 
+                            />
+                          </div>
+                          <span className="text-sm sm:text-base font-medium text-white/90 group-hover:text-white transition-colors duration-200">
+                            {translations.navigation[key]}
+                          </span>
+                        </div>
+                      </motion.button>
+                    ))}
+                  </nav>
 
-                  {/* IMPROVED: Language Switcher with proper container */}
+                  {/* Enhanced Language Switcher */}
                   <motion.div
                     custom={navigationKeys.length}
                     variants={itemVariants}
                     initial="hidden"
                     animate="visible"
-                    className="mt-4 relative"
+                    className="mt-6 sm:mt-8 p-3 sm:p-4 rounded-lg sm:rounded-xl bg-white/5 border border-white/10"
                     data-language-dropdown="container"
                   >
+                    <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                      <FontAwesomeIcon icon={faGlobe} className="text-white/60 text-sm" />
+                      <span className="text-xs sm:text-sm font-medium text-white/80">Language</span>
+                    </div>
                     <LanguageSwitcher
                       currentLanguage={language}
                       setLanguage={setLanguage}
                     />
                   </motion.div>
+                </div>
 
-                  {/* Authentication Button */}
-                  <motion.div
-                    custom={navigationKeys.length + 1}
-                    variants={itemVariants}
-                    initial="hidden"
-                    animate="visible"
-                    className="mt-auto pt-6"
-                  >
-                    {user ? (
-                      <button
-                        onClick={() => {
-                          window.location.href = getProfilePath();
-                          onClose();
-                        }}
-                        className="group w-full bg-gradient-to-r from-[#001E80] to-[#3A50FF] rounded-xl px-6 py-4 font-medium hover:from-[#0029A3] hover:to-[#4A5DFF] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/20 flex items-center justify-center space-x-3"
-                      >
-                        <FontAwesomeIcon 
-                          icon={faUserMd} 
-                          className="text-lg group-hover:scale-110 transition-transform duration-200" 
-                        />
-                        <span>{user.first_name}</span>
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          setIsAuthOpen(true);
-                          onClose();
-                        }}
-                        className="group w-full bg-gradient-to-r from-[#001E80] to-[#3A50FF] rounded-xl px-6 py-4 font-medium hover:from-[#0029A3] hover:to-[#4A5DFF] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/20 relative overflow-hidden"
-                      >
-                        <span className="relative z-10">{getAuthButtonText()}</span>
-                        <div className="absolute inset-0 bg-white/10 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
-                      </button>
-                    )}
-                  </motion.div>
-                </nav>
               </div>
             </FocusTrap>
           </motion.div>

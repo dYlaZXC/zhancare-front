@@ -3,14 +3,12 @@
 import { useState, useRef, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { 
-  faUserMd, 
   faSignOutAlt, 
   faUser, 
   faChevronDown,
   faCog,
   faChartLine,
-  faCalendarAlt,
-  faShieldAlt
+  faCalendarAlt
 } from "@fortawesome/free-solid-svg-icons";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/context/LanguageContext";
@@ -24,9 +22,11 @@ type Props = {
     avatar?: string;
   };
   onLogout: () => void;
+  disableClickOutside?: boolean;
+  isMobile?: boolean;
 };
 
-export default function UserDropdown({ user, onLogout }: Props) {
+export default function UserDropdown({ user, onLogout, disableClickOutside = false, isMobile = false }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const { language } = useLanguage();
@@ -124,8 +124,11 @@ export default function UserDropdown({ user, onLogout }: Props) {
       }
     };
 
-    if (isOpen) {
+    if (isOpen && !disableClickOutside) {
       document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleEscapeKey);
+    } else if (isOpen) {
+      // Only add escape key listener when click outside is disabled
       document.addEventListener("keydown", handleEscapeKey);
     }
 
@@ -133,7 +136,7 @@ export default function UserDropdown({ user, onLogout }: Props) {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEscapeKey);
     };
-  }, [isOpen]);
+  }, [isOpen, disableClickOutside]);
 
   // Get user initials for avatar fallback
   const getUserInitials = () => {
@@ -215,11 +218,11 @@ export default function UserDropdown({ user, onLogout }: Props) {
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative" ref={dropdownRef} data-user-dropdown="container" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
       {/* User Button */}
       <motion.button
         onClick={() => setIsOpen(!isOpen)}
-        className="group bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white rounded-lg px-4 py-2 flex items-center gap-3 hover:from-[#0029A3] hover:to-[#4A5DFF] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/20 relative overflow-hidden min-w-[140px]"
+        className={`group bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white rounded-lg px-4 py-2 flex items-center gap-3 hover:from-[#0029A3] hover:to-[#4A5DFF] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/20 relative overflow-hidden ${isMobile ? 'min-w-0 w-full' : 'min-w-[140px]'}`}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
       >
@@ -284,7 +287,9 @@ export default function UserDropdown({ user, onLogout }: Props) {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="absolute right-0 mt-2 w-72 bg-white/95 backdrop-blur-xl text-gray-800 shadow-2xl rounded-xl overflow-hidden border border-white/20 z-50"
+            className={`absolute ${isMobile ? 'left-0 right-0 mt-2' : 'right-0 mt-2'} ${isMobile ? 'w-full max-w-[calc(100vw-2rem)]' : 'w-72'} bg-white/95 backdrop-blur-xl text-gray-800 shadow-2xl rounded-xl overflow-hidden border border-white/20 ${isMobile ? 'z-[10001]' : 'z-50'}`}
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div className="bg-gradient-to-r from-[#001E80]/10 to-[#3A50FF]/10 p-4 border-b border-gray-100">

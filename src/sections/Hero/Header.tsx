@@ -1,5 +1,4 @@
 "use client";
-
 import Image from "next/image";
 import Logo from "@/assets/logosaas.png";
 import MenuIcon from "@/assets/menu.svg";
@@ -20,12 +19,12 @@ const SCROLL_OPTIONS = { passive: true };
 export default function Header() {
   const { setIsAuthOpen, user, logoutUser } = useAuth();
   const { language, setLanguage } = useLanguage();
-  
+    
   // Debug: Log language changes
   useEffect(() => {
     console.log(`Header component language changed to: ${language}`);
   }, [language]);
-  
+    
   // Memoize translations to prevent unnecessary re-renders
   const translations = useMemo(() => {
     switch (language) {
@@ -35,7 +34,7 @@ export default function Header() {
       default: return ru.hero;
     }
   }, [language]);
-  
+    
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -43,10 +42,10 @@ export default function Header() {
   // Enhanced scroll handler - always visible, just changes background
   const handleScroll = useCallback(() => {
     const currentScrollY = window.scrollY;
-    
+        
     // Update background blur state with smoother transition
     setIsScrolled(currentScrollY > SCROLL_THRESHOLD);
-    
+        
     // Calculate scroll progress safely
     const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
     const progress = Math.min((currentScrollY / maxScroll) * 100, 100);
@@ -62,17 +61,22 @@ export default function Header() {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
-      
+            
       // Don't close if clicking on language dropdown elements
       if (target.closest('[data-language-dropdown]')) {
         return;
       }
-      
+            
       // Don't close if clicking on mobile menu elements
       if (target.closest('[data-mobile-menu]')) {
         return;
       }
-      
+            
+      // Don't close if clicking on user dropdown elements
+      if (target.closest('[data-user-dropdown]')) {
+        return;
+      }
+            
       // Close menu if clicking outside
       if (isMenuOpen) {
         setIsMenuOpen(false);
@@ -113,7 +117,7 @@ export default function Header() {
     if (element) {
       const headerHeight = 80;
       const elementPosition = element.offsetTop - headerHeight;
-      
+            
       window.scrollTo({
         top: elementPosition,
         behavior: "smooth"
@@ -126,19 +130,7 @@ export default function Header() {
     logoutUser();
   }, [logoutUser]);
 
-  // Simple cycling function for backwards compatibility
-  const toggleLanguage = useCallback(() => {
-    const currentIndex = languages.findIndex(lang => lang.code === language);
-    const nextIndex = (currentIndex + 1) % languages.length;
-    setLanguage(languages[nextIndex].code as "ru" | "en" | "kz");
-  }, [language, setLanguage]);
 
-  // Define languages array for cycling
-  const languages = [
-    { code: "ru", name: "Русский" },
-    { code: "en", name: "English" },
-    { code: "kz", name: "Қазақша" }
-  ];
 
   // Get auth button text for current language
   const getAuthButtonText = useCallback(() => {
@@ -180,46 +172,46 @@ export default function Header() {
   const headerClasses = useMemo(() => {
     const baseClasses = "fixed top-0 w-full z-50 transition-all duration-500 ease-out";
     const backgroundClasses = isScrolled 
-      ? "bg-[#1D1D2F]/95 backdrop-blur-xl shadow-xl" 
+      ? "bg-[#1D1D2F]/95 backdrop-blur-xl shadow-xl"
       : "bg-[#1D1D2F]/0 backdrop-blur-none";
-    
+        
     return `${baseClasses} ${backgroundClasses}`;
   }, [isScrolled]);
 
   return (
     <>
       <header className={headerClasses} role="banner">
-        <div className="py-2 sm:py-3 md:py-3 laptop-hd:py-2 desktop-fhd:py-3">
-          <div className="container mx-auto flex items-center justify-between px-4 max-w-7xl laptop-hd:max-w-none desktop-fhd:max-w-none laptop-hd:px-6 desktop-fhd:px-8">
+        <div className="py-1.5 xs:py-2 sm:py-3 md:py-3 laptop-hd:py-2 desktop-fhd:py-3">
+          <div className="container mx-auto flex items-center justify-between px-3 xs:px-4 sm:px-6 max-w-7xl laptop-hd:max-w-none desktop-fhd:max-w-none laptop-hd:px-6 desktop-fhd:px-8">
             {/* Logo */}
-            <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="flex items-center gap-2 xs:gap-3 flex-shrink-0">
               <Image
                 src={Logo}
                 alt="ZhanCare.AI logo"
-                className="h-6 w-auto sm:h-8 md:h-10 lg:h-12 laptop-hd:h-8 desktop-fhd:h-10 transition-transform hover:scale-105"
+                className="h-5 xs:h-6 sm:h-8 md:h-10 lg:h-12 laptop-hd:h-8 desktop-fhd:h-10 w-auto transition-transform hover:scale-105"
                 priority
                 width={140}
                 height={140}
               />
             </div>
 
-            {/* Mobile menu button */}
+            {/* FIXED: Mobile menu button with better positioning and sizing */}
             <button
-              className="md:hidden text-white p-2 rounded-lg hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 flex-shrink-0"
+              className="md:hidden text-white p-2 rounded-lg hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 flex-shrink-0 min-w-[40px] xs:min-w-[44px] min-h-[40px] xs:min-h-[44px] flex items-center justify-center"
               onClick={toggleMenu}
               aria-label={getMenuAriaLabel()}
               aria-expanded={isMenuOpen}
               data-mobile-menu="trigger"
             >
               <MenuIcon 
-                className={`h-5 w-5 sm:h-6 sm:w-6 transition-transform duration-200 ${
+                className={`h-5 w-5 transition-transform duration-200 ${
                   isMenuOpen ? 'rotate-90' : 'rotate-0'
-                }`} 
+                }`}
               />
             </button>
 
             {/* Desktop navigation */}
-            <nav 
+            <nav
               className="hidden md:flex flex-wrap items-center gap-1 lg:gap-2 xl:gap-3 laptop-hd:gap-1.5 desktop-fhd:gap-2 text-white text-xs sm:text-sm lg:text-base laptop-hd:text-sm desktop-fhd:text-base flex-shrink-0"
               role="navigation"
               aria-label={getNavAriaLabel()}
@@ -236,7 +228,7 @@ export default function Header() {
                   </button>
                 ))}
               </div>
-
+              
               <div className="flex items-center gap-1 lg:gap-2 laptop-hd:gap-1.5 desktop-fhd:gap-2 ml-1 lg:ml-2 laptop-hd:ml-1.5 desktop-fhd:ml-2">
                 {/* Language switcher */}
                 <div className="laptop-hd:scale-90 desktop-fhd:scale-100">
