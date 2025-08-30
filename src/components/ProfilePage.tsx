@@ -24,6 +24,11 @@ const ProfilePage = () => {
 
   const [activeTab, setActiveTab] = useState("profile");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  const handleToggleSidebar = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
+  };
 
   useEffect(() => {
     if (!loading && user?.role === "doctor") {
@@ -81,21 +86,28 @@ const ProfilePage = () => {
         setActiveTab={setActiveTab}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        isCollapsed={sidebarCollapsed}
       />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* Header with menu toggle */}
-        <Header onMenuClick={() => setSidebarOpen(true)} />
+        <Header 
+          onMenuClick={() => setSidebarOpen(true)}
+          sidebarCollapsed={sidebarCollapsed}
+          onToggleSidebar={handleToggleSidebar}
+        />
 
-        {/* Main Container */}
-        <main className="flex-1 p-4 sm:p-6 bg-gray-50">
-          {/* Breadcrumbs */}
-          <Breadcrumb activeTab={activeTab} />
+        {/* Scrollable Container */}
+        <div className="flex-1 overflow-y-auto">
+          <main className="flex-1 p-4 sm:p-6 bg-gray-50">
+            {/* Breadcrumbs */}
+            <Breadcrumb activeTab={activeTab} />
 
-          {/* Animated Content */}
-          <MainContent activeTab={activeTab}>{renderContent()}</MainContent>
-        </main>
+            {/* Animated Content */}
+            <MainContent activeTab={activeTab}>{renderContent()}</MainContent>
+          </main>
+        </div>
       </div>
     </div>
   );
