@@ -43,7 +43,7 @@ export const Sidebar = ({
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
-  if (!user) return null;
+  
 
   const menuItems = [
     { id: "profile", icon: faUser, title: "Профиль", color: "#3772ff" },
@@ -63,6 +63,8 @@ export const Sidebar = ({
     window.addEventListener('mousemove', handleMouseMove);
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
+
+  if (!user) return null;
 
   const handleLogout = () => {
     toast.success("Вы успешно вышли!", { position: "top-right", autoClose: 3000 });
