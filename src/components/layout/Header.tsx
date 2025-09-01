@@ -32,18 +32,24 @@ export const Header = ({
     <header className="flex justify-between items-center bg-white/95 backdrop-blur-lg border-b border-gray-200/50 p-4 shadow-lg sticky top-0 z-30 transition-all duration-300">
       {/* Left - Mobile Menu Button & Desktop Sidebar Toggle */}
       <div className="flex items-center gap-3">
-        {/* Mobile Menu Button */}
-        {/* <button
+        {/* Mobile Menu Button - Now Active */}
+        <button
           onClick={onMenuClick}
-          className="sm:hidden group relative overflow-hidden text-white p-3 rounded-xl shadow-lg transform hover:scale-110 transition-all duration-300 hover:rotate-3"
-          style={{ background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)' }}
+          className="sm:hidden group relative overflow-hidden text-white min-w-[48px] min-h-[48px] p-3 rounded-xl xs:rounded-2xl shadow-2xl border-0 outline-none backdrop-blur-lg transform hover:scale-110 active:scale-95 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:rotate-3 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:hover:rotate-0"
+          style={{ 
+            background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)',
+            border: '1px solid rgba(255, 255, 255, 0.2)'
+          }}
+          aria-label="Открыть меню навигации"
+          title="Открыть меню"
         >
           <FontAwesomeIcon 
             icon={faBars} 
-            className="group-hover:rotate-180 transition-transform duration-500" 
+            className="group-hover:rotate-180 transition-transform duration-500 text-sm xs:text-base" 
+            aria-hidden="true"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-        </button> */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-xl xs:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        </button>
 
         {/* Desktop Sidebar Toggle - Always visible on desktop */}
         <button
@@ -140,7 +146,6 @@ export const Header = ({
           </div>
         )}
       </div>
-
     </header>
   );
 };

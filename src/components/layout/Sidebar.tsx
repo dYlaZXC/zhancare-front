@@ -14,7 +14,6 @@ import {
   faSignOutAlt,
   faCircle,
   faTimes,
-  faBars,
   faBolt,
   faGem,
 } from "@fortawesome/free-solid-svg-icons";
@@ -42,8 +41,6 @@ export const Sidebar = ({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-
-  
 
   const menuItems = [
     { id: "profile", icon: faUser, title: "Профиль", color: "#3772ff" },
@@ -98,25 +95,6 @@ export const Sidebar = ({
 
   return (
     <>
-      {/* Accessible Touch-Friendly Mobile Menu Button */}
-      <button
-        onClick={() => setSidebarOpen(true)}
-        className="sm:hidden fixed top-3 left-3 xs:top-4 xs:left-4 z-50 text-white min-w-[48px] min-h-[48px] p-3 xs:p-3.5 rounded-xl xs:rounded-2xl shadow-2xl border-0 outline-none backdrop-blur-lg transform hover:scale-110 active:scale-95 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:rotate-3 group text-sm xs:text-base flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:hover:rotate-0"
-        style={{ 
-          background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)',
-          border: '1px solid rgba(255, 255, 255, 0.2)'
-        }}
-        aria-label="Открыть меню навигации"
-        title="Открыть меню"
-      >
-        <FontAwesomeIcon 
-          icon={faBars} 
-          className="group-hover:rotate-180 transition-transform duration-500 text-sm xs:text-base" 
-          aria-hidden="true"
-        />
-        <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-xl xs:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-      </button>
-
       {/* Accessible Mobile Overlay with blur */}
       {(sidebarOpen || isOpen) && (
         <div
@@ -133,7 +111,7 @@ export const Sidebar = ({
 
       <aside
         className={`${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          sidebarOpen || isOpen ? "translate-x-0" : "-translate-x-full"
         } fixed top-0 left-0 h-screen ${isCollapsed ? "w-16 xs:w-18 sm:w-20" : "w-72 xs:w-76 sm:w-80"} text-white flex flex-col transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] transform z-50 sm:sticky sm:left-0 sm:top-0 sm:h-screen sm:flex sm:translate-x-0 md:relative shadow-2xl border-r border-white/10 backdrop-blur-xl lg:${isCollapsed ? "w-20" : "w-80"} will-change-transform`}
         style={{
           background: `
@@ -149,7 +127,7 @@ export const Sidebar = ({
           <div className="absolute top-1/2 left-1/2 w-12 h-12 xs:w-16 xs:h-16 rounded-full blur-md animate-ping" style={{ background: 'radial-gradient(circle, rgba(67, 126, 255, 0.25) 0%, transparent 70%)', animationDuration: '2s' }}></div>
         </div>
 
-        {/* Enhanced Responsive Mobile Header */}
+        {/* Enhanced Responsive Mobile Header with Close Button Only */}
         <div className="flex justify-between items-center px-3 py-4 xs:px-4 xs:py-5 sm:px-6 sm:py-6 sm:hidden relative z-10 border-b border-white/10">
           {/* Mobile Logo Container */}
           <div className="relative group">
@@ -201,7 +179,10 @@ export const Sidebar = ({
           {/* Enhanced Close Button */}
           <div className="relative group">
             <button 
-              onClick={() => setSidebarOpen(false)}
+              onClick={() => {
+                setSidebarOpen(false);
+                onClose();
+              }}
               className="relative min-w-[48px] min-h-[48px] p-3 xs:p-3.5 sm:p-4 rounded-xl xs:rounded-2xl backdrop-blur-md transition-all duration-300 hover:rotate-90 hover:scale-110 active:scale-95 border-0 outline-none overflow-hidden flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
               aria-label="Закрыть меню навигации"
               title="Закрыть меню"
