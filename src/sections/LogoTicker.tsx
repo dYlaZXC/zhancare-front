@@ -13,6 +13,7 @@ import Logo4 from "@/assets/astanamua.png";
 import Logo5 from "@/assets/kazakhemblem.png";
 import Logo6 from "@/assets/enactus.png";
 import Logo7 from "@/assets/omron.png";
+import Logo8 from "@/assets/respublica.png"
 
 export const LogoTicker = () => {
   const { language } = useLanguage();
@@ -55,6 +56,7 @@ export const LogoTicker = () => {
     //   alt: "Aqniet Käsipodağy",
     //   text: ["AQNIET", "KÄSIPODAĞY"],
     // },
+    { src: Logo8, alt: "Logo8" },
     { src: Logo7, alt: "Logo7" },
     {
       src: Logo1,

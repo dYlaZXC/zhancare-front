@@ -1,52 +1,77 @@
 "use client";
-import React from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEdit, faSave, faFilePdf } from "@fortawesome/free-solid-svg-icons";
+import { Download, Edit, Save, X } from "lucide-react";
 
-interface Props {
+interface ProfileHeaderProps {
   isEditing: boolean;
   onEditToggle: () => void;
   onSave: () => void;
+  onCancel: () => void;
   onDownloadPDF: () => void;
-  stats: { label: string; value: number }[];
 }
 
-const ProfileHeader: React.FC<Props> = ({ isEditing, onEditToggle, onSave, onDownloadPDF, stats }) => {
+export const ProfileHeader = ({
+  isEditing,
+  onEditToggle,
+  onSave,
+  onCancel,
+  onDownloadPDF
+}: ProfileHeaderProps) => {
   return (
-    <div className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-gray-200 pb-3 mb-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-2">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-slate-800">Карточка пациента</h2>
-          <p className="text-xs text-gray-400">
-            Информация на{" "}
-            {new Intl.DateTimeFormat("ru-RU", { dateStyle: "medium" }).format(new Date())}
+    <div className="mb-4 sm:mb-6 bg-white rounded-lg sm:rounded-xl border border-gray-200 p-4 sm:p-6 shadow-sm">
+      <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between">
+        {/* Header Content */}
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 truncate">
+            Медицинский профиль
+          </h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2 leading-relaxed">
+            Управление личными данными и медицинской информацией
           </p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={isEditing ? onSave : onEditToggle}
-            className="flex items-center gap-1 px-3 py-1.5 text-xs sm:text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-full shadow"
-          >
-            <FontAwesomeIcon icon={isEditing ? faSave : faEdit} />
-            {isEditing ? "Сохранить" : "Редактировать"}
-          </button>
+        
+        {/* Action Buttons */}
+        <div className="flex flex-col xs:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+          {/* PDF Download Button */}
           <button
             onClick={onDownloadPDF}
-            className="flex items-center gap-1 px-3 py-1.5 text-xs sm:text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-full shadow"
+            className="flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors text-sm sm:text-base font-medium order-2 sm:order-1"
           >
-            <FontAwesomeIcon icon={faFilePdf} /> PDF
+            <Download className="w-4 h-4 flex-shrink-0" />
+            <span className="whitespace-nowrap">PDF</span>
           </button>
+          
+          {/* Edit/Save/Cancel Buttons */}
+          {!isEditing ? (
+            <button
+              onClick={onEditToggle}
+              className="flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm sm:text-base font-medium order-1 sm:order-2"
+            >
+              <Edit className="w-4 h-4 flex-shrink-0" />
+              <span className="whitespace-nowrap">Редактировать</span>
+            </button>
+          ) : (
+            <div className="flex flex-col xs:flex-row gap-2 order-1 sm:order-2">
+              {/* Save Button */}
+              <button
+                onClick={onSave}
+                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm sm:text-base font-medium"
+              >
+                <Save className="w-4 h-4 flex-shrink-0" />
+                <span className="whitespace-nowrap">Сохранить</span>
+              </button>
+              
+              {/* Cancel Button */}
+              <button
+                onClick={onCancel}
+                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors text-sm sm:text-base font-medium"
+              >
+                <X className="w-4 h-4 flex-shrink-0" />
+                <span className="whitespace-nowrap">Отмена</span>
+              </button>
+            </div>
+          )}
         </div>
-      </div>
-      <div className="flex gap-4">
-        {stats.map((s, i) => (
-          <div key={i} className="text-xs text-gray-600">
-            <span className="font-semibold text-gray-800">{s.value}</span> — {s.label}
-          </div>
-        ))}
       </div>
     </div>
   );
 };
-
-export default ProfileHeader;

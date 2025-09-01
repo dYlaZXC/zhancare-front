@@ -49,9 +49,9 @@ const ProfilePage = () => {
 
   if (!user) return null;
 
-  // ✅ Добавляем id в объект userProfile
+  // ✅ Convert id to string to match User type expectations
   const userProfile = {
-    id: user.id || 0,
+    id: String(user.id || 0), // Convert number to string
     first_name: user.first_name || "",
     last_name: user.last_name || "",
     email: user.email || "",

@@ -1,8 +1,22 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Info, ClipboardPaste } from "lucide-react";
+import { 
+  Sparkles, 
+  Info, 
+  ClipboardPaste, 
+  Mic, 
+  MicOff,
+  Thermometer,
+  Heart,
+  Brain,
+  Zap,
+  Clock,
+  AlertCircle,
+  CheckCircle2,
+  ArrowRight
+} from "lucide-react";
 
 interface Step1Props {
   symptoms: string;
@@ -17,111 +31,345 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
   onNext,
   loading = false,
 }) => {
-  const isNextDisabled = !symptoms.trim() || loading;
+  const [isRecording, setIsRecording] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [charCount, setCharCount] = useState(symptoms.length);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const isNextDisabled = !symptoms.trim() || loading;
+  const minChars = 20;
+  const maxChars = 500;
+  const progress = Math.min((charCount / minChars) * 100, 100);
+
+  // Quick symptom categories
+  const categories = [
+    { id: 'fever', icon: Thermometer, label: 'Температура/Жар', color: 'from-red-500 to-orange-500' },
+    { id: 'heart', icon: Heart, label: 'Сердце/Грудь', color: 'from-pink-500 to-red-500' },
+    { id: 'head', icon: Brain, label: 'Головная боль', color: 'from-purple-500 to-indigo-500' },
+    { id: 'energy', icon: Zap, label: 'Слабость/Усталость', color: 'from-yellow-500 to-orange-500' },
+  ];
+
+  // Smart suggestions based on input
+  const suggestions = [
+    "Головная боль с утра, усиливается при движении",
+    "Температура 38.2°C, озноб, ломота в теле",
+    "Боль в горле, трудно глотать, кашель",
+    "Тошнота, головокружение, слабость",
+    "Боль в животе, спазмы после еды",
+  ];
+
+  useEffect(() => {
+    setCharCount(symptoms.length);
+  }, [symptoms]);
 
   const insertExample = () => {
-    onChange("Головная боль, температура 38.5, слабость, першение в горле");
+    const example = "Головная боль с утра (около 7 утра), пульсирующая в области висков. Температура 38.1°C, небольшой озноб. Общая слабость, трудно сконцентрироваться на работе.";
+    onChange(example);
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  };
+
+  const insertSuggestion = (suggestion: string) => {
+    const currentText = symptoms.trim();
+    const newText = currentText ? `${currentText}. ${suggestion}` : suggestion;
+    onChange(newText);
+    setShowSuggestions(false);
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  };
+
+  const selectCategory = (categoryId: string) => {
+    setSelectedCategory(categoryId);
+    // Auto-focus textarea after category selection
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
+    }, 100);
+  };
+
+  // Mock voice recording (in real implementation, integrate with Web Speech API)
+  const toggleRecording = () => {
+    setIsRecording(!isRecording);
+    // Simulate voice input after 3 seconds
+    if (!isRecording) {
+      setTimeout(() => {
+        setIsRecording(false);
+        onChange(symptoms + " (добавлено голосом: першение в горле, сухой кашель)");
+      }, 3000);
+    }
+  };
+
+  const getProgressColor = () => {
+    if (progress < 30) return 'from-red-400 to-red-500';
+    if (progress < 70) return 'from-yellow-400 to-orange-500';
+    return 'from-green-400 to-emerald-500';
   };
 
   return (
     <motion.div
-      className="space-y-6"
+      className="space-y-6 max-w-4xl mx-auto"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
-      {/* Шаг и заголовок */}
-      <div className="text-xs text-gray-500 uppercase tracking-wide">Шаг 1 из 3</div>
+      {/* Progress and Step */}
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-gray-500 uppercase tracking-wide flex items-center gap-2">
+          <Clock size={14} />
+          Шаг 1 из 3 • ~2 минуты
+        </div>
+        <div className="text-xs text-gray-500">
+          {charCount}/{maxChars} символов
+        </div>
+      </div>
 
+      {/* Enhanced Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
+        className="relative"
       >
-        <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-          <Sparkles className="text-blue-600" size={28} />
-          Расскажите о симптомах
+        <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3 mb-3">
+          <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+            <Sparkles size={24} />
+          </div>
+          Расскажите о ваших симптомах
         </h2>
-        <p className="mt-2 text-sm text-gray-600 leading-relaxed">
-          Это поможет нам рекомендовать подходящего врача. Укажите: когда начались симптомы, что
-          беспокоит больше всего, и насколько часто это происходит.
+        <p className="text-gray-600 leading-relaxed max-w-2xl">
+          Чем подробнее вы опишете симптомы, тем лучше мы сможем подобрать подходящего специалиста. 
+          Укажите когда началось, что беспокоит, интенсивность.
         </p>
       </motion.div>
 
-      {/* Поле ввода */}
-      <motion.textarea
-        className="w-full h-40 p-4 rounded-xl border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-500 text-gray-800 resize-none transition-all"
-        placeholder="📝 Например: головная боль, жар, слабость..."
-        value={symptoms}
-        onChange={(e) => onChange(e.target.value)}
+      {/* Quick Category Selection */}
+      {/* <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="space-y-3"
+      >
+        <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+          <Zap size={16} />
+          Быстрый выбор категории (необязательно)
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {categories.map((category) => {
+            const Icon = category.icon;
+            const isSelected = selectedCategory === category.id;
+            return (
+              <motion.button
+                key={category.id}
+                onClick={() => selectCategory(category.id)}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className={`p-3 rounded-xl border-2 transition-all duration-200 ${
+                  isSelected 
+                    ? 'border-blue-500 bg-blue-50' 
+                    : 'border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50'
+                }`}
+              >
+                <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${category.color} flex items-center justify-center text-white mx-auto mb-2`}>
+                  <Icon size={16} />
+                </div>
+                <div className="text-xs font-medium text-gray-700 text-center">
+                  {category.label}
+                </div>
+              </motion.button>
+            );
+          })}
+        </div>
+      </motion.div> */}
+
+      {/* Enhanced Textarea with Features */}
+      <motion.div
         initial={{ opacity: 0, y: 10, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ delay: 0.2 }}
-      />
-
-      {/* Вставить пример */}
-      <div className="text-right">
-        <button
-          onClick={insertExample}
-          className="flex items-center gap-1 text-sm text-blue-600 hover:underline transition"
-        >
-          <ClipboardPaste className="w-4 h-4" />
-          Вставить пример
-        </button>
-      </div>
-
-      {/* Подсказка */}
-      <AnimatePresence>
-        {!symptoms.trim() && (
-          <motion.div
-            className="text-sm text-blue-500 italic flex items-center gap-2"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ delay: 0.3 }}
+        transition={{ delay: 0.3 }}
+        className="relative"
+      >
+        <div className="relative">
+          <textarea
+            ref={textareaRef}
+            className={`w-full h-32 p-4 pr-16 rounded-xl border-2 bg-white resize-none transition-all duration-200 text-gray-800 placeholder-gray-400 ${
+              charCount < minChars 
+                ? 'border-gray-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-100' 
+                : 'border-green-300 focus:border-green-400 focus:ring-2 focus:ring-green-100'
+            }`}
+            placeholder="💬 Опишите что вас беспокоит... Например: 'Болит голова с утра, пульсирующая боль в области висков. Температура поднялась до 38°C...'"
+            value={symptoms}
+            maxLength={maxChars}
+            onChange={(e) => onChange(e.target.value)}
+            onFocus={() => setShowSuggestions(true)}
+          />
+          
+          {/* Voice Input Button */}
+          <button
+            onClick={toggleRecording}
+            className={`absolute bottom-3 right-3 p-2 rounded-lg transition-all ${
+              isRecording 
+                ? 'bg-red-500 text-white animate-pulse' 
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+            }`}
+            title={isRecording ? 'Остановить запись' : 'Голосовой ввод'}
           >
-            <Info size={16} />
-            💡 Опишите симптомы как можно точнее — это ускорит помощь.
+            {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
+          </button>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="mt-2 flex items-center gap-3">
+          <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+            <motion.div
+              className={`h-full bg-gradient-to-r ${getProgressColor()} rounded-full`}
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.3 }}
+            />
+          </div>
+          <div className="flex items-center gap-1 text-xs">
+            {charCount >= minChars ? (
+              <CheckCircle2 className="text-green-500" size={14} />
+            ) : (
+              <AlertCircle className="text-orange-500" size={14} />
+            )}
+            <span className={charCount >= minChars ? 'text-green-600' : 'text-orange-600'}>
+              {charCount >= minChars ? 'Достаточно' : `Ещё ${minChars - charCount} символов`}
+            </span>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Smart Suggestions */}
+      <AnimatePresence>
+        {showSuggestions && symptoms.length < 10 && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="space-y-2"
+          >
+            <h4 className="text-sm font-semibold text-gray-700">💡 Готовые примеры:</h4>
+            <div className="grid gap-2">
+              {suggestions.slice(0, 3).map((suggestion, index) => (
+                <motion.button
+                  key={index}
+                  onClick={() => insertSuggestion(suggestion)}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="text-left p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all text-sm text-gray-700"
+                >
+                  <ClipboardPaste className="inline w-4 h-4 mr-2 text-gray-400" />
+                  {suggestion}
+                </motion.button>
+              ))}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Кнопка Далее */}
-      <div className="flex justify-end pt-4 relative">
+      {/* Enhanced Help Section */}
+      <AnimatePresence>
+        {charCount > 0 && charCount < minChars && (
+          <motion.div
+            className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <div className="flex items-start gap-3">
+              <Info className="text-blue-500 mt-0.5" size={18} />
+              <div>
+                <h4 className="font-semibold text-blue-900 mb-1">Полезные советы:</h4>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• Укажите когда началось (вчера вечером, 3 дня назад)</li>
+                  <li>• Опишите интенсивность (слабая, умеренная, сильная боль)</li>
+                  <li>• Добавьте сопутствующие симптомы</li>
+                </ul>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Action Buttons */}
+      <div className="flex flex-col sm:flex-row gap-3 pt-4">
         <motion.button
-          onClick={onNext}
-          disabled={isNextDisabled}
-          onMouseEnter={() => setShowTooltip(isNextDisabled)}
-          onMouseLeave={() => setShowTooltip(false)}
-          whileTap={!isNextDisabled ? { scale: 0.97 } : {}}
-          whileHover={!isNextDisabled ? { scale: 1.03 } : {}}
-          transition={{ type: "spring", stiffness: 300 }}
-          className={`px-5 py-3 rounded-xl font-semibold flex items-center justify-center transition-all duration-300 ease-out ${
-            isNextDisabled
-              ? "bg-gradient-to-r from-[#001E80] to-[#3A50FF] opacity-50 cursor-not-allowed text-white"
-              : "bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white hover:shadow-md"
-          }`}
+          onClick={insertExample}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-gray-300 hover:border-blue-400 text-gray-600 hover:text-blue-600 transition-all"
         >
-          {loading ? (
-            <>
-              <span className="relative flex h-3 w-3 mr-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
-              </span>
-              AI думает...
-            </>
-          ) : (
-            "Далее ➡"
-          )}
+          <ClipboardPaste size={16} />
+          Вставить подробный пример
         </motion.button>
 
-        {showTooltip && isNextDisabled && (
-          <div className="absolute -top-8 right-0 text-xs bg-gray-800 text-white px-3 py-1 rounded-md shadow">
-            Пожалуйста, опишите симптомы перед продолжением
-          </div>
-        )}
+        <div className="flex-1" />
+
+        <div className="relative">
+          <motion.button
+            onClick={onNext}
+            disabled={isNextDisabled}
+            onMouseEnter={() => setShowTooltip(isNextDisabled && !loading)}
+            onMouseLeave={() => setShowTooltip(false)}
+            whileTap={!isNextDisabled ? { scale: 0.97 } : {}}
+            whileHover={!isNextDisabled ? { scale: 1.02 } : {}}
+            transition={{ type: "spring", stiffness: 300 }}
+            className={`px-6 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all duration-300 min-w-[140px] ${
+              isNextDisabled
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-lg hover:shadow-blue-500/25"
+            }`}
+          >
+            {loading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Анализируем...
+              </>
+            ) : (
+              <>
+                Далее
+                <ArrowRight size={16} />
+              </>
+            )}
+          </motion.button>
+
+          <AnimatePresence>
+            {showTooltip && (
+              <motion.div
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 5 }}
+                className="absolute -top-12 right-0 bg-gray-900 text-white text-xs px-3 py-2 rounded-lg shadow-lg whitespace-nowrap z-10"
+              >
+                Опишите симптомы для продолжения
+                <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
+
+      {/* Recording Indicator */}
+      <AnimatePresence>
+        {isRecording && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed bottom-6 right-6 bg-red-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 z-50"
+          >
+            <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+            Идет запись...
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

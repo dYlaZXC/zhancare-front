@@ -1,26 +1,29 @@
 export interface User {
-  id: number;
+  id: string;
   first_name: string;
   last_name: string;
   email: string;
+  birth_date?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  gender?: string;
+  language?: string;
+  blood_type?: string;
+  role?: string;
 }
 
 export interface Consultation {
   id: number;
+  created_at: string;
   doctor_first_name: string;
   doctor_last_name: string;
-  doctor_specialty?: string;
-  created_at: string;
+  doctor_specialty: string;
 }
 
-export interface HomeAppointment {
+export interface Appointment {
   id: number;
-  doctor_name: string;
   appointment_time: string;
-  status: string;
-}
-
-export interface ChartDataPoint {
-  date: string;
-  count: number;
+  doctor_name: string;
+  status: 'completed' | 'scheduled' | 'cancelled';
 }
