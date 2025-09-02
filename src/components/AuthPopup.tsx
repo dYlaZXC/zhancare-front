@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo, memo } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import gsap from "gsap";
@@ -27,12 +27,76 @@ interface FormData {
   last_name: string;
 }
 
+interface InputFieldProps {
+  name: keyof FormData;
+  type?: string;
+  placeholder: string;
+  icon: any;
+  value: string;
+  autoComplete?: string;
+  showPasswordToggle?: boolean;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  validationError?: string;
+  loading?: boolean;
+  showPassword?: boolean;
+  showConfirmPassword?: boolean;
+  onTogglePassword?: (field: 'password' | 'confirmPassword') => void;
+}
+
+const InputField = memo(({ 
+  name, 
+  type = "text", 
+  placeholder, 
+  icon: Icon, 
+  value, 
+  autoComplete,
+  showPasswordToggle = false,
+  onChange,
+  validationError,
+  loading = false,
+  showPassword = false,
+  showConfirmPassword = false,
+  onTogglePassword
+}: InputFieldProps) => (
+  <div className="space-y-1">
+    <div className="relative">
+      <Icon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+      <input
+        type={showPasswordToggle && name === "password" ? (showPassword ? "text" : "password") : 
+              showPasswordToggle && name === "confirmPassword" ? (showConfirmPassword ? "text" : "password") : type}
+        name={name}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+        className={`w-full pl-11 pr-${showPasswordToggle ? '11' : '4'} py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
+          validationError ? 'border-red-300 bg-red-50' : 'border-gray-300 bg-white'
+        }`}
+        disabled={loading}
+      />
+      {showPasswordToggle && onTogglePassword && (
+        <button
+          type="button"
+          onClick={() => onTogglePassword(name === "password" ? "password" : "confirmPassword")}
+          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+        >
+          {(name === "password" ? showPassword : showConfirmPassword) ? 
+            <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+        </button>
+      )}
+    </div>
+    {validationError && (
+      <p className="text-sm text-red-600 ml-1">{validationError}</p>
+    )}
+  </div>
+));
+
 const AuthPopup = () => {
   const { isAuthOpen, setIsAuthOpen, loginUser } = useAuth();
   const { language } = useLanguage();
   
   // Get translations based on language
-  const getTranslations = useCallback(() => {
+  const translations = useMemo(() => {
     switch (language) {
       case "ru": return ru.auth;
       case "kz": return kz.auth;
@@ -41,10 +105,8 @@ const AuthPopup = () => {
     }
   }, [language]);
 
-  const translations = getTranslations();
-
   // Get error message translations
-  const getErrorMessages = useCallback(() => {
+  const errorMessages = useMemo(() => {
     const messages = {
       ru: {
         passwordsMismatch: "Пароли не совпадают",
@@ -82,8 +144,6 @@ const AuthPopup = () => {
     };
     return messages[language as keyof typeof messages] || messages.en;
   }, [language]);
-
-  const errorMessages = getErrorMessages();
 
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
   const [isForgotOpen, setIsForgotOpen] = useState(false);
@@ -190,7 +250,7 @@ const AuthPopup = () => {
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isAuthOpen, setIsAuthOpen]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     
@@ -199,7 +259,15 @@ const AuthPopup = () => {
       setValidationErrors(prev => ({ ...prev, [name]: undefined }));
     }
     if (error) setError("");
-  };
+  }, [validationErrors, error]);
+
+  const handleTogglePassword = useCallback((field: 'password' | 'confirmPassword') => {
+    if (field === 'password') {
+      setShowPassword(prev => !prev);
+    } else {
+      setShowConfirmPassword(prev => !prev);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -283,56 +351,6 @@ const AuthPopup = () => {
 
   if (!isAuthOpen) return null;
 
-  const InputField = ({ 
-    name, 
-    type = "text", 
-    placeholder, 
-    icon: Icon, 
-    value, 
-    autoComplete,
-    showPasswordToggle = false 
-  }: {
-    name: keyof FormData;
-    type?: string;
-    placeholder: string;
-    icon: any;
-    value: string;
-    autoComplete?: string;
-    showPasswordToggle?: boolean;
-  }) => (
-    <div className="space-y-1">
-      <div className="relative">
-        <Icon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-        <input
-          type={showPasswordToggle && name === "password" ? (showPassword ? "text" : "password") : 
-                showPasswordToggle && name === "confirmPassword" ? (showConfirmPassword ? "text" : "password") : type}
-          name={name}
-          value={value}
-          onChange={handleChange}
-          placeholder={placeholder}
-          autoComplete={autoComplete}
-          className={`w-full pl-11 pr-${showPasswordToggle ? '11' : '4'} py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
-            validationErrors[name] ? 'border-red-300 bg-red-50' : 'border-gray-300 bg-white'
-          }`}
-          disabled={loading}
-        />
-        {showPasswordToggle && (
-          <button
-            type="button"
-            onClick={() => name === "password" ? setShowPassword(!showPassword) : setShowConfirmPassword(!showConfirmPassword)}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-          >
-            {(name === "password" ? showPassword : showConfirmPassword) ? 
-              <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-          </button>
-        )}
-      </div>
-      {validationErrors[name] && (
-        <p className="text-sm text-red-600 ml-1">{validationErrors[name]}</p>
-      )}
-    </div>
-  );
-
   return (
     <>
       <AnimatePresence>
@@ -384,6 +402,9 @@ const AuthPopup = () => {
                             icon={Mail}
                             value={formData.email}
                             autoComplete="email"
+                            onChange={handleChange}
+                            validationError={validationErrors.email}
+                            loading={loading}
                           />
                           <InputField
                             name="password"
@@ -392,6 +413,11 @@ const AuthPopup = () => {
                             value={formData.password}
                             autoComplete="current-password"
                             showPasswordToggle
+                            onChange={handleChange}
+                            validationError={validationErrors.password}
+                            loading={loading}
+                            showPassword={showPassword}
+                            onTogglePassword={handleTogglePassword}
                           />
                           <div className="flex items-center justify-between text-sm">
                             <label className="flex items-center">
@@ -416,6 +442,9 @@ const AuthPopup = () => {
                               icon={User}
                               value={formData.first_name}
                               autoComplete="given-name"
+                              onChange={handleChange}
+                              validationError={validationErrors.first_name}
+                              loading={loading}
                             />
                             <InputField
                               name="last_name"
@@ -423,6 +452,9 @@ const AuthPopup = () => {
                               icon={User}
                               value={formData.last_name}
                               autoComplete="family-name"
+                              onChange={handleChange}
+                              validationError={validationErrors.last_name}
+                              loading={loading}
                             />
                           </div>
                           <InputField
@@ -432,6 +464,9 @@ const AuthPopup = () => {
                             icon={Mail}
                             value={formData.email}
                             autoComplete="email"
+                            onChange={handleChange}
+                            validationError={validationErrors.email}
+                            loading={loading}
                           />
                           <InputField
                             name="phone"
@@ -440,6 +475,9 @@ const AuthPopup = () => {
                             icon={Phone}
                             value={formData.phone}
                             autoComplete="tel"
+                            onChange={handleChange}
+                            validationError={validationErrors.phone}
+                            loading={loading}
                           />
                           <InputField
                             name="password"
@@ -448,6 +486,11 @@ const AuthPopup = () => {
                             value={formData.password}
                             autoComplete="new-password"
                             showPasswordToggle
+                            onChange={handleChange}
+                            validationError={validationErrors.password}
+                            loading={loading}
+                            showPassword={showPassword}
+                            onTogglePassword={handleTogglePassword}
                           />
                           <InputField
                             name="confirmPassword"
@@ -456,6 +499,11 @@ const AuthPopup = () => {
                             value={formData.confirmPassword}
                             autoComplete="new-password"
                             showPasswordToggle
+                            onChange={handleChange}
+                            validationError={validationErrors.confirmPassword}
+                            loading={loading}
+                            showConfirmPassword={showConfirmPassword}
+                            onTogglePassword={handleTogglePassword}
                           />
                         </>
                       )}

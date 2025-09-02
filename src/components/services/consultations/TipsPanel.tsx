@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Bot, Loader2, ClipboardPaste, X, ExternalLink } from "lucide-react";
 import Image from "next/image";
@@ -45,7 +45,7 @@ const TipsPanel: React.FC<Props> = ({
   aiErrorData,
   fallbackUsed,
   adBanners = [
-    // Default banners using your imported images
+    // Two rotating banners with pagination
     {
       id: "omron",
       imagePath: Logo7,
@@ -62,7 +62,7 @@ const TipsPanel: React.FC<Props> = ({
       url: "https://respublica-partiyasy.kz/",
       alt: "Respublica pharmacy chain"
     }
-  ], // Default banners with your logos
+  ], // Two rotating banners
 }) => {
   const [isPopupVisible, setPopupVisible] = useState(false);
   const [aiTypingText, setAiTypingText] = useState("");
@@ -73,7 +73,7 @@ const TipsPanel: React.FC<Props> = ({
   const closePopup = () => setPopupVisible(false);
   const openPopup = () => setPopupVisible(true);
 
-  const getFullAnalysisText = (): string => {
+  const fullAnalysisText = useMemo((): string => {
     if (step === 2) {
       if (fallbackUsed && recommendedDoctor && aiErrorData) {
         return `AI не нашёл врача по направлению «${aiErrorData.specialty}», поэтому предложен врач: ${recommendedDoctor.name} (${recommendedDoctor.doctor_type}).
@@ -98,7 +98,7 @@ const TipsPanel: React.FC<Props> = ({
     }
 
     return "";
-  };
+  }, [step, recommendedDoctor, aiErrorData, fallbackUsed]);
 
   useEffect(() => {
     if (step >= 1 && step <= 3) {
@@ -108,36 +108,24 @@ const TipsPanel: React.FC<Props> = ({
 
   // Typing animation for full response
   useEffect(() => {
-    const fullText = getFullAnalysisText();
     setTypingIndex(0);
     setAiTypingText("");
 
-    if (!fullText) return;
+    if (!fullAnalysisText) return;
 
     const interval = setInterval(() => {
       setTypingIndex((prev) => {
-        if (prev >= fullText.length) {
+        if (prev >= fullAnalysisText.length) {
           clearInterval(interval);
           return prev;
         }
-        setAiTypingText(fullText.slice(0, prev + 1));
+        setAiTypingText(fullAnalysisText.slice(0, prev + 1));
         return prev + 1;
       });
     }, 25);
 
     return () => clearInterval(interval);
-  }, [step, recommendedDoctor, aiErrorData, fallbackUsed]);
-
-  // Auto-rotate ads every 10 seconds
-  useEffect(() => {
-    if (adBanners.length > 1) {
-      const interval = setInterval(() => {
-        setCurrentAdIndex((prev) => (prev + 1) % adBanners.length);
-      }, 10000);
-
-      return () => clearInterval(interval);
-    }
-  }, [adBanners.length]);
+  }, [fullAnalysisText]);
 
   const getTipsContent = () => {
     if (step === 1) {
@@ -184,26 +172,37 @@ const TipsPanel: React.FC<Props> = ({
     return null;
   };
 
-  const handleAdClick = (ad: AdBanner) => {
+  const handleAdClick = useCallback((ad: AdBanner) => {
     if (ad.url) {
       window.open(ad.url, '_blank');
     }
-  };
+  }, []);
 
-  const handleCloseAd = (adId: string, e: React.MouseEvent) => {
+  const handleCloseAd = useCallback((adId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setClosedAds(prev => new Set([...prev, adId]));
-  };
+  }, []);
 
-  const visibleAds = adBanners.filter(ad => !closedAds.has(ad.id));
-  const currentAd = visibleAds[currentAdIndex % visibleAds.length];
+  const visibleAds = useMemo(() => adBanners.filter(ad => !closedAds.has(ad.id)), [adBanners, closedAds]);
+  const currentAd = useMemo(() => visibleAds[currentAdIndex % visibleAds.length], [visibleAds, currentAdIndex]);
 
-  const AdBannerComponent = ({ ad, showClose = true }: { ad: AdBanner; showClose?: boolean }) => (
+  // Auto-rotate ads every 5 seconds (pagination with rotation)
+  useEffect(() => {
+    if (visibleAds.length > 1) {
+      const interval = setInterval(() => {
+        setCurrentAdIndex((prev) => (prev + 1) % visibleAds.length);
+      }, 5000); // Rotate every 5 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [visibleAds.length]);
+
+  const AdBannerComponent = useCallback(({ ad, showClose = true }: { ad: AdBanner; showClose?: boolean }) => (
     <motion.div
-      key={ad.id}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      transition={{ duration: 0.3, ease: "easeInOut" }}
       className={`relative bg-white rounded-lg border border-gray-200 overflow-hidden group ${
         ad.url ? 'cursor-pointer hover:shadow-md transition-all duration-300' : ''
       }`}
@@ -246,7 +245,7 @@ const TipsPanel: React.FC<Props> = ({
         <div className="absolute inset-0 bg-blue-500/0 group-hover:bg-blue-500/5 transition-colors duration-300" />
       )}
     </motion.div>
-  );
+  ), [handleAdClick, handleCloseAd]);
 
   return (
     <>
@@ -278,23 +277,55 @@ const TipsPanel: React.FC<Props> = ({
                 </div>
               )}
 
-              {/* Mobile Ads */}
+              {/* Mobile Ads with Pagination */}
               {visibleAds.length > 0 && currentAd && (
                 <div className="space-y-3">
                   <hr className="border-gray-200" />
-                  <div className="text-xs text-gray-500 font-medium">Реклама</div>
+                  <div className="text-xs text-gray-500 font-medium flex items-center justify-between">
+                    <span>Реклама</span>
+                    {visibleAds.length > 1 && (
+                      <span className="text-gray-400 text-xs">
+                        {currentAdIndex + 1} / {visibleAds.length}
+                      </span>
+                    )}
+                  </div>
                   <AdBannerComponent ad={currentAd} showClose={false} />
+                  
+                  {/* Mobile Pagination */}
                   {visibleAds.length > 1 && (
-                    <div className="flex justify-center gap-1">
-                      {visibleAds.map((_, index) => (
-                        <button
-                          key={index}
-                          onClick={() => setCurrentAdIndex(index)}
-                          className={`w-2 h-2 rounded-full transition-colors ${
-                            index === currentAdIndex ? 'bg-blue-500' : 'bg-gray-300'
-                          }`}
-                        />
-                      ))}
+                    <div className="flex justify-center items-center gap-2">
+                      <button
+                        onClick={() => setCurrentAdIndex((prev) => (prev - 1 + visibleAds.length) % visibleAds.length)}
+                        className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors"
+                        aria-label="Previous ad"
+                      >
+                        <svg className="w-3 h-3 text-gray-600" fill="none" viewBox="0 0 6 10">
+                          <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 1L1 5l4 4"/>
+                        </svg>
+                      </button>
+                      
+                      <div className="flex gap-1">
+                        {visibleAds.map((_, index) => (
+                          <button
+                            key={index}
+                            onClick={() => setCurrentAdIndex(index)}
+                            className={`w-2 h-2 rounded-full transition-colors ${
+                              index === currentAdIndex ? 'bg-blue-500' : 'bg-gray-300'
+                            }`}
+                            aria-label={`Go to ad ${index + 1}`}
+                          />
+                        ))}
+                      </div>
+                      
+                      <button
+                        onClick={() => setCurrentAdIndex((prev) => (prev + 1) % visibleAds.length)}
+                        className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors"
+                        aria-label="Next ad"
+                      >
+                        <svg className="w-3 h-3 text-gray-600" fill="none" viewBox="0 0 6 10">
+                          <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M1 9l4-4-4-4"/>
+                        </svg>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -330,26 +361,63 @@ const TipsPanel: React.FC<Props> = ({
               <span className="font-mono">{aiTypingText || "Анализ..."}</span>
             </div>
           )}
-        {/* Advertisement Banners - Integrated into the same panel */}
-        {visibleAds.length > 0 && (
+        {/* Advertisement Banners - Paginated Rotation */}
+        {visibleAds.length > 0 && currentAd && (
           <div className="space-y-3">
-            <div className="text-xs text-gray-400 font-medium">Реклама</div>
+            <div className="text-xs text-gray-400 font-medium flex items-center justify-between">
+              <span>Реклама</span>
+              {visibleAds.length > 1 && (
+                <span className="text-gray-300 text-xs">
+                  {currentAdIndex + 1} / {visibleAds.length}
+                </span>
+              )}
+            </div>
+            
+            {/* Always use smooth animation for banner transitions */}
             <AnimatePresence mode="wait">
-              {currentAd && <AdBannerComponent ad={currentAd} />}
+              <AdBannerComponent key={`ad-${currentAd.id}`} ad={currentAd} />
             </AnimatePresence>
             
-            {/* Ad Navigation Dots */}
+            {/* Pagination Dots - show if multiple ads */}
             {visibleAds.length > 1 && (
-              <div className="flex justify-center gap-1">
-                {visibleAds.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setCurrentAdIndex(index)}
-                    className={`w-2 h-2 rounded-full transition-colors ${
-                      index === currentAdIndex ? 'bg-blue-500' : 'bg-gray-300 hover:bg-gray-400'
-                    }`}
-                  />
-                ))}
+              <div className="flex justify-center items-center gap-2">
+                {/* Previous button */}
+                <button
+                  onClick={() => setCurrentAdIndex((prev) => (prev - 1 + visibleAds.length) % visibleAds.length)}
+                  className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors"
+                  aria-label="Previous ad"
+                >
+                  <svg className="w-3 h-3 text-gray-600" fill="none" viewBox="0 0 6 10">
+                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 1L1 5l4 4"/>
+                  </svg>
+                </button>
+                
+                {/* Pagination dots */}
+                <div className="flex gap-1">
+                  {visibleAds.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentAdIndex(index)}
+                      className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                        index === currentAdIndex 
+                          ? 'bg-blue-500 scale-110' 
+                          : 'bg-gray-300 hover:bg-gray-400 hover:scale-105'
+                      }`}
+                      aria-label={`Go to ad ${index + 1}`}
+                    />
+                  ))}
+                </div>
+                
+                {/* Next button */}
+                <button
+                  onClick={() => setCurrentAdIndex((prev) => (prev + 1) % visibleAds.length)}
+                  className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors"
+                  aria-label="Next ad"
+                >
+                  <svg className="w-3 h-3 text-gray-600" fill="none" viewBox="0 0 6 10">
+                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M1 9l4-4-4-4"/>
+                  </svg>
+                </button>
               </div>
             )}
           </div>
