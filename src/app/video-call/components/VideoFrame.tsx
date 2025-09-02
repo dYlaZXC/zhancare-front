@@ -74,7 +74,7 @@ const VideoFrame: React.FC<VideoFrameProps> = ({
     if (meetingId) {
       fetchToken();
     }
-  }, [fetchToken, retryCount]);
+  }, [meetingId, fetchToken, retryCount]);
 
   // ✅ Optional auto-retry every 5s
   useEffect(() => {

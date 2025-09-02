@@ -85,7 +85,7 @@ export const ProductShowcase = () => {
       const newActiveContent = contentData.find(c => c.id === currentId) || contentData[0];
       setActiveContent(newActiveContent);
     }
-  }, [language]);
+  }, [language, activeContent.id, contentData]);
 
   return (
     <section

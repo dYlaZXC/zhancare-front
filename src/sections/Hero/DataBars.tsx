@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useInView } from "framer-motion";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 
 interface DataBar {
   width: string;
@@ -83,7 +83,7 @@ export default function DataBars({
 
   const translations = getTranslations();
 
-  const dataBars: DataBar[] = [
+  const dataBars: DataBar[] = useMemo(() => [
     {
       width: "w-full",
       backgroundOpacity: 15,
@@ -132,7 +132,7 @@ export default function DataBars({
       value: "76%",
       color: "primary"
     }
-  ];
+  ], []);
 
   const getColorGradients = (color: "primary" | "secondary" | "accent", direction: "normal" | "reverse") => {
     const colors = {
@@ -173,7 +173,7 @@ export default function DataBars({
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [containerDelay]);
+  }, [containerDelay, dataBars]);
 
   const containerVariants = {
     hidden: { opacity: 0 },

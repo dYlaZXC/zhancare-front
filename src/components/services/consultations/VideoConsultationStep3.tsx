@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Sparkles,
@@ -44,14 +44,14 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
   const [checkResults, setCheckResults] = useState<{[key: string]: 'success' | 'error' | 'warning'}>({});
   const [isRechecking, setIsRechecking] = useState(false);
   
-  const checks = [
+  const checks = useMemo(() => [
     { id: 'symptoms', label: "Анализ симптомов", icon: Brain, duration: 1200 },
     { id: 'connection', label: "Проверка соединения", icon: Wifi, duration: 800 },
     { id: 'camera', label: "Тестирование камеры", icon: Camera, duration: 1000 },
     { id: 'microphone', label: "Проверка микрофона", icon: Volume2, duration: 600 },
     { id: 'security', label: "Настройка безопасности", icon: Shield, duration: 900 },
     { id: 'doctor', label: "Готовность врача", icon: Activity, duration: 1500 }
-  ];
+  ], []);
 
   // Monitor permission changes and recheck if needed
   useEffect(() => {

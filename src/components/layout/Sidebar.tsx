@@ -109,7 +109,7 @@ export const Sidebar = ({
       {/* Accessible Mobile Overlay with blur */}
       {(sidebarOpen || isOpen) && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 sm:hidden transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] cursor-pointer motion-reduce:transition-none"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 sm:hidden transition-all duration-300 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; cursor-pointer motion-reduce:transition-none"
           onClick={() => setSidebarOpen(false)}
           onKeyDown={(e) => {
             if (e.key === 'Escape') setSidebarOpen(false);
@@ -123,7 +123,7 @@ export const Sidebar = ({
       <aside
         className={`${
           sidebarOpen || isOpen ? "translate-x-0" : "-translate-x-full"
-        } fixed top-0 left-0 h-screen ${isCollapsed ? "w-16 xs:w-18 sm:w-20" : "w-72 xs:w-76 sm:w-80"} text-white flex flex-col transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] transform z-50 sm:sticky sm:left-0 sm:top-0 sm:h-screen sm:flex sm:translate-x-0 md:relative shadow-2xl border-r border-white/10 backdrop-blur-xl lg:${isCollapsed ? "w-20" : "w-80"} will-change-transform`}
+        } fixed top-0 left-0 h-screen ${isCollapsed ? "w-16 xs:w-18 sm:w-20" : "w-72 xs:w-76 sm:w-80"} text-white flex flex-col transition-all duration-500 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; transform z-50 sm:sticky sm:left-0 sm:top-0 sm:h-screen sm:flex sm:translate-x-0 md:relative shadow-2xl border-r border-white/10 backdrop-blur-xl lg:${isCollapsed ? "w-20" : "w-80"} will-change-transform`}
         style={{
           background: `
             radial-gradient(circle at ${mousePos.x}px ${mousePos.y}px, rgba(55, 114, 255, 0.2) 0%, transparent 50%),
@@ -328,7 +328,7 @@ export const Sidebar = ({
               onClick={() => handleTabChange(item.id)}
               onMouseEnter={() => setHoveredItem(item.id)}
               onMouseLeave={() => setHoveredItem(null)}
-              className={`w-full group relative transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] min-h-[48px] border-0 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform ${
+              className={`w-full group relative transition-all duration-300 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; min-h-[48px] border-0 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform ${
                 activeTab === item.id
                   ? "transform scale-105"
                   : "hover:scale-102"
@@ -437,7 +437,7 @@ export const Sidebar = ({
         <div className={`${isCollapsed ? "px-1 xs:px-2" : "px-3 xs:px-4 sm:px-6"} py-4 xs:py-6 relative z-10`}>
           <button
             onClick={handleLogout}
-            className={`w-full group relative overflow-hidden min-h-[48px] ${isCollapsed ? "px-2 py-3 xs:px-3 xs:py-4" : "px-3 py-3 xs:px-4 xs:py-4 sm:px-5 sm:py-4"} rounded-xl xs:rounded-2xl text-white font-semibold flex items-center justify-center ${isCollapsed ? "" : "gap-2 xs:gap-3"} transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] shadow-2xl hover:scale-105 hover:-translate-y-1 active:scale-95 border-0 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:hover:translate-y-0`}
+            className={`w-full group relative overflow-hidden min-h-[48px] ${isCollapsed ? "px-2 py-3 xs:px-3 xs:py-4" : "px-3 py-3 xs:px-4 xs:py-4 sm:px-5 sm:py-4"} rounded-xl xs:rounded-2xl text-white font-semibold flex items-center justify-center ${isCollapsed ? "" : "gap-2 xs:gap-3"} transition-all duration-300 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; shadow-2xl hover:scale-105 hover:-translate-y-1 active:scale-95 border-0 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:hover:translate-y-0`}
             aria-label="Выйти из системы"
             style={{
               background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%)',

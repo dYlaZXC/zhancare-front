@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import clsx from "clsx";
 import { Star, StarHalf, StarOff } from "lucide-react";
+import Image from "next/image";
 
 interface Doctor {
   id: number;
@@ -222,9 +223,11 @@ const DoctorSelect: React.FC<DoctorSelectProps> = ({
                           {/* Avatar */}
                           <div className="w-10 h-10 flex-shrink-0 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center overflow-hidden">
                             {doc.avatarUrl ? (
-                              <img
+                              <Image
                                 src={doc.avatarUrl}
                                 alt={doc.name}
+                                width={40}
+                                height={40}
                                 className="w-full h-full object-cover rounded-full"
                               />
                             ) : (

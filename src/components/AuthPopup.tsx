@@ -43,7 +43,7 @@ interface InputFieldProps {
   onTogglePassword?: (field: 'password' | 'confirmPassword') => void;
 }
 
-const InputField = memo(({ 
+const InputField = memo(function InputField({ 
   name, 
   type = "text", 
   placeholder, 
@@ -57,7 +57,8 @@ const InputField = memo(({
   showPassword = false,
   showConfirmPassword = false,
   onTogglePassword
-}: InputFieldProps) => (
+}: InputFieldProps) {
+  return (
   <div className="space-y-1">
     <div className="relative">
       <Icon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -89,7 +90,8 @@ const InputField = memo(({
       <p className="text-sm text-red-600 ml-1">{validationError}</p>
     )}
   </div>
-));
+  );
+});
 
 const AuthPopup = () => {
   const { isAuthOpen, setIsAuthOpen, loginUser } = useAuth();

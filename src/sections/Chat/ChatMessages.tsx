@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import MessageItem from "./MessageItem";
 import StreamingMessage from "./StreamingMessage";
@@ -22,15 +22,15 @@ export default function ChatMessages({
   messagesContainerRef,
   onBookAppointment
 }: ChatMessagesProps) {
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
-  };
+  }, [messagesContainerRef]);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, scrollToBottom]);
 
   const handleChatScroll = (e: React.UIEvent<HTMLDivElement>) => {
     e.stopPropagation();

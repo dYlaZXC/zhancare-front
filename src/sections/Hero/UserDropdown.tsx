@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import Image from "next/image";
 import { 
   faSignOutAlt, 
   faUser, 
@@ -241,9 +242,11 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
         {/* Avatar */}
         <div className="relative">
           {user.avatar ? (
-            <img
+            <Image
               src={user.avatar}
               alt={`${user.first_name} avatar`}
+              width={32}
+              height={32}
               className="w-8 h-8 rounded-full object-cover border-2 border-white/20"
             />
           ) : (
@@ -295,9 +298,11 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
             <div className="bg-gradient-to-r from-[#001E80]/10 to-[#3A50FF]/10 p-4 border-b border-gray-100">
               <div className="flex items-center gap-3">
                 {user.avatar ? (
-                  <img
+                  <Image
                     src={user.avatar}
                     alt={`${user.first_name} avatar`}
+                    width={48}
+                    height={48}
                     className="w-12 h-12 rounded-full object-cover"
                   />
                 ) : (

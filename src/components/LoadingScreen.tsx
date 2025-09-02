@@ -206,11 +206,8 @@ export default function LoadingScreen({
     // Cleanup function
     return () => {
       tl.kill();
-      gsap.killTweensOf([
-        ...lettersRef.current, spinnerRef.current, textRef.current, 
-        dotsRef.current, heartbeatRef.current, pulseLineRef.current,
-        ekcLineRef.current, ...orbsRef.current
-      ]);
+      // Kill all tweens without specific targets to avoid ref warnings
+      gsap.killTweensOf("*");
     };
   }, [message]);
 

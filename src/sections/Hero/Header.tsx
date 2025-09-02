@@ -165,7 +165,7 @@ export default function Header() {
   // Memoize navigation keys
   const navigationKeys = useMemo(() => 
     Object.keys(translations.navigation) as Array<keyof typeof translations.navigation>,
-    [translations.navigation]
+    [translations]
   );
 
   // Animation classes - always visible sticky header

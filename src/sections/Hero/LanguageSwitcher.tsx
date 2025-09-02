@@ -1,6 +1,7 @@
 "use client";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 
 type Props = {
   currentLanguage: string;
@@ -68,10 +69,18 @@ const FlagDisplay = ({ language, size = "sm", className = "" }: {
     );
   }
 
+  const dimensionMap = {
+    sm: { width: 12, height: 10 },
+    md: { width: 16, height: 12 },
+    lg: { width: 20, height: 16 }
+  };
+
   return (
-    <img
+    <Image
       src={language.flagImage}
       alt={`${language.name} flag`}
+      width={dimensionMap[size].width}
+      height={dimensionMap[size].height}
       className={`${sizeClasses[size]} object-cover rounded-sm ${className}`}
       onError={() => setImageError(true)}
     />

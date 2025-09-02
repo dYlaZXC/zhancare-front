@@ -35,7 +35,7 @@ export const Header = ({
         {/* Mobile Menu Button - Now Active */}
         <button
           onClick={onMenuClick}
-          className="sm:hidden group relative overflow-hidden text-white min-w-[48px] min-h-[48px] p-3 rounded-xl xs:rounded-2xl shadow-2xl border-0 outline-none backdrop-blur-lg transform hover:scale-110 active:scale-95 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:rotate-3 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:hover:rotate-0"
+          className="sm:hidden group relative overflow-hidden text-white min-w-[48px] min-h-[48px] p-3 rounded-xl xs:rounded-2xl shadow-2xl border-0 outline-none backdrop-blur-lg transform hover:scale-110 active:scale-95 transition-all duration-300 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; hover:rotate-3 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:hover:rotate-0"
           style={{ 
             background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)',
             border: '1px solid rgba(255, 255, 255, 0.2)'

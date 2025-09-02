@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { NicknameEntry } from "./NicknameEntry";
 import { TimerScorePanel } from "./TimerScorePanel";
 import { QuestionDisplay } from "./QuestionDisplay";
@@ -113,7 +113,7 @@ export default function AIGame() {
     );
   };
 
-  const saveToLeaderboard = async () => {
+  const saveToLeaderboard = useCallback(async () => {
     try {
       await api.post("/sessions/submit/", {
         nickname,
@@ -125,7 +125,7 @@ export default function AIGame() {
     } catch (e) {
       console.warn("Ошибка при отправке результатов или загрузке лидерборда");
     }
-  };
+  }, [nickname, score]);
 
   const handleGenerateNickname = async () => {
     setLoadingNick(true);
@@ -160,7 +160,7 @@ export default function AIGame() {
       saveToLeaderboard();
     }
     return () => clearTimeout(timer);
-  }, [started, timeLeft]);
+  }, [started, timeLeft, saveToLeaderboard]);
 
   // === RENDER ===
 
