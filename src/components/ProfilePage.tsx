@@ -15,11 +15,9 @@ import MedicalHistory from "@/components/services/MedicalHistory";
 import ChatDoctors from "@/components/services/ChatDoctors";
 import ProfileDetails from "@/components/services/ProfileDetails";
 import { ActivityLog } from "@/components/services/ActivityLog";
-import Image from "next/image";
-import Logo from "@/assets/logosaas_new2.png";
 
 const ProfilePage = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, setIsAuthOpen } = useAuth();
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState("profile");
@@ -31,23 +29,26 @@ const ProfilePage = () => {
   };
 
   useEffect(() => {
+    if (!loading && !user) {
+      // User is not authenticated, show auth popup immediately and redirect
+      setIsAuthOpen(true);
+      router.replace('/');
+      return;
+    }
+    
     if (!loading && user?.role === "doctor") {
       router.replace("/doctor-profile");
     }
-  }, [loading, user, router]);
+  }, [loading, user, router, setIsAuthOpen]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
-        <div className="animate-pulse">
-          <Image src={Logo} alt="Loading..." width={120} height={120} priority />
-        </div>
-        <p className="text-gray-500 mt-4 text-sm">Проверка авторизации...</p>
-      </div>
-    );
+    return null; // Don't show loading screen, let auth popup handle it
   }
 
-  if (!user) return null;
+  if (!user) {
+    // User will be redirected immediately, return null to avoid flash
+    return null;
+  }
 
   // ✅ Convert id to string to match User type expectations
   const userProfile = {

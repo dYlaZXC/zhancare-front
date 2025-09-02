@@ -199,21 +199,21 @@ export const InsuranceStatusCard = ({
       {showDetailedInfo && (
         <div className="mt-4 space-y-4">
           {/* Quick Stats */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-100">
-              <div className="text-lg font-bold text-blue-600">
+              <div className="text-base sm:text-lg font-bold text-blue-600 truncate">
                 {formatCurrency(insurance.coverageLimit)}
               </div>
               <div className="text-xs text-gray-600">Лимит покрытия</div>
             </div>
             <div className="text-center p-3 bg-green-50 rounded-lg border border-green-100">
-              <div className="text-lg font-bold text-green-600">
+              <div className="text-base sm:text-lg font-bold text-green-600 truncate">
                 {formatCurrency(insurance.deductible)}
               </div>
               <div className="text-xs text-gray-600">Франшиза</div>
             </div>
             <div className="text-center p-3 bg-purple-50 rounded-lg border border-purple-100">
-              <div className="text-lg font-bold text-purple-600">
+              <div className="text-base sm:text-lg font-bold text-purple-600 truncate">
                 {formatCurrency(insurance.premium)}
               </div>
               <div className="text-xs text-gray-600">Годовая премия</div>

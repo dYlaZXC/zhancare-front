@@ -2,10 +2,9 @@
 
 import { useState, useMemo } from "react";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
-import { Appointment } from "./types";
+import { useProfileData } from "./useProfileData";
 
 interface CalendarCardProps {
-  appointments: Appointment[];
   onDateSelect?: (date: Date) => void;
   selectedDate?: Date;
 }
@@ -21,10 +20,10 @@ interface DayInfo {
 }
 
 export const CalendarCard = ({ 
-  appointments, 
   onDateSelect,
   selectedDate 
 }: CalendarCardProps) => {
+  const { appointments, loading } = useProfileData();
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const isSameDay = (date1: Date, date2: Date): boolean => {
@@ -146,6 +145,41 @@ export const CalendarCard = ({
     return date.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
   };
 
+  if (loading) {
+    return (
+      <div className="w-full max-w-4xl mx-auto bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden animate-pulse">
+        {/* Header skeleton */}
+        <div className="bg-gray-100 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
+          <div className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <div className="h-6 bg-gray-300 rounded w-20"></div>
+              <div className="h-8 bg-gray-300 rounded w-16"></div>
+            </div>
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="w-8 h-8 bg-gray-300 rounded"></div>
+              <div className="w-32 h-6 bg-gray-300 rounded"></div>
+              <div className="w-8 h-8 bg-gray-300 rounded"></div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Calendar grid skeleton */}
+        <div className="p-3 sm:p-6">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2">
+            {/* Day headers */}
+            {Array.from({ length: 7 }).map((_, i) => (
+              <div key={i} className="h-8 bg-gray-200 rounded"></div>
+            ))}
+            {/* Calendar days */}
+            {Array.from({ length: 42 }).map((_, i) => (
+              <div key={i} className="h-10 sm:h-14 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-4xl mx-auto bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       {/* Calendar Header */}
@@ -258,6 +292,17 @@ export const CalendarCard = ({
             <span className="text-xs sm:text-sm font-medium text-gray-600">Выходные</span>
           </div>
         </div>
+
+        {/* Appointment Summary */}
+        {appointments.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <div className="text-center">
+              <p className="text-sm text-gray-600">
+                Всего записей в этом месяце: <span className="font-semibold text-blue-600">{appointments.length}</span>
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

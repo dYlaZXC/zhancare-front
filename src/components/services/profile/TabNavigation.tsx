@@ -15,8 +15,8 @@ interface TabNavigationProps {
 export const TabNavigation = ({ selectedTab, onTabChange }: TabNavigationProps) => {
   const tabs: Tab[] = [
     { name: "Общая информация", icon: User },
-    { name: "История", icon: FileText },
-    { name: "Визиты", icon: Home },
+    { name: "История онлайн консултации", icon: FileText },
+    { name: "История визитов на дом", icon: Home },
   ];
 
   return (

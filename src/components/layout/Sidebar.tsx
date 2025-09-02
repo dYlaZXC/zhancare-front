@@ -36,7 +36,7 @@ export const Sidebar = ({
   onClose: () => void;
   isCollapsed?: boolean;
 }) => {
-  const { user, logoutUser } = useAuth();
+  const { user, logoutUser, setIsAuthOpen } = useAuth();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -72,9 +72,20 @@ export const Sidebar = ({
   };
 
   const handleTabChange = (tabId: string) => {
+    // Check if user is authenticated before allowing navigation
+    if (!user) {
+      // Show auth popup instead of navigating
+      setIsAuthOpen(true);
+      onClose();
+      setSidebarOpen(false);
+      return;
+    }
+    
+    // User is authenticated, allow navigation
     setActiveTab(tabId);
     onClose();
     setSidebarOpen(false);
+    router.push(`/${tabId}`);
   };
 
   const getRoleIcon = (role: string) => {

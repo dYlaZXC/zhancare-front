@@ -1,7 +1,48 @@
 "use client";
 
 import { User, Calendar, TrendingUp, Mail, Phone, MapPin, Users, CheckCircle } from "lucide-react";
+import React from "react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from "recharts";
 import { User as UserType } from "./types";
+import { useProfileData } from "./useProfileData";
+
+interface ChartDataPoint {
+  date: string;
+  count: number;
+}
+
+interface ConsultationChartProps {
+  data: ChartDataPoint[];
+}
+
+const ConsultationChart: React.FC<ConsultationChartProps> = ({ data }) => {
+  return (
+    <div className="mt-6">
+      <h3 className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+        <TrendingUp className="w-4 h-4" /> Динамика консультаций
+      </h3>
+      <div className="w-full h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="date" />
+            <YAxis allowDecimals={false} />
+            <Tooltip />
+            <Line type="monotone" dataKey="count" stroke="#3B82F6" strokeWidth={2} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+};
 
 interface GeneralInfoTabProps {
   user: UserType;
@@ -20,8 +61,11 @@ export const GeneralInfoTab = ({
   errors, 
   onEditValueChange,
   consultationsCount,
-  appointmentsCount 
+  appointmentsCount
 }: GeneralInfoTabProps) => {
+  // Get real data from the hook
+  const { consultations, appointments, consultationTrendData, loading } = useProfileData();
+
   if (isEditing) {
     return (
       <div className="space-y-6">
@@ -199,7 +243,7 @@ export const GeneralInfoTab = ({
               <span className="text-xs font-medium text-blue-700 bg-blue-200 px-2 py-1 rounded-full">Всего</span>
             </div>
             <p className="text-3xl font-bold text-blue-900 mb-1">{consultationsCount}</p>
-            <p className="text-sm font-medium text-blue-700">Консультаций</p>
+            <p className="text-sm font-medium text-blue-700">Онлайн Консультаций</p>
             <p className="text-xs text-blue-600 mt-1">За все время</p>
           </div>
           
@@ -211,7 +255,7 @@ export const GeneralInfoTab = ({
               <span className="text-xs font-medium text-green-700 bg-green-200 px-2 py-1 rounded-full">Записи</span>
             </div>
             <p className="text-3xl font-bold text-green-900 mb-1">{appointmentsCount}</p>
-            <p className="text-sm font-medium text-green-700">Визитов</p>
+            <p className="text-sm font-medium text-green-700">Визитов на дом</p>
             <p className="text-xs text-green-600 mt-1">Включая запланированные</p>
           </div>
         </div>
@@ -231,7 +275,20 @@ export const GeneralInfoTab = ({
             <p className="text-xs text-gray-600">Рейтинг</p>
           </div>
         </div>
+
+        {/* Consultation Chart */}
+        <ConsultationChart data={consultationTrendData} />
       </div>
     </div>
   );
+
+  // Show loading state if data is still being fetched
+  if (loading) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="bg-gray-200 h-48 rounded-xl"></div>
+        <div className="bg-gray-200 h-96 rounded-xl"></div>
+      </div>
+    );
+  }
 };

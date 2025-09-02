@@ -112,13 +112,13 @@ const ProfileDetails: React.FC<ProfileDetailsProps> = ({ user }) => {
       case 1:
         return (
           <motion.div key="consultations" {...motionProps}>
-            <ConsultationsTab consultations={consultations} />
+            <ConsultationsTab />
           </motion.div>
         );
       case 2:
         return (
           <motion.div key="visits" {...motionProps}>
-            <VisitsTab appointments={appointments} />
+            <VisitsTab />
           </motion.div>
         );
       default:
@@ -171,7 +171,7 @@ const ProfileDetails: React.FC<ProfileDetailsProps> = ({ user }) => {
 
         {/* Right Column - Calendar and Quick Actions */}
         <div className="space-y-4 sm:space-y-6 md:col-span-2 xl:col-span-1 md:order-first xl:order-none">
-          <CalendarCard appointments={appointments} />
+          <CalendarCard />
           <QuickActionsCard />
         </div>
       </div>
