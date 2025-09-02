@@ -11,6 +11,7 @@ export interface User {
   language?: string;
   blood_type?: string;
   role?: string;
+  date_joined?: string;
 }
 
 export interface Consultation {

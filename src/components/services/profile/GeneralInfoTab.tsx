@@ -66,6 +66,16 @@ export const GeneralInfoTab = ({
   // Get real data from the hook
   const { consultations, appointments, consultationTrendData, loading } = useProfileData();
 
+  // Show loading state if data is still being fetched
+  if (loading) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="bg-gray-200 h-48 rounded-xl"></div>
+        <div className="bg-gray-200 h-96 rounded-xl"></div>
+      </div>
+    );
+  }
+
   if (isEditing) {
     return (
       <div className="space-y-6">
@@ -242,7 +252,7 @@ export const GeneralInfoTab = ({
               </div>
               <span className="text-xs font-medium text-blue-700 bg-blue-200 px-2 py-1 rounded-full">Всего</span>
             </div>
-            <p className="text-3xl font-bold text-blue-900 mb-1">{consultationsCount}</p>
+            <p className="text-3xl font-bold text-blue-900 mb-1">{loading ? '...' : consultations.length}</p>
             <p className="text-sm font-medium text-blue-700">Онлайн Консультаций</p>
             <p className="text-xs text-blue-600 mt-1">За все время</p>
           </div>
@@ -254,7 +264,7 @@ export const GeneralInfoTab = ({
               </div>
               <span className="text-xs font-medium text-green-700 bg-green-200 px-2 py-1 rounded-full">Записи</span>
             </div>
-            <p className="text-3xl font-bold text-green-900 mb-1">{appointmentsCount}</p>
+            <p className="text-3xl font-bold text-green-900 mb-1">{loading ? '...' : appointments.length}</p>
             <p className="text-sm font-medium text-green-700">Визитов на дом</p>
             <p className="text-xs text-green-600 mt-1">Включая запланированные</p>
           </div>
@@ -263,15 +273,30 @@ export const GeneralInfoTab = ({
         {/* Additional Stats Row */}
         <div className="mt-4 grid grid-cols-3 gap-4">
           <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <p className="text-lg font-bold text-gray-900">100%</p>
+            <p className="text-lg font-bold text-gray-900">
+              {loading ? '...' : `${Math.min(100, Math.max(0, Math.round((consultations.length + appointments.length) * 10)))}%`}
+            </p>
             <p className="text-xs text-gray-600">Активность</p>
           </div>
           <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <p className="text-lg font-bold text-gray-900">{new Date().getFullYear() - 2023}</p>
+            <p className="text-lg font-bold text-gray-900">
+              {user.date_joined 
+                ? Math.max(0, Math.floor((Date.now() - new Date(user.date_joined).getTime()) / (1000 * 60 * 60 * 24 * 365)))
+                : 0
+              }
+            </p>
             <p className="text-xs text-gray-600">Лет в системе</p>
           </div>
           <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <p className="text-lg font-bold text-gray-900">A+</p>
+            <p className="text-lg font-bold text-gray-900">
+              {loading ? '...' : 
+                consultations.length + appointments.length >= 20 ? 'A+' :
+                consultations.length + appointments.length >= 15 ? 'A' :
+                consultations.length + appointments.length >= 10 ? 'B+' :
+                consultations.length + appointments.length >= 5 ? 'B' :
+                consultations.length + appointments.length >= 1 ? 'C' : 'New'
+              }
+            </p>
             <p className="text-xs text-gray-600">Рейтинг</p>
           </div>
         </div>
@@ -281,14 +306,4 @@ export const GeneralInfoTab = ({
       </div>
     </div>
   );
-
-  // Show loading state if data is still being fetched
-  if (loading) {
-    return (
-      <div className="space-y-6 animate-pulse">
-        <div className="bg-gray-200 h-48 rounded-xl"></div>
-        <div className="bg-gray-200 h-96 rounded-xl"></div>
-      </div>
-    );
-  }
 };
