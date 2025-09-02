@@ -3,6 +3,7 @@
 import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { useRouter } from "next/navigation";
 import { useRef, useMemo } from "react";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
@@ -23,8 +24,9 @@ const containerVariants = {
 };
 
 export default function HeroContent() {
-  const { setIsAuthOpen } = useAuth();
+  const { user, setIsAuthOpen } = useAuth();
   const { language } = useLanguage();
+  const router = useRouter();
   
   // Fixed translations logic to handle all 3 languages
   const translations = useMemo(() => {
@@ -49,7 +51,14 @@ export default function HeroContent() {
   const opacity = useTransform(scrollYProgress, [0, 0.3, 0.7, 1], [1, 1, 1, 0.8]);
 
   const handleBookAppointment = () => {
-    setIsAuthOpen(true);
+    if (user) {
+      // User is authenticated, navigate to appropriate profile page
+      const profileRoute = user.role === "doctor" ? "/doctor-profile" : "/profile";
+      router.push(profileRoute);
+    } else {
+      // User is not authenticated, show auth popup
+      setIsAuthOpen(true);
+    }
   };
 
   const handleLearnMore = () => {

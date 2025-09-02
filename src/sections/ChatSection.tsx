@@ -3,6 +3,7 @@
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { useState, useRef, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
@@ -14,8 +15,9 @@ import { Message } from "./Chat/types";
 import { useChat } from "./Chat/hooks/useChat";
 
 export const ChatSection = () => {
-  const { setIsAuthOpen } = useAuth();
+  const { user, setIsAuthOpen } = useAuth();
   const { language } = useLanguage();
+  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -49,6 +51,15 @@ export const ChatSection = () => {
 
   const handleSend = () => {
     onSend();
+  };
+
+  const handleBookAppointment = () => {
+    if (user) {
+      const profileRoute = user.role === "doctor" ? "/doctor-profile" : "/profile";
+      router.push(profileRoute);
+    } else {
+      setIsAuthOpen(true);
+    }
   };
 
   const getHeaderDescription = () => {
@@ -121,7 +132,7 @@ export const ChatSection = () => {
             streaming={streaming}
             language={language}
             messagesContainerRef={messagesContainerRef}
-            onBookAppointment={() => setIsAuthOpen(true)}
+            onBookAppointment={handleBookAppointment}
           />
           
           <ChatInput

@@ -37,7 +37,7 @@ export const CallToAction = () => {
   const translateY = useTransform(scrollYProgress, [0, 1], [150, -150]);
 
   const handleEmailRedirect = () => {
-    window.location.href = "mailto:support@zhancare.ai"; // Updated with actual email
+    window.location.href = "mailto:marzipan9256@gmail.com"; // Updated with actual email
   };
 
   const handleSubmit = (e: React.FormEvent) => {
