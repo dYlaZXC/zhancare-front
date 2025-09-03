@@ -21,7 +21,7 @@ interface RecommendedDoctor {
   name: string;
   doctor_type: string;
   reason: string;
-  urgency: "urgent" | "non_urgent"; // Add urgency here
+  urgency: "urgent" | "non_urgent";
 }
 
 interface AIErrorData {
@@ -149,11 +149,8 @@ const VideoConsultation: React.FC = () => {
 
       console.log("AI response:", res.data);
 
-      // If doctor is recommended successfully
       if (res.data.success && res.data.recommended_doctor) {
         const doctor = res.data.recommended_doctor;
-
-        // Properly extract urgency from doctor object
         const urgency = doctor.urgency === "urgent" ? "urgent" : "non_urgent";
         console.log("Urgency extracted from recommended_doctor:", urgency);
 
@@ -164,16 +161,12 @@ const VideoConsultation: React.FC = () => {
 
         setSelectedDoctorId(doctor.id);
         toast.success(`🤖 AI рекомендовал врача: ${doctor.name}`);
-      }
-
-      // Fallback scenario: AI gave a specialty but no matching doctor found
-      else if (!res.data.success && res.data.ai_data) {
+      } else if (!res.data.success && res.data.ai_data) {
         const fallback = doctors.find((d) =>
           d.doctor_type.toLowerCase().includes("терапевт")
         );
 
         if (fallback) {
-          // Try to extract urgency from ai_data (if provided), otherwise assume urgent
           const urgency =
             res.data.ai_data?.urgency === "non_urgent" ? "non_urgent" : "urgent";
 
@@ -193,7 +186,6 @@ const VideoConsultation: React.FC = () => {
 
           toast.info("❌ Специалист не найден. Назначен терапевт.");
         } else {
-          // No fallback therapist found either
           setAiErrorData(res.data.ai_data);
           toast.warn("❌ AI дал рекомендацию, но подходящих врачей не найдено.");
         }
@@ -239,66 +231,74 @@ const VideoConsultation: React.FC = () => {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 px-4 sm:px-6 py-8 sm:py-10">
-      <div ref={containerRef} className="lg:col-span-8 w-full">
-        <h2 className="text-3xl font-extrabold text-[#001E80] mb-4">Видео консультация</h2>
+    <div className="min-h-screen w-full max-w-none overflow-x-hidden">
+      <div className={`grid grid-cols-1 gap-4 lg:gap-6 px-3 sm:px-4 lg:px-6 py-6 lg:py-8 min-h-screen w-full max-w-none ${
+        step === 2 ? 'xl:grid-cols-4' : 'xl:grid-cols-5'
+      }`}>
+        <div ref={containerRef} className={`w-full min-w-0 ${
+          step === 2 ? 'xl:col-span-3' : 'xl:col-span-4'
+        }`}>
+          <h2 className="text-2xl lg:text-3xl font-extrabold text-[#001E80] mb-4 lg:mb-6">Видео консультация</h2>
 
-        <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
-          <div
-            className={`h-full transition-all duration-500 rounded-full ${step === 1
-                ? "w-1/3 bg-blue-600"
-                : step === 2
-                ? "w-2/3 bg-blue-600"
-                : "w-full bg-blue-600"}`}
+          <div className="w-full bg-gray-200 rounded-full h-2 mb-4 lg:mb-6">
+            <div
+              className={`h-full transition-all duration-500 rounded-full ${step === 1
+                  ? "w-1/3 bg-blue-600"
+                  : step === 2
+                  ? "w-2/3 bg-blue-600"
+                  : "w-full bg-blue-600"}`}
+            />
+          </div>
+
+          <div className="w-full min-w-0">
+            {step === 1 && (
+              <Step1
+                symptoms={symptoms}
+                onChange={setSymptoms}
+                onNext={handleAIRecommend}
+                loading={loadingAI}
+              />
+            )}
+            {step === 2 && (
+              <Step2
+                doctors={doctors}
+                selectedDoctorId={selectedDoctorId}
+                onSelect={setSelectedDoctorId}
+                loading={fetchingDoctors}
+                onBack={() => setStep(1)}
+                onNext={() => setStep(3)}
+                symptoms={symptoms}
+                recommendedDoctor={recommendedDoctor}
+                aiErrorData={aiErrorData}
+                fallbackUsed={fallbackUsed}
+              />
+            )}
+            {step === 3 && (
+              <Step3
+                symptoms={symptoms}
+                doctors={doctors}
+                selectedDoctorId={selectedDoctorId}
+                onBack={() => setStep(2)}
+                onCall={handleStartCall}
+                onCancel={cancelConsultation}
+                loading={loadingCall}
+                waiting={waiting}
+              />
+            )}
+          </div>
+        </div>
+
+        <div className={`w-full min-w-0 ${
+          step === 2 ? 'xl:col-span-1' : 'xl:col-span-1'
+        }`}>
+          <TipsPanel
+            step={step}
+            onInsertExample={() => setSymptoms("Головная боль, температура 38.5, слабость, першение в горле")}
+            recommendedDoctor={recommendedDoctor}
+            aiErrorData={aiErrorData}
+            fallbackUsed={fallbackUsed}
           />
         </div>
-
-        <div className="space-y-6">
-          {step === 1 && (
-            <Step1
-              symptoms={symptoms}
-              onChange={setSymptoms}
-              onNext={handleAIRecommend}
-              loading={loadingAI}
-            />
-          )}
-          {step === 2 && (
-            <Step2
-              doctors={doctors}
-              selectedDoctorId={selectedDoctorId}
-              onSelect={setSelectedDoctorId}
-              loading={fetchingDoctors}
-              onBack={() => setStep(1)}
-              onNext={() => setStep(3)}
-              symptoms={symptoms}
-              recommendedDoctor={recommendedDoctor}
-              aiErrorData={aiErrorData}
-              fallbackUsed={fallbackUsed}
-            />
-          )}
-          {step === 3 && (
-            <Step3
-              symptoms={symptoms}
-              doctors={doctors}
-              selectedDoctorId={selectedDoctorId}
-              onBack={() => setStep(2)}
-              onCall={handleStartCall}
-              onCancel={cancelConsultation}
-              loading={loadingCall}
-              waiting={waiting}
-            />
-          )}
-        </div>
-      </div>
-
-      <div className="lg:col-span-4">
-        <TipsPanel
-          step={step}
-          onInsertExample={() => setSymptoms("Головная боль, температура 38.5, слабость, першение в горле")}
-          recommendedDoctor={recommendedDoctor}
-          aiErrorData={aiErrorData}
-          fallbackUsed={fallbackUsed}
-        />
       </div>
     </div>
   );

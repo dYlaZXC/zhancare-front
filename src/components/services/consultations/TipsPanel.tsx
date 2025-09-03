@@ -361,67 +361,202 @@ const TipsPanel: React.FC<Props> = ({
               <span className="font-mono">{aiTypingText || "Анализ..."}</span>
             </div>
           )}
-        {/* Advertisement Banners - Paginated Rotation */}
-        {visibleAds.length > 0 && currentAd && (
+          
+          {/* Quick Facts Section */}
           <div className="space-y-3">
-            <div className="text-xs text-gray-400 font-medium flex items-center justify-between">
-              <span>Реклама</span>
-              {visibleAds.length > 1 && (
-                <span className="text-gray-300 text-xs">
-                  {currentAdIndex + 1} / {visibleAds.length}
-                </span>
+            <h4 className="font-semibold text-gray-800 text-sm">💡 Полезная информация</h4>
+            <div className="space-y-2 text-xs text-gray-600">
+              {step === 1 && (
+                <>
+                  <div className="flex items-start gap-2">
+                    <span className="text-blue-500 mt-1">•</span>
+                    <span>Укажите продолжительность симптомов</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-blue-500 mt-1">•</span>
+                    <span>Опишите интенсивность боли от 1 до 10</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-blue-500 mt-1">•</span>
+                    <span>Добавьте сопутствующие симптомы</span>
+                  </div>
+                </>
+              )}
+              {step === 2 && (
+                <>
+                  <div className="flex items-start gap-2">
+                    <span className="text-green-500 mt-1">•</span>
+                    <span>AI анализирует ваши симптомы</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-green-500 mt-1">•</span>
+                    <span>Вы можете выбрать другого врача</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-green-500 mt-1">•</span>
+                    <span>Все врачи сертифицированы</span>
+                  </div>
+                </>
+              )}
+              {step === 3 && (
+                <>
+                  <div className="flex items-start gap-2">
+                    <span className="text-purple-500 mt-1">•</span>
+                    <span>Консультация длится до 30 минут</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-purple-500 mt-1">•</span>
+                    <span>Врач может выписать рецепт</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-purple-500 mt-1">•</span>
+                    <span>История консультаций сохраняется</span>
+                  </div>
+                </>
               )}
             </div>
-            
-            {/* Always use smooth animation for banner transitions */}
-            <AnimatePresence mode="wait">
-              <AdBannerComponent key={`ad-${currentAd.id}`} ad={currentAd} />
-            </AnimatePresence>
-            
-            {/* Pagination Dots - show if multiple ads */}
-            {visibleAds.length > 1 && (
-              <div className="flex justify-center items-center gap-2">
-                {/* Previous button */}
-                <button
-                  onClick={() => setCurrentAdIndex((prev) => (prev - 1 + visibleAds.length) % visibleAds.length)}
-                  className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors"
-                  aria-label="Previous ad"
-                >
-                  <svg className="w-3 h-3 text-gray-600" fill="none" viewBox="0 0 6 10">
-                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 1L1 5l4 4"/>
-                  </svg>
-                </button>
-                
-                {/* Pagination dots */}
-                <div className="flex gap-1">
-                  {visibleAds.map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setCurrentAdIndex(index)}
-                      className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                        index === currentAdIndex 
-                          ? 'bg-blue-500 scale-110' 
-                          : 'bg-gray-300 hover:bg-gray-400 hover:scale-105'
-                      }`}
-                      aria-label={`Go to ad ${index + 1}`}
-                    />
-                  ))}
-                </div>
-                
-                {/* Next button */}
-                <button
-                  onClick={() => setCurrentAdIndex((prev) => (prev + 1) % visibleAds.length)}
-                  className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors"
-                  aria-label="Next ad"
-                >
-                  <svg className="w-3 h-3 text-gray-600" fill="none" viewBox="0 0 6 10">
-                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M1 9l4-4-4-4"/>
-                  </svg>
-                </button>
-              </div>
-            )}
           </div>
-        )}
+
+          {/* Statistics Card */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
+            <h4 className="font-semibold text-blue-800 text-sm mb-2">📊 Сегодня на платформе</h4>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="text-center">
+                <div className="font-bold text-blue-600 text-lg">120+</div>
+                <div className="text-blue-500">Врачей онлайн</div>
+              </div>
+              <div className="text-center">
+                <div className="font-bold text-green-600 text-lg">95%</div>
+                <div className="text-green-500">Довольных пациентов</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Security Notice */}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+            <div className="flex items-start gap-2">
+              <span className="text-green-600 text-sm">🔒</span>
+              <div className="text-xs text-green-700">
+                <div className="font-medium mb-1">Ваши данные защищены</div>
+                <div>Все консультации проходят по защищенному соединению</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Advertisement Banners - Paginated Rotation */}
+          {visibleAds.length > 0 && currentAd && (
+            <div className="space-y-3">
+              <div className="text-xs text-gray-400 font-medium flex items-center justify-between">
+                <span>Реклама</span>
+                {visibleAds.length > 1 && (
+                  <span className="text-gray-300 text-xs">
+                    {currentAdIndex + 1} / {visibleAds.length}
+                  </span>
+                )}
+              </div>
+              
+              {/* Always use smooth animation for banner transitions */}
+              <AnimatePresence mode="wait">
+                <AdBannerComponent key={`ad-${currentAd.id}`} ad={currentAd} />
+              </AnimatePresence>
+              
+              {/* Pagination Dots - show if multiple ads */}
+              {visibleAds.length > 1 && (
+                <div className="flex justify-center items-center gap-2">
+                  {/* Previous button */}
+                  <button
+                    onClick={() => setCurrentAdIndex((prev) => (prev - 1 + visibleAds.length) % visibleAds.length)}
+                    className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors"
+                    aria-label="Previous ad"
+                  >
+                    <svg className="w-3 h-3 text-gray-600" fill="none" viewBox="0 0 6 10">
+                      <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 1L1 5l4 4"/>
+                    </svg>
+                  </button>
+                  
+                  {/* Pagination dots */}
+                  <div className="flex gap-1">
+                    {visibleAds.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentAdIndex(index)}
+                        className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                          index === currentAdIndex 
+                            ? 'bg-blue-500 scale-110' 
+                            : 'bg-gray-300 hover:bg-gray-400 hover:scale-105'
+                        }`}
+                        aria-label={`Go to ad ${index + 1}`}
+                      />
+                    ))}
+                  </div>
+                  
+                  {/* Next button */}
+                  <button
+                    onClick={() => setCurrentAdIndex((prev) => (prev + 1) % visibleAds.length)}
+                    className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors"
+                    aria-label="Next ad"
+                  >
+                    <svg className="w-3 h-3 text-gray-600" fill="none" viewBox="0 0 6 10">
+                      <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M1 9l4-4-4-4"/>
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Additional Info Cards */}
+        <div className="space-y-4">
+          {/* Emergency Contact Card */}
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-4 shadow-sm">
+            <h4 className="font-bold text-red-800 text-sm mb-2 flex items-center gap-2">
+              🚨 Экстренная помощь
+            </h4>
+            <p className="text-xs text-red-700 mb-3">
+              При серьёзных симптомах немедленно обратитесь в скорую помощь
+            </p>
+            <div className="text-center">
+              <a href="tel:103" className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                📞 103
+              </a>
+            </div>
+          </div>
+
+          {/* FAQ Card */}
+          <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-lg p-4">
+            <h4 className="font-bold text-gray-800 text-sm mb-3">❓ Часто задаваемые вопросы</h4>
+            <div className="space-y-2 text-xs text-gray-600">
+              <details className="cursor-pointer">
+                <summary className="font-medium text-gray-700 hover:text-blue-600">Сколько стоит консультация?</summary>
+                <p className="mt-1 pl-2 border-l-2 border-blue-200">Первая консультация бесплатная. Последующие - от 2000 тенге.</p>
+              </details>
+              <details className="cursor-pointer">
+                <summary className="font-medium text-gray-700 hover:text-blue-600">Как долго длится консультация?</summary>
+                <p className="mt-1 pl-2 border-l-2 border-blue-200">Обычно 15-30 минут в зависимости от сложности случая.</p>
+              </details>
+              <details className="cursor-pointer">
+                <summary className="font-medium text-gray-700 hover:text-blue-600">Можно ли получить рецепт?</summary>
+                <p className="mt-1 pl-2 border-l-2 border-blue-200">Да, врач может выписать электронный рецепт после консультации.</p>
+              </details>
+            </div>
+          </div>
+
+          {/* Contact Support Card */}
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-2xl p-4 shadow-sm">
+            <h4 className="font-bold text-purple-800 text-sm mb-2">💬 Нужна помощь?</h4>
+            <p className="text-xs text-purple-700 mb-3">
+              Наша служба поддержки работает 24/7
+            </p>
+            <div className="flex gap-2">
+              <button className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg text-xs font-medium transition-colors">
+                Чат
+              </button>
+              <button className="flex-1 bg-white border border-purple-300 hover:bg-purple-50 text-purple-700 px-3 py-2 rounded-lg text-xs font-medium transition-colors">
+                Email
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </>
