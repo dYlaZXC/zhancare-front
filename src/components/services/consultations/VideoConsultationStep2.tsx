@@ -205,7 +205,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
 
   return (
     <motion.div
-      className="space-y-6 max-w-4xl mx-auto"
+      className="space-y-6 w-full"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
