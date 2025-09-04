@@ -218,25 +218,25 @@ const TipsPanel: React.FC<Props> = ({
       )}
       
       {/* Image Section */}
-      <div className="relative aspect-[4/3] w-full bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center p-4">
+      <div className="relative aspect-[3/2] w-full bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center p-2">
         <div className="relative w-full h-full">
           <Image
             src={ad.imagePath}
             alt={ad.alt}
             fill
             className="object-contain"
-            sizes="(max-width: 768px) 100vw, 300px"
+            sizes="(max-width: 768px) 200px, 300px"
           />
         </div>
       </div>
       
       {/* Text Section */}
-      <div className="p-3 bg-white">
+      <div className="p-2 bg-white">
         {ad.title && (
-          <h4 className="font-bold text-sm text-gray-900 mb-1">{ad.title}</h4>
+          <h4 className="font-bold text-xs text-gray-900 mb-0.5">{ad.title}</h4>
         )}
         {ad.description && (
-          <p className="text-xs text-gray-600 leading-relaxed">{ad.description}</p>
+          <p className="text-xs text-gray-600 leading-tight line-clamp-2">{ad.description}</p>
         )}
       </div>
       
@@ -253,7 +253,7 @@ const TipsPanel: React.FC<Props> = ({
       <AnimatePresence>
         {isPopupVisible && (
           <motion.div
-            className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center lg:hidden"
+            className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center lg:hidden p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -261,25 +261,36 @@ const TipsPanel: React.FC<Props> = ({
           >
             <motion.div
               onClick={(e) => e.stopPropagation()}
-              className="bg-white w-11/12 max-w-md p-6 rounded-xl shadow-lg space-y-3 max-h-[90vh] overflow-y-auto"
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 20, opacity: 0 }}
+              className="bg-white w-full max-w-sm mx-auto p-3 rounded-2xl shadow-xl space-y-2 relative"
+              initial={{ y: 30, opacity: 0, scale: 0.9 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 30, opacity: 0, scale: 0.9 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
             >
-              <div className="flex items-center gap-2 text-gray-800 font-semibold text-base">
-                <Bot className="text-blue-600" size={20} />
-                🤖 Помощь AI
+              {/* Header with close button */}
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-1.5 text-gray-800 font-semibold text-sm">
+                  <Bot className="text-blue-600" size={16} />
+                  🤖 Помощь AI
+                </div>
+                <button
+                  onClick={closePopup}
+                  className="p-1.5 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0"
+                  aria-label="Закрыть"
+                >
+                  <X size={16} className="text-gray-500" />
+                </button>
               </div>
-              <div className="text-sm text-gray-700 space-y-3">{getTipsContent()}</div>
+              <div className="text-xs text-gray-700 space-y-2">{getTipsContent()}</div>
               {step === 2 && (
-                <div className="bg-gray-50 border border-gray-200 p-3 rounded-md text-xs text-gray-600 whitespace-pre-line">
+                <div className="bg-gray-50 border border-gray-200 p-2 rounded-md text-xs text-gray-600 whitespace-pre-line">
                   {aiTypingText}
                 </div>
               )}
 
               {/* Mobile Ads with Pagination */}
               {visibleAds.length > 0 && currentAd && (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <hr className="border-gray-200" />
                   <div className="text-xs text-gray-500 font-medium flex items-center justify-between">
                     <span>Реклама</span>
@@ -289,14 +300,16 @@ const TipsPanel: React.FC<Props> = ({
                       </span>
                     )}
                   </div>
-                  <AdBannerComponent ad={currentAd} showClose={false} />
+                  <div className="w-full">
+                    <AdBannerComponent ad={currentAd} showClose={false} />
+                  </div>
                   
                   {/* Mobile Pagination */}
                   {visibleAds.length > 1 && (
-                    <div className="flex justify-center items-center gap-2">
+                    <div className="flex justify-center items-center gap-1">
                       <button
                         onClick={() => setCurrentAdIndex((prev) => (prev - 1 + visibleAds.length) % visibleAds.length)}
-                        className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors"
+                        className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors touch-manipulation"
                         aria-label="Previous ad"
                       >
                         <svg className="w-3 h-3 text-gray-600" fill="none" viewBox="0 0 6 10">
@@ -304,12 +317,12 @@ const TipsPanel: React.FC<Props> = ({
                         </svg>
                       </button>
                       
-                      <div className="flex gap-1">
+                      <div className="flex gap-1 px-2">
                         {visibleAds.map((_, index) => (
                           <button
                             key={index}
                             onClick={() => setCurrentAdIndex(index)}
-                            className={`w-2 h-2 rounded-full transition-colors ${
+                            className={`w-2 h-2 rounded-full transition-colors touch-manipulation ${
                               index === currentAdIndex ? 'bg-blue-500' : 'bg-gray-300'
                             }`}
                             aria-label={`Go to ad ${index + 1}`}
@@ -319,7 +332,7 @@ const TipsPanel: React.FC<Props> = ({
                       
                       <button
                         onClick={() => setCurrentAdIndex((prev) => (prev + 1) % visibleAds.length)}
-                        className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors"
+                        className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors touch-manipulation"
                         aria-label="Next ad"
                       >
                         <svg className="w-3 h-3 text-gray-600" fill="none" viewBox="0 0 6 10">
@@ -330,24 +343,17 @@ const TipsPanel: React.FC<Props> = ({
                   )}
                 </div>
               )}
-
-              <button
-                className="text-blue-600 hover:underline text-sm mt-2"
-                onClick={closePopup}
-              >
-                Закрыть
-              </button>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Desktop Panel */}
-      <div className="hidden lg:block w-full max-w-sm space-y-4">
+      <div className="hidden md:block w-full max-w-sm space-y-3 md:space-y-4">
         {/* Tips Panel */}
-        <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-lg p-6 text-sm text-gray-700 sticky top-6 space-y-5">
-          <div className="flex items-center gap-2 font-semibold text-gray-800 text-base">
-            <Bot className="text-blue-600" size={20} />
+        <div className="bg-white/80 backdrop-blur-md rounded-xl md:rounded-2xl shadow-lg p-4 md:p-6 text-sm text-gray-700 sticky top-6 space-y-4 md:space-y-5">
+          <div className="flex items-center gap-2 font-semibold text-gray-800 text-sm md:text-base">
+            <Bot className="text-blue-600" size={18} />
             Помощь AI
           </div>
 
@@ -356,16 +362,16 @@ const TipsPanel: React.FC<Props> = ({
           <hr className="border-gray-200" />
 
           {step === 2 && (
-            <div className="flex items-start gap-2 text-gray-500 text-sm whitespace-pre-line">
-              <Loader2 className="animate-spin text-blue-500 mt-1" size={16} />
+            <div className="flex items-start gap-2 text-gray-500 text-xs md:text-sm whitespace-pre-line">
+              <Loader2 className="animate-spin text-blue-500 mt-1" size={14} />
               <span className="font-mono">{aiTypingText || "Анализ..."}</span>
             </div>
           )}
           
           {/* Quick Facts Section */}
           <div className="space-y-3">
-            <h4 className="font-semibold text-gray-800 text-sm">💡 Полезная информация</h4>
-            <div className="space-y-2 text-xs text-gray-600">
+            <h4 className="font-semibold text-gray-800 text-xs md:text-sm">💡 Полезная информация</h4>
+            <div className="space-y-1 md:space-y-2 text-xs text-gray-600">
               {step === 1 && (
                 <>
                   <div className="flex items-start gap-2">
@@ -418,32 +424,21 @@ const TipsPanel: React.FC<Props> = ({
           </div>
 
           {/* Statistics Card */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
-            <h4 className="font-semibold text-blue-800 text-sm mb-2">📊 Сегодня на платформе</h4>
-            <div className="grid grid-cols-2 gap-3 text-xs">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 md:p-4 border border-blue-100">
+            <h4 className="font-semibold text-blue-800 text-xs md:text-sm mb-2">📊 Сегодня на платформе</h4>
+            <div className="grid grid-cols-2 gap-2 md:gap-3 text-xs">
               <div className="text-center">
-                <div className="font-bold text-blue-600 text-lg">120+</div>
+                <div className="font-bold text-blue-600 text-base md:text-lg">120+</div>
                 <div className="text-blue-500">Врачей онлайн</div>
               </div>
               <div className="text-center">
-                <div className="font-bold text-green-600 text-lg">95%</div>
+                <div className="font-bold text-green-600 text-base md:text-lg">95%</div>
                 <div className="text-green-500">Довольных пациентов</div>
               </div>
             </div>
           </div>
 
-          {/* Security Notice */}
-          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-            <div className="flex items-start gap-2">
-              <span className="text-green-600 text-sm">🔒</span>
-              <div className="text-xs text-green-700">
-                <div className="font-medium mb-1">Ваши данные защищены</div>
-                <div>Все консультации проходят по защищенному соединению</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Advertisement Banners - Paginated Rotation */}
+          {/* Advertisement Banners - Paginated Rotation - PRIORITY SECTION */}
           {visibleAds.length > 0 && currentAd && (
             <div className="space-y-3">
               <div className="text-xs text-gray-400 font-medium flex items-center justify-between">
@@ -504,29 +499,37 @@ const TipsPanel: React.FC<Props> = ({
               )}
             </div>
           )}
-        </div>
 
-        {/* Additional Info Cards */}
-        <div className="space-y-4">
+          {/* Security Notice */}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-2 md:p-3">
+            <div className="flex items-start gap-2">
+              <span className="text-green-600 text-sm">🔒</span>
+              <div className="text-xs text-green-700">
+                <div className="font-medium mb-1">Ваши данные защищены</div>
+                <div>Все консультации проходят по защищенному соединению</div>
+              </div>
+            </div>
+          </div>
+
           {/* Emergency Contact Card */}
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-4 shadow-sm">
-            <h4 className="font-bold text-red-800 text-sm mb-2 flex items-center gap-2">
+          <div className="bg-red-50 border border-red-200 rounded-lg md:rounded-xl p-2 md:p-3 shadow-sm">
+            <h4 className="font-bold text-red-800 text-xs md:text-sm mb-2 flex items-center gap-2">
               🚨 Экстренная помощь
             </h4>
-            <p className="text-xs text-red-700 mb-3">
+            <p className="text-xs text-red-700 mb-2">
               При серьёзных симптомах немедленно обратитесь в скорую помощь
             </p>
             <div className="text-center">
-              <a href="tel:103" className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+              <a href="tel:103" className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors">
                 📞 103
               </a>
             </div>
           </div>
 
           {/* FAQ Card */}
-          <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-lg p-4">
-            <h4 className="font-bold text-gray-800 text-sm mb-3">❓ Часто задаваемые вопросы</h4>
-            <div className="space-y-2 text-xs text-gray-600">
+          <div className="bg-white/60 backdrop-blur-md rounded-lg md:rounded-xl shadow-md p-2 md:p-3">
+            <h4 className="font-bold text-gray-800 text-xs md:text-sm mb-2">❓ Часто задаваемые вопросы</h4>
+            <div className="space-y-1 text-xs text-gray-600">
               <details className="cursor-pointer">
                 <summary className="font-medium text-gray-700 hover:text-blue-600">Сколько стоит консультация?</summary>
                 <p className="mt-1 pl-2 border-l-2 border-blue-200">Первая консультация бесплатная. Последующие - от 2000 тенге.</p>
@@ -543,16 +546,16 @@ const TipsPanel: React.FC<Props> = ({
           </div>
 
           {/* Contact Support Card */}
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-2xl p-4 shadow-sm">
-            <h4 className="font-bold text-purple-800 text-sm mb-2">💬 Нужна помощь?</h4>
-            <p className="text-xs text-purple-700 mb-3">
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg md:rounded-xl p-2 md:p-3 shadow-sm">
+            <h4 className="font-bold text-purple-800 text-xs md:text-sm mb-2">💬 Нужна помощь?</h4>
+            <p className="text-xs text-purple-700 mb-2">
               Наша служба поддержки работает 24/7
             </p>
-            <div className="flex gap-2">
-              <button className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg text-xs font-medium transition-colors">
+            <div className="flex gap-1.5">
+              <button className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-2 py-1.5 rounded-lg text-xs font-medium transition-colors">
                 Чат
               </button>
-              <button className="flex-1 bg-white border border-purple-300 hover:bg-purple-50 text-purple-700 px-3 py-2 rounded-lg text-xs font-medium transition-colors">
+              <button className="flex-1 bg-white border border-purple-300 hover:bg-purple-50 text-purple-700 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors">
                 Email
               </button>
             </div>

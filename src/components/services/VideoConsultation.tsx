@@ -231,73 +231,83 @@ const VideoConsultation: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full max-w-none overflow-x-hidden">
-      <div className={`grid grid-cols-1 gap-4 lg:gap-6 px-3 sm:px-4 lg:px-6 py-6 lg:py-8 min-h-screen w-full max-w-none ${
-        step === 2 ? 'xl:grid-cols-4' : 'xl:grid-cols-5'
-      }`}>
-        <div ref={containerRef} className={`w-full min-w-0 ${
-          step === 2 ? 'xl:col-span-3' : 'xl:col-span-4'
-        }`}>
-          <h2 className="text-2xl lg:text-3xl font-extrabold text-[#001E80] mb-4 lg:mb-6">Видео консультация</h2>
+    <div className="min-h-screen">
+      {/* Mobile-first layout with minimal padding */}
+      <div className="w-full">
+        <div className="flex flex-col lg:flex-row gap-0 lg:gap-6 min-h-screen">
+          {/* Main content area - full width on mobile */}
+          <div ref={containerRef} className="flex-1 min-w-0 p-3 sm:p-4 lg:p-6">
+            {/* Compact header section */}
+            <div className="mb-4 space-y-3">
+              <h2 className="text-xl md:text-2xl lg:text-3xl font-extrabold text-[#001E80]">
+                Видео консультация
+              </h2>
+              
+              {/* Progress bar */}
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className={`h-full transition-all duration-500 rounded-full ${
+                    step === 1
+                      ? "w-1/3 bg-blue-600"
+                      : step === 2
+                      ? "w-2/3 bg-blue-600"
+                      : "w-full bg-blue-600"
+                  }`}
+                />
+              </div>
+            </div>
 
-          <div className="w-full bg-gray-200 rounded-full h-2 mb-4 lg:mb-6">
-            <div
-              className={`h-full transition-all duration-500 rounded-full ${step === 1
-                  ? "w-1/3 bg-blue-600"
-                  : step === 2
-                  ? "w-2/3 bg-blue-600"
-                  : "w-full bg-blue-600"}`}
-            />
+            {/* Step content - no extra spacing */}
+            <div className="w-full">
+              {step === 1 && (
+                <Step1
+                  symptoms={symptoms}
+                  onChange={setSymptoms}
+                  onNext={handleAIRecommend}
+                  loading={loadingAI}
+                />
+              )}
+              {step === 2 && (
+                <Step2
+                  doctors={doctors}
+                  selectedDoctorId={selectedDoctorId}
+                  onSelect={setSelectedDoctorId}
+                  loading={fetchingDoctors}
+                  onBack={() => setStep(1)}
+                  onNext={() => setStep(3)}
+                  symptoms={symptoms}
+                  recommendedDoctor={recommendedDoctor}
+                  aiErrorData={aiErrorData}
+                  fallbackUsed={fallbackUsed}
+                />
+              )}
+              {step === 3 && (
+                <Step3
+                  symptoms={symptoms}
+                  doctors={doctors}
+                  selectedDoctorId={selectedDoctorId}
+                  onBack={() => setStep(2)}
+                  onCall={handleStartCall}
+                  onCancel={cancelConsultation}
+                  loading={loadingCall}
+                  waiting={waiting}
+                />
+              )}
+            </div>
           </div>
 
-          <div className="w-full min-w-0">
-            {step === 1 && (
-              <Step1
-                symptoms={symptoms}
-                onChange={setSymptoms}
-                onNext={handleAIRecommend}
-                loading={loadingAI}
-              />
-            )}
-            {step === 2 && (
-              <Step2
-                doctors={doctors}
-                selectedDoctorId={selectedDoctorId}
-                onSelect={setSelectedDoctorId}
-                loading={fetchingDoctors}
-                onBack={() => setStep(1)}
-                onNext={() => setStep(3)}
-                symptoms={symptoms}
+          {/* Tips panel - hidden on mobile, sidebar on desktop */}
+          <div className="hidden lg:block lg:w-80 flex-shrink-0 p-6 bg-gray-50 border-l border-gray-200">
+            <div className="sticky top-6">
+              <TipsPanel
+                step={step}
+                onInsertExample={() => setSymptoms("Головная боль, температура 38.5, слабость, першение в горле")}
                 recommendedDoctor={recommendedDoctor}
                 aiErrorData={aiErrorData}
                 fallbackUsed={fallbackUsed}
               />
-            )}
-            {step === 3 && (
-              <Step3
-                symptoms={symptoms}
-                doctors={doctors}
-                selectedDoctorId={selectedDoctorId}
-                onBack={() => setStep(2)}
-                onCall={handleStartCall}
-                onCancel={cancelConsultation}
-                loading={loadingCall}
-                waiting={waiting}
-              />
-            )}
+            </div>
           </div>
-        </div>
-
-        <div className={`w-full min-w-0 ${
-          step === 2 ? 'xl:col-span-1' : 'xl:col-span-1'
-        }`}>
-          <TipsPanel
-            step={step}
-            onInsertExample={() => setSymptoms("Головная боль, температура 38.5, слабость, першение в горле")}
-            recommendedDoctor={recommendedDoctor}
-            aiErrorData={aiErrorData}
-            fallbackUsed={fallbackUsed}
-          />
         </div>
       </div>
     </div>

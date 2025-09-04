@@ -76,8 +76,8 @@ export const InsuranceStatusCard = ({
           bgColor: 'bg-green-50',
           borderColor: 'border-green-200',
           icon: CheckCircle,
-          text: 'Активен',
-          description: 'Полис действует'
+          text: 'Не активен',
+          description: 'Полис не действует'
         };
       case 'expired':
         return {

@@ -125,7 +125,7 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
             >
               <div className="flex items-center gap-2">
                 <Loader2 className="animate-spin text-blue-600" size={16} />
-                <span className="text-blue-700 font-medium">Пересканирование...</span>
+                <span className="text-blue-700 font-medium text-sm md:text-base">Пересканирование...</span>
               </div>
             </motion.div>
           ) : (
@@ -150,7 +150,7 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
                 ) : (
                   <CheckCircle2 className="text-green-600" size={16} />
                 )}
-                <span className={`font-medium ${
+                <span className={`font-medium text-sm md:text-base ${
                   hasErrors 
                     ? 'text-red-700' 
                     : hasWarnings 
@@ -172,7 +172,7 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
               </div>
               <button
                 onClick={onOpenDetailedCheck}
-                className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1"
+                className="text-blue-600 hover:text-blue-700 text-xs md:text-sm font-medium flex items-center gap-1"
               >
                 <Settings size={14} />
                 {hasErrors || hasWarnings ? 'Исправить' : 'Детали'}
@@ -198,7 +198,7 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
                   }}
                   transition={{ duration: 0.3 }}
                 />
-                <span className="text-gray-600">
+                <span className="text-gray-600 text-xs">
                   Связь: {connectionQuality === 'good' ? 'стабильна' : connectionQuality === 'fair' ? 'средняя' : 'слабая'}
                 </span>
               </div>
@@ -210,7 +210,7 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
                   }}
                   transition={{ duration: 0.3 }}
                 />
-                <span className="text-gray-600">
+                <span className="text-gray-600 text-xs">
                   Камера: {cameraPermission === 'granted' ? 'готова' : 'заблокирована'}
                 </span>
               </div>
@@ -222,7 +222,7 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
                   }}
                   transition={{ duration: 0.3 }}
                 />
-                <span className="text-gray-600">
+                <span className="text-gray-600 text-xs">
                   Микрофон: {micPermission === 'granted' ? 'готов' : 'заблокирован'}
                 </span>
               </div>
@@ -252,7 +252,7 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
       <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
         <div className="flex items-center gap-2 mb-2">
           <Bot className="text-blue-600" size={16} />
-          <span className="text-blue-700 font-medium">ИИ выполняет проверку...</span>
+          <span className="text-blue-700 font-medium text-sm md:text-base">ИИ выполняет проверку...</span>
         </div>
         
         <div className="space-y-2">
@@ -294,7 +294,7 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
                 ) : (
                   <Icon size={14} />
                 )}
-                <span className={isActive ? 'font-medium' : ''}>{check.label}</span>
+                <span className={`${isActive ? 'font-medium' : ''} text-sm`}>{check.label}</span>
                 {isActive && (
                   <div className="flex-1 ml-2">
                     <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
@@ -449,8 +449,9 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
     }
   };
 
-  const TechCheckModal = () => (
-    <AnimatePresence>
+  const TechCheckModal = () => {
+    return (
+      <AnimatePresence>
       {showTechCheck && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -467,7 +468,7 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-bold text-gray-900">Проверка оборудования</h3>
+              <h3 className="text-lg md:text-xl font-bold text-gray-900">Проверка оборудования</h3>
               <button 
                 onClick={() => setShowTechCheck(false)}
                 className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
@@ -480,9 +481,9 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-3">
                   {cameraPermission === 'granted' ? <Camera className="text-green-500" /> : <CameraOff className="text-red-500" />}
-                  <span className="font-medium">Камера</span>
+                  <span className="font-medium text-sm md:text-base">Камера</span>
                 </div>
-                <span className={`text-sm px-2 py-1 rounded-full ${
+                <span className={`text-xs md:text-sm px-2 py-1 rounded-full ${
                   cameraPermission === 'granted' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                 }`}>
                   {cameraPermission === 'granted' ? 'Разрешена' : 'Нет доступа'}
@@ -492,9 +493,9 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-3">
                   {micPermission === 'granted' ? <Volume2 className="text-green-500" /> : <VolumeX className="text-red-500" />}
-                  <span className="font-medium">Микрофон</span>
+                  <span className="font-medium text-sm md:text-base">Микрофон</span>
                 </div>
-                <span className={`text-sm px-2 py-1 rounded-full ${
+                <span className={`text-xs md:text-sm px-2 py-1 rounded-full ${
                   micPermission === 'granted' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                 }`}>
                   {micPermission === 'granted' ? 'Разрешен' : 'Нет доступа'}
@@ -504,9 +505,9 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-3">
                   {getConnectionIcon()}
-                  <span className="font-medium">Интернет</span>
+                  <span className="font-medium text-sm md:text-base">Интернет</span>
                 </div>
-                <span className={`text-sm px-2 py-1 rounded-full ${
+                <span className={`text-xs md:text-sm px-2 py-1 rounded-full ${
                   connectionQuality === 'good' 
                     ? 'bg-green-100 text-green-700' 
                     : connectionQuality === 'fair' 
@@ -523,8 +524,8 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
                 <div className="flex items-start gap-2">
                   <AlertCircle className="text-yellow-600 flex-shrink-0 mt-0.5" size={16} />
                   <div className="text-sm">
-                    <p className="font-medium text-yellow-800 mb-1">Требуется доступ</p>
-                    <p className="text-yellow-700">
+                    <p className="font-medium text-yellow-800 mb-1 text-sm md:text-base">Требуется доступ</p>
+                    <p className="text-yellow-700 text-xs md:text-sm">
                       Разрешите доступ к камере и микрофону в настройках браузера для видеоконсультации
                     </p>
                   </div>
@@ -534,40 +535,42 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
 
             <button
               onClick={checkMediaPermissions}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm md:text-base"
             >
               Проверить снова
             </button>
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
-  );
+      </AnimatePresence>
+    );
+  };
 
   return (
-    <motion.div
-      className="space-y-8 w-full"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-    >
-      {/* Header */}
+    <div className="min-h-full flex flex-col">
       <motion.div
-        initial={{ opacity: 0, y: -10 }}
+        className="flex-1 p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 w-full"
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="text-center space-y-2"
+        transition={{ duration: 0.4 }}
       >
-        <h2 className="text-3xl font-bold text-gray-900 flex items-center justify-center gap-3">
-          <div className="p-2 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 text-white">
-            <CheckCircle2 size={24} />
-          </div>
-          Все готово для консультации
-        </h2>
-        <p className="text-gray-600">
-          Проверьте информацию и начните видеоконсультацию с врачом
-        </p>
-      </motion.div>
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="text-center space-y-3"
+        >
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 text-white">
+              <CheckCircle2 size={20} />
+            </div>
+            Все готово для консультации
+          </h2>
+          <p className="text-gray-600 text-sm md:text-base leading-relaxed">
+            Проверьте информацию и начните видеоконсультацию с врачом
+          </p>
+        </motion.div>
 
       {/* Progress Steps */}
       <motion.div
@@ -576,12 +579,12 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
         transition={{ delay: 0.2 }}
         className="bg-white border border-gray-200 rounded-2xl p-6"
       >
-        <h3 className="font-semibold text-gray-900 mb-6 flex items-center gap-2">
+        <h3 className="font-semibold text-gray-900 mb-4 md:mb-6 flex items-center gap-2 text-base md:text-lg">
           <FileText size={20} />
           Сводка консультации
         </h3>
 
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
           {steps.map((step, index) => {
             const Icon = step.icon;
             const status = getStepStatus(step.id);
@@ -606,19 +609,19 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-2">
-                    <h4 className="font-medium text-gray-900">{step.label}</h4>
+                    <h4 className="font-medium text-gray-900 text-sm md:text-base">{step.label}</h4>
                     {status === "current" && (
                       <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
                         Активный шаг
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-gray-600 mb-2">{step.description}</p>
+                  <p className="text-xs md:text-sm text-gray-600 mb-2">{step.description}</p>
                   
                   <div className="text-sm">
                     {step.key === "symptoms" && (
                       <div className="p-3 bg-gray-50 rounded-lg">
-                        <p className="text-gray-700 line-clamp-3">{symptoms}</p>
+                        <p className="text-gray-700 line-clamp-3 text-sm md:text-base">{symptoms}</p>
                       </div>
                     )}
                     {step.key === "doctor" && doctor && (
@@ -627,8 +630,8 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
                           {doctor.avatar || doctor.name.charAt(0)}
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{doctor.name}</p>
-                          <p className="text-sm text-blue-600">{doctor.doctor_type}</p>
+                          <p className="font-medium text-gray-900 text-sm md:text-base">{doctor.name}</p>
+                          <p className="text-xs md:text-sm text-blue-600">{doctor.doctor_type}</p>
                           {doctor.rating && (
                             <div className="flex items-center gap-1 mt-1">
                               <Star className="fill-yellow-400 text-yellow-400" size={12} />
@@ -668,15 +671,15 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
         <div className="flex items-start gap-3">
           <Shield className="text-blue-600 flex-shrink-0 mt-1" size={20} />
           <div className="space-y-3">
-            <h3 className="font-semibold text-blue-900">Важная информация</h3>
-            <div className="grid md:grid-cols-2 gap-4 text-sm text-blue-800">
+            <h3 className="font-semibold text-blue-900 text-sm md:text-base">Важная информация</h3>
+            <div className="grid md:grid-cols-2 gap-3 md:gap-4 text-xs md:text-sm text-blue-800">
               <div className="flex items-start gap-2">
                 <Clock size={14} className="mt-0.5 flex-shrink-0" />
-                <span>Средняя продолжительность консультации: 15-30 минут</span>
+                <span>Средняя продолжительность: 15-30 минут</span>
               </div>
               <div className="flex items-start gap-2">
                 <Info size={14} className="mt-0.5 flex-shrink-0" />
-                <span>Консультация будет записана для вашей медицинской карты</span>
+                <span>Консультация записывается в мед. карту</span>
               </div>
               <div className="flex items-start gap-2">
                 <Calendar size={14} className="mt-0.5 flex-shrink-0" />
@@ -702,7 +705,7 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
           onClick={onBack}
           whileHover={{ x: -3 }}
           whileTap={{ scale: 0.97 }}
-          className="flex items-center gap-2 px-5 py-3 rounded-xl font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition-all"
+          className="flex items-center gap-2 px-4 md:px-5 py-2.5 md:py-3 rounded-xl font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition-all text-sm md:text-base"
         >
           <ArrowLeft size={16} />
           Изменить данные
@@ -713,7 +716,7 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
           disabled={loading || !selectedDoctorId || waiting}
           whileTap={!loading && !waiting ? { scale: 0.97 } : {}}
           whileHover={!loading && !waiting ? { scale: 1.02 } : {}}
-          className={`flex items-center gap-3 px-8 py-4 rounded-xl font-bold text-lg transition-all min-w-[200px] justify-center ${
+          className={`flex items-center gap-2 md:gap-3 px-6 md:px-8 py-3 md:py-4 rounded-xl font-bold text-base md:text-lg transition-all min-w-[160px] md:min-w-[200px] justify-center ${
             loading || waiting
               ? "bg-gray-300 text-gray-500 cursor-not-allowed"
               : "bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:shadow-lg hover:shadow-green-500/25"
@@ -754,10 +757,10 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
                 <div className="w-3 h-3 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
               </div>
               <div>
-                <h3 className="font-semibold text-yellow-900 mb-1">
+                <h3 className="font-semibold text-yellow-900 mb-1 text-sm md:text-base">
                   Ожидаем подключения врача
                 </h3>
-                <p className="text-sm text-yellow-700">
+                <p className="text-xs md:text-sm text-yellow-700">
                   Доктор {doctor?.name} скоро подключится к видеоконсультации
                 </p>
                 <p className="text-xs text-yellow-600 mt-2">
@@ -766,7 +769,7 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
               </div>
               <button
                 onClick={onCancel}
-                className="text-red-600 hover:text-red-700 text-sm font-medium underline transition-colors"
+                className="text-red-600 hover:text-red-700 text-xs md:text-sm font-medium underline transition-colors"
               >
                 Отменить консультацию
               </button>
@@ -777,6 +780,7 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
 
       <TechCheckModal />
     </motion.div>
+    </div>
   );
 };
 

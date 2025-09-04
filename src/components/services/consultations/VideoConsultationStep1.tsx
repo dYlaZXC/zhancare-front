@@ -111,9 +111,9 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
   };
 
   return (
-    <div className="min-h-full flex flex-col">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-100">
       <motion.div
-        className="flex-1 p-4 md:p-6 lg:p-8 w-full space-y-4 md:space-y-6"
+        className="p-4 md:p-6 space-y-4 md:space-y-6"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
@@ -125,7 +125,7 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
             Шаг 1 из 3 • ~2 минуты
           </div>
           <div className="text-gray-500">
-            {charCount}/{maxChars} символов
+            {charCount}/{maxChars}
           </div>
         </div>
 
@@ -136,12 +136,12 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
           transition={{ delay: 0.1 }}
           className="space-y-3"
         >
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-3">
+          <h3 className="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-3">
             <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
-              <Sparkles size={20} />
+              <Sparkles size={16} />
             </div>
             Расскажите о ваших симптомах
-          </h2>
+          </h3>
           <p className="text-gray-600 leading-relaxed text-sm md:text-base">
             Чем подробнее вы опишете симптомы, тем лучше мы сможем подобрать подходящего специалиста. 
             Укажите когда началось, что беспокоит, интенсивность.
@@ -259,9 +259,6 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* Spacer to push buttons to bottom */}
-        <div className="flex-1 min-h-4"></div>
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-100">

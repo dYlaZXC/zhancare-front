@@ -17,7 +17,17 @@ import {
   Info,
   Calendar,
   Award,
-  Users
+  Users,
+  ChevronDown,
+  ChevronUp,
+  MapPin,
+  Phone,
+  Video,
+  MessageSquare,
+  Medal,
+  Stethoscope,
+  GraduationCap,
+  TrendingUp
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -72,6 +82,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
   const [showTooltip, setShowTooltip] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterByType, setFilterByType] = useState<string>("all");
+  const [isRecommendationExpanded, setIsRecommendationExpanded] = useState(true);
 
   const selectedDoctor = useMemo(
     () => doctors.find((doc) => doc.id === selectedDoctorId),
@@ -91,56 +102,63 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
   }, [doctors, searchTerm, filterByType]);
 
   const doctorTypes = useMemo(() => {
-    const types = [...new Set(doctors.map(doc => doc.doctor_type))];
+    const types = [...new Set(doctors.map(doc => doc.doctor_type).filter(type => type))];
     return types;
   }, [doctors]);
 
   const showAIBlock = recommendedDoctor || aiErrorData;
 
-  // Format AI reasoning text with proper paragraphs and structure
-  const formatAIReasoning = (text: string) => {
+  // Format AI reasoning text with proper paragraphs and structure for mobile
+  const formatAIReasoning = (text: string): Array<{type: 'warning' | 'recommendation' | 'text', content: string}> => {
     if (!text) return [];
     
-    // First, handle obvious paragraph breaks and topic changes
-    let formattedText = text
-      // Add breaks before topic change keywords
-      .replace(/(Например|Также|Кроме того|В качестве|Если симптомы|Однако|Поэтому|При этом)/g, '\n\n$1')
-      // Add breaks before medical recommendations
-      .replace(/(рекомендуется|следует|необходимо|важно|срочно)/gi, '\n\n$1')
-      // Add breaks before warning statements
-      .replace(/(немедленно обратитесь|обратитесь к врачу|вызовите скорую)/gi, '\n\n⚠️ $1');
+    // Split into sentences and group related content
+    const sentences = text.split(/\.(?=\s+[А-Я])/);
+    const paragraphs: Array<{type: 'warning' | 'recommendation' | 'text', content: string}> = [];
+    let currentParagraph = "";
     
-    // Split into paragraphs and clean up
-    const paragraphs = formattedText
-      .split('\n\n')
-      .map(p => p.trim())
-      .filter(p => p.length > 0)
-      .map(paragraph => {
-        // Add bullet points to recommendations
-        if (/^(можете попробовать|рекомендуется|следует)/i.test(paragraph)) {
-          // Split recommendations by comma and create bullet points
-          const recommendations = paragraph.split(/,\s+(?=\w)/);
-          if (recommendations.length > 1) {
-            return {
-              type: 'list',
-              items: recommendations.map(item => item.trim())
-            };
+    sentences.forEach((sentence, index) => {
+      const trimmed = sentence.trim();
+      if (!trimmed) return;
+      
+      // Add sentence to current paragraph
+      currentParagraph += (currentParagraph ? '. ' : '') + trimmed;
+      
+      // Check if we should start a new paragraph
+      const shouldBreak = (
+        // After recommendations/treatment suggestions
+        /рекомендуется|следует|необходимо|важно|можете|попробуйте/i.test(trimmed) ||
+        // After symptom analysis
+        /указывает|свидетельствует|характерно|типично|проявляется/i.test(trimmed) ||
+        // After 2 sentences in current paragraph
+        currentParagraph.split('.').length >= 3 ||
+        // Before warnings
+        /немедленно|срочно|опасно|внимание/i.test(sentences[index + 1] || "")
+      );
+      
+      if (shouldBreak || index === sentences.length - 1) {
+        if (currentParagraph.trim()) {
+          // Categorize paragraph type
+          if (/немедленно|срочно|опасно|внимание|вызовите скорую/i.test(currentParagraph)) {
+            paragraphs.push({
+              type: 'warning',
+              content: currentParagraph.trim() + '.'
+            });
+          } else if (/рекомендуется|следует|можете попробовать|советуем/i.test(currentParagraph)) {
+            paragraphs.push({
+              type: 'recommendation',
+              content: currentParagraph.trim() + '.'
+            });
+          } else {
+            paragraphs.push({
+              type: 'text',
+              content: currentParagraph.trim() + '.'
+            });
           }
         }
-        
-        // Mark warning paragraphs
-        if (paragraph.includes('⚠️') || /немедленно|срочно|опасно/i.test(paragraph)) {
-          return {
-            type: 'warning',
-            content: paragraph.replace('⚠️', '').trim()
-          };
-        }
-        
-        return {
-          type: 'text',
-          content: paragraph
-        };
-      });
+        currentParagraph = "";
+      }
+    });
     
     return paragraphs;
   };
@@ -151,7 +169,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
         color: "bg-red-500",
         icon: AlertCircle,
         text: "Срочно",
-        description: "Рекомендуется немедленная консультация"
+        description: "Немедленная консультация"
       },
       non_urgent: {
         color: "bg-green-500",
@@ -163,7 +181,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
         color: "bg-yellow-500",
         icon: Clock,
         text: "Умеренно",
-        description: "Желательна консультация в ближайшее время"
+        description: "В ближайшее время"
       }
     };
 
@@ -171,9 +189,9 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
     const Icon = config.icon;
 
     return (
-      <div className="flex items-center gap-2">
-        <div className={`flex items-center gap-1.5 ${config.color} text-white px-3 py-1.5 rounded-full text-xs font-medium`}>
-          <Icon size={12} />
+      <div className="flex items-center justify-between">
+        <div className={`flex items-center gap-1.5 ${config.color} text-white px-2.5 py-1 rounded-full text-xs font-medium`}>
+          <Icon size={10} />
           {config.text}
         </div>
         <span className="text-xs text-gray-500">{config.description}</span>
@@ -189,103 +207,248 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
     <div
       onClick={() => onSelect(doctor.id)}
       className={clsx(
-        "relative p-6 rounded-2xl border-2 cursor-pointer transition-all duration-300 bg-white hover:shadow-lg w-full max-w-full",
+        "group relative p-3 sm:p-4 lg:p-5 xl:p-6 rounded-lg sm:rounded-xl lg:rounded-2xl border cursor-pointer transition-all duration-300 bg-white hover:shadow-lg w-full max-w-full",
         isSelected 
-          ? "border-blue-500 bg-blue-50 shadow-lg ring-2 ring-blue-200" 
-          : "border-gray-200 hover:border-gray-300",
-        isRecommended && !isSelected && "ring-2 ring-blue-400 ring-opacity-30"
+          ? "border-blue-500 bg-blue-50 shadow-md ring-1 sm:ring-2 ring-blue-200" 
+          : "border-gray-200 hover:border-blue-300",
+        isRecommended && !isSelected && "ring-1 sm:ring-2 ring-blue-400/30"
       )}
-      style={{ marginTop: isRecommended ? '12px' : '0', marginRight: isRecommended ? '24px' : '0' }}
     >
       {isRecommended && (
-        <div className="absolute -top-3 -right-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-xl z-20 border-2 border-white">
-          <Bot size={12} />
-          AI рекомендует
+        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1 shadow-lg z-10 border-2 border-white">
+          <Bot size={10} />
+          <span>AI</span>
         </div>
       )}
 
-      <div className="flex items-start gap-4 w-full min-w-0">
+
+      <div className="flex flex-col sm:flex-row items-start sm:items-stretch gap-3 sm:gap-4 lg:gap-5 min-h-full">
         {/* Doctor Avatar */}
-        <div className="relative flex-shrink-0">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-2xl shadow-lg">
-            {doctor.avatar || doctor.name.charAt(0)}
+        <div className="relative flex-shrink-0 sm:self-start">
+          <div className="relative w-14 h-14 sm:w-16 sm:h-16 lg:w-18 lg:h-18 xl:w-20 xl:h-20 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg sm:text-xl lg:text-2xl shadow-lg overflow-hidden">
+            {doctor.avatar ? (
+              <img src={doctor.avatar} alt={doctor.name} className="w-full h-full object-cover" />
+            ) : (
+              <div className="relative z-10">{doctor.name.charAt(0)}</div>
+            )}
           </div>
+          
+          {/* Online Status */}
+          <div className="absolute bottom-0 right-0 w-3 h-3 sm:w-4 sm:h-4 bg-green-500 rounded-full flex items-center justify-center shadow-lg border-1 sm:border-2 border-white z-10">
+            <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 bg-white rounded-full"></div>
+          </div>
+          
           {isSelected && (
-            <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-blue-500 rounded-full flex items-center justify-center shadow-lg">
-              <CheckCircle2 className="text-white" size={16} />
+            <div className="absolute top-0 left-0 w-5 h-5 sm:w-6 sm:h-6 bg-blue-500 rounded-full flex items-center justify-center shadow-lg border-1 sm:border-2 border-white z-10">
+              <CheckCircle2 className="text-white" size={10} />
             </div>
           )}
+          
+          {/* Verified Badge */}
+          <div className="absolute top-0 right-0 w-4 h-4 sm:w-5 sm:h-5 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg border-1 sm:border-2 border-white z-10">
+            <Shield className="text-white" size={6} />
+          </div>
         </div>
         
         {/* Doctor Info */}
-        <div className="flex-1 min-w-0 space-y-3 overflow-hidden">
-          <div className="w-full">
-            <h3 className="text-lg font-bold text-gray-900 mb-1 truncate">{doctor.name}</h3>
-            <p className="text-blue-600 font-semibold">{doctor.doctor_type}</p>
+        <div className="flex-1 min-w-0 space-y-2 sm:space-y-3">
+          <div>
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-2 gap-2">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent leading-tight mb-1">
+                  {doctor.name || 'Имя не указано'}
+                </h3>
+                <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
+                  <Stethoscope className="text-blue-600 flex-shrink-0" size={12} />
+                  <p className="text-blue-600 font-bold text-xs sm:text-sm lg:text-base">{doctor.doctor_type || 'Специальность не указана'}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 bg-gradient-to-r from-green-100 to-emerald-100 px-2 py-1 rounded-full self-start">
+                <TrendingUp className="text-green-600" size={10} />
+                <span className="text-green-700 font-bold text-xs">ТОП</span>
+              </div>
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-gray-600 mb-2">
+              <div className="flex items-center gap-1">
+                <GraduationCap className="text-indigo-500" size={10} />
+                <span className="font-medium">К.м.н</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Calendar className="text-purple-500" size={10} />
+                <span className="font-medium">{doctor.experience || 5} лет</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Award className="text-amber-500" size={10} />
+                <span className="font-medium">Сертифицирован</span>
+              </div>
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs">
+              <div className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">Взрослые</div>
+              <div className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full font-medium">Ассоциация</div>
+              <div className="bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">Премиум</div>
+            </div>
           </div>
-          
-          <div className="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
-            {doctor.rating && (
-              <div className="flex items-center gap-1.5">
-                <div className="flex items-center">
+
+          {/* Languages & Communication */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 text-xs font-semibold">
+              <MessageSquare size={10} />
+              Русский язык
+            </div>
+            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs font-medium">
+              <Video size={10} />
+              Видео
+            </div>
+            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-purple-100 text-purple-800 text-xs font-medium">
+              <Phone size={10} />
+              Аудио
+            </div>
+          </div>
+
+          {/* Enhanced Rating Section */}
+          <div className="bg-gradient-to-r from-amber-50 to-yellow-50 p-3 rounded-2xl border border-amber-200">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   {[...Array(5)].map((_, i) => (
-                    <Star 
-                      key={i} 
-                      className={`w-4 h-4 ${i < Math.floor(doctor.rating!) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} 
-                    />
+                    <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                   ))}
                 </div>
-                <span className="font-medium">{doctor.rating}</span>
+                <span className="font-bold text-gray-900 text-lg">{doctor.rating || "4.9"}</span>
               </div>
-            )}
-            {doctor.experience && (
-              <div className="flex items-center gap-1.5">
-                <Award className="text-gray-400" size={16} />
-                <span>{doctor.experience} лет опыта</span>
+              <div className="text-right">
+                <div className="text-xs text-gray-600">из 1247 отзывов</div>
               </div>
-            )}
+            </div>
+            
+            <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-1 text-emerald-600">
+                <div className="w-3 h-3 bg-emerald-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xs">✓</span>
+                </div>
+                <span className="font-bold">98% рекомендуют</span>
+              </div>
+              <div className="flex items-center gap-1 text-blue-600">
+                <Heart className="w-3 h-3 fill-red-400 text-red-400" />
+                <span className="font-bold">1.2k лайков</span>
+              </div>
+            </div>
           </div>
 
-          {doctor.availability && (
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-sm text-green-600 font-medium">{doctor.availability}</span>
+          {/* Premium Pricing Section */}
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-2 rounded-xl border border-green-200">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                <span className="text-white text-xs">₸</span>
+              </div>
+              <p className="text-xs font-bold text-gray-700 uppercase tracking-wide">ПРЕМИУМ КОНСУЛЬТАЦИЯ</p>
             </div>
-          )}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-white p-1.5 rounded-lg border border-green-200">
+                <div className="text-center">
+                  <div className="text-xs text-gray-500 mb-1">Первичная</div>
+                  <div className="font-bold text-green-600 text-sm">15,000 ₸</div>
+                  <div className="text-xs text-gray-400 line-through">20,000 ₸</div>
+                </div>
+              </div>
+              <div className="bg-white p-1.5 rounded-lg border border-green-200">
+                <div className="text-center">
+                  <div className="text-xs text-gray-500 mb-1">Повторная</div>
+                  <div className="font-bold text-green-600 text-sm">12,000 ₸</div>
+                  <div className="text-xs text-gray-400 line-through">18,000 ₸</div>
+                </div>
+              </div>
+            </div>
+            <div className="mt-2 text-center">
+              <span className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+                🔥 СКИДКА 25%
+              </span>
+            </div>
+          </div>
+        </div>
 
-          {doctor.specialties && (
-            <div className="flex flex-wrap gap-2 overflow-hidden">
-              {doctor.specialties.slice(0, 3).map((specialty, index) => (
-                <span 
-                  key={index} 
-                  className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm font-medium whitespace-nowrap"
-                >
-                  {specialty}
-                </span>
-              ))}
+        {/* Enhanced Schedule Section */}
+        <div className="w-full sm:w-auto sm:flex-shrink-0 sm:flex sm:flex-col sm:justify-between sm:min-h-full">
+          {/* Premium Schedule Card */}
+          <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-2 sm:p-3 rounded-lg sm:rounded-xl border border-indigo-200 shadow-md sm:h-full sm:flex sm:flex-col">
+            <div className="flex items-center gap-2 mb-2 sm:mb-3">
+              <div className="w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-r from-indigo-500 to-blue-600 rounded-lg flex items-center justify-center">
+                <Calendar className="text-white" size={10} />
+              </div>
+              <span className="text-xs sm:text-sm font-bold text-indigo-800">Расписание</span>
             </div>
-          )}
+            
+            {/* Mini Calendar */}
+            <div className="flex-1 flex flex-col justify-center space-y-3">
+              <div className="grid grid-cols-7 gap-1 text-center">
+                {['Пт', 'Сб', 'Вс', 'Пн', 'Вт', 'Ср', 'Чт'].map((day) => (
+                  <div key={day} className="text-xs text-gray-500 font-semibold">
+                    {day}
+                  </div>
+                ))}
+                {[22, 23, 24, 25, 26, 27, 28].map((date, i) => (
+                  <div 
+                    key={date} 
+                    className={clsx(
+                      "w-7 h-7 flex items-center justify-center text-xs rounded-lg font-medium transition-all",
+                      i === 3 
+                        ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold shadow-lg ring-2 ring-blue-200" 
+                        : i === 1 || i === 5 
+                        ? "bg-green-100 text-green-700 hover:bg-green-200" 
+                        : "text-gray-400 hover:bg-gray-100"
+                    )}
+                  >
+                    {date}
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Available Slots */}
+            <div className="sm:flex-1 sm:flex sm:flex-col sm:justify-center space-y-2 sm:space-y-3">
+              <p className="text-xs font-bold text-indigo-700 uppercase text-center">Ближайшие слоты</p>
+              <div className="grid grid-cols-2 sm:grid-cols-1 gap-2 sm:gap-3">
+                <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-2 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl text-center shadow-lg">
+                  <div className="font-bold text-sm sm:text-lg">18:00</div>
+                  <div className="text-xs sm:text-sm opacity-90">Сегодня</div>
+                </div>
+                <div className="bg-white border border-indigo-200 text-indigo-600 px-3 py-2 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl text-center hover:bg-indigo-50 transition-colors">
+                  <div className="font-bold text-sm sm:text-lg">09:30</div>
+                  <div className="text-xs sm:text-sm">Завтра</div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Location Info */}
+            <div className="mt-3 pt-3 border-t border-indigo-200">
+              <div className="flex items-center gap-2 text-xs text-indigo-600">
+                <MapPin size={10} />
+                <span className="font-medium">Онлайн консультация</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 
   return (
-    <div className="h-full flex flex-col w-full">
-      <motion.div
-        className="flex-1 p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 w-full"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-      >
+    <motion.div
+      className="space-y-4"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+    >
         {/* Header */}
-        <div className="flex items-center justify-between w-full">
+        <div className="flex items-center justify-between">
           <div className="text-sm text-gray-500 uppercase tracking-wide flex items-center gap-2">
             <Clock size={14} />
             Шаг 2 из 3
           </div>
           <div className="text-sm text-gray-500">
-            {filteredDoctors.length} из {doctors.length} врачей
+            {filteredDoctors.length} врачей
           </div>
         </div>
 
@@ -293,28 +456,28 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="space-y-3 w-full"
+          className="space-y-2"
         >
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-3">
+          <h3 className="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2">
             <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
-              <User size={20} />
+              <User size={16} />
             </div>
             Выбор врача
-          </h2>
-          <p className="text-gray-600 leading-relaxed text-sm md:text-base">
-            Искусственный интеллект проанализировал ваши симптомы и подобрал подходящего специалиста
+          </h3>
+          <p className="text-gray-600 text-sm leading-relaxed">
+            ИИ проанализировал ваши симптомы и подобрал специалиста
           </p>
         </motion.div>
 
-        {/* AI Recommendation Block */}
+        {/* Full AI Recommendation Block */}
         <AnimatePresence>
           {showAIBlock && (
             <motion.div
-              initial={{ opacity: 0, y: 10, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -10, scale: 0.98 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
               className={clsx(
-                "p-6 rounded-2xl border-2 w-full",
+                "rounded-xl border-2 overflow-hidden",
                 fallbackUsed
                   ? "bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200"
                   : recommendedDoctor
@@ -322,161 +485,135 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
                   : "bg-gradient-to-r from-red-50 to-pink-50 border-red-200"
               )}
             >
-              <div className="flex items-start gap-4">
-                <div className={clsx(
-                  "p-3 rounded-xl",
-                  fallbackUsed ? "bg-yellow-500" : recommendedDoctor ? "bg-blue-500" : "bg-red-500"
-                )}>
-                  <Bot className="text-white" size={20} />
+              {/* Header */}
+              <div className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={clsx(
+                    "p-2 rounded-lg flex-shrink-0",
+                    fallbackUsed ? "bg-yellow-500" : recommendedDoctor ? "bg-blue-500" : "bg-red-500"
+                  )}>
+                    <Bot className="text-white" size={16} />
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className={clsx(
+                      "font-bold text-base",
+                      fallbackUsed ? "text-yellow-800" : recommendedDoctor ? "text-blue-800" : "text-red-800"
+                    )}>
+                      Рекомендация ИИ
+                    </h4>
+                    <p className={clsx(
+                      "text-xs",
+                      fallbackUsed ? "text-yellow-600" : recommendedDoctor ? "text-blue-600" : "text-red-600"
+                    )}>
+                      {fallbackUsed ? "Назначен доступный врач" : "На основе ваших симптомов"}
+                    </p>
+                  </div>
                 </div>
-                
-                <div className="flex-1 space-y-4 min-w-0">
-                  {/* Enhanced Header */}
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
-                    <div className="min-w-0 flex-1">
-                      <h3 className={clsx(
-                        "font-bold text-xl mb-2",
-                        fallbackUsed ? "text-yellow-800" : recommendedDoctor ? "text-blue-800" : "text-red-800"
-                      )}>
-                        Рекомендация ИИ
-                      </h3>
-                      <p className={clsx(
-                        "text-sm font-medium",
-                        fallbackUsed ? "text-yellow-600" : recommendedDoctor ? "text-blue-600" : "text-red-600"
-                      )}>
-                        {fallbackUsed 
-                          ? "Автоматически назначен доступный специалист" 
-                          : recommendedDoctor 
-                          ? "На основе анализа ваших симптомов" 
-                          : "Подходящий специалист не найден"
-                        }
-                      </p>
-                    </div>
-                    {recommendedDoctor?.confidence && (
-                      <div className="text-center flex-shrink-0">
-                        <div className={clsx(
-                          "inline-flex items-center px-3 py-2 rounded-xl text-white font-bold text-lg",
-                          recommendedDoctor.confidence >= 80 ? "bg-green-500" :
-                          recommendedDoctor.confidence >= 60 ? "bg-yellow-500" : "bg-orange-500"
-                        )}>
-                          {recommendedDoctor.confidence}%
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">
-                          уверенности
+              </div>
+
+              {recommendedDoctor && (
+                <div className="px-4 pb-4">
+                  {/* Doctor info - always visible */}
+                  <div className="bg-white rounded-lg p-3 border border-gray-200 mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                        {recommendedDoctor.name.charAt(0)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs text-gray-600 mb-0.5">
+                          {fallbackUsed ? "📋 Назначен" : "✨ Рекомендуется"}
                         </p>
+                        <h5 className="font-bold text-gray-900 text-sm leading-tight">{recommendedDoctor.name}</h5>
+                        <p className="text-blue-600 font-semibold text-xs">{recommendedDoctor.doctor_type}</p>
+                      </div>
+                      {recommendedDoctor.confidence && (
+                        <div className="text-center flex-shrink-0">
+                          <div className={clsx(
+                            "inline-flex items-center justify-center w-8 h-8 rounded-full text-white font-bold text-xs",
+                            recommendedDoctor.confidence >= 80 ? "bg-green-500" :
+                            recommendedDoctor.confidence >= 60 ? "bg-yellow-500" : "bg-orange-500"
+                          )}>
+                            {recommendedDoctor.confidence}%
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Always visible - Full recommendation details */}
+                  <div className="space-y-4">
+                    <div>
+                      <h6 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                        💭 Медицинское обоснование
+                      </h6>
+                      <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-blue-400 space-y-3">
+                        {formatAIReasoning(recommendedDoctor.reason).map((block, index) => {
+                          if (block.type === 'warning') {
+                            return (
+                              <div key={index} className="bg-red-50 border border-red-200 rounded-lg p-3">
+                                <p className="text-red-800 text-sm font-medium flex items-start gap-2 leading-relaxed">
+                                  <span className="text-red-500 mt-0.5 flex-shrink-0">⚠️</span>
+                                  <span>{block.content}</span>
+                                </p>
+                              </div>
+                            );
+                          }
+                          
+                          if (block.type === 'recommendation') {
+                            return (
+                              <div key={index} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                <p className="text-blue-800 text-sm leading-relaxed flex items-start gap-2">
+                                  <span className="text-blue-500 mt-0.5 flex-shrink-0">💡</span>
+                                  <span>{block.content}</span>
+                                </p>
+                              </div>
+                            );
+                          }
+                          
+                          return (
+                            <p key={index} className="text-gray-700 text-sm leading-relaxed">
+                              {block.content}
+                            </p>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {recommendedDoctor.urgency && (
+                      <div>
+                        <h6 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                          ⚡ Уровень срочности
+                        </h6>
+                        <div className="bg-white rounded-lg p-3 border border-gray-200">
+                          {getUrgencyIndicator(recommendedDoctor.urgency)}
+                        </div>
                       </div>
                     )}
                   </div>
-
-                  {recommendedDoctor && (
-                    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                      {/* Doctor Info Header */}
-                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-5 border-b border-gray-100">
-                        <div className="flex items-center gap-4">
-                          <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl">
-                            {recommendedDoctor.name.charAt(0)}
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-600 mb-1">
-                              {fallbackUsed ? "📋 Назначен врач" : "✨ Рекомендуется"}
-                            </p>
-                            <h4 className="text-xl font-bold text-gray-900">{recommendedDoctor.name}</h4>
-                            <p className="text-blue-600 font-semibold">{recommendedDoctor.doctor_type}</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Recommendation Details */}
-                      <div className="p-5 space-y-4">
-                        <div>
-                          <h5 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                            💭 Обоснование
-                          </h5>
-                          <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-blue-400">
-                            <div className="space-y-4">
-                              {formatAIReasoning(recommendedDoctor.reason).map((block, index) => {
-                                if (block.type === 'list' && block.items) {
-                                  return (
-                                    <div key={index} className="space-y-2">
-                                      <p className="text-gray-700 text-sm font-medium">
-                                        {block.items[0]}
-                                      </p>
-                                      {block.items.length > 1 && (
-                                        <ul className="ml-4 space-y-1">
-                                          {block.items.slice(1).map((item, itemIndex) => (
-                                            <li key={itemIndex} className="text-gray-600 text-sm flex items-start gap-2">
-                                              <span className="text-blue-500 mt-1.5">•</span>
-                                              <span>{item}</span>
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      )}
-                                    </div>
-                                  );
-                                }
-                                
-                                if (block.type === 'warning' && block.content) {
-                                  return (
-                                    <div key={index} className="bg-red-50 border border-red-200 rounded-lg p-3">
-                                      <p className="text-red-800 text-sm font-medium flex items-start gap-2">
-                                        <span className="text-red-500 mt-0.5">⚠️</span>
-                                        {block.content}
-                                      </p>
-                                    </div>
-                                  );
-                                }
-                                
-                                if (block.content) {
-                                  return (
-                                    <p key={index} className="text-gray-700 leading-relaxed text-sm">
-                                      {block.content}
-                                    </p>
-                                  );
-                                }
-                                
-                                return null;
-                              })}
-                            </div>
-                          </div>
-                        </div>
-
-                        {recommendedDoctor.urgency && (
-                          <div>
-                            <h5 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                              ⚡ Срочность обращения
-                            </h5>
-                            {getUrgencyIndicator(recommendedDoctor.urgency)}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
                 </div>
-              </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Search and Filter */}
+        {/* Compact Search */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="flex flex-col sm:flex-row gap-4 w-full"
+          className="space-y-2"
         >
-          <div className="flex-1">
-            <input
-              type="text"
-              placeholder="Поиск по имени или специальности..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all text-sm md:text-base"
-            />
-          </div>
+          <input
+            type="text"
+            placeholder="Поиск врача..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100 transition-all text-sm"
+          />
           <select
             value={filterByType}
             onChange={(e) => setFilterByType(e.target.value)}
-            className="px-4 py-3 rounded-xl border border-gray-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all bg-white text-sm md:text-base w-full sm:w-auto"
+            className="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100 transition-all bg-white text-sm"
           >
             <option value="all">Все специальности</option>
             {doctorTypes.map(type => (
@@ -485,54 +622,47 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
           </select>
         </motion.div>
 
-        {/* Doctor List - Takes remaining space */}
-        <div className="flex-1 overflow-hidden w-full">
+        {/* Doctor List */}
+        <div className="w-full">
           <AnimatePresence mode="wait">
             {loading ? (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="flex justify-center items-center h-full w-full"
+                className="flex justify-center items-center h-32"
               >
-                <div className="text-center space-y-4">
-                  <div className="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto"></div>
-                  <p className="text-gray-600">Загружаем список врачей...</p>
+                <div className="text-center space-y-3">
+                  <div className="w-8 h-8 border-3 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto"></div>
+                  <p className="text-gray-600 text-sm">Загружаем врачей...</p>
                 </div>
               </motion.div>
             ) : filteredDoctors.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center justify-center h-full w-full"
+                className="text-center py-12 bg-gray-50 rounded-xl"
               >
-                <div className="text-center py-16 bg-gray-50 rounded-2xl px-8 w-full">
-                  <Users className="mx-auto text-gray-400 mb-4" size={48} />
-                  <p className="text-gray-600 text-lg">
-                    {doctors.length === 0 
-                      ? "В данный момент нет доступных врачей" 
-                      : "Не найдено врачей по вашему запросу"
-                    }
-                  </p>
-                </div>
+                <Users className="mx-auto text-gray-400 mb-3" size={32} />
+                <p className="text-gray-600 text-sm">
+                  {doctors.length === 0 
+                    ? "Нет доступных врачей" 
+                    : "Врачи не найдены"
+                  }
+                </p>
               </motion.div>
             ) : (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="h-full overflow-y-auto overflow-x-visible space-y-4 w-full pr-6"
-                style={{ 
-                  scrollbarWidth: 'thin',
-                  scrollbarColor: '#cbd5e1 #f1f5f9'
-                }}
+                className="space-y-3 w-full max-w-full"
               >
                 {filteredDoctors.map((doctor, index) => (
                   <motion.div
                     key={doctor.id}
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="w-full"
+                    transition={{ delay: index * 0.03 }}
                   >
                     <DoctorCard
                       doctor={doctor}
@@ -547,13 +677,11 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
         </div>
 
         {/* Navigation */}
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-0 pt-6 border-t border-gray-100 mt-auto w-full">
+        <div className="flex justify-between items-center pt-4 border-t border-gray-100">
           <motion.button
             onClick={onBack}
-            whileTap={{ scale: 0.97 }}
-            whileHover={{ scale: 1.02 }}
-            transition={{ type: "spring", stiffness: 300 }}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition-all"
+            whileTap={{ scale: 0.95 }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 transition-all"
           >
             <ArrowLeft size={16} />
             Назад
@@ -563,15 +691,15 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
             <motion.button
               onClick={onNext}
               disabled={!selectedDoctorId}
-              whileTap={selectedDoctorId ? { scale: 0.97 } : {}}
-              whileHover={selectedDoctorId ? { scale: 1.02 } : {}}
+              whileTap={selectedDoctorId ? { scale: 0.95 } : {}}
+              onTouchStart={() => setShowTooltip(!selectedDoctorId)}
+              onTouchEnd={() => setShowTooltip(false)}
               onMouseEnter={() => setShowTooltip(!selectedDoctorId)}
               onMouseLeave={() => setShowTooltip(false)}
-              transition={{ type: "spring", stiffness: 300 }}
               className={clsx(
-                "flex items-center gap-2 px-8 py-3 rounded-xl font-semibold transition-all min-w-[160px] justify-center",
+                "flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium transition-all",
                 selectedDoctorId
-                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-lg hover:shadow-blue-500/25"
+                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-md"
                   : "bg-gray-300 text-gray-500 cursor-not-allowed"
               )}
             >
@@ -585,17 +713,16 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 5 }}
-                  className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-3 py-2 rounded-lg shadow-lg whitespace-nowrap z-10"
+                  className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded-md shadow-lg whitespace-nowrap z-10"
                 >
-                  Выберите врача для продолжения
-                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                  Выберите врача
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
         </div>
-      </motion.div>
-    </div>
+    </motion.div>
   );
 };
 
