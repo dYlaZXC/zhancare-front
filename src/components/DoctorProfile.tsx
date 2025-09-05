@@ -18,6 +18,7 @@ export default function DoctorProfile() {
 
   const [activeTab, setActiveTab] = useState("appointments");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     if (!loading && user?.role !== "doctor") {
@@ -41,6 +42,10 @@ export default function DoctorProfile() {
       logoutUser();
       router.replace("/");
     }, 1000);
+  };
+
+  const handleToggleSidebar = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
   };
 
   const renderContent = () => {
@@ -72,18 +77,25 @@ export default function DoctorProfile() {
         setActiveTab={setActiveTab}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        onLogout={handleLogout}
+        isCollapsed={sidebarCollapsed}
       />
 
       {/* Main */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <DoctorHeader onMenuClick={() => setSidebarOpen(true)} />
+        <DoctorHeader 
+          onMenuClick={() => setSidebarOpen(true)}
+          sidebarCollapsed={sidebarCollapsed}
+          onToggleSidebar={handleToggleSidebar}
+        />
 
         {/* Main Content */}
         <main className="flex-1 p-4 sm:p-6 bg-gray-50">
           {/* Breadcrumb */}
-          <DoctorBreadcrumb activeTab={activeTab} />
+          <DoctorBreadcrumb 
+            activeTab={activeTab} 
+            onNavigate={setActiveTab}
+          />
 
           {/* Page Content with loading animation */}
           <DoctorMainContent activeTab={activeTab}>

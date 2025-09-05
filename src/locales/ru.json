@@ -12,7 +12,8 @@
       "firstName": "Имя",
       "phone": "Телефон",
       "confirmPassword": "Подтвердить пароль",
-      "registerButton": "Зарегистрироваться"
+      "registerButton": "Зарегистрироваться",
+      "rememberMe": "Запомнить меня"
     },
     "hero": {
       "navigation": {

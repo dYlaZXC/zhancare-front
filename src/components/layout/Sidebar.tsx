@@ -129,7 +129,7 @@ export const Sidebar = ({
       <aside
         className={`${
           sidebarOpen || isOpen ? "translate-x-0" : "-translate-x-full"
-        } fixed top-0 left-0 h-screen w-72 xs:w-76 sm:${isCollapsed ? "w-20" : "w-80"} text-white flex flex-col transition-all duration-500 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; transform z-50 sm:sticky sm:left-0 sm:top-0 sm:h-screen sm:flex sm:translate-x-0 md:relative shadow-2xl border-r border-white/10 backdrop-blur-xl lg:${isCollapsed ? "w-20" : "w-80"} will-change-transform`}
+        } fixed top-0 left-0 h-screen w-72 xs:w-76 sm:${isCollapsed ? "w-20" : "w-80"} text-white flex flex-col transition-all duration-500 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; transform z-50 sm:sticky sm:left-0 sm:top-0 sm:h-screen sm:flex sm:translate-x-0 md:relative shadow-2xl border-r border-white/10 backdrop-blur-xl lg:${isCollapsed ? "w-20" : "w-80"} will-change-transform overflow-x-hidden`}
         style={{
           background: `
             radial-gradient(circle at ${mousePos.x}px ${mousePos.y}px, rgba(55, 114, 255, 0.2) 0%, transparent 50%),
@@ -256,11 +256,11 @@ export const Sidebar = ({
         </div>
 
         {/* Responsive Desktop Logo */}
-        <div className="hidden sm:flex items-center justify-center px-4 py-6 md:px-6 md:py-8 relative z-10">
+        <div className={`hidden sm:flex items-center ${isCollapsed ? 'justify-center px-2 py-4' : 'justify-center px-4 py-6 md:px-6 md:py-8'} relative z-10 overflow-hidden`}>
           <Link href="/" className="group relative outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 rounded-2xl">
-            <div className="relative overflow-hidden rounded-2xl p-4 backdrop-blur-sm border border-white/10" style={{ background: 'rgba(55, 114, 255, 0.05)' }}>
+            <div className={`relative overflow-hidden rounded-2xl ${isCollapsed ? 'p-2' : 'p-4'} backdrop-blur-sm border border-white/10`} style={{ background: 'rgba(55, 114, 255, 0.05)' }}>
               {isCollapsed ? (
-                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-sm sm:text-lg font-bold text-white shadow-md"
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-lg font-bold text-white shadow-md"
                      style={{ background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)' }}>
                   Z
                 </div>
@@ -271,7 +271,7 @@ export const Sidebar = ({
                   width={280} 
                   height={55} 
                   priority 
-                  className="w-48 h-9 sm:w-56 sm:h-11 md:w-64 md:h-12 lg:w-72 lg:h-14 group-hover:scale-105 transition-all duration-500" 
+                  className="w-48 h-9 sm:w-52 sm:h-10 md:w-56 md:h-11 group-hover:scale-105 transition-all duration-500" 
                 />
               )}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
@@ -280,9 +280,9 @@ export const Sidebar = ({
         </div>
 
         {/* Responsive User Info */}
-        <div className="px-3 py-4 xs:px-4 xs:py-5 sm:px-6 sm:py-6 text-center relative z-10">
+        <div className={`${isCollapsed ? 'px-2 py-4' : 'px-3 py-4 xs:px-4 xs:py-5 sm:px-6 sm:py-6'} text-center relative z-10`}>
           <div className="relative group mb-4 flex justify-center">
-            <div className={`relative w-16 h-16 xs:w-18 xs:h-18 sm:${isCollapsed ? "w-8 h-8" : "w-20 h-20"} rounded-xl xs:rounded-2xl flex items-center justify-center text-xl xs:text-2xl sm:${isCollapsed ? "text-sm" : "text-2xl"} font-bold shadow-2xl transform group-hover:scale-110 transition-all duration-300 border-2 backdrop-blur-sm`}
+            <div className={`relative ${isCollapsed ? 'w-10 h-10' : 'w-16 h-16 xs:w-18 xs:h-18 sm:w-20 sm:h-20'} rounded-xl xs:rounded-2xl flex items-center justify-center ${isCollapsed ? 'text-sm' : 'text-xl xs:text-2xl sm:text-2xl'} font-bold shadow-2xl transform group-hover:scale-110 transition-all duration-300 border-2 backdrop-blur-sm`}
                  style={{ 
                    background: getRoleGradient(user.role).bg,
                    borderColor: getRoleGradient(user.role).border 
@@ -294,8 +294,8 @@ export const Sidebar = ({
               <div className="absolute -inset-1 bg-gradient-to-br from-white/30 to-transparent rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               
               {/* Status indicator - online/offline only */}
-              <div className={`absolute -bottom-0.5 -right-0.5 xs:-bottom-1 xs:-right-1 w-5 h-5 xs:w-6 xs:h-6 sm:${isCollapsed ? "w-3 h-3" : "w-6 h-6"} bg-white rounded-full flex items-center justify-center shadow-lg border-2 border-white`}>
-                <div className={`w-2.5 h-2.5 xs:w-3 xs:h-3 sm:${isCollapsed ? "w-1.5 h-1.5" : "w-3 h-3"} bg-emerald-400 rounded-full animate-pulse`}></div>
+              <div className={`absolute -bottom-0.5 -right-0.5 xs:-bottom-1 xs:-right-1 ${isCollapsed ? 'w-3 h-3' : 'w-5 h-5 xs:w-6 xs:h-6 sm:w-6 sm:h-6'} bg-white rounded-full flex items-center justify-center shadow-lg border-2 border-white`}>
+                <div className={`${isCollapsed ? 'w-1.5 h-1.5' : 'w-2.5 h-2.5 xs:w-3 xs:h-3 sm:w-3 sm:h-3'} bg-emerald-400 rounded-full animate-pulse`}></div>
               </div>
             </div>
           </div>
@@ -353,10 +353,10 @@ export const Sidebar = ({
         </div>
 
         {/* Responsive Navigation */}
-        <nav className={`mt-2 space-y-2 xs:space-y-3 px-3 xs:px-4 sm:${isCollapsed ? "px-1" : "px-6"} flex-1 overflow-y-auto relative z-10`}>
+        <nav className={`mt-2 space-y-2 xs:space-y-3 ${isCollapsed ? 'px-2' : 'px-3 xs:px-4 sm:px-6'} flex-1 overflow-y-auto overflow-x-hidden relative z-10`}>
           {menuItems.map((item, index) => (
-            <button
-              key={item.id}
+            <div key={item.id} className="relative">
+              <button
               onClick={() => handleTabChange(item.id)}
               onMouseEnter={() => setHoveredItem(item.id)}
               onMouseLeave={() => setHoveredItem(null)}
@@ -373,7 +373,7 @@ export const Sidebar = ({
               role="tab"
               aria-selected={activeTab === item.id}
             >
-              <div className={`relative flex items-center gap-3 px-3 py-3 xs:gap-4 xs:px-4 xs:py-4 sm:${isCollapsed ? "justify-center px-2 py-3" : "gap-4 px-5 py-4"} rounded-xl xs:rounded-2xl text-left transition-all duration-300 overflow-hidden ${
+                <div className={`relative flex items-center gap-3 px-3 py-3 xs:gap-4 xs:px-4 xs:py-4 ${isCollapsed ? 'sm:justify-center sm:gap-0 sm:px-3 sm:py-3' : 'sm:gap-4 sm:px-5 sm:py-4'} rounded-xl xs:rounded-2xl text-left transition-all duration-300 overflow-hidden whitespace-nowrap ${
                 activeTab === item.id
                   ? `text-white shadow-2xl font-semibold`
                   : "backdrop-blur-sm"
@@ -407,22 +407,22 @@ export const Sidebar = ({
                   <div className="absolute left-0 top-0 w-1 h-full bg-gradient-to-b from-blue-400 to-blue-600 rounded-r-sm"></div>
                 )}
 
-                {/* Responsive Icon container */}
-                <div className={`relative flex items-center justify-center w-8 h-8 xs:w-10 xs:h-10 rounded-lg xs:rounded-xl transition-all duration-300 ${
-                  activeTab === item.id 
-                    ? "text-white shadow-lg" 
-                    : ""
-                }`}
-                     style={activeTab === item.id 
-                       ? { background: 'rgba(255, 255, 255, 0.2)' }
-                       : { background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)' }
-                     }>
-                  <FontAwesomeIcon 
-                    icon={item.icon} 
-                    className={`text-base xs:text-lg transition-all duration-300 ${
-                      activeTab === item.id ? "scale-110" : "group-hover:scale-110"
-                    }`}
-                  />
+                  {/* Icon container */}
+                  <div className={`relative flex items-center justify-center ${isCollapsed ? 'w-6 h-6' : 'w-8 h-8 xs:w-10 xs:h-10 sm:w-10 sm:h-10'} rounded-lg xs:rounded-xl transition-all duration-300 ${
+                    activeTab === item.id 
+                      ? "text-white shadow-lg" 
+                      : ""
+                  }`}
+                       style={activeTab === item.id 
+                         ? { background: 'rgba(255, 255, 255, 0.2)' }
+                         : { background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)' }
+                       }>
+                    <FontAwesomeIcon 
+                      icon={item.icon} 
+                      className={`${isCollapsed ? 'text-sm' : 'text-base xs:text-lg sm:text-lg'} transition-all duration-300 ${
+                        activeTab === item.id ? "scale-110" : "group-hover:scale-110"
+                      }`}
+                    />
                   
                   {/* Glow effect - contained within icon */}
                   {hoveredItem === item.id && (
@@ -431,27 +431,27 @@ export const Sidebar = ({
                   )}
                 </div>
 
-                {/* Text - show on mobile, conditionally on desktop */}
-                <div className="block sm:hidden">
-                  <span className={`text-sm xs:text-base transition-all duration-300 ${
-                    activeTab === item.id 
-                      ? "font-semibold text-white" 
-                      : "font-medium group-hover:text-white"
-                  }`}>
-                    {item.title}
-                  </span>
+                  {/* Mobile text - always show */}
+                  <div className="block sm:hidden">
+                    <span className={`text-sm xs:text-base transition-all duration-300 ${
+                      activeTab === item.id 
+                        ? "font-semibold text-white" 
+                        : "font-medium group-hover:text-white"
+                    }`}>
+                      {item.title}
+                    </span>
 
-                  {/* Active indicator */}
-                  {activeTab === item.id && (
-                    <div className="absolute right-2 xs:right-4 top-1/2 -translate-y-1/2">
-                      <div className="w-1.5 h-1.5 xs:w-2 xs:h-2 bg-white rounded-full animate-pulse"></div>
-                    </div>
-                  )}
-                </div>
+                    {/* Active indicator */}
+                    {activeTab === item.id && (
+                      <div className="absolute right-2 xs:right-4 top-1/2 -translate-y-1/2">
+                        <div className="w-1.5 h-1.5 xs:w-2 xs:h-2 bg-white rounded-full animate-pulse"></div>
+                      </div>
+                    )}
+                  </div>
 
-                <div className="hidden sm:block">
+                  {/* Desktop text - only show when not collapsed */}
                   {!isCollapsed && (
-                    <>
+                    <div className="hidden sm:block">
                       <span className={`text-sm xs:text-base transition-all duration-300 ${
                         activeTab === item.id 
                           ? "font-semibold text-white" 
@@ -466,31 +466,38 @@ export const Sidebar = ({
                           <div className="w-1.5 h-1.5 xs:w-2 xs:h-2 bg-white rounded-full animate-pulse"></div>
                         </div>
                       )}
-                    </>
-                  )}
-                </div>
-
-                {/* Active indicator for collapsed state - desktop only */}
-                <div className="hidden sm:block">
-                  {isCollapsed && activeTab === item.id && (
-                    <div className="absolute -right-0.5 xs:-right-1 top-1/2 -translate-y-1/2">
-                      <div className="w-0.5 xs:w-1 h-6 xs:h-8 bg-white rounded-full"></div>
                     </div>
                   )}
-                </div>
 
-                {/* Hover shimmer effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
-              </div>
-            </button>
+                  {/* Active indicator for collapsed state */}
+                  {isCollapsed && activeTab === item.id && (
+                    <div className="absolute -right-1 top-1/2 -translate-y-1/2">
+                      <div className="w-1 h-8 bg-gradient-to-b from-blue-400 to-blue-600 rounded-full shadow-lg"></div>
+                    </div>
+                  )}
+
+                  {/* Hover shimmer effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
+                </div>
+              </button>
+
+              {/* Tooltip for collapsed state */}
+              {isCollapsed && (
+                <div className="absolute left-full ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-[9999] whitespace-nowrap hidden sm:block top-1/2 -translate-y-1/2">
+                  {item.title}
+                  {/* Tooltip arrow */}
+                  <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
+                </div>
+              )}
+            </div>
           ))}
         </nav>
 
         {/* Responsive Logout Button */}
-        <div className={`px-3 xs:px-4 sm:${isCollapsed ? "px-1" : "px-6"} py-4 xs:py-6 relative z-10`}>
+        <div className={`${isCollapsed ? 'px-2' : 'px-3 xs:px-4 sm:px-6'} py-4 xs:py-6 relative z-10`}>
           <button
             onClick={handleLogout}
-            className={`w-full group relative overflow-hidden min-h-[48px] px-3 py-3 xs:px-4 xs:py-4 sm:${isCollapsed ? "px-2 py-3" : "px-5 py-4"} rounded-xl xs:rounded-2xl text-white font-semibold flex items-center justify-center gap-2 xs:gap-3 sm:${isCollapsed ? "gap-0" : "gap-3"} transition-all duration-300 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; shadow-2xl hover:scale-105 hover:-translate-y-1 active:scale-95 border-0 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:hover:translate-y-0`}
+            className={`w-full group relative overflow-hidden min-h-[48px] ${isCollapsed ? 'px-3 py-3' : 'px-3 py-3 xs:px-4 xs:py-4 sm:px-5 sm:py-4'} rounded-xl xs:rounded-2xl text-white font-semibold flex items-center ${isCollapsed ? 'justify-center' : 'justify-center gap-2 xs:gap-3 sm:gap-3'} transition-all duration-300 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; shadow-2xl hover:scale-105 hover:-translate-y-1 active:scale-95 border-0 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:hover:translate-y-0`}
             aria-label="Выйти из системы"
             style={{
               background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%)',
@@ -509,8 +516,12 @@ export const Sidebar = ({
               className="text-base xs:text-lg group-hover:rotate-12 transition-transform duration-300" 
               aria-hidden="true"
             />
-            <span className="block sm:hidden text-sm xs:text-base">Выйти</span>
-            <span className="hidden sm:block">{!isCollapsed && "Выйти"}</span>
+            {!isCollapsed && (
+              <>
+                <span className="block sm:hidden text-sm xs:text-base">Выйти</span>
+                <span className="hidden sm:block text-sm xs:text-base">Выйти</span>
+              </>
+            )}
             
             {/* Animated background */}
             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" style={{ background: 'linear-gradient(135deg, rgba(220, 38, 38, 0.2) 0%, rgba(185, 28, 28, 0.2) 100%)' }}></div>

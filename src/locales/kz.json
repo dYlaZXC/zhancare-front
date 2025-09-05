@@ -13,7 +13,8 @@
       "firstName": "Аты",
       "phone": "Телефон",
       "confirmPassword": "Құпия сөзді растаңыз",
-      "registerButton": "Тіркелу"
+      "registerButton": "Тіркелу",
+      "rememberMe": "Мені есте сақта"
     },
     "hero": {
       "navigation": {

@@ -12,7 +12,8 @@
       "firstName": "First Name",
       "phone": "Phone",
       "confirmPassword": "Confirm Password",
-      "registerButton": "Register"
+      "registerButton": "Register",
+      "rememberMe": "Remember me"
     },
     "hero": {
       "navigation": {

@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import { 
   Sparkles, 
   Smile, 
@@ -227,7 +228,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
         <div className="relative flex-shrink-0 sm:self-start">
           <div className="relative w-14 h-14 sm:w-16 sm:h-16 lg:w-18 lg:h-18 xl:w-20 xl:h-20 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg sm:text-xl lg:text-2xl shadow-lg overflow-hidden">
             {doctor.avatar ? (
-              <img src={doctor.avatar} alt={doctor.name} className="w-full h-full object-cover" />
+              <Image src={doctor.avatar} alt={doctor.name} fill className="object-cover" />
             ) : (
               <div className="relative z-10">{doctor.name.charAt(0)}</div>
             )}
