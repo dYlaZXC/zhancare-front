@@ -110,9 +110,15 @@ export const Sidebar = ({
       {(sidebarOpen || isOpen) && (
         <div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 sm:hidden transition-all duration-300 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; cursor-pointer motion-reduce:transition-none"
-          onClick={() => setSidebarOpen(false)}
+          onClick={() => {
+            setSidebarOpen(false);
+            onClose();
+          }}
           onKeyDown={(e) => {
-            if (e.key === 'Escape') setSidebarOpen(false);
+            if (e.key === 'Escape') {
+              setSidebarOpen(false);
+              onClose();
+            }
           }}
           aria-label="Закрыть меню навигации"
           role="button"
@@ -123,7 +129,7 @@ export const Sidebar = ({
       <aside
         className={`${
           sidebarOpen || isOpen ? "translate-x-0" : "-translate-x-full"
-        } fixed top-0 left-0 h-screen ${isCollapsed ? "w-16 xs:w-18 sm:w-20" : "w-72 xs:w-76 sm:w-80"} text-white flex flex-col transition-all duration-500 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; transform z-50 sm:sticky sm:left-0 sm:top-0 sm:h-screen sm:flex sm:translate-x-0 md:relative shadow-2xl border-r border-white/10 backdrop-blur-xl lg:${isCollapsed ? "w-20" : "w-80"} will-change-transform`}
+        } fixed top-0 left-0 h-screen w-72 xs:w-76 sm:${isCollapsed ? "w-20" : "w-80"} text-white flex flex-col transition-all duration-500 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; transform z-50 sm:sticky sm:left-0 sm:top-0 sm:h-screen sm:flex sm:translate-x-0 md:relative shadow-2xl border-r border-white/10 backdrop-blur-xl lg:${isCollapsed ? "w-20" : "w-80"} will-change-transform`}
         style={{
           background: `
             radial-gradient(circle at ${mousePos.x}px ${mousePos.y}px, rgba(55, 114, 255, 0.2) 0%, transparent 50%),
@@ -276,7 +282,7 @@ export const Sidebar = ({
         {/* Responsive User Info */}
         <div className="px-3 py-4 xs:px-4 xs:py-5 sm:px-6 sm:py-6 text-center relative z-10">
           <div className="relative group mb-4 flex justify-center">
-            <div className={`relative ${isCollapsed ? "w-8 h-8 xs:w-10 xs:h-10" : "w-16 h-16 xs:w-18 xs:h-18 sm:w-20 sm:h-20"} rounded-xl xs:rounded-2xl flex items-center justify-center ${isCollapsed ? "text-sm xs:text-base sm:text-lg" : "text-xl xs:text-2xl"} font-bold shadow-2xl transform group-hover:scale-110 transition-all duration-300 border-2 backdrop-blur-sm`}
+            <div className={`relative w-16 h-16 xs:w-18 xs:h-18 sm:${isCollapsed ? "w-8 h-8" : "w-20 h-20"} rounded-xl xs:rounded-2xl flex items-center justify-center text-xl xs:text-2xl sm:${isCollapsed ? "text-sm" : "text-2xl"} font-bold shadow-2xl transform group-hover:scale-110 transition-all duration-300 border-2 backdrop-blur-sm`}
                  style={{ 
                    background: getRoleGradient(user.role).bg,
                    borderColor: getRoleGradient(user.role).border 
@@ -288,40 +294,66 @@ export const Sidebar = ({
               <div className="absolute -inset-1 bg-gradient-to-br from-white/30 to-transparent rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               
               {/* Status indicator - online/offline only */}
-              <div className={`absolute -bottom-0.5 -right-0.5 xs:-bottom-1 xs:-right-1 ${isCollapsed ? "w-3 h-3 xs:w-4 xs:h-4" : "w-5 h-5 xs:w-6 xs:h-6"} bg-white rounded-full flex items-center justify-center shadow-lg border-2 border-white`}>
-                <div className={`${isCollapsed ? "w-1.5 h-1.5 xs:w-2 xs:h-2" : "w-2.5 h-2.5 xs:w-3 xs:h-3"} bg-emerald-400 rounded-full animate-pulse`}></div>
+              <div className={`absolute -bottom-0.5 -right-0.5 xs:-bottom-1 xs:-right-1 w-5 h-5 xs:w-6 xs:h-6 sm:${isCollapsed ? "w-3 h-3" : "w-6 h-6"} bg-white rounded-full flex items-center justify-center shadow-lg border-2 border-white`}>
+                <div className={`w-2.5 h-2.5 xs:w-3 xs:h-3 sm:${isCollapsed ? "w-1.5 h-1.5" : "w-3 h-3"} bg-emerald-400 rounded-full animate-pulse`}></div>
               </div>
             </div>
           </div>
 
-          {!isCollapsed && (
-            <>
-              {/* Responsive Role badge */}
-              <div className={`inline-flex items-center gap-1.5 xs:gap-2 px-2 py-1 xs:px-3 xs:py-1.5 rounded-lg xs:rounded-xl shadow-lg border backdrop-blur-sm mb-2 xs:mb-3 text-xs font-bold uppercase tracking-wide`}
-                   style={{ 
-                     background: getRoleGradient(user.role).bg,
-                     borderColor: getRoleGradient(user.role).border 
-                   }}>
-                <FontAwesomeIcon icon={getRoleIcon(user.role)} className="text-xs" />
-                <span>
-                  {user.role === "doctor"
-                    ? "Доктор"
-                    : user.role === "admin"
-                    ? "Администратор"
-                    : "Пациент"}
-                </span>
-              </div>
+          <div className="block sm:hidden">
+            {/* Mobile - Always show full info */}
+            <div className={`inline-flex items-center gap-1.5 xs:gap-2 px-2 py-1 xs:px-3 xs:py-1.5 rounded-lg xs:rounded-xl shadow-lg border backdrop-blur-sm mb-2 xs:mb-3 text-xs font-bold uppercase tracking-wide`}
+                 style={{ 
+                   background: getRoleGradient(user.role).bg,
+                   borderColor: getRoleGradient(user.role).border 
+                 }}>
+              <FontAwesomeIcon icon={getRoleIcon(user.role)} className="text-xs" />
+              <span>
+                {user.role === "doctor"
+                  ? "Доктор"
+                  : user.role === "admin"
+                  ? "Администратор"
+                  : "Пациент"}
+              </span>
+            </div>
 
-              <h2 className="text-base xs:text-lg font-bold mb-1 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent leading-tight">
-                {user.first_name} {user.last_name}
-              </h2>
-              <p className="text-xs text-gray-300 break-words opacity-80 leading-relaxed px-2 xs:px-0">{user.email}</p>
-            </>
-          )}
+            <h2 className="text-base xs:text-lg font-bold mb-1 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent leading-tight">
+              {user.first_name} {user.last_name}
+            </h2>
+            <p className="text-xs text-gray-300 break-words opacity-80 leading-relaxed px-2 xs:px-0">{user.email}</p>
+          </div>
+
+          <div className="hidden sm:block">
+            {/* Desktop - Respect collapsed state */}
+            {!isCollapsed && (
+              <>
+                {/* Responsive Role badge */}
+                <div className={`inline-flex items-center gap-1.5 xs:gap-2 px-2 py-1 xs:px-3 xs:py-1.5 rounded-lg xs:rounded-xl shadow-lg border backdrop-blur-sm mb-2 xs:mb-3 text-xs font-bold uppercase tracking-wide`}
+                     style={{ 
+                       background: getRoleGradient(user.role).bg,
+                       borderColor: getRoleGradient(user.role).border 
+                     }}>
+                  <FontAwesomeIcon icon={getRoleIcon(user.role)} className="text-xs" />
+                  <span>
+                    {user.role === "doctor"
+                      ? "Доктор"
+                      : user.role === "admin"
+                      ? "Администратор"
+                      : "Пациент"}
+                  </span>
+                </div>
+
+                <h2 className="text-base xs:text-lg font-bold mb-1 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent leading-tight">
+                  {user.first_name} {user.last_name}
+                </h2>
+                <p className="text-xs text-gray-300 break-words opacity-80 leading-relaxed px-2 xs:px-0">{user.email}</p>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Responsive Navigation */}
-        <nav className={`mt-2 space-y-2 xs:space-y-3 ${isCollapsed ? "px-1 xs:px-2" : "px-3 xs:px-4 sm:px-6"} flex-1 overflow-y-auto relative z-10`}>
+        <nav className={`mt-2 space-y-2 xs:space-y-3 px-3 xs:px-4 sm:${isCollapsed ? "px-1" : "px-6"} flex-1 overflow-y-auto relative z-10`}>
           {menuItems.map((item, index) => (
             <button
               key={item.id}
@@ -341,7 +373,7 @@ export const Sidebar = ({
               role="tab"
               aria-selected={activeTab === item.id}
             >
-              <div className={`relative flex items-center ${isCollapsed ? "justify-center px-2 py-3 xs:px-3 xs:py-4" : "gap-3 px-3 py-3 xs:gap-4 xs:px-4 xs:py-4 sm:px-5 sm:py-4"} rounded-xl xs:rounded-2xl text-left transition-all duration-300 overflow-hidden ${
+              <div className={`relative flex items-center gap-3 px-3 py-3 xs:gap-4 xs:px-4 xs:py-4 sm:${isCollapsed ? "justify-center px-2 py-3" : "gap-4 px-5 py-4"} rounded-xl xs:rounded-2xl text-left transition-all duration-300 overflow-hidden ${
                 activeTab === item.id
                   ? `text-white shadow-2xl font-semibold`
                   : "backdrop-blur-sm"
@@ -399,32 +431,53 @@ export const Sidebar = ({
                   )}
                 </div>
 
-                {/* Text - only show when not collapsed */}
-                {!isCollapsed && (
-                  <>
-                    <span className={`text-sm xs:text-base transition-all duration-300 ${
-                      activeTab === item.id 
-                        ? "font-semibold text-white" 
-                        : "font-medium group-hover:text-white"
-                    }`}>
-                      {item.title}
-                    </span>
+                {/* Text - show on mobile, conditionally on desktop */}
+                <div className="block sm:hidden">
+                  <span className={`text-sm xs:text-base transition-all duration-300 ${
+                    activeTab === item.id 
+                      ? "font-semibold text-white" 
+                      : "font-medium group-hover:text-white"
+                  }`}>
+                    {item.title}
+                  </span>
 
-                    {/* Active indicator */}
-                    {activeTab === item.id && (
-                      <div className="absolute right-2 xs:right-4 top-1/2 -translate-y-1/2">
-                        <div className="w-1.5 h-1.5 xs:w-2 xs:h-2 bg-white rounded-full animate-pulse"></div>
-                      </div>
-                    )}
-                  </>
-                )}
+                  {/* Active indicator */}
+                  {activeTab === item.id && (
+                    <div className="absolute right-2 xs:right-4 top-1/2 -translate-y-1/2">
+                      <div className="w-1.5 h-1.5 xs:w-2 xs:h-2 bg-white rounded-full animate-pulse"></div>
+                    </div>
+                  )}
+                </div>
 
-                {/* Active indicator for collapsed state */}
-                {isCollapsed && activeTab === item.id && (
-                  <div className="absolute -right-0.5 xs:-right-1 top-1/2 -translate-y-1/2">
-                    <div className="w-0.5 xs:w-1 h-6 xs:h-8 bg-white rounded-full"></div>
-                  </div>
-                )}
+                <div className="hidden sm:block">
+                  {!isCollapsed && (
+                    <>
+                      <span className={`text-sm xs:text-base transition-all duration-300 ${
+                        activeTab === item.id 
+                          ? "font-semibold text-white" 
+                          : "font-medium group-hover:text-white"
+                      }`}>
+                        {item.title}
+                      </span>
+
+                      {/* Active indicator */}
+                      {activeTab === item.id && (
+                        <div className="absolute right-2 xs:right-4 top-1/2 -translate-y-1/2">
+                          <div className="w-1.5 h-1.5 xs:w-2 xs:h-2 bg-white rounded-full animate-pulse"></div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Active indicator for collapsed state - desktop only */}
+                <div className="hidden sm:block">
+                  {isCollapsed && activeTab === item.id && (
+                    <div className="absolute -right-0.5 xs:-right-1 top-1/2 -translate-y-1/2">
+                      <div className="w-0.5 xs:w-1 h-6 xs:h-8 bg-white rounded-full"></div>
+                    </div>
+                  )}
+                </div>
 
                 {/* Hover shimmer effect */}
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
@@ -434,10 +487,10 @@ export const Sidebar = ({
         </nav>
 
         {/* Responsive Logout Button */}
-        <div className={`${isCollapsed ? "px-1 xs:px-2" : "px-3 xs:px-4 sm:px-6"} py-4 xs:py-6 relative z-10`}>
+        <div className={`px-3 xs:px-4 sm:${isCollapsed ? "px-1" : "px-6"} py-4 xs:py-6 relative z-10`}>
           <button
             onClick={handleLogout}
-            className={`w-full group relative overflow-hidden min-h-[48px] ${isCollapsed ? "px-2 py-3 xs:px-3 xs:py-4" : "px-3 py-3 xs:px-4 xs:py-4 sm:px-5 sm:py-4"} rounded-xl xs:rounded-2xl text-white font-semibold flex items-center justify-center ${isCollapsed ? "" : "gap-2 xs:gap-3"} transition-all duration-300 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; shadow-2xl hover:scale-105 hover:-translate-y-1 active:scale-95 border-0 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:hover:translate-y-0`}
+            className={`w-full group relative overflow-hidden min-h-[48px] px-3 py-3 xs:px-4 xs:py-4 sm:${isCollapsed ? "px-2 py-3" : "px-5 py-4"} rounded-xl xs:rounded-2xl text-white font-semibold flex items-center justify-center gap-2 xs:gap-3 sm:${isCollapsed ? "gap-0" : "gap-3"} transition-all duration-300 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; shadow-2xl hover:scale-105 hover:-translate-y-1 active:scale-95 border-0 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:hover:translate-y-0`}
             aria-label="Выйти из системы"
             style={{
               background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%)',
@@ -456,7 +509,8 @@ export const Sidebar = ({
               className="text-base xs:text-lg group-hover:rotate-12 transition-transform duration-300" 
               aria-hidden="true"
             />
-            {!isCollapsed && <span className="text-sm xs:text-base">Выйти</span>}
+            <span className="block sm:hidden text-sm xs:text-base">Выйти</span>
+            <span className="hidden sm:block">{!isCollapsed && "Выйти"}</span>
             
             {/* Animated background */}
             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" style={{ background: 'linear-gradient(135deg, rgba(220, 38, 38, 0.2) 0%, rgba(185, 28, 28, 0.2) 100%)' }}></div>
