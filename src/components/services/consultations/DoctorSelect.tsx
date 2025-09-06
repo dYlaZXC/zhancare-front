@@ -225,7 +225,7 @@ const DoctorSelect: React.FC<DoctorSelectProps> = ({
                             {doc.avatarUrl ? (
                               <Image
                                 src={doc.avatarUrl}
-                                alt={doc.name}
+                                alt={`Фотография доктора ${doc.name}`}
                                 width={40}
                                 height={40}
                                 className="w-full h-full object-cover rounded-full"

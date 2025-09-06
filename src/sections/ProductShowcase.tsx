@@ -3,7 +3,9 @@
 import React, { useState, useRef } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import product1 from "@/assets/hero1212.png";
+import ai_diagnostics_ru from "@/assets/ai_diagnostics_ru.png";
+import ai_diagnostics_kz from "@/assets/ai_diagnostics_kz.png";
+import ai_diagnostics_en from "@/assets/ai_diagnostics_en.png";
 import product2 from "@/assets/hero1213.png";
 import product3 from "@/assets/hero1214.png";
 import product4 from "@/assets/hero1215.png";
@@ -13,14 +15,30 @@ import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import en from "@/locales/en.json";
 
-const images = {
-  hero1212: product1.src,
-  hero1213: product2.src,
-  hero1214: product3.src,
-  hero1215: product4.src,
+// Language-specific image mappings
+const languageImages = {
+  ru: {
+    hero1212: ai_diagnostics_ru.src,
+    hero1213: product2.src,
+    hero1214: product3.src,
+    hero1215: product4.src,
+  },
+  kz: {
+    hero1212: ai_diagnostics_kz.src,
+    hero1213: product2.src,
+    hero1214: product3.src,
+    hero1215: product4.src,
+  },
+  en: {
+    hero1212: ai_diagnostics_en.src,
+    hero1213: product2.src,
+    hero1214: product3.src,
+    hero1215: product4.src,
+  },
 } as const;
 
-type ImageKey = keyof typeof images;
+type ImageKey = keyof typeof languageImages.en;
+type LanguageType = keyof typeof languageImages;
 
 interface ContentData {
   id: number;
@@ -55,6 +73,12 @@ export const ProductShowcase = () => {
     }
   };
 
+  // Get language-specific images
+  const getCurrentImages = () => {
+    const currentLang = language as LanguageType;
+    return languageImages[currentLang] || languageImages.en;
+  };
+
   const rawTranslations = getTranslations();
   const contentData: ContentData[] = React.useMemo(() => 
     mapTranslations(rawTranslations.contentData), 
@@ -62,6 +86,8 @@ export const ProductShowcase = () => {
   );
 
   const [activeContent, setActiveContent] = useState<ContentData>(() => contentData[0]);
+  const [isImageLoading, setIsImageLoading] = useState(false);
+  const [hoveredTab, setHoveredTab] = useState<number | null>(null);
   const sectionRef = useRef(null);
 
   const { scrollYProgress } = useScroll({
@@ -142,7 +168,7 @@ export const ProductShowcase = () => {
               className="relative w-full max-w-4xl"
             >
               <Image
-                src={images[activeContent.imageSrc]}
+                src={getCurrentImages()[activeContent.imageSrc]}
                 alt={activeContent.title}
                 width={900}
                 height={600}

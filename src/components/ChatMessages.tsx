@@ -2,12 +2,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { User, Bot, AlertCircle, Sparkles } from "lucide-react";
 
 type Props = {
-  messages: { user: string; response: string; timestamp: string }[];
+  messages: { user: string; response: string; timestamp: string; showGameButton?: boolean }[];
   loading: boolean;
   error: string;
   translations: any;
   containerRef: React.RefObject<HTMLDivElement>;
   streamedResponse: string;
+  onPlayGame?: () => void;
 };
 
 export const ChatMessages = ({
@@ -17,6 +18,7 @@ export const ChatMessages = ({
   translations,
   containerRef,
   streamedResponse,
+  onPlayGame,
 }: Props) => (
   <div
     ref={containerRef}
@@ -195,6 +197,22 @@ export const ChatMessages = ({
                       );
                     }).filter(Boolean)}
                   </div>
+                  
+                  {/* Game button if showGameButton is true */}
+                  {msg.showGameButton && onPlayGame && (
+                    <motion.button
+                      onClick={onPlayGame}
+                      className="mt-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-4 py-2 rounded-xl font-medium text-sm transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.5 }}
+                    >
+                      🎮 Играть в медицинскую викторину
+                    </motion.button>
+                  )}
+                  
                   <div className="flex items-center justify-between gap-2 mt-2">
                     <div className="flex items-center gap-1">
                       <Sparkles className="w-3 h-3 text-yellow-500" />

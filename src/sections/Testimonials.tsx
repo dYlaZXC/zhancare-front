@@ -104,7 +104,7 @@ const TestimonialsColumn = (props: {
                       width={40}
                       height={40}
                       src={imageSrc}
-                      alt={name}
+                      alt={`Фотография пользователя ${name}`}
                       className="h-10 w-10 rounded-full"
                     />
                     <div className="flex flex-col">

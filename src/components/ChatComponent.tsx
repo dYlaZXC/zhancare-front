@@ -8,6 +8,7 @@ import { ChatHeader } from "./ChatHeader";
 import { ChatMessages } from "./ChatMessages";
 import { ChatInput } from "./ChatInput";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 
 const API_KEY = "QqkMxELY0YVGkCx17Vya04Sq9nGvCahu";
 const ENDPOINT = "https://api.mistral.ai/v1/chat/completions";
@@ -15,7 +16,7 @@ const ENDPOINT = "https://api.mistral.ai/v1/chat/completions";
 export const ChatComponent = ({ onClose }: { onClose: () => void }) => {
   const [userInput, setUserInput] = useState("");
   const [messages, setMessages] = useState<
-    { user: string; response: string; timestamp: string }[]
+    { user: string; response: string; timestamp: string; showGameButton?: boolean }[]
   >([]);
   const [streamedResponse, setStreamedResponse] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,6 +26,12 @@ export const ChatComponent = ({ onClose }: { onClose: () => void }) => {
   const typingInterval = useRef<NodeJS.Timeout | null>(null);
 
   const { language } = useLanguage();
+  const router = useRouter();
+
+  const handlePlayGame = () => {
+    router.push('/aigame');
+    onClose(); // Close chat when navigating to game
+  };
   
   // Fixed: Properly handle all three languages with fallback
   const translations = React.useMemo(() => {
@@ -48,6 +55,34 @@ export const ChatComponent = ({ onClose }: { onClose: () => void }) => {
     setMessages((prev) => [...prev, newMessage]);
     setLoading(true);
     setError("");
+
+    // Check if user wants to play the AI game
+    const gameKeywords = ["давай поиграем", "поиграем", "хочу играть", "можно поиграть", "let's play", "want to play", "can we play", "ойнайық", "ойын ойнау"];
+    const medicalKeywords = ["болит", "боль", "ушибла", "ушиб", "травма", "hurt", "pain", "injury", "bruise", "ауырады", "жарақат"];
+    
+    const isGameRequest = gameKeywords.some(keyword => 
+      userInput.toLowerCase().includes(keyword.toLowerCase())
+    );
+    
+    const hasMedicalContent = medicalKeywords.some(keyword => 
+      userInput.toLowerCase().includes(keyword.toLowerCase())
+    );
+
+    // Only offer game if there are no medical concerns
+    if (isGameRequest && !hasMedicalContent) {
+      // Show game button instead of AI response
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        return [...prev.slice(0, -1), { 
+          ...last, 
+          response: translations.gameResponse || "Отличная идея! Давайте поиграем в медицинскую викторину! 🎮",
+          showGameButton: true 
+        }];
+      });
+      setLoading(false);
+      setUserInput("");
+      return;
+    }
 
     try {
       const payload = {
@@ -135,6 +170,7 @@ export const ChatComponent = ({ onClose }: { onClose: () => void }) => {
           translations={translations}
           containerRef={messageContainerRef}
           streamedResponse={streamedResponse}
+          onPlayGame={handlePlayGame}
         />
         <ChatInput
           userInput={userInput}

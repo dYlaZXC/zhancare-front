@@ -82,7 +82,7 @@ const ChatDoctors = () => {
                     <div className="relative w-24 h-24 mb-4">
                       <Image
                         src={doc.photo || doctorPlaceholder}
-                        alt={doc.name}
+                        alt={`Фотография доктора ${doc.name}, специалист по ${doc.doctor_type}`}
                         fill
                         className="rounded-full object-cover"
                       />

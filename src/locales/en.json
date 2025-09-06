@@ -201,7 +201,8 @@
       "sending": "Sending...",
       "typing": " Thinking...",
       "fetchError": "Error getting response from server.",
-      "genericError": "An error occurred. Please try again."
+      "genericError": "An error occurred. Please try again.",
+      "gameResponse": "Great idea! Let's play a medical quiz! 🎮"
     },
     
     "impactSection": {

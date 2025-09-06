@@ -38,6 +38,11 @@ export const DoctorsCarousel = () => {
   const [selectedDoctor, setSelectedDoctor] = useState<null | any>(null);
   const [activeCategory, setActiveCategory] = useState<string>("all");
 
+  // Handle category change
+  const handleCategoryChange = (categoryKey: string) => {
+    setActiveCategory(categoryKey);
+  };
+
   // Get translations based on language
   const getTranslations = () => {
     switch (language) {
@@ -58,7 +63,11 @@ export const DoctorsCarousel = () => {
           experiencedDoctor: "Опытный врач",
           profileButton: "Профиль",
           experience: "опыта",
-          yearsExp: "лет"
+          yearsExp: "лет",
+          altTexts: {
+            doctorPhoto: "Фотография врача",
+            doctorProfilePhoto: "Профильная фотография врача"
+          }
         };
       case "kz":
         return {
@@ -77,7 +86,11 @@ export const DoctorsCarousel = () => {
           experiencedDoctor: "Тәжірибелі дәрігер",
           profileButton: "Профиль",
           experience: "тәжірибесі",
-          yearsExp: "жыл"
+          yearsExp: "жыл",
+          altTexts: {
+            doctorPhoto: "Дәрігердің фотосуреті",
+            doctorProfilePhoto: "Дәрігердің профиль фотосуреті"
+          }
         };
       case "en":
         return {
@@ -96,7 +109,11 @@ export const DoctorsCarousel = () => {
           experiencedDoctor: "Experienced Doctor",
           profileButton: "Profile",
           experience: "experience",
-          yearsExp: "years"
+          yearsExp: "years",
+          altTexts: {
+            doctorPhoto: "Doctor's photo",
+            doctorProfilePhoto: "Doctor's profile photo"
+          }
         };
       default:
         return {
@@ -115,7 +132,11 @@ export const DoctorsCarousel = () => {
           experiencedDoctor: "Experienced Doctor",
           profileButton: "Profile",
           experience: "experience",
-          yearsExp: "years"
+          yearsExp: "years",
+          altTexts: {
+            doctorPhoto: "Doctor's photo",
+            doctorProfilePhoto: "Doctor's profile photo"
+          }
         };
     }
   };
@@ -185,17 +206,23 @@ export const DoctorsCarousel = () => {
       </motion.h2>
 
       {/* Categories */}
-      <div className="flex flex-wrap justify-center gap-4 mb-10">
+      <div className="flex flex-wrap justify-center gap-4 mb-10 relative z-10">
         {categories.map((category) => (
           <button
             key={category.key}
-            onClick={() => setActiveCategory(category.key)}
-            className={`px-5 py-2 rounded-full border 
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleCategoryChange(category.key);
+            }}
+            className={`px-5 py-2 rounded-full border cursor-pointer select-none relative z-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
               ${activeCategory === category.key 
-                ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white" 
-                : "border-blue-400 text-blue-700 hover:bg-blue-100 transition"
+                ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-transparent shadow-lg" 
+                : "border-blue-400 text-blue-700 hover:bg-blue-100 transition-all duration-200 bg-white"
               }`
             }
+            style={{ pointerEvents: 'auto' }}
           >
             {category.label}
           </button>
@@ -230,7 +257,7 @@ export const DoctorsCarousel = () => {
                   <div className="relative w-full h-full bg-white rounded-full overflow-hidden">
                     <Image
                       src={doc.image}
-                      alt={doc.name}
+                      alt={`${translations.altTexts.doctorPhoto} - ${doc.name}, ${doc.specialtyText}`}
                       fill
                       className="object-cover"
                       sizes="(max-width: 768px) 100vw, 33vw"
@@ -289,7 +316,7 @@ export const DoctorsCarousel = () => {
                 <div className="relative w-32 h-32 mb-4">
                   <Image
                     src={selectedDoctor.image}
-                    alt={selectedDoctor.name}
+                    alt={`${translations.altTexts.doctorProfilePhoto} - ${selectedDoctor.name}, ${selectedDoctor.specialtyText}`}
                     fill
                     className="rounded-full object-cover"
                   />

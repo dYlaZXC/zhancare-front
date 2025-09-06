@@ -57,7 +57,7 @@ export const AboutSection = () => {
       <div className="absolute bottom-0 right-0 transform translate-x-1/3 translate-y-1/3">
         <Image
           src={donutImage}
-          alt="Decorative 3D Donut"
+          alt="Декоративный 3D элемент - тор для оформления секции о ситуационном центре"
           width={300}
           height={300}
           className="animate-spin-slow" // Optional animation
