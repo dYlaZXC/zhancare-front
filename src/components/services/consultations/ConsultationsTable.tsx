@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Calendar,
@@ -16,38 +16,59 @@ import {
   MessageSquare,
   ChevronDown,
   ChevronUp,
-  Phone
+  Phone,
+  Filter,
+  Search,
+  X,
+  RefreshCw
 } from "lucide-react";
+import { useConsultationManager } from "./useConsultationManager";
+import type { Consultation as APIConsultation } from "@/types/consultation";
 
-interface Consultation {
-  id: string;
-  date: string;
-  time: string;
-  doctor: {
+// Extended interface for display purposes
+interface ExtendedConsultation extends APIConsultation {
+  date?: string;
+  time?: string;
+  doctor?: {
     name: string;
     specialty: string;
     avatar?: string;
   };
-  symptoms: string;
-  type: "video" | "chat" | "phone";
-  status: "completed" | "scheduled" | "cancelled" | "in-progress";
+  symptoms?: string;
+  type?: "video" | "chat" | "phone";
   diagnosis?: string;
   prescription?: boolean;
 }
 
 interface ConsultationsTableProps {
-  consultations?: Consultation[];
+  consultations?: ExtendedConsultation[];
+  showFilters?: boolean;
 }
 
+type FilterStatus = "all" | "pending" | "ongoing" | "completed" | "cancelled" | "missed";
+type FilterType = "all" | "video" | "chat" | "phone";
+
 const ConsultationsTable: React.FC<ConsultationsTableProps> = ({ 
-  consultations = [] 
+  consultations = [],
+  showFilters = true 
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
+  const [typeFilter, setTypeFilter] = useState<FilterType>("all");
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
   
-  // Mock data for demonstration
-  const mockConsultations: Consultation[] = [
+  // Use real API data if no consultations provided
+  const { consultations: apiConsultations, fetchConsultations } = useConsultationManager();
+  
+  // Mock data for demonstration when no API data
+  const mockConsultations: ExtendedConsultation[] = [
     {
-      id: "1",
+      id: 1,
+      meeting_id: "mock-1",
+      patient_name: "Иван Иванов",
+      patient_email: "ivan@example.com",
+      status: "completed",
       date: "2024-01-15",
       time: "14:30",
       doctor: {
@@ -56,12 +77,15 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
       },
       symptoms: "Головная боль, повышенная температура",
       type: "video",
-      status: "completed",
       diagnosis: "ОРВИ",
       prescription: true
     },
     {
-      id: "2", 
+      id: 2,
+      meeting_id: "mock-2", 
+      patient_name: "Мария Петрова",
+      patient_email: "maria@example.com",
+      status: "completed",
       date: "2024-01-10",
       time: "10:15",
       doctor: {
@@ -70,11 +94,14 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
       },
       symptoms: "Боль в груди, одышка",
       type: "chat",
-      status: "completed",
       diagnosis: "Рекомендована ЭКГ"
     },
     {
-      id: "3",
+      id: 3,
+      meeting_id: "mock-3",
+      patient_name: "Алексей Сидоров", 
+      patient_email: "alex@example.com",
+      status: "pending",
       date: "2024-01-08",
       time: "16:45",
       doctor: {
@@ -82,24 +109,62 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
         specialty: "Невролог"
       },
       symptoms: "Мигрень, головокружение",
-      type: "video",
-      status: "scheduled"
+      type: "video"
     }
   ];
 
-  const displayConsultations = consultations.length > 0 ? consultations : mockConsultations;
-  const visibleConsultations = isExpanded ? displayConsultations : displayConsultations.slice(0, 3);
+  // Use provided consultations, API data, or mock data
+  const baseConsultations = consultations.length > 0 ? consultations : 
+                           (apiConsultations.length > 0 ? apiConsultations : mockConsultations);
+
+  // Apply filters
+  const filteredConsultations = useMemo(() => {
+    let filtered = baseConsultations;
+
+    // Search filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(consultation => {
+        const extendedConsultation = consultation as ExtendedConsultation;
+        return extendedConsultation.patient_name?.toLowerCase().includes(term) ||
+               extendedConsultation.doctor?.name?.toLowerCase().includes(term) ||
+               extendedConsultation.doctor?.specialty?.toLowerCase().includes(term) ||
+               extendedConsultation.symptoms?.toLowerCase().includes(term) ||
+               extendedConsultation.diagnosis?.toLowerCase().includes(term) ||
+               extendedConsultation.meeting_id?.toLowerCase().includes(term);
+      });
+    }
+
+    // Status filter
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(consultation => consultation.status === statusFilter);
+    }
+
+    // Type filter
+    if (typeFilter !== "all") {
+      filtered = filtered.filter(consultation => {
+        const extendedConsultation = consultation as ExtendedConsultation;
+        return extendedConsultation.type === typeFilter;
+      });
+    }
+
+    return filtered;
+  }, [baseConsultations, searchTerm, statusFilter, typeFilter]);
+
+  const visibleConsultations = isExpanded ? filteredConsultations : filteredConsultations.slice(0, 3);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "completed":
         return <CheckCircle2 className="w-4 h-4 text-green-500" />;
-      case "scheduled":
+      case "pending":
         return <Clock className="w-4 h-4 text-blue-500" />;
+      case "ongoing":
+        return <AlertCircle className="w-4 h-4 text-yellow-500" />;
       case "cancelled":
         return <XCircle className="w-4 h-4 text-red-500" />;
-      case "in-progress":
-        return <AlertCircle className="w-4 h-4 text-yellow-500" />;
+      case "missed":
+        return <XCircle className="w-4 h-4 text-orange-500" />;
       default:
         return <Clock className="w-4 h-4 text-gray-500" />;
     }
@@ -109,12 +174,14 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
     switch (status) {
       case "completed":
         return "bg-green-50 text-green-700 border-green-200";
-      case "scheduled": 
+      case "pending": 
         return "bg-blue-50 text-blue-700 border-blue-200";
+      case "ongoing":
+        return "bg-yellow-50 text-yellow-700 border-yellow-200";
       case "cancelled":
         return "bg-red-50 text-red-700 border-red-200";
-      case "in-progress":
-        return "bg-yellow-50 text-yellow-700 border-yellow-200";
+      case "missed":
+        return "bg-orange-50 text-orange-700 border-orange-200";
       default:
         return "bg-gray-50 text-gray-700 border-gray-200";
     }
@@ -137,12 +204,14 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
     switch (status) {
       case "completed":
         return "Завершена";
-      case "scheduled":
-        return "Запланирована";
+      case "pending":
+        return "Ожидает";
+      case "ongoing":
+        return "В процессе";
       case "cancelled":
         return "Отменена";
-      case "in-progress":
-        return "В процессе";
+      case "missed":
+        return "Пропущена";
       default:
         return "Неизвестно";
     }
@@ -174,7 +243,7 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
     }
   };
 
-  if (displayConsultations.length === 0) {
+  if (filteredConsultations.length === 0) {
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -200,8 +269,15 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
           >
             <Stethoscope className="w-8 h-8 text-white" />
           </motion.div>
-          <h3 className="text-xl font-bold text-gray-800 mb-2">История консультаций пуста</h3>
-          <p className="text-gray-600 max-w-sm mx-auto">Ваши консультации будут отображаться здесь после их проведения</p>
+          <h3 className="text-xl font-bold text-gray-800 mb-2">
+            {baseConsultations.length === 0 ? "История консультаций пуста" : "Нет результатов"}
+          </h3>
+          <p className="text-gray-600 max-w-sm mx-auto">
+            {baseConsultations.length === 0 
+              ? "Ваши консультации будут отображаться здесь после их проведения"
+              : "Попробуйте изменить критерии фильтрации"
+            }
+          </p>
         </div>
       </motion.div>
     );
@@ -231,15 +307,132 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
           </div>
           История консультаций
         </motion.h3>
-        <motion.span 
-          initial={{ x: 20, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="text-sm font-semibold text-gray-600 bg-gradient-to-r from-gray-100 to-gray-200 px-4 py-2 rounded-full border border-gray-300/50 shadow-sm"
-        >
-          {displayConsultations.length} консультаций
-        </motion.span>
+        <div className="flex items-center gap-3">
+          {showFilters && (
+            <motion.button
+              onClick={() => setShowFilterPanel(!showFilterPanel)}
+              initial={{ x: 20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-medium text-sm transition-all duration-200 border ${
+                showFilterPanel 
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-md' 
+                  : 'bg-white/70 text-blue-600 border-blue-200 hover:bg-blue-50'
+              }`}
+            >
+              <Filter className="w-4 h-4" />
+              Фильтры
+            </motion.button>
+          )}
+          
+          <motion.button
+            onClick={fetchConsultations}
+            initial={{ x: 20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.45 }}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl font-medium text-sm bg-white/70 text-gray-600 border border-gray-200 hover:bg-gray-50 transition-all duration-200"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <RefreshCw className="w-4 h-4" />
+          </motion.button>
+          
+          <motion.span 
+            initial={{ x: 20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="text-sm font-semibold text-gray-600 bg-gradient-to-r from-gray-100 to-gray-200 px-4 py-2 rounded-full border border-gray-300/50 shadow-sm"
+          >
+            {filteredConsultations.length} из {baseConsultations.length}
+          </motion.span>
+        </div>
       </div>
+
+      {/* Filters Panel */}
+      <AnimatePresence>
+        {showFilterPanel && showFilters && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="relative bg-white/95 backdrop-blur-sm rounded-2xl border border-blue-200/50 shadow-lg overflow-hidden"
+          >
+            <div className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold text-gray-800">Фильтры</h4>
+                <motion.button
+                  onClick={() => {
+                    setSearchTerm("");
+                    setStatusFilter("all");
+                    setTypeFilter("all");
+                  }}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  whileHover={{ scale: 1.05 }}
+                >
+                  Сбросить
+                </motion.button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Search */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Поиск</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Имя пациента, врач, симптомы..."
+                      className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    />
+                    {searchTerm && (
+                      <button
+                        onClick={() => setSearchTerm("")}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Status Filter */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Статус</label>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value as FilterStatus)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  >
+                    <option value="all">Все статусы</option>
+                    <option value="pending">Ожидает</option>
+                    <option value="ongoing">В процессе</option>
+                    <option value="completed">Завершена</option>
+                    <option value="cancelled">Отменена</option>
+                    <option value="missed">Пропущена</option>
+                  </select>
+                </div>
+
+                {/* Type Filter */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Тип</label>
+                  <select
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value as FilterType)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  >
+                    <option value="all">Все типы</option>
+                    <option value="video">Видео</option>
+                    <option value="chat">Чат</option>
+                    <option value="phone">Телефон</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Table */}
       <motion.div 
@@ -253,8 +446,8 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
             <thead className="bg-gradient-to-r from-slate-50 to-blue-50/50 border-b border-gray-200">
               <tr>
                 <th className="text-left p-4 font-semibold text-gray-700 text-sm">Дата/Время</th>
-                <th className="text-left p-4 font-semibold text-gray-700 text-sm">Врач</th>
-                <th className="text-left p-4 font-semibold text-gray-700 text-sm">Симптомы</th>
+                <th className="text-left p-4 font-semibold text-gray-700 text-sm">Врач/Пациент</th>
+                <th className="text-left p-4 font-semibold text-gray-700 text-sm">Детали</th>
                 <th className="text-left p-4 font-semibold text-gray-700 text-sm">Тип</th>
                 <th className="text-left p-4 font-semibold text-gray-700 text-sm">Статус</th>
                 <th className="text-left p-4 font-semibold text-gray-700 text-sm">Действия</th>
@@ -262,7 +455,9 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
             </thead>
             <tbody>
               <AnimatePresence>
-                {visibleConsultations.map((consultation, index) => (
+                {visibleConsultations.map((consultation, index) => {
+                  const extendedConsultation = consultation as ExtendedConsultation;
+                  return (
                   <motion.tr
                     key={consultation.id}
                     initial={{ opacity: 0, y: 10 }}
@@ -275,39 +470,41 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
                     <td className="p-4">
                       <div className="space-y-1">
                         <div className="text-sm font-medium text-gray-900">
-                          {formatDate(consultation.date)}
+                          {extendedConsultation.date ? formatDate(extendedConsultation.date) : "Не указано"}
                         </div>
                         <div className="text-xs text-gray-500 flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          {consultation.time}
+                          {extendedConsultation.time || "Не указано"}
                         </div>
                       </div>
                     </td>
 
-                    {/* Doctor */}
+                    {/* Doctor/Patient */}
                     <td className="p-4">
                       <div className="space-y-1">
                         <div className="text-sm font-medium text-gray-900">
-                          {consultation.doctor.name}
+                          {extendedConsultation.doctor?.name || extendedConsultation.patient_name}
                         </div>
                         <div className="text-xs text-blue-600 font-medium">
-                          {consultation.doctor.specialty}
+                          {extendedConsultation.doctor?.specialty || extendedConsultation.patient_email}
                         </div>
                       </div>
                     </td>
 
-                    {/* Symptoms */}
+                    {/* Symptoms/Meeting ID */}
                     <td className="p-4">
                       <div className="space-y-1">
                         <div className="text-sm text-gray-700 max-w-xs">
-                          {consultation.symptoms.length > 50 
-                            ? `${consultation.symptoms.slice(0, 50)}...` 
-                            : consultation.symptoms
+                          {extendedConsultation.symptoms 
+                            ? (extendedConsultation.symptoms.length > 50 
+                                ? `${extendedConsultation.symptoms.slice(0, 50)}...` 
+                                : extendedConsultation.symptoms)
+                            : `ID встречи: ${extendedConsultation.meeting_id}`
                           }
                         </div>
-                        {consultation.diagnosis && (
+                        {extendedConsultation.diagnosis && (
                           <div className="text-xs text-blue-600 font-medium">
-                            Диагноз: {consultation.diagnosis}
+                            Диагноз: {extendedConsultation.diagnosis}
                           </div>
                         )}
                       </div>
@@ -317,10 +514,10 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
                     <td className="p-4">
                       <div className="flex items-center gap-2">
                         <div className="p-1.5 bg-gray-50 rounded-lg border border-gray-200">
-                          {getTypeIcon(consultation.type)}
+                          {getTypeIcon(extendedConsultation.type || "video")}
                         </div>
                         <span className="text-sm text-gray-700 font-medium">
-                          {getTypeText(consultation.type)}
+                          {getTypeText(extendedConsultation.type || "video")}
                         </span>
                       </div>
                     </td>
@@ -332,7 +529,7 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
                           {getStatusIcon(consultation.status)}
                           {getStatusText(consultation.status)}
                         </span>
-                        {consultation.prescription && (
+                        {extendedConsultation.prescription && (
                           <div className="text-xs text-green-600 font-medium flex items-center gap-1">
                             <Download className="w-3 h-3" />
                             Рецепт выдан
@@ -352,7 +549,7 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
                         >
                           <Eye className="w-4 h-4" />
                         </motion.button>
-                        {consultation.prescription && (
+                        {extendedConsultation.prescription && (
                           <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
@@ -373,14 +570,15 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
                       </div>
                     </td>
                   </motion.tr>
-                ))}
+                  );
+                })}
               </AnimatePresence>
             </tbody>
           </table>
         </div>
 
         {/* Show More Button */}
-        {displayConsultations.length > 3 && (
+        {filteredConsultations.length > 3 && (
           <div className="p-4 border-t border-gray-200 bg-gradient-to-r from-slate-50 to-blue-50/30">
             <motion.button
               onClick={() => setIsExpanded(!isExpanded)}
@@ -395,7 +593,7 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
                 </>
               ) : (
                 <>
-                  Показать все ({displayConsultations.length - 3} ещё)
+                  Показать все ({filteredConsultations.length - 3} ещё)
                   <ChevronDown className="w-4 h-4" />
                 </>
               )}

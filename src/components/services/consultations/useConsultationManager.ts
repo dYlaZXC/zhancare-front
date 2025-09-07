@@ -1,14 +1,19 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { api } from "@/utils/api";
 import type { Consultation } from "@/types/consultation";
+import { useAuth } from "@/context/AuthContext";
 
 export const useConsultationManager = () => {
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [newConsultation, setNewConsultation] = useState<Consultation | null>(null);
+  const { user } = useAuth();
 
   const seenIds = useRef<Set<number>>(new Set());
   const dismissedIds = useRef<Set<number>>(new Set());
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Check if current user is a doctor
+  const isDoctor = user?.role === 'doctor';
 
   const fetchConsultations = useCallback(async () => {
     try {
@@ -47,12 +52,15 @@ export const useConsultationManager = () => {
       if (pending && !newConsultation) {
         setNewConsultation(pending);
         seenIds.current.add(pending.id);
-        playSound();
+        // Only play sound for doctors
+        if (isDoctor) {
+          playSound();
+        }
       }
     } catch (error) {
       console.error("Failed to fetch new consultations:", error);
     }
-  }, [newConsultation, playSound]);
+  }, [newConsultation, playSound, isDoctor]);
 
   useEffect(() => {
     fetchConsultations();
