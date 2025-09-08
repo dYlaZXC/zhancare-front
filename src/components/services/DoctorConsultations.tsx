@@ -331,7 +331,6 @@ const DoctorConsultations: React.FC = () => {
           </div>
 
           <ConsultationsTable
-            consultations={filteredConsultations}
             showFilters={false}
           />
         </motion.div>
