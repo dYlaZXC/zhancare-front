@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { useConsultationManager } from "./useConsultationManager";
 import type { Consultation as APIConsultation } from "@/types/consultation";
+import { useAuth } from "@/context/AuthContext";
 
 // Extended interface for display purposes
 interface ExtendedConsultation extends APIConsultation {
@@ -52,6 +53,7 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
   consultations = [],
   showFilters = true 
 }) => {
+  const { user } = useAuth();
   const [isExpanded, setIsExpanded] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
@@ -113,9 +115,30 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
     }
   ];
 
-  // Use provided consultations, API data, or mock data
-  const baseConsultations = consultations.length > 0 ? consultations : 
-                           (apiConsultations.length > 0 ? apiConsultations : mockConsultations);
+  // Transform API data to match expected format
+  const transformApiConsultations = (consultations: APIConsultation[]): ExtendedConsultation[] => {
+    return consultations.map(consultation => ({
+      ...consultation,
+      // Map API fields to expected format for display
+      doctor: {
+        name: `${consultation.doctor_first_name} ${consultation.doctor_last_name}`,
+        specialty: "Врач общей практики" // Default since API doesn't provide specialty
+      },
+      date: consultation.created_at ? consultation.created_at.split('T')[0] : undefined,
+      time: consultation.started_at ? new Date(consultation.started_at).toLocaleTimeString('ru-RU', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      }) : undefined,
+      type: "video" as const // Default type since API doesn't specify
+    }));
+  };
+
+  // Use provided consultations, transformed API data, or mock data
+  const baseConsultations = consultations.length > 0 
+    ? consultations 
+    : (apiConsultations.length > 0 
+        ? transformApiConsultations(apiConsultations) 
+        : mockConsultations);
 
   // Apply filters
   const filteredConsultations = useMemo(() => {
@@ -326,7 +349,7 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
           )}
           
           <motion.button
-            onClick={fetchConsultations}
+            onClick={() => fetchConsultations()}
             initial={{ x: 20, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ delay: 0.45 }}
@@ -470,11 +493,17 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
                     <td className="p-4">
                       <div className="space-y-1">
                         <div className="text-sm font-medium text-gray-900">
-                          {extendedConsultation.date ? formatDate(extendedConsultation.date) : "Не указано"}
+                          {consultation.created_at ? formatDate(consultation.created_at) : "Не указано"}
                         </div>
                         <div className="text-xs text-gray-500 flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          {extendedConsultation.time || "Не указано"}
+                          {consultation.started_at 
+                            ? new Date(consultation.started_at).toLocaleTimeString('ru-RU', { 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              })
+                            : "Не начата"
+                          }
                         </div>
                       </div>
                     </td>
@@ -483,10 +512,16 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
                     <td className="p-4">
                       <div className="space-y-1">
                         <div className="text-sm font-medium text-gray-900">
-                          {extendedConsultation.doctor?.name || extendedConsultation.patient_name}
+                          {user?.role === 'doctor' 
+                            ? consultation.patient_name || "Пациент не указан"
+                            : `${consultation.doctor_first_name} ${consultation.doctor_last_name}` || "Врач не назначен"
+                          }
                         </div>
                         <div className="text-xs text-blue-600 font-medium">
-                          {extendedConsultation.doctor?.specialty || extendedConsultation.patient_email}
+                          {user?.role === 'doctor'
+                            ? consultation.patient_email || "Email не указан"
+                            : "Врач общей практики"
+                          }
                         </div>
                       </div>
                     </td>
@@ -495,18 +530,11 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
                     <td className="p-4">
                       <div className="space-y-1">
                         <div className="text-sm text-gray-700 max-w-xs">
-                          {extendedConsultation.symptoms 
-                            ? (extendedConsultation.symptoms.length > 50 
-                                ? `${extendedConsultation.symptoms.slice(0, 50)}...` 
-                                : extendedConsultation.symptoms)
-                            : `ID встречи: ${extendedConsultation.meeting_id}`
-                          }
+                          ID встречи: {consultation.meeting_id}
                         </div>
-                        {extendedConsultation.diagnosis && (
-                          <div className="text-xs text-blue-600 font-medium">
-                            Диагноз: {extendedConsultation.diagnosis}
-                          </div>
-                        )}
+                        <div className="text-xs text-gray-500">
+                          Статус: {getStatusText(consultation.status)}
+                        </div>
                       </div>
                     </td>
 
@@ -514,10 +542,10 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
                     <td className="p-4">
                       <div className="flex items-center gap-2">
                         <div className="p-1.5 bg-gray-50 rounded-lg border border-gray-200">
-                          {getTypeIcon(extendedConsultation.type || "video")}
+                          {getTypeIcon("video")}
                         </div>
                         <span className="text-sm text-gray-700 font-medium">
-                          {getTypeText(extendedConsultation.type || "video")}
+                          {getTypeText("video")}
                         </span>
                       </div>
                     </td>
@@ -529,12 +557,6 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
                           {getStatusIcon(consultation.status)}
                           {getStatusText(consultation.status)}
                         </span>
-                        {extendedConsultation.prescription && (
-                          <div className="text-xs text-green-600 font-medium flex items-center gap-1">
-                            <Download className="w-3 h-3" />
-                            Рецепт выдан
-                          </div>
-                        )}
                       </div>
                     </td>
 
@@ -549,16 +571,6 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
                         >
                           <Eye className="w-4 h-4" />
                         </motion.button>
-                        {extendedConsultation.prescription && (
-                          <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-all duration-200 border border-green-200/50 hover:border-green-300"
-                            title="Скачать рецепт"
-                          >
-                            <Download className="w-4 h-4" />
-                          </motion.button>
-                        )}
                         <motion.button
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}

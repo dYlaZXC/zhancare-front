@@ -15,14 +15,20 @@ export const useConsultationManager = () => {
   // Check if current user is a doctor
   const isDoctor = user?.role === 'doctor';
 
-  const fetchConsultations = useCallback(async () => {
+  const fetchConsultations = useCallback(async (status?: string) => {
     try {
-      const { data } = await api.get<Consultation[]>("/consultations/");
+      // Different endpoints based on user role
+      const baseUrl = user?.role === 'patient' 
+        ? '/consultations/my-consultations/'
+        : '/consultations/';
+      
+      const url = status ? `${baseUrl}?status=${status}` : baseUrl;
+      const { data } = await api.get<Consultation[]>(url);
       setConsultations(data);
     } catch (error) {
       console.error("Failed to fetch consultations:", error);
     }
-  }, []);
+  }, [user?.role]);
 
   const playSound = useCallback(() => {
     if (!audioRef.current) {
@@ -41,7 +47,12 @@ export const useConsultationManager = () => {
 
   const fetchNewConsultations = useCallback(async () => {
     try {
-      const { data } = await api.get<Consultation[]>("/consultations/");
+      // Use same role-based endpoint logic
+      const baseUrl = user?.role === 'patient' 
+        ? '/consultations/my-consultations/'
+        : '/consultations/';
+        
+      const { data } = await api.get<Consultation[]>(baseUrl);
       const pending = data.find(
         (c) =>
           c.status === "pending" &&
@@ -60,7 +71,7 @@ export const useConsultationManager = () => {
     } catch (error) {
       console.error("Failed to fetch new consultations:", error);
     }
-  }, [newConsultation, playSound, isDoctor]);
+  }, [newConsultation, playSound, isDoctor, user?.role]);
 
   useEffect(() => {
     fetchConsultations();

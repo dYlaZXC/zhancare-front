@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/utils/api";
 import { toast } from "react-toastify";
+import { useAuth } from "@/context/AuthContext";
 
 export interface Consultation {
   id: number;
@@ -25,6 +26,7 @@ interface ChartDataPoint {
 }
 
 export const useProfileData = () => {
+  const { user } = useAuth();
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [appointments, setAppointments] = useState<HomeAppointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,8 +34,13 @@ export const useProfileData = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Use role-based endpoints
+        const consultationEndpoint = user?.role === 'patient' 
+          ? '/consultations/my-consultations/'
+          : '/consultations/';
+
         const [consultationRes, appointmentRes] = await Promise.all([
-          api.get("/consultations/"),
+          api.get(consultationEndpoint),
           api.get("/appointments/my-appointments/"),
         ]);
 
@@ -55,7 +62,7 @@ export const useProfileData = () => {
     };
 
     fetchData();
-  }, []);
+  }, [user?.role]);
 
   const consultationTrendData: ChartDataPoint[] = Object.values(
     consultations.reduce((acc, cur) => {
