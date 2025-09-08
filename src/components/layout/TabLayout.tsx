@@ -71,8 +71,8 @@ const TabLayout = ({ children }: TabLayoutProps) => {
         isCollapsed={sidebarCollapsed}
       />
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+      {/* Main Content - Account for desktop sidebar on XL screens and above */}
+      <div className={`flex-1 flex flex-col h-screen overflow-hidden ${sidebarCollapsed ? 'xl:ml-20' : 'xl:ml-80'} transition-all duration-500`}>
         {/* Header with menu toggle */}
         <Header 
           onMenuClick={() => setSidebarOpen(true)}

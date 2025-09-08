@@ -1,0 +1,65 @@
+🎨 Blue Palette (Set 1)
+
+Light: #ebf1ff (rgb 235, 241, 255)
+
+Light :hover: #e1eaff (rgb 225, 234, 255)
+
+Light :active: #c1d3ff (rgb 193, 211, 255)
+
+Normal: #3772ff (rgb 55, 114, 255)
+
+Normal :hover: #3267e6 (rgb 50, 103, 230)
+
+Normal :active: #2c5bcc (rgb 44, 91, 204)
+
+Dark: #2956bf (rgb 41, 86, 191)
+
+Dark :hover: #214499 (rgb 33, 68, 153)
+
+Dark :active: #193373 (rgb 25, 51, 115)
+
+Darker: #132859 (rgb 19, 40, 89)
+
+🎨 Blue Palette (Set 2 – darker themed)
+
+Light: #eaebee (rgb 234, 235, 238)
+
+Light :hover: #dfe0e5 (rgb 223, 224, 229)
+
+Light :active: #bcc0ca (rgb 188, 192, 202)
+
+Normal: #283353 (rgb 40, 51, 83)
+
+Normal :hover: #242e4b (rgb 36, 46, 75)
+
+Normal :active: #202942 (rgb 32, 41, 66)
+
+Dark: #1e263e (rgb 30, 38, 62)
+
+Dark :hover: #181732 (rgb 24, 31, 50)
+
+Dark :active: #121725 (rgb 18, 23, 37)
+
+Darker: #0e121d (rgb 14, 18, 29)
+
+🎨 Grey Palette
+
+Light: #e8e8e8 (rgb 232, 232, 232)
+
+Light :hover: #dddddd (rgb 221, 221, 221)
+
+Light :active: #b8b8b8 (rgb 184, 184, 184)
+
+Normal: #1b1b1b (rgb 27, 27, 27)
+
+Normal :hover: #181818 (rgb 24, 24, 24)
+
+Normal :active: #161616 (rgb 22, 22, 22)
+
+Dark: #141414 (rgb 20, 20, 20)
+
+Dark :hover: #101010 (rgb 16, 16, 16)
+
+Dark :active: #0c0c0c (rgb 12, 12, 12)
+
+Darker: #090909 (rgb 9, 9, 9)

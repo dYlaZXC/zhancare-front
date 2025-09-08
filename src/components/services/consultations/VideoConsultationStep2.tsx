@@ -208,7 +208,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
     <div
       onClick={() => onSelect(doctor.id)}
       className={clsx(
-        "group relative p-3 sm:p-4 lg:p-5 xl:p-6 rounded-lg sm:rounded-xl lg:rounded-2xl border cursor-pointer transition-all duration-300 bg-white hover:shadow-lg w-full max-w-full",
+        "group relative p-3 sm:p-4 md:p-5 lg:p-5 xl:p-6 rounded-lg sm:rounded-xl md:rounded-xl lg:rounded-2xl border cursor-pointer transition-all duration-300 bg-white hover:shadow-lg w-full max-w-full",
         isSelected 
           ? "border-blue-500 bg-blue-50 shadow-md ring-1 sm:ring-2 ring-blue-200" 
           : "border-gray-200 hover:border-blue-300",
@@ -218,15 +218,15 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
       {isRecommended && (
         <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1 shadow-lg z-10 border-2 border-white">
           <Bot size={10} />
-          <span>AI</span>
+          <span>AI рекомендует</span>
         </div>
       )}
 
 
-      <div className="flex flex-col sm:flex-row items-start sm:items-stretch gap-3 sm:gap-4 lg:gap-5 min-h-full">
+      <div className="flex flex-col md:flex-row items-start md:items-stretch gap-3 md:gap-4 lg:gap-5 min-h-full">
         {/* Doctor Avatar */}
-        <div className="relative flex-shrink-0 sm:self-start">
-          <div className="relative w-14 h-14 sm:w-16 sm:h-16 lg:w-18 lg:h-18 xl:w-20 xl:h-20 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg sm:text-xl lg:text-2xl shadow-lg overflow-hidden">
+        <div className="relative flex-shrink-0 md:self-start">
+          <div className="relative w-14 h-14 sm:w-16 sm:h-16 md:w-18 md:h-18 lg:w-18 lg:h-18 xl:w-20 xl:h-20 rounded-xl md:rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg sm:text-xl md:text-xl lg:text-2xl shadow-lg overflow-hidden">
             {doctor.avatar ? (
               <Image src={doctor.avatar} alt={doctor.name} fill className="object-cover" />
             ) : (
@@ -252,16 +252,16 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
         </div>
         
         {/* Doctor Info */}
-        <div className="flex-1 min-w-0 space-y-2 sm:space-y-3">
+        <div className="flex-1 min-w-0 space-y-2 md:space-y-3">
           <div>
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-2 gap-2">
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-2 gap-2">
               <div className="flex-1 min-w-0">
-                <h3 className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent leading-tight mb-1">
+                <h3 className="text-lg sm:text-xl md:text-xl lg:text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent leading-tight mb-1">
                   {doctor.name || 'Имя не указано'}
                 </h3>
-                <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
+                <div className="flex items-center gap-1.5 md:gap-2 mb-1">
                   <Stethoscope className="text-blue-600 flex-shrink-0" size={12} />
-                  <p className="text-blue-600 font-bold text-xs sm:text-sm lg:text-base">{doctor.doctor_type || 'Специальность не указана'}</p>
+                  <p className="text-blue-600 font-bold text-xs sm:text-sm md:text-sm lg:text-base">{doctor.doctor_type || 'Специальность не указана'}</p>
                 </div>
               </div>
               <div className="flex items-center gap-1 bg-gradient-to-r from-green-100 to-emerald-100 px-2 py-1 rounded-full self-start">
@@ -270,7 +270,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
               </div>
             </div>
             
-            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-gray-600 mb-2">
+            <div className="flex flex-wrap items-center gap-2 md:gap-4 text-xs text-gray-600 mb-2">
               <div className="flex items-center gap-1">
                 <GraduationCap className="text-indigo-500" size={10} />
                 <span className="font-medium">К.м.н</span>
@@ -285,7 +285,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
               </div>
             </div>
             
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs">
+            <div className="flex flex-wrap items-center gap-1.5 md:gap-2 text-xs">
               <div className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">Взрослые</div>
               <div className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full font-medium">Ассоциация</div>
               <div className="bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">Премиум</div>
@@ -314,10 +314,10 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                    <Star key={i} className="w-3 h-3 md:w-4 md:h-4 fill-yellow-400 text-yellow-400" />
                   ))}
                 </div>
-                <span className="font-bold text-gray-900 text-lg">{doctor.rating || "4.9"}</span>
+                <span className="font-bold text-gray-900 text-base md:text-lg">{doctor.rating || "4.9"}</span>
               </div>
               <div className="text-right">
                 <div className="text-xs text-gray-600">из 1247 отзывов</div>
@@ -339,22 +339,22 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
           </div>
 
           {/* Premium Pricing Section */}
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-2 rounded-xl border border-green-200">
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-2 md:p-3 rounded-xl border border-green-200">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
                 <span className="text-white text-xs">₸</span>
               </div>
               <p className="text-xs font-bold text-gray-700 uppercase tracking-wide">ПРЕМИУМ КОНСУЛЬТАЦИЯ</p>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-white p-1.5 rounded-lg border border-green-200">
+            <div className="grid grid-cols-2 gap-2 md:gap-3">
+              <div className="bg-white p-1.5 md:p-2 rounded-lg border border-green-200">
                 <div className="text-center">
                   <div className="text-xs text-gray-500 mb-1">Первичная</div>
                   <div className="font-bold text-green-600 text-sm">15,000 ₸</div>
                   <div className="text-xs text-gray-400 line-through">20,000 ₸</div>
                 </div>
               </div>
-              <div className="bg-white p-1.5 rounded-lg border border-green-200">
+              <div className="bg-white p-1.5 md:p-2 rounded-lg border border-green-200">
                 <div className="text-center">
                   <div className="text-xs text-gray-500 mb-1">Повторная</div>
                   <div className="font-bold text-green-600 text-sm">12,000 ₸</div>
@@ -371,14 +371,14 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
         </div>
 
         {/* Enhanced Schedule Section */}
-        <div className="w-full sm:w-auto sm:flex-shrink-0 sm:flex sm:flex-col sm:justify-between sm:min-h-full">
+        <div className="w-full md:w-auto md:flex-shrink-0 md:flex md:flex-col md:justify-between md:min-h-full">
           {/* Premium Schedule Card */}
-          <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-2 sm:p-3 rounded-lg sm:rounded-xl border border-indigo-200 shadow-md sm:h-full sm:flex sm:flex-col">
-            <div className="flex items-center gap-2 mb-2 sm:mb-3">
-              <div className="w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-r from-indigo-500 to-blue-600 rounded-lg flex items-center justify-center">
+          <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-2 md:p-3 rounded-lg md:rounded-xl border border-indigo-200 shadow-md md:h-full md:flex md:flex-col">
+            <div className="flex items-center gap-2 mb-2 md:mb-3">
+              <div className="w-5 h-5 md:w-6 md:h-6 bg-gradient-to-r from-indigo-500 to-blue-600 rounded-lg flex items-center justify-center">
                 <Calendar className="text-white" size={10} />
               </div>
-              <span className="text-xs sm:text-sm font-bold text-indigo-800">Расписание</span>
+              <span className="text-xs md:text-sm font-bold text-indigo-800">Расписание</span>
             </div>
             
             {/* Mini Calendar */}
@@ -393,7 +393,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
                   <div 
                     key={date} 
                     className={clsx(
-                      "w-7 h-7 flex items-center justify-center text-xs rounded-lg font-medium transition-all",
+                      "w-6 h-6 md:w-7 md:h-7 flex items-center justify-center text-xs rounded-lg font-medium transition-all",
                       i === 3 
                         ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold shadow-lg ring-2 ring-blue-200" 
                         : i === 1 || i === 5 
@@ -408,16 +408,16 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
             </div>
             
             {/* Available Slots */}
-            <div className="sm:flex-1 sm:flex sm:flex-col sm:justify-center space-y-2 sm:space-y-3">
+            <div className="md:flex-1 md:flex md:flex-col md:justify-center space-y-2 md:space-y-3">
               <p className="text-xs font-bold text-indigo-700 uppercase text-center">Ближайшие слоты</p>
-              <div className="grid grid-cols-2 sm:grid-cols-1 gap-2 sm:gap-3">
-                <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-2 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl text-center shadow-lg">
-                  <div className="font-bold text-sm sm:text-lg">18:00</div>
-                  <div className="text-xs sm:text-sm opacity-90">Сегодня</div>
+              <div className="grid grid-cols-2 md:grid-cols-1 gap-2 md:gap-3">
+                <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-2 md:px-4 md:py-3 rounded-lg md:rounded-xl text-center shadow-lg">
+                  <div className="font-bold text-sm md:text-base">18:00</div>
+                  <div className="text-xs md:text-sm opacity-90">Сегодня</div>
                 </div>
-                <div className="bg-white border border-indigo-200 text-indigo-600 px-3 py-2 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl text-center hover:bg-indigo-50 transition-colors">
-                  <div className="font-bold text-sm sm:text-lg">09:30</div>
-                  <div className="text-xs sm:text-sm">Завтра</div>
+                <div className="bg-white border border-indigo-200 text-indigo-600 px-3 py-2 md:px-4 md:py-3 rounded-lg md:rounded-xl text-center hover:bg-indigo-50 transition-colors">
+                  <div className="font-bold text-sm md:text-base">09:30</div>
+                  <div className="text-xs md:text-sm">Завтра</div>
                 </div>
               </div>
             </div>

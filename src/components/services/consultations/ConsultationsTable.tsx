@@ -1,12 +1,10 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { 
   Calendar,
   Clock,
   Eye,
-  Download,
   CheckCircle2,
   AlertCircle,
   XCircle,
@@ -14,35 +12,19 @@ import {
   Stethoscope,
   Video,
   MessageSquare,
-  ChevronDown,
-  ChevronUp,
   Phone,
   Filter,
   Search,
   X,
-  RefreshCw
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { useConsultationManager } from "./useConsultationManager";
-import type { Consultation as APIConsultation } from "@/types/consultation";
+import type { Consultation } from "@/types/consultation";
 import { useAuth } from "@/context/AuthContext";
 
-// Extended interface for display purposes
-interface ExtendedConsultation extends APIConsultation {
-  date?: string;
-  time?: string;
-  doctor?: {
-    name: string;
-    specialty: string;
-    avatar?: string;
-  };
-  symptoms?: string;
-  type?: "video" | "chat" | "phone";
-  diagnosis?: string;
-  prescription?: boolean;
-}
-
 interface ConsultationsTableProps {
-  consultations?: ExtendedConsultation[];
   showFilters?: boolean;
 }
 
@@ -50,111 +32,33 @@ type FilterStatus = "all" | "pending" | "ongoing" | "completed" | "cancelled" | 
 type FilterType = "all" | "video" | "chat" | "phone";
 
 const ConsultationsTable: React.FC<ConsultationsTableProps> = ({ 
-  consultations = [],
   showFilters = true 
 }) => {
   const { user } = useAuth();
-  const [isExpanded, setIsExpanded] = useState(false);
+  const { consultations, fetchConsultations } = useConsultationManager();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
   const [typeFilter, setTypeFilter] = useState<FilterType>("all");
   const [showFilterPanel, setShowFilterPanel] = useState(false);
-  
-  // Use real API data if no consultations provided
-  const { consultations: apiConsultations, fetchConsultations } = useConsultationManager();
-  
-  // Mock data for demonstration when no API data
-  const mockConsultations: ExtendedConsultation[] = [
-    {
-      id: 1,
-      meeting_id: "mock-1",
-      patient_name: "Иван Иванов",
-      patient_email: "ivan@example.com",
-      status: "completed",
-      date: "2024-01-15",
-      time: "14:30",
-      doctor: {
-        name: "Д-р Алиев К.С.",
-        specialty: "Терапевт"
-      },
-      symptoms: "Головная боль, повышенная температура",
-      type: "video",
-      diagnosis: "ОРВИ",
-      prescription: true
-    },
-    {
-      id: 2,
-      meeting_id: "mock-2", 
-      patient_name: "Мария Петрова",
-      patient_email: "maria@example.com",
-      status: "completed",
-      date: "2024-01-10",
-      time: "10:15",
-      doctor: {
-        name: "Д-р Нурланова А.М.",
-        specialty: "Кардиолог"
-      },
-      symptoms: "Боль в груди, одышка",
-      type: "chat",
-      diagnosis: "Рекомендована ЭКГ"
-    },
-    {
-      id: 3,
-      meeting_id: "mock-3",
-      patient_name: "Алексей Сидоров", 
-      patient_email: "alex@example.com",
-      status: "pending",
-      date: "2024-01-08",
-      time: "16:45",
-      doctor: {
-        name: "Д-р Смирнов Д.В.",
-        specialty: "Невролог"
-      },
-      symptoms: "Мигрень, головокружение",
-      type: "video"
-    }
-  ];
-
-  // Transform API data to match expected format
-  const transformApiConsultations = (consultations: APIConsultation[]): ExtendedConsultation[] => {
-    return consultations.map(consultation => ({
-      ...consultation,
-      // Map API fields to expected format for display
-      doctor: {
-        name: `${consultation.doctor_first_name} ${consultation.doctor_last_name}`,
-        specialty: "Врач общей практики" // Default since API doesn't provide specialty
-      },
-      date: consultation.created_at ? consultation.created_at.split('T')[0] : undefined,
-      time: consultation.started_at ? new Date(consultation.started_at).toLocaleTimeString('ru-RU', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      }) : undefined,
-      type: "video" as const // Default type since API doesn't specify
-    }));
-  };
-
-  // Use provided consultations, transformed API data, or mock data
-  const baseConsultations = consultations.length > 0 
-    ? consultations 
-    : (apiConsultations.length > 0 
-        ? transformApiConsultations(apiConsultations) 
-        : mockConsultations);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Apply filters
   const filteredConsultations = useMemo(() => {
-    let filtered = baseConsultations;
+    let filtered = consultations;
 
     // Search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(consultation => {
-        const extendedConsultation = consultation as ExtendedConsultation;
-        return extendedConsultation.patient_name?.toLowerCase().includes(term) ||
-               extendedConsultation.doctor?.name?.toLowerCase().includes(term) ||
-               extendedConsultation.doctor?.specialty?.toLowerCase().includes(term) ||
-               extendedConsultation.symptoms?.toLowerCase().includes(term) ||
-               extendedConsultation.diagnosis?.toLowerCase().includes(term) ||
-               extendedConsultation.meeting_id?.toLowerCase().includes(term);
+        const doctorName = `${consultation.doctor_first_name || ''} ${consultation.doctor_last_name || ''}`.trim();
+        const patientName = `${consultation.patient_first_name || ''} ${consultation.patient_last_name || ''}`.trim();
+        
+        return consultation.patient_name?.toLowerCase().includes(term) ||
+               patientName.toLowerCase().includes(term) ||
+               doctorName.toLowerCase().includes(term) ||
+               consultation.patient_email?.toLowerCase().includes(term) ||
+               consultation.meeting_id?.toLowerCase().includes(term);
       });
     }
 
@@ -166,15 +70,27 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
     // Type filter
     if (typeFilter !== "all") {
       filtered = filtered.filter(consultation => {
-        const extendedConsultation = consultation as ExtendedConsultation;
-        return extendedConsultation.type === typeFilter;
+        const consultationType = consultation.type || "video"; // Default to "video" like in display
+        return consultationType === typeFilter;
       });
     }
 
     return filtered;
-  }, [baseConsultations, searchTerm, statusFilter, typeFilter]);
+  }, [consultations, searchTerm, statusFilter, typeFilter]);
 
-  const visibleConsultations = isExpanded ? filteredConsultations : filteredConsultations.slice(0, 3);
+  // Pagination logic
+  const totalPages = Math.ceil(filteredConsultations.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const visibleConsultations = filteredConsultations.slice(startIndex, startIndex + itemsPerPage);
+  
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
+
+  // Reset to page 1 when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, typeFilter]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -210,19 +126,6 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
     }
   };
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case "video":
-        return <Video className="w-4 h-4 text-purple-600" />;
-      case "chat":
-        return <MessageSquare className="w-4 h-4 text-blue-600" />;
-      case "phone":
-        return <Phone className="w-4 h-4 text-green-600" />;
-      default:
-        return <MessageSquare className="w-4 h-4 text-gray-500" />;
-    }
-  };
-
   const getStatusText = (status: string) => {
     switch (status) {
       case "completed":
@@ -253,6 +156,19 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
     }
   };
 
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case "video":
+        return <Video className="w-4 h-4 text-white" />;
+      case "chat":
+        return <MessageSquare className="w-4 h-4 text-white" />;
+      case "phone":
+        return <Phone className="w-4 h-4 text-white" />;
+      default:
+        return <Video className="w-4 h-4 text-white" />;
+    }
+  };
+
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
@@ -266,233 +182,372 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
     }
   };
 
-  if (filteredConsultations.length === 0) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative mt-8 p-8 bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 border-2 border-gray-200/50 rounded-2xl overflow-hidden backdrop-blur-sm"
-        style={{
-          backgroundImage: `
-            radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
-            radial-gradient(circle at 75% 75%, rgba(139, 92, 246, 0.08) 0%, transparent 50%)
-          `,
-        }}
-      >
-        {/* Floating decorations */}
-        <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-blue-200/20 to-purple-200/20 rounded-full blur-2xl" />
-        <div className="absolute -bottom-4 -left-4 w-32 h-32 bg-gradient-to-tr from-indigo-200/20 to-blue-200/20 rounded-full blur-2xl" />
-        
-        <div className="relative text-center">
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2, type: "spring", stiffness: 300 }}
-            className="inline-flex items-center justify-center w-16 h-16 mb-4 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg"
-          >
-            <Stethoscope className="w-8 h-8 text-white" />
-          </motion.div>
-          <h3 className="text-xl font-bold text-gray-800 mb-2">
-            {baseConsultations.length === 0 ? "История консультаций пуста" : "Нет результатов"}
-          </h3>
-          <p className="text-gray-600 max-w-sm mx-auto">
-            {baseConsultations.length === 0 
-              ? "Ваши консультации будут отображаться здесь после их проведения"
-              : "Попробуйте изменить критерии фильтрации"
-            }
-          </p>
-        </div>
-      </motion.div>
-    );
-  }
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.3 }}
-      className="relative mt-8 space-y-6 px-4 md:px-6"
-    >
+    <div className="relative mt-8 space-y-6 px-4 md:px-6">
       {/* Floating background decorations */}
       <div className="absolute -top-6 -right-6 w-32 h-32 bg-gradient-to-br from-blue-200/15 to-purple-200/15 rounded-full blur-3xl" />
       <div className="absolute -bottom-6 -left-6 w-40 h-40 bg-gradient-to-tr from-indigo-200/15 to-blue-200/15 rounded-full blur-3xl" />
       
       {/* Header */}
-      <div className="relative flex items-center justify-between">
-        <motion.h3 
-          initial={{ x: -20, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className="text-2xl font-bold text-gray-800 flex items-center gap-3"
-        >
-          <div className="p-2.5 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
-            <Calendar className="w-6 h-6 text-white" />
-          </div>
-          История консультаций
-        </motion.h3>
-        <div className="flex items-center gap-3">
-          {showFilters && (
-            <motion.button
-              onClick={() => setShowFilterPanel(!showFilterPanel)}
-              initial={{ x: 20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-medium text-sm transition-all duration-200 border ${
-                showFilterPanel 
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-md' 
-                  : 'bg-white/70 text-blue-600 border-blue-200 hover:bg-blue-50'
-              }`}
+      <div className="relative">
+        {/* Desktop Header */}
+        <div className="hidden sm:flex items-center justify-between">
+          <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
+            <div className="p-2.5 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+              <Calendar className="w-6 h-6 text-white" />
+            </div>
+            История консультаций
+          </h3>
+          <div className="flex items-center gap-3">
+            {showFilters && (
+              <button
+                onClick={() => setShowFilterPanel(!showFilterPanel)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl font-medium text-sm transition-all duration-200 border ${
+                  showFilterPanel 
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-md' 
+                    : 'bg-white/70 text-blue-600 border-blue-200 hover:bg-blue-50'
+                }`}
+              >
+                <Filter className="w-4 h-4" />
+                Фильтры
+              </button>
+            )}
+            
+            <button 
+              onClick={() => fetchConsultations()}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl font-medium text-sm bg-white/70 text-gray-600 border border-gray-200 hover:bg-gray-50 transition-all duration-200"
             >
-              <Filter className="w-4 h-4" />
-              Фильтры
-            </motion.button>
-          )}
+              <RefreshCw className="w-4 h-4" />
+            </button>
+            
+            <span className="text-sm font-semibold text-gray-600 bg-gradient-to-r from-gray-100 to-gray-200 px-4 py-2 rounded-full border border-gray-300/50 shadow-sm">
+              {filteredConsultations.length} из {consultations.length}
+            </span>
+          </div>
+        </div>
+
+        {/* Mobile Header */}
+        <div className="sm:hidden space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg shadow-lg">
+              <Calendar className="w-5 h-5 text-white" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-800 flex-1">
+              История консультаций
+            </h3>
+          </div>
           
-          <motion.button
-            onClick={() => fetchConsultations()}
-            initial={{ x: 20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ delay: 0.45 }}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl font-medium text-sm bg-white/70 text-gray-600 border border-gray-200 hover:bg-gray-50 transition-all duration-200"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <RefreshCw className="w-4 h-4" />
-          </motion.button>
-          
-          <motion.span 
-            initial={{ x: 20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            className="text-sm font-semibold text-gray-600 bg-gradient-to-r from-gray-100 to-gray-200 px-4 py-2 rounded-full border border-gray-300/50 shadow-sm"
-          >
-            {filteredConsultations.length} из {baseConsultations.length}
-          </motion.span>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              {showFilters && (
+                <button
+                  onClick={() => setShowFilterPanel(!showFilterPanel)}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-sm transition-all duration-200 border ${
+                    showFilterPanel 
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-md' 
+                      : 'bg-white/70 text-blue-600 border-blue-200 hover:bg-blue-50'
+                  }`}
+                >
+                  <Filter className="w-4 h-4" />
+                  <span className="hidden xs:inline">Фильтры</span>
+                </button>
+              )}
+              
+              <button 
+                onClick={() => fetchConsultations()}
+                className="p-2 bg-white/70 text-gray-600 border border-gray-200 hover:bg-gray-50 rounded-lg transition-all duration-200"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <span className="text-xs font-semibold text-gray-600 bg-gradient-to-r from-gray-100 to-gray-200 px-3 py-1.5 rounded-full border border-gray-300/50 shadow-sm">
+              {filteredConsultations.length}/{consultations.length}
+            </span>
+          </div>
         </div>
       </div>
 
       {/* Filters Panel */}
-      <AnimatePresence>
-        {showFilterPanel && showFilters && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="relative bg-white/95 backdrop-blur-sm rounded-2xl border border-blue-200/50 shadow-lg overflow-hidden"
-          >
-            <div className="p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-gray-800">Фильтры</h4>
-                <motion.button
-                  onClick={() => {
-                    setSearchTerm("");
-                    setStatusFilter("all");
-                    setTypeFilter("all");
-                  }}
-                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                  whileHover={{ scale: 1.05 }}
-                >
-                  Сбросить
-                </motion.button>
+      {showFilterPanel && showFilters && (
+        <div className="relative bg-white/95 backdrop-blur-sm rounded-2xl border border-blue-200/50 shadow-lg overflow-hidden">
+          <div className="p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="font-semibold text-gray-800">Фильтры</h4>
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  setStatusFilter("all");
+                  setTypeFilter("all");
+                }}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                Сбросить
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Search */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Поиск</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Имя пациента, врач, симптомы..."
+                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm("")}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Search */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Поиск</label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      type="text"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Имя пациента, врач, симптомы..."
-                      className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                    />
-                    {searchTerm && (
-                      <button
-                        onClick={() => setSearchTerm("")}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
 
-                {/* Status Filter */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Статус</label>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value as FilterStatus)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                  >
-                    <option value="all">Все статусы</option>
-                    <option value="pending">Ожидает</option>
-                    <option value="ongoing">В процессе</option>
-                    <option value="completed">Завершена</option>
-                    <option value="cancelled">Отменена</option>
-                    <option value="missed">Пропущена</option>
-                  </select>
-                </div>
+              {/* Status Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Статус</label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as FilterStatus)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                >
+                  <option value="all">Все статусы</option>
+                  <option value="pending">Ожидает</option>
+                  <option value="ongoing">В процессе</option>
+                  <option value="completed">Завершена</option>
+                  <option value="cancelled">Отменена</option>
+                  <option value="missed">Пропущена</option>
+                </select>
+              </div>
 
-                {/* Type Filter */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Тип</label>
-                  <select
-                    value={typeFilter}
-                    onChange={(e) => setTypeFilter(e.target.value as FilterType)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                  >
-                    <option value="all">Все типы</option>
-                    <option value="video">Видео</option>
-                    <option value="chat">Чат</option>
-                    <option value="phone">Телефон</option>
-                  </select>
-                </div>
+              {/* Type Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Тип</label>
+                <select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value as FilterType)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                >
+                  <option value="all">Все типы</option>
+                  <option value="video">Видео</option>
+                  <option value="chat">Чат</option>
+                  <option value="phone">Телефон</option>
+                </select>
               </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+        </div>
+      )}
 
-      {/* Table */}
-      <motion.div 
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-        className="relative bg-white/95 backdrop-blur-sm rounded-2xl border border-gray-200/80 shadow-xl overflow-hidden"
-      >
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gradient-to-r from-slate-50 to-blue-50/50 border-b border-gray-200">
-              <tr>
-                <th className="text-left p-4 font-semibold text-gray-700 text-sm">Дата/Время</th>
-                <th className="text-left p-4 font-semibold text-gray-700 text-sm">Врач/Пациент</th>
-                <th className="text-left p-4 font-semibold text-gray-700 text-sm">Детали</th>
-                <th className="text-left p-4 font-semibold text-gray-700 text-sm">Тип</th>
-                <th className="text-left p-4 font-semibold text-gray-700 text-sm">Статус</th>
-                <th className="text-left p-4 font-semibold text-gray-700 text-sm">Действия</th>
-              </tr>
-            </thead>
-            <tbody>
-              <AnimatePresence>
-                {visibleConsultations.map((consultation, index) => {
-                  const extendedConsultation = consultation as ExtendedConsultation;
-                  return (
-                  <motion.tr
+      {/* Table Container */}
+      <div className="relative space-y-4">
+        {/* No Results State */}
+        {filteredConsultations.length === 0 && (
+          <div className="relative p-8 bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 border-2 border-gray-200/50 rounded-2xl overflow-hidden backdrop-blur-sm">
+            <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-blue-200/20 to-purple-200/20 rounded-full blur-2xl" />
+            <div className="absolute -bottom-4 -left-4 w-32 h-32 bg-gradient-to-tr from-indigo-200/20 to-blue-200/20 rounded-full blur-2xl" />
+            
+            <div className="relative text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 mb-4 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg">
+                <Stethoscope className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">
+                {consultations.length === 0 ? "История консультаций пуста" : "Нет результатов"}
+              </h3>
+              <p className="text-gray-600 max-w-sm mx-auto">
+                {consultations.length === 0 
+                  ? "Ваши консультации будут отображаться здесь после их проведения"
+                  : "Попробуйте изменить критерии фильтрации"
+                }
+              </p>
+            </div>
+          </div>
+        )}
+        {/* Desktop Table View */}
+        {filteredConsultations.length > 0 && (
+          <div className="hidden xl:block bg-white/95 backdrop-blur-sm rounded-2xl border border-gray-200/80 shadow-xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gradient-to-r from-slate-50 to-blue-50/50 border-b border-gray-200">
+                <tr>
+                  <th className="text-left p-6 font-semibold text-gray-800 text-sm uppercase tracking-wider">Дата/Время</th>
+                  <th className="text-left p-6 font-semibold text-gray-800 text-sm uppercase tracking-wider">Врач/Пациент</th>
+                  <th className="text-left p-6 font-semibold text-gray-800 text-sm uppercase tracking-wider">Детали</th>
+                  <th className="text-left p-6 font-semibold text-gray-800 text-sm uppercase tracking-wider">Тип</th>
+                  <th className="text-left p-6 font-semibold text-gray-800 text-sm uppercase tracking-wider">Статус</th>
+                  <th className="text-center p-6 font-semibold text-gray-800 text-sm uppercase tracking-wider">Действия</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleConsultations.map((consultation) => (
+                  <tr
                     key={consultation.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="border-b border-gray-100 hover:bg-blue-50/30 transition-all duration-200"
+                    className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/30 transition-all duration-300 group"
                   >
                     {/* Date/Time */}
+                    <td className="p-6">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                            <Calendar className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-semibold text-gray-900">
+                              {consultation.created_at ? formatDate(consultation.created_at) : "Не указано"}
+                            </div>
+                            <div className="text-xs text-gray-500 flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {consultation.started_at 
+                                ? new Date(consultation.started_at).toLocaleTimeString('ru-RU', { 
+                                    hour: '2-digit', 
+                                    minute: '2-digit' 
+                                  })
+                                : "Не начата"
+                              }
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Doctor/Patient */}
+                    <td className="p-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full flex items-center justify-center">
+                          <span className="text-white font-bold text-sm">
+                            {user?.role === 'doctor' 
+                              ? (consultation.patient_name || consultation.patient_first_name || "П").charAt(0).toUpperCase()
+                              : (consultation.doctor_first_name || "В").charAt(0).toUpperCase()
+                            }
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold text-gray-900">
+                            {user?.role === 'doctor' 
+                              ? consultation.patient_name || `${consultation.patient_first_name || ''} ${consultation.patient_last_name || ''}`.trim() || "Пациент не указан"
+                              : `${consultation.doctor_first_name || ''} ${consultation.doctor_last_name || ''}`.trim() || "Врач не назначен"
+                            }
+                          </div>
+                          <div className="text-xs text-blue-600 font-medium">
+                            {user?.role === 'doctor'
+                              ? consultation.patient_email || "Email не указан"
+                              : "Врач общей практики"
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Details */}
+                    <td className="p-6">
+                      <div className="space-y-2">
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <span className="text-xs font-mono text-gray-700">
+                            {consultation.meeting_id}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          ID встречи
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Type */}
+                    <td className="p-6">
+                      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border bg-blue-50 border-blue-200">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-500">
+                          {getTypeIcon(consultation.type || "video")}
+                        </div>
+                        <span className="text-sm font-semibold text-blue-700">
+                          {getTypeText(consultation.type || "video")}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* Status */}
+                    <td className="p-6">
+                      <span className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border-2 ${getStatusColor(consultation.status)} shadow-sm`}>
+                        {getStatusIcon(consultation.status)}
+                        {getStatusText(consultation.status)}
+                      </span>
+                    </td>
+
+                    {/* Actions */}
+                    <td className="p-6">
+                      <div className="flex items-center justify-center gap-2">
+                        <button className="p-3 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all duration-200 border border-blue-200 hover:border-blue-300 shadow-sm group-hover:shadow-md">
+                          <Eye className="w-5 h-5" />
+                        </button>
+                        <button className="p-3 text-gray-600 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all duration-200 border border-gray-200 hover:border-gray-300 shadow-sm group-hover:shadow-md">
+                          <MoreHorizontal className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          </div>
+        )}
+
+        {/* Tablet Compact Table View */}
+        {filteredConsultations.length > 0 && (
+          <div className="hidden md:block xl:hidden bg-white/95 backdrop-blur-sm rounded-2xl border border-gray-200/80 shadow-xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gradient-to-r from-slate-50 to-blue-50/50 border-b border-gray-200">
+                <tr>
+                  <th className="text-left p-4 font-semibold text-gray-800 text-sm">Пациент/Врач</th>
+                  <th className="text-left p-4 font-semibold text-gray-800 text-sm">Дата</th>
+                  <th className="text-left p-4 font-semibold text-gray-800 text-sm">Статус</th>
+                  <th className="text-center p-4 font-semibold text-gray-800 text-sm">Действия</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleConsultations.map((consultation) => (
+                  <tr
+                    key={`tablet-${consultation.id}`}
+                    className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/30 transition-all duration-300 group"
+                  >
+                    <td className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full flex items-center justify-center">
+                          <span className="text-white font-bold text-sm">
+                            {user?.role === 'doctor' 
+                              ? (consultation.patient_name || consultation.patient_first_name || "П").charAt(0).toUpperCase()
+                              : (consultation.doctor_first_name || "В").charAt(0).toUpperCase()
+                            }
+                          </span>
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-gray-900 truncate">
+                            {user?.role === 'doctor' 
+                              ? consultation.patient_name || `${consultation.patient_first_name || ''} ${consultation.patient_last_name || ''}`.trim() || "Пациент не указан"
+                              : `${consultation.doctor_first_name || ''} ${consultation.doctor_last_name || ''}`.trim() || "Врач не назначен"
+                            }
+                          </div>
+                          <div className="text-xs text-blue-600 font-medium truncate">
+                            {user?.role === 'doctor'
+                              ? consultation.patient_email || "Email не указан"
+                              : "Врач общей практики"
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+
                     <td className="p-4">
                       <div className="space-y-1">
-                        <div className="text-sm font-medium text-gray-900">
+                        <div className="text-sm font-semibold text-gray-900">
                           {consultation.created_at ? formatDate(consultation.created_at) : "Не указано"}
                         </div>
                         <div className="text-xs text-gray-500 flex items-center gap-1">
@@ -508,112 +563,195 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
                       </div>
                     </td>
 
-                    {/* Doctor/Patient */}
                     <td className="p-4">
-                      <div className="space-y-1">
-                        <div className="text-sm font-medium text-gray-900">
-                          {user?.role === 'doctor' 
-                            ? consultation.patient_name || "Пациент не указан"
-                            : `${consultation.doctor_first_name} ${consultation.doctor_last_name}` || "Врач не назначен"
-                          }
-                        </div>
-                        <div className="text-xs text-blue-600 font-medium">
-                          {user?.role === 'doctor'
-                            ? consultation.patient_email || "Email не указан"
-                            : "Врач общей практики"
-                          }
-                        </div>
-                      </div>
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border-2 ${getStatusColor(consultation.status)} shadow-sm`}>
+                        {getStatusIcon(consultation.status)}
+                        {getStatusText(consultation.status)}
+                      </span>
                     </td>
 
-                    {/* Symptoms/Meeting ID */}
                     <td className="p-4">
-                      <div className="space-y-1">
-                        <div className="text-sm text-gray-700 max-w-xs">
-                          ID встречи: {consultation.meeting_id}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          Статус: {getStatusText(consultation.status)}
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Type */}
-                    <td className="p-4">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-gray-50 rounded-lg border border-gray-200">
-                          {getTypeIcon("video")}
-                        </div>
-                        <span className="text-sm text-gray-700 font-medium">
-                          {getTypeText("video")}
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* Status */}
-                    <td className="p-4">
-                      <div className="space-y-2">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${getStatusColor(consultation.status)}`}>
-                          {getStatusIcon(consultation.status)}
-                          {getStatusText(consultation.status)}
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="p-4">
-                      <div className="flex items-center gap-1">
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 border border-blue-200/50 hover:border-blue-300"
-                          title="Просмотреть детали"
-                        >
+                      <div className="flex items-center justify-center gap-2">
+                        <button className="p-2.5 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all duration-200 border border-blue-200 hover:border-blue-300 shadow-sm">
                           <Eye className="w-4 h-4" />
-                        </motion.button>
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-all duration-200 border border-gray-200/50 hover:border-gray-300"
-                          title="Еще действия"
-                        >
+                        </button>
+                        <button className="p-2.5 text-gray-600 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg transition-all duration-200 border border-gray-200 hover:border-gray-300 shadow-sm">
                           <MoreHorizontal className="w-4 h-4" />
-                        </motion.button>
+                        </button>
                       </div>
                     </td>
-                  </motion.tr>
-                  );
-                })}
-              </AnimatePresence>
-            </tbody>
-          </table>
-        </div>
-
-        {/* Show More Button */}
-        {filteredConsultations.length > 3 && (
-          <div className="p-4 border-t border-gray-200 bg-gradient-to-r from-slate-50 to-blue-50/30">
-            <motion.button
-              onClick={() => setIsExpanded(!isExpanded)}
-              whileHover={{ scale: 1.01, y: -1 }}
-              whileTap={{ scale: 0.99 }}
-              className="w-full flex items-center justify-center gap-3 py-3 px-4 text-sm text-blue-700 hover:text-blue-800 font-semibold transition-all duration-200 bg-white hover:bg-blue-50 border border-blue-200 hover:border-blue-300 rounded-xl shadow-sm hover:shadow-md"
-            >
-              {isExpanded ? (
-                <>
-                  Показать меньше
-                  <ChevronUp className="w-4 h-4" />
-                </>
-              ) : (
-                <>
-                  Показать все ({filteredConsultations.length - 3} ещё)
-                  <ChevronDown className="w-4 h-4" />
-                </>
-              )}
-            </motion.button>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           </div>
         )}
-      </motion.div>
-    </motion.div>
+
+        {/* Mobile Card Layout */}
+        {filteredConsultations.length > 0 && (
+          <div className="md:hidden space-y-3">
+          {visibleConsultations.map((consultation) => (
+            <div
+              key={consultation.id}
+              className="bg-white/95 backdrop-blur-sm rounded-xl border border-gray-200 shadow-md overflow-hidden"
+            >
+              <div className="p-3">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-white font-bold text-xs">
+                        {user?.role === 'doctor' 
+                          ? (consultation.patient_name || consultation.patient_first_name || "П").charAt(0).toUpperCase()
+                          : (consultation.doctor_first_name || "В").charAt(0).toUpperCase()
+                        }
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-semibold text-gray-900 truncate">
+                        {user?.role === 'doctor' 
+                          ? consultation.patient_name || `${consultation.patient_first_name || ''} ${consultation.patient_last_name || ''}`.trim() || "Пациент не указан"
+                          : `${consultation.doctor_first_name || ''} ${consultation.doctor_last_name || ''}`.trim() || "Врач не назначен"
+                        }
+                      </div>
+                      <div className="text-xs text-blue-600 font-medium truncate">
+                        {user?.role === 'doctor'
+                          ? consultation.patient_email || "Email не указан"
+                          : "Врач общей практики"
+                        }
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border ${getStatusColor(consultation.status)} flex-shrink-0 ml-2`}>
+                    {getStatusIcon(consultation.status)}
+                    <span className="hidden xs:inline">{getStatusText(consultation.status)}</span>
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-3 h-3 text-blue-500 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <div className="font-medium text-gray-900 truncate">
+                        {consultation.created_at ? formatDate(consultation.created_at) : "Не указано"}
+                      </div>
+                      <div className="text-gray-500 flex items-center gap-1">
+                        <Clock className="w-2.5 h-2.5" />
+                        {consultation.started_at 
+                          ? new Date(consultation.started_at).toLocaleTimeString('ru-RU', { 
+                              hour: '2-digit', 
+                              minute: '2-digit' 
+                            })
+                          : "Не начата"
+                        }
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 bg-blue-500">
+                      {getTypeIcon(consultation.type || "video")}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-medium truncate text-blue-700">
+                        {getTypeText(consultation.type || "video")}
+                      </div>
+                      <div className="text-gray-500">Консультация</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
+                    <span className="text-xs text-gray-600">ID:</span>
+                    <span className="text-xs font-mono text-gray-900 truncate">
+                      {consultation.meeting_id}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 mt-3">
+                  <button className="flex-1 flex items-center justify-center gap-2 p-2.5 text-blue-600 bg-blue-50 rounded-lg transition-colors border border-blue-200">
+                    <Eye className="w-4 h-4" />
+                    <span className="text-sm font-medium">Детали</span>
+                  </button>
+                  <button className="p-2.5 text-gray-600 bg-gray-50 rounded-lg transition-colors border border-gray-200">
+                    <MoreHorizontal className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+          </div>
+        )}
+      </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="mt-6 p-4 bg-white/95 backdrop-blur-sm rounded-2xl border border-gray-200 shadow-lg">
+          <div className="bg-gradient-to-r from-slate-50 to-blue-50/30 p-4 rounded-xl">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-600">
+                Показано {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredConsultations.length)} из {filteredConsultations.length}
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className={`p-2 rounded-lg transition-all ${
+                    currentPage === 1
+                      ? 'text-gray-400 cursor-not-allowed'
+                      : 'text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-200 hover:border-blue-300'
+                  }`}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                    if (totalPages <= 5 || page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1) {
+                      return (
+                        <button
+                          key={page}
+                          onClick={() => goToPage(page)}
+                          className={`w-8 h-8 rounded-lg text-sm font-semibold transition-all ${
+                            page === currentPage
+                              ? 'bg-blue-600 text-white shadow-md'
+                              : 'text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-200 hover:border-blue-300'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      );
+                    } else if (page === 2 && currentPage > 3) {
+                      return <span key={page} className="text-gray-400 px-1">...</span>;
+                    } else if (page === totalPages - 1 && currentPage < totalPages - 2) {
+                      return <span key={page} className="text-gray-400 px-1">...</span>;
+                    }
+                    return null;
+                  })}
+                </div>
+
+                <button
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className={`p-2 rounded-lg transition-all ${
+                    currentPage === totalPages
+                      ? 'text-gray-400 cursor-not-allowed'
+                      : 'text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-200 hover:border-blue-300'
+                  }`}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
