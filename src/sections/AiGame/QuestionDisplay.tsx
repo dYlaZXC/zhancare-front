@@ -158,7 +158,7 @@ export function QuestionDisplay({
             <div className="space-y-4">
               <div className="bg-blue-500/10 border border-blue-400/20 rounded-lg p-4">
                 <p className="text-blue-100/90 text-sm font-medium mb-2">
-                  <strong>Почему правильный ответ: "{answer}"</strong>
+                  <strong>Почему правильный ответ: &quot;{answer}&quot;</strong>
                 </p>
                 <p className="text-white/90 leading-relaxed text-sm">
                   {explanation}
