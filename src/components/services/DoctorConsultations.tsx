@@ -341,7 +341,6 @@ const DoctorConsultations: React.FC = () => {
           </div>
 
           <ConsultationsTable
-            consultations={filteredConsultations}
             showFilters={false}
             onAccept={acceptConsultation}
             onReject={rejectConsultation}
