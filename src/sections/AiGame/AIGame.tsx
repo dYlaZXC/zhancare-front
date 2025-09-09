@@ -69,11 +69,13 @@ export default function AIGame() {
     setTypedOptions([]);
     
     try {
-      // Send the API request
-      const response = await api.post("/sessions/generate_question/");
+      // Send the API request with explanation request
+      const response = await api.post("/sessions/generate_question/", {
+        include_explanation: true
+      });
     
       // The response is now already a valid Question object, no need for JSON.parse
-      const { symptoms, correct_answer, wrong_answers } = response.data;
+      const { symptoms, correct_answer, wrong_answers, explanation } = response.data;
     
       // Shuffle the options, ensuring the correct answer is included
       const options = shuffleArray(
@@ -89,6 +91,7 @@ export default function AIGame() {
         symptoms: symptoms.trim(),
         answer: correct_answer,
         options,
+        explanation: explanation || undefined,
       };
     
       setQuestion(q);
@@ -266,6 +269,7 @@ export default function AIGame() {
                   selected={selected}
                   typing={typing}
                   result={result}
+                  explanation={question.explanation}
                   onSelect={handleSelect}
                   onNext={fetchNewUniqueQuestion}
                 />

@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import {QuestionDisplayProps} from "./types";
-import { FileText, CheckCircle, XCircle, ArrowRight } from "lucide-react";
+import { FileText, CheckCircle, XCircle, ArrowRight, BookOpen } from "lucide-react";
 
 export function QuestionDisplay({
   symptoms,
@@ -9,6 +9,7 @@ export function QuestionDisplay({
   selected,
   typing,
   result,
+  explanation,
   onSelect,
   onNext,
 }: QuestionDisplayProps) {
@@ -130,6 +131,54 @@ export function QuestionDisplay({
           animate={{ opacity: 1, y: 0 }}
         >
           <p className="text-lg font-semibold text-white">{result}</p>
+        </motion.div>
+      )}
+
+      {/* Explanation - Only show when user answered incorrectly and explanation exists */}
+      {result && !result.includes('✅') && explanation && (
+        <motion.div
+          className="backdrop-blur-md rounded-xl p-6 border border-blue-400/30 bg-blue-900/10 relative overflow-hidden"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          {/* Background decoration */}
+          <div className="absolute top-2 right-2 w-4 h-4 rounded-full blur-md animate-pulse"
+               style={{ background: 'radial-gradient(circle, rgba(59, 130, 246, 0.4) 0%, transparent 70%)' }}></div>
+          
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+                   style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' }}>
+                <span className="text-white text-sm">🤖</span>
+              </div>
+              <h4 className="text-lg font-bold text-blue-100">AI объяснение</h4>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="bg-blue-500/10 border border-blue-400/20 rounded-lg p-4">
+                <p className="text-blue-100/90 text-sm font-medium mb-2">
+                  <strong>Почему правильный ответ: "{answer}"</strong>
+                </p>
+                <p className="text-white/90 leading-relaxed text-sm">
+                  {explanation}
+                </p>
+              </div>
+              
+              {/* Learning tip */}
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-green-500/10 border border-green-400/20">
+                <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-white text-xs">💡</span>
+                </div>
+                <div>
+                  <p className="text-green-100 text-sm font-medium mb-1">Для запоминания:</p>
+                  <p className="text-green-100/80 text-xs leading-relaxed">
+                    Обратите внимание на ключевые симптомы и их связь с диагнозом для улучшения ваших медицинских знаний!
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </motion.div>
       )}
 

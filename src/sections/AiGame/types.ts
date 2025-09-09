@@ -7,6 +7,7 @@ export interface Question {
   symptoms: string;
   options: string[];
   answer: string;
+  explanation?: string;
 };
 
 export interface LeaderboardProps {
@@ -38,6 +39,7 @@ export interface QuestionDisplayProps {
   selected: string | null;
   typing: boolean;
   result: string | null;
+  explanation?: string;
   onSelect: (option: string) => void;
   onNext: () => void;
 }
