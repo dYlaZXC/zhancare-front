@@ -27,6 +27,7 @@ export interface NicknameEntryProps {
 export interface TimerScorePanelProps {
   timeLeft: number;
   score: number;
+  isPaused?: boolean;
 };
 
 

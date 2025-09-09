@@ -8,6 +8,7 @@ import { Leaderboard } from "./Leaderboard";
 import { motion } from "framer-motion";
 import { Score, Question } from "./types";
 import { api } from "@/utils/api";
+import heroVideo from "@/assets/hero-video.mp4";
 
 export default function AIGame() {
   const [nickname, setNickname] = useState("");
@@ -154,66 +155,128 @@ export default function AIGame() {
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    if (started && timeLeft > 0) {
+    // Only run timer if game is started, time is left, AND not currently typing/loading AND no question is answered
+    if (started && timeLeft > 0 && !typing && !loading && !selected) {
       timer = setTimeout(() => setTimeLeft((t) => t - 1), 1000);
     } else if (started && timeLeft === 0) {
       saveToLeaderboard();
     }
     return () => clearTimeout(timer);
-  }, [started, timeLeft, saveToLeaderboard]);
+  }, [started, timeLeft, typing, loading, selected, saveToLeaderboard]);
 
   // === RENDER ===
 
-  if (!started) {
-    return (
-      <NicknameEntry
-        nickname={nickname}
-        onNicknameChange={setNickname}
-        loading={loadingNick}
-        onGenerate={handleGenerateNickname}
-        onStart={() => {
-          setStarted(true);
-          fetchNewUniqueQuestion();
-        }}
-      />
-    );
-  }
-
-  if (timeLeft === 0) {
-    return (
-      <Leaderboard
-        score={score}
-        nickname={nickname}
-        leaderboard={leaderboard}
-        onRestart={resetGame}
-      />
-    );
-  }
-
   return (
-    <motion.div
-      className="bg-white/10 backdrop-blur-lg p-6 sm:p-8 rounded-2xl shadow-xl text-white max-w-2xl mx-auto mt-12"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+    <motion.section
+      className="relative overflow-hidden h-screen w-full"
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true }}
     >
-      <TimerScorePanel timeLeft={timeLeft} score={score} />
-      {loading ? (
-        <p className="text-center text-white/70">Загрузка вопроса...</p>
-      ) : error ? (
-        <div className="text-red-300 text-center">{error}</div>
-      ) : question ? (
-        <QuestionDisplay
-          symptoms={displayedSymptoms}
-          options={typedOptions}
-          answer={question.answer}
-          selected={selected}
-          typing={typing}
-          result={result}
-          onSelect={handleSelect}
-          onNext={fetchNewUniqueQuestion}
-        />
-      ) : null}
-    </motion.div>
+      {/* Background Video */}
+      <video
+        autoPlay
+        muted
+        loop
+        playsInline
+        className="fixed inset-0 w-full h-full object-cover z-0 blur-sm"
+      >
+        <source src={heroVideo} type="video/mp4" />
+      </video>
+
+      {/* Fallback Background for any gaps */}
+      <div className="fixed inset-0 bg-gray-900 -z-10" />
+
+      {/* Black Overlay */}
+      <motion.div
+        className="fixed inset-0 z-10 bg-black/60"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1 }}
+      />
+
+      {/* Game Content */}
+      <div className="relative z-20 h-screen flex items-center justify-center px-4">
+        {!started ? (
+          <NicknameEntry
+            nickname={nickname}
+            onNicknameChange={setNickname}
+            loading={loadingNick}
+            onGenerate={handleGenerateNickname}
+            onStart={() => {
+              setStarted(true);
+              fetchNewUniqueQuestion();
+            }}
+          />
+        ) : timeLeft === 0 ? (
+          <Leaderboard
+            score={score}
+            nickname={nickname}
+            leaderboard={leaderboard}
+            onRestart={resetGame}
+          />
+        ) : (
+          <motion.div
+            className="backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-8 text-white max-w-3xl mx-auto relative overflow-hidden"
+            style={{ background: 'rgba(235, 241, 255, 0.08)' }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            {/* Animated Background Elements */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              <div className="absolute top-4 left-4 w-16 h-16 rounded-full blur-xl animate-pulse" 
+                   style={{ background: 'radial-gradient(circle, rgba(55, 114, 255, 0.2) 0%, transparent 70%)', animationDuration: '4s' }}></div>
+              <div className="absolute bottom-4 right-4 w-12 h-12 rounded-full blur-lg animate-bounce" 
+                   style={{ background: 'radial-gradient(circle, rgba(50, 103, 230, 0.25) 0%, transparent 70%)', animationDuration: '3s' }}></div>
+              <div className="absolute top-1/2 left-1/2 w-8 h-8 rounded-full blur-md animate-ping" 
+                   style={{ background: 'radial-gradient(circle, rgba(67, 126, 255, 0.3) 0%, transparent 70%)', animationDuration: '2s' }}></div>
+            </div>
+
+            <div className="relative z-10">
+              <TimerScorePanel timeLeft={timeLeft} score={score} isPaused={typing || loading || !!selected} />
+              
+              {loading ? (
+                <motion.div 
+                  className="text-center py-12"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  <div className="inline-flex items-center gap-3 px-6 py-4 backdrop-blur-md rounded-xl border border-white/20"
+                       style={{ background: 'rgba(40, 51, 83, 0.3)' }}>
+                    <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-white/90 font-medium">Загрузка вопроса...</p>
+                  </div>
+                </motion.div>
+              ) : error ? (
+                <motion.div 
+                  className="text-center py-8"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                >
+                  <div className="inline-block px-6 py-4 backdrop-blur-md rounded-xl border border-red-400/30 bg-red-900/20">
+                    <p className="text-red-300 font-medium">{error}</p>
+                  </div>
+                </motion.div>
+              ) : question ? (
+                <QuestionDisplay
+                  symptoms={displayedSymptoms}
+                  options={typedOptions}
+                  answer={question.answer}
+                  selected={selected}
+                  typing={typing}
+                  result={result}
+                  onSelect={handleSelect}
+                  onNext={fetchNewUniqueQuestion}
+                />
+              ) : null}
+            </div>
+
+            {/* Glass Effect Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-white/5 pointer-events-none rounded-2xl"></div>
+          </motion.div>
+        )}
+      </div>
+    </motion.section>
   );
 }
