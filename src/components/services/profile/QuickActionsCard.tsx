@@ -27,6 +27,8 @@ interface QuickAction {
   hoverColor: string;
   badge?: string;
   urgent?: boolean;
+  disabled?: boolean;
+  status?: 'available' | 'development' | 'coming-soon';
   onClick: () => void;
 }
 
@@ -53,70 +55,84 @@ export const QuickActionsCard = ({
     {
       id: 'appointment',
       title: 'Записаться на прием',
-      description: 'Выберите врача и удобное время',
+      description: 'В разработке',
       icon: Calendar,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-      hoverColor: 'hover:bg-blue-100',
-      badge: showNotifications && notifications.appointments > 0 ? `${notifications.appointments}` : undefined,
+      color: 'text-gray-400',
+      bgColor: 'bg-gray-50',
+      hoverColor: 'hover:bg-gray-100',
+      disabled: true,
+      status: 'development',
       onClick: () => handleActionClick('appointment')
     },
     {
       id: 'medical-history',
       title: 'История болезни',
-      description: 'Просмотр медицинской карты',
+      description: 'В разработке',
       icon: FileText,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
-      hoverColor: 'hover:bg-green-100',
+      color: 'text-gray-400',
+      bgColor: 'bg-gray-50',
+      hoverColor: 'hover:bg-gray-100',
+      disabled: true,
+      status: 'development',
       onClick: () => handleActionClick('medical-history')
     },
     {
       id: 'test-results',
       title: 'Результаты анализов',
-      description: 'Лабораторные исследования',
+      description: 'В разработке',
       icon: FlaskConical,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
-      hoverColor: 'hover:bg-purple-100',
-      badge: showNotifications && notifications.results > 0 ? `${notifications.results}` : undefined,
-      urgent: false, // Changed from notifications.results > 0 to remove blinking
+      color: 'text-gray-400',
+      bgColor: 'bg-gray-50',
+      hoverColor: 'hover:bg-gray-100',
+      disabled: true,
+      status: 'development',
       onClick: () => handleActionClick('test-results')
     },
     {
       id: 'prescriptions',
       title: 'Рецепты и лекарства',
-      description: 'Управление назначениями',
+      description: 'В разработке',
       icon: Pill,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50',
-      hoverColor: 'hover:bg-orange-100',
+      color: 'text-gray-400',
+      bgColor: 'bg-gray-50',
+      hoverColor: 'hover:bg-gray-100',
+      disabled: true,
+      status: 'development',
       onClick: () => handleActionClick('prescriptions')
     },
     {
       id: 'teleconsult',
       title: 'Телемедицина',
-      description: 'Консультация онлайн',
+      description: 'В разработке',
       icon: Phone,
-      color: 'text-indigo-600',
-      bgColor: 'bg-indigo-50',
-      hoverColor: 'hover:bg-indigo-100',
+      color: 'text-gray-400',
+      bgColor: 'bg-gray-50',
+      hoverColor: 'hover:bg-gray-100',
+      disabled: true,
+      status: 'development',
       onClick: () => handleActionClick('teleconsult')
     },
     {
       id: 'messages',
       title: 'Сообщения врача',
-      description: 'Чат с медперсоналом',
+      description: 'В разработке',
       icon: MessageCircle,
-      color: 'text-pink-600',
-      bgColor: 'bg-pink-50',
-      hoverColor: 'hover:bg-pink-100',
-      badge: showNotifications && notifications.messages > 0 ? `${notifications.messages}` : undefined,
+      color: 'text-gray-400',
+      bgColor: 'bg-gray-50',
+      hoverColor: 'hover:bg-gray-100',
+      disabled: true,
+      status: 'development',
       onClick: () => handleActionClick('messages')
     }
   ];
 
   const handleActionClick = async (actionId: string) => {
+    const action = quickActions.find(a => a.id === actionId);
+    if (action?.disabled) {
+      alert('Эта функция находится в разработке и будет доступна в ближайшее время');
+      return;
+    }
+    
     setLoadingAction(actionId);
     
     // Simulate API call
@@ -140,14 +156,15 @@ export const QuickActionsCard = ({
         onClick={action.onClick}
         onMouseEnter={() => setHoveredAction(action.id)}
         onMouseLeave={() => setHoveredAction(null)}
-        disabled={isLoading}
+        disabled={isLoading || action.disabled}
         className={`
           group relative w-full text-left p-4 rounded-xl transition-all duration-200 
-          ${action.bgColor} ${action.hoverColor}
-          ${isHovered ? 'transform scale-[1.02] shadow-lg' : 'shadow-sm'}
-          ${isLoading ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}
+          ${action.bgColor} ${action.disabled ? '' : action.hoverColor}
+          ${isHovered && !action.disabled ? 'transform scale-[1.02] shadow-lg' : 'shadow-sm'}
+          ${isLoading ? 'opacity-75 cursor-not-allowed' : action.disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
           touch-manipulation min-h-[72px] flex items-center justify-between
           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
+          ${action.disabled ? 'relative' : ''}
         `}
       >
         {/* Main Content */}
@@ -164,8 +181,13 @@ export const QuickActionsCard = ({
               <IconComponent className={`w-5 h-5 ${action.color}`} />
             )}
             
+            {/* Development status indicator */}
+            {action.status === 'development' && (
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-500 rounded-full" />
+            )}
+            
             {/* Notification indicator (static) */}
-            {action.badge && (
+            {action.badge && !action.disabled && (
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full" />
             )}
           </div>
@@ -176,7 +198,12 @@ export const QuickActionsCard = ({
               <h3 className="font-medium text-gray-900 text-sm sm:text-base truncate">
                 {action.title}
               </h3>
-              {action.badge && (
+              {action.status === 'development' && (
+                <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium text-yellow-800 bg-yellow-100 rounded-full">
+                  В разработке
+                </span>
+              )}
+              {action.badge && !action.disabled && (
                 <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full animate-bounce">
                   {action.badge}
                 </span>
@@ -191,8 +218,8 @@ export const QuickActionsCard = ({
         {/* Arrow indicator */}
         <ArrowRight className={`
           w-4 h-4 text-gray-400 transition-all duration-200
-          ${isHovered ? 'text-gray-600 transform translate-x-1' : ''}
-          group-hover:text-gray-600
+          ${isHovered && !action.disabled ? 'text-gray-600 transform translate-x-1' : ''}
+          ${action.disabled ? 'opacity-30' : 'group-hover:text-gray-600'}
         `} />
 
         {/* Hover overlay effect */}

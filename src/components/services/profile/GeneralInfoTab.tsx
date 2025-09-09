@@ -200,7 +200,7 @@ export const GeneralInfoTab = ({
             <p className="text-lg font-semibold text-gray-900">
               {user.first_name} {user.last_name}
             </p>
-            <p className="text-sm text-gray-500 mt-1">{age} лет • {user.gender || "Мужчина"}</p>
+            <p className="text-sm text-gray-500 mt-1">{age} лет • {user.gender || "Не указано"}</p>
           </div>
           
           <div className="bg-white rounded-lg p-4 shadow-sm">

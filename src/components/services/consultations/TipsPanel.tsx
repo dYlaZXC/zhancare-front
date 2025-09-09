@@ -5,7 +5,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Bot, Loader2, ClipboardPaste, X, ExternalLink } from "lucide-react";
 import Image from "next/image";
 import Logo7 from "@/assets/omron.png";
-import Logo8 from "@/assets/respublica.png";
+import Logo8 from "@/assets/astanamua.png";
+import Logo9 from "@/assets/enactus2.png";
 
 interface RecommendedDoctor {
   id: number;
@@ -55,12 +56,20 @@ const TipsPanel: React.FC<Props> = ({
       alt: "OMRON medical equipment"
     },
     {
-      id: "respublica",
+      id: "astnanamua",
       imagePath: Logo8,
-      title: "Respublica",
-      description: "Голосуй за справедливый Казахстан",
-      url: "https://respublica-partiyasy.kz/",
-      alt: "Respublica pharmacy chain"
+      title: "Astana MUA",
+      description: "Медицинский университет Астана – твой путь в профессию будущего!",
+      url: "https://amu.edu.kz/",
+      alt: "Astana MUA"
+    },
+    {
+      id: "enactuskz",
+      imagePath: Logo9,
+      title: "Enactus Kazakhstan",
+      description: "Предпринимательство на благо общества",
+      url: "https://enactus.kz/",
+      alt: "Enactus Kazakhstan"
     }
   ], // Two rotating banners
 }) => {

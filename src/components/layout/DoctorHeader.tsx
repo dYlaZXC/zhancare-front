@@ -35,10 +35,10 @@ export const DoctorHeader = ({
     <header className="flex justify-between items-center bg-white/95 backdrop-blur-lg border-b border-gray-200/50 p-4 shadow-lg sticky top-0 z-30 transition-all duration-300">
       {/* Left - Mobile Menu Button & Desktop Sidebar Toggle */}
       <div className="flex items-center gap-3">
-        {/* Mobile Menu Button - Now Active */}
+        {/* Mobile & Tablet Menu Button - Now Active */}
         <button
           onClick={onMenuClick}
-          className="sm:hidden group relative overflow-hidden text-white min-w-[48px] min-h-[48px] p-3 rounded-xl xs:rounded-2xl shadow-2xl border-0 outline-none backdrop-blur-lg transform hover:scale-110 active:scale-95 transition-all duration-300 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; hover:rotate-3 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:hover:rotate-0"
+          className="xl:hidden group relative overflow-hidden text-white min-w-[48px] min-h-[48px] p-3 rounded-xl xs:rounded-2xl shadow-2xl border-0 outline-none backdrop-blur-lg transform hover:scale-110 active:scale-95 transition-all duration-300 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; hover:rotate-3 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:hover:rotate-0"
           style={{ 
             background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)',
             border: '1px solid rgba(255, 255, 255, 0.2)'
@@ -54,13 +54,13 @@ export const DoctorHeader = ({
           <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-xl xs:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
         </button>
 
-        {/* Desktop Sidebar Toggle - Always visible on desktop */}
+        {/* Desktop Sidebar Toggle - Only visible on XL screens */}
         {onToggleSidebar && (
           <button
             onClick={onToggleSidebar}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
-            className="hidden sm:flex items-center gap-2 group relative overflow-hidden px-4 py-2.5 rounded-xl shadow-md border transition-all duration-300 hover:scale-105 hover:shadow-lg"
+            className="hidden xl:flex items-center gap-2 group relative overflow-hidden px-4 py-2.5 rounded-xl shadow-md border transition-all duration-300 hover:scale-105 hover:shadow-lg"
             style={{ 
               background: sidebarCollapsed 
                 ? 'linear-gradient(135deg, rgba(55, 114, 255, 0.15) 0%, rgba(41, 53, 143, 0.15) 100%)'

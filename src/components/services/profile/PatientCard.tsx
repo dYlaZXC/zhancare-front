@@ -9,7 +9,7 @@ interface PatientCardProps {
 export const PatientCard = ({ user }: PatientCardProps) => {
   // Calculate age from birth_date
   const calculateAge = (birthDate: string) => {
-    if (!birthDate) return 25; // fallback age
+    if (!birthDate || birthDate === "Не указано") return "Не указано";
     const birth = new Date(birthDate.split('.').reverse().join('-')); // Convert DD.MM.YYYY to YYYY-MM-DD
     const today = new Date();
     let age = today.getFullYear() - birth.getFullYear();
@@ -20,8 +20,8 @@ export const PatientCard = ({ user }: PatientCardProps) => {
     return age;
   };
 
-  const age = calculateAge(user.birth_date || "03.08.1999");
-  const initials = `${user.first_name?.charAt(0) || 'A'}${user.last_name?.charAt(0) || 'A'}`;
+  const age = calculateAge(user.birth_date || "Не указано");
+  const initials = `${user.first_name?.charAt(0) || 'Н'}${user.last_name?.charAt(0) || 'У'}`;
 
   return (
     <motion.div
@@ -42,24 +42,24 @@ export const PatientCard = ({ user }: PatientCardProps) => {
         <div className="flex-1 min-w-0">
           {/* Name */}
           <h2 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 uppercase truncate sm:break-words">
-            <span className="block sm:inline">{user.last_name || "AKHRAMOVICH"}</span>
-            <span className="block sm:inline sm:ml-2">{user.first_name || "ADILAN"}</span>
+            <span className="block sm:inline">{user.last_name || "НЕ УКАЗАНО"}</span>
+            <span className="block sm:inline sm:ml-2">{user.first_name || "НЕ УКАЗАНО"}</span>
           </h2>
           
           {/* Details */}
           <div className="mt-1 sm:mt-2 space-y-1 sm:space-y-0">
             {/* Birth date and age - always on one line if possible */}
             <p className="text-xs sm:text-sm text-gray-600">
-              <span className="font-medium">{user.birth_date || "03.08.1999"}</span>
+              <span className="font-medium">{user.birth_date || "Не указано"}</span>
               <span className="mx-1">•</span>
-              <span>{age}л</span>
+              <span>{typeof age === 'string' ? age : `${age}л`}</span>
               <span className="mx-1">•</span>
-              <span>{user.gender || "Мужчина"}</span>
+              <span>{user.gender || "Не указано"}</span>
             </p>
             
             {/* ID - separate line on mobile for better readability */}
             <p className="text-xs sm:text-sm text-gray-500 font-mono">
-              ID: {user.id || "990803351054"}
+              ID: {user.id || "Не указано"}
             </p>
           </div>
         </div>

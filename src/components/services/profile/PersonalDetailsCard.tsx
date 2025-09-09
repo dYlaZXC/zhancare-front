@@ -201,18 +201,7 @@ export const PersonalDetailsCard = ({
 
   const getFieldValue = (field: PersonalField): string => {
     const value = user[field.key as keyof User];
-    
-    // Default values for specific fields
-    const defaults: Record<string, string> = {
-      address: user.address || `${user.city || "Астана"}, Казахстан, Мангыстауская область`,
-      phone: user.phone || "+77781203654",
-      language: user.language || "Казахский",
-      citizenship: "Казахстан",
-      maritalStatus: "Не женат/не замужем",
-      profession: "Бакалавр"
-    };
-
-    return value?.toString() || defaults[field.key] || 'Не указано';
+    return value?.toString() || 'Не указано';
   };
 
   const renderField = (field: PersonalField) => {

@@ -18,30 +18,47 @@ import {
   X,
   RefreshCw,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Check,
+  PhoneCall,
+  ChevronDown,
+  Edit
 } from "lucide-react";
 import { useConsultationManager } from "./useConsultationManager";
 import type { Consultation } from "@/types/consultation";
 import { useAuth } from "@/context/AuthContext";
 
 interface ConsultationsTableProps {
+  consultations?: Consultation[];
   showFilters?: boolean;
+  onAccept?: (meetingId: string) => void;
+  onReject?: (meetingId: string) => void;
+  onStatusChange?: (meetingId: string, newStatus: string) => void;
 }
 
 type FilterStatus = "all" | "pending" | "ongoing" | "completed" | "cancelled" | "missed";
 type FilterType = "all" | "video" | "chat" | "phone";
 
 const ConsultationsTable: React.FC<ConsultationsTableProps> = ({ 
-  showFilters = true 
+  consultations: propConsultations,
+  showFilters = true,
+  onAccept,
+  onReject,
+  onStatusChange
 }) => {
   const { user } = useAuth();
-  const { consultations, fetchConsultations } = useConsultationManager();
+  const { consultations: hookConsultations, fetchConsultations } = useConsultationManager();
+  const consultations = propConsultations || hookConsultations;
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
   const [typeFilter, setTypeFilter] = useState<FilterType>("all");
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [showStatusDropdown, setShowStatusDropdown] = useState<string | null>(null);
   const itemsPerPage = 10;
+
+  // Check if user is doctor
+  const isDoctor = user?.role === 'doctor';
 
   // Apply filters
   const filteredConsultations = useMemo(() => {
@@ -143,6 +160,90 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
     }
   };
 
+  const availableStatuses = [
+    { value: 'pending', label: 'Ожидает', color: 'text-blue-700' },
+    { value: 'ongoing', label: 'В процессе', color: 'text-yellow-700' },
+    { value: 'completed', label: 'Завершена', color: 'text-green-700' },
+    { value: 'cancelled', label: 'Отменена', color: 'text-red-700' },
+    { value: 'missed', label: 'Пропущена', color: 'text-orange-700' }
+  ];
+
+  const handleStatusChange = (meetingId: string, newStatus: string) => {
+    if (onStatusChange) {
+      onStatusChange(meetingId, newStatus);
+    }
+    setShowStatusDropdown(null);
+  };
+
+  const renderStatusDropdown = (consultation: Consultation, isCompact = false) => {
+    const isOpen = showStatusDropdown === consultation.meeting_id;
+    
+    const buttonClasses = isCompact 
+      ? "inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold border-2 shadow-sm"
+      : "inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border-2 shadow-sm";
+    
+    if (!isDoctor) {
+      return (
+        <span className={`${buttonClasses} ${getStatusColor(consultation.status)}`}>
+          {getStatusIcon(consultation.status)}
+          <span className={isCompact ? "hidden xs:inline" : ""}>{getStatusText(consultation.status)}</span>
+        </span>
+      );
+    }
+
+    return (
+      <div className="relative">
+        <button
+          onClick={() => setShowStatusDropdown(isOpen ? null : consultation.meeting_id)}
+          className={`${buttonClasses} ${getStatusColor(consultation.status)} hover:shadow-md transition-all duration-200 group`}
+        >
+          {getStatusIcon(consultation.status)}
+          <span className={isCompact ? "hidden xs:inline" : ""}>{getStatusText(consultation.status)}</span>
+          <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
+
+        {isOpen && (
+          <>
+            {/* Backdrop */}
+            <div 
+              className="fixed inset-0 z-10" 
+              onClick={() => setShowStatusDropdown(null)}
+            />
+            
+            {/* Dropdown */}
+            <div className={`absolute top-full ${isCompact ? 'right-0' : 'left-0'} mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-[180px] overflow-hidden`}>
+              <div className="p-2 border-b border-gray-100 bg-gray-50">
+                <div className="flex items-center gap-2 text-xs font-medium text-gray-600">
+                  <Edit className="w-3 h-3" />
+                  Изменить статус
+                </div>
+              </div>
+              <div className="py-1">
+                {availableStatuses.map((status) => (
+                  <button
+                    key={status.value}
+                    onClick={() => handleStatusChange(consultation.meeting_id, status.value)}
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors flex items-center gap-2 ${
+                      consultation.status === status.value 
+                        ? 'bg-blue-50 text-blue-700 font-medium' 
+                        : 'text-gray-700'
+                    }`}
+                  >
+                    {getStatusIcon(status.value)}
+                    {status.label}
+                    {consultation.status === status.value && (
+                      <Check className="w-4 h-4 ml-auto text-blue-600" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
   const getTypeText = (type: string) => {
     switch (type) {
       case "video":
@@ -180,6 +281,168 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
     } catch {
       return dateString;
     }
+  };
+
+  const renderActionButtons = (consultation: Consultation) => {
+    const isPending = consultation.status === 'pending';
+    const canAccept = isPending && onAccept;
+    const canReject = isPending && onReject;
+
+    return (
+      <div className="flex items-center justify-center gap-2">
+        {/* Accept Call Button */}
+        {canAccept && (
+          <button 
+            onClick={() => onAccept(consultation.meeting_id)}
+            className="p-3 text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 rounded-xl transition-all duration-200 border border-green-200 hover:border-green-300 shadow-sm group-hover:shadow-md"
+            title="Принять вызов"
+          >
+            <Check className="w-5 h-5" />
+          </button>
+        )}
+
+        {/* Reject Call Button */}
+        {canReject && (
+          <button 
+            onClick={() => onReject(consultation.meeting_id)}
+            className="p-3 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-xl transition-all duration-200 border border-red-200 hover:border-red-300 shadow-sm group-hover:shadow-md"
+            title="Отклонить вызов"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
+
+        {/* Join Call Button for ongoing consultations */}
+        {consultation.status === 'ongoing' && (
+          <button 
+            onClick={() => window.open(`/video-call?meetingId=${consultation.meeting_id}`, '_blank')}
+            className="p-3 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all duration-200 border border-blue-200 hover:border-blue-300 shadow-sm group-hover:shadow-md"
+            title="Присоединиться к звонку"
+          >
+            <PhoneCall className="w-5 h-5" />
+          </button>
+        )}
+
+        {/* View Details Button */}
+        <button className="p-3 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all duration-200 border border-blue-200 hover:border-blue-300 shadow-sm group-hover:shadow-md">
+          <Eye className="w-5 h-5" />
+        </button>
+
+        {/* More Options Button */}
+        <button className="p-3 text-gray-600 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all duration-200 border border-gray-200 hover:border-gray-300 shadow-sm group-hover:shadow-md">
+          <MoreHorizontal className="w-5 h-5" />
+        </button>
+      </div>
+    );
+  };
+
+  const renderCompactActionButtons = (consultation: Consultation) => {
+    const isPending = consultation.status === 'pending';
+    const canAccept = isPending && onAccept;
+    const canReject = isPending && onReject;
+
+    return (
+      <div className="flex items-center justify-center gap-2">
+        {/* Accept Call Button */}
+        {canAccept && (
+          <button 
+            onClick={() => onAccept(consultation.meeting_id)}
+            className="p-2.5 text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-all duration-200 border border-green-200 hover:border-green-300 shadow-sm"
+            title="Принять вызов"
+          >
+            <Check className="w-4 h-4" />
+          </button>
+        )}
+
+        {/* Reject Call Button */}
+        {canReject && (
+          <button 
+            onClick={() => onReject(consultation.meeting_id)}
+            className="p-2.5 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-all duration-200 border border-red-200 hover:border-red-300 shadow-sm"
+            title="Отклонить вызов"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+
+        {/* Join Call Button for ongoing consultations */}
+        {consultation.status === 'ongoing' && (
+          <button 
+            onClick={() => window.open(`/video-call?meetingId=${consultation.meeting_id}`, '_blank')}
+            className="p-2.5 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all duration-200 border border-blue-200 hover:border-blue-300 shadow-sm"
+            title="Присоединиться к звонку"
+          >
+            <PhoneCall className="w-4 h-4" />
+          </button>
+        )}
+
+        {/* View Details Button */}
+        <button className="p-2.5 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all duration-200 border border-blue-200 hover:border-blue-300 shadow-sm">
+          <Eye className="w-4 h-4" />
+        </button>
+
+        {/* More Options Button */}
+        <button className="p-2.5 text-gray-600 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg transition-all duration-200 border border-gray-200 hover:border-gray-300 shadow-sm">
+          <MoreHorizontal className="w-4 h-4" />
+        </button>
+      </div>
+    );
+  };
+
+  const renderMobileActionButtons = (consultation: Consultation) => {
+    const isPending = consultation.status === 'pending';
+    const canAccept = isPending && onAccept;
+    const canReject = isPending && onReject;
+
+    return (
+      <div className="flex items-center gap-2 mt-3">
+        {/* Accept Call Button - Full width when pending */}
+        {canAccept && (
+          <button 
+            onClick={() => onAccept(consultation.meeting_id)}
+            className="flex-1 flex items-center justify-center gap-2 p-2.5 text-green-600 bg-green-50 rounded-lg transition-colors border border-green-200"
+          >
+            <Check className="w-4 h-4" />
+            <span className="text-sm font-medium">Принять</span>
+          </button>
+        )}
+
+        {/* Reject Call Button - Full width when pending */}
+        {canReject && (
+          <button 
+            onClick={() => onReject(consultation.meeting_id)}
+            className="flex-1 flex items-center justify-center gap-2 p-2.5 text-red-600 bg-red-50 rounded-lg transition-colors border border-red-200"
+          >
+            <X className="w-4 h-4" />
+            <span className="text-sm font-medium">Отклонить</span>
+          </button>
+        )}
+
+        {/* Join Call Button for ongoing consultations */}
+        {consultation.status === 'ongoing' && (
+          <button 
+            onClick={() => window.open(`/video-call?meetingId=${consultation.meeting_id}`, '_blank')}
+            className="flex-1 flex items-center justify-center gap-2 p-2.5 text-blue-600 bg-blue-50 rounded-lg transition-colors border border-blue-200"
+          >
+            <PhoneCall className="w-4 h-4" />
+            <span className="text-sm font-medium">Подключиться</span>
+          </button>
+        )}
+
+        {/* View Details Button - Always present when no primary actions */}
+        {!isPending && consultation.status !== 'ongoing' && (
+          <button className="flex-1 flex items-center justify-center gap-2 p-2.5 text-blue-600 bg-blue-50 rounded-lg transition-colors border border-blue-200">
+            <Eye className="w-4 h-4" />
+            <span className="text-sm font-medium">Детали</span>
+          </button>
+        )}
+
+        {/* More Options Button */}
+        <button className="p-2.5 text-gray-600 bg-gray-50 rounded-lg transition-colors border border-gray-200">
+          <MoreHorizontal className="w-4 h-4" />
+        </button>
+      </div>
+    );
   };
 
   return (
@@ -474,22 +737,12 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
 
                     {/* Status */}
                     <td className="p-6">
-                      <span className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border-2 ${getStatusColor(consultation.status)} shadow-sm`}>
-                        {getStatusIcon(consultation.status)}
-                        {getStatusText(consultation.status)}
-                      </span>
+                      {renderStatusDropdown(consultation)}
                     </td>
 
                     {/* Actions */}
                     <td className="p-6">
-                      <div className="flex items-center justify-center gap-2">
-                        <button className="p-3 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all duration-200 border border-blue-200 hover:border-blue-300 shadow-sm group-hover:shadow-md">
-                          <Eye className="w-5 h-5" />
-                        </button>
-                        <button className="p-3 text-gray-600 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all duration-200 border border-gray-200 hover:border-gray-300 shadow-sm group-hover:shadow-md">
-                          <MoreHorizontal className="w-5 h-5" />
-                        </button>
-                      </div>
+                      {renderActionButtons(consultation)}
                     </td>
                   </tr>
                 ))}
@@ -564,21 +817,11 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
                     </td>
 
                     <td className="p-4">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border-2 ${getStatusColor(consultation.status)} shadow-sm`}>
-                        {getStatusIcon(consultation.status)}
-                        {getStatusText(consultation.status)}
-                      </span>
+                      {renderStatusDropdown(consultation)}
                     </td>
 
                     <td className="p-4">
-                      <div className="flex items-center justify-center gap-2">
-                        <button className="p-2.5 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all duration-200 border border-blue-200 hover:border-blue-300 shadow-sm">
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button className="p-2.5 text-gray-600 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg transition-all duration-200 border border-gray-200 hover:border-gray-300 shadow-sm">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </button>
-                      </div>
+                      {renderCompactActionButtons(consultation)}
                     </td>
                   </tr>
                 ))}
@@ -623,10 +866,9 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
                     </div>
                   </div>
                   
-                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border ${getStatusColor(consultation.status)} flex-shrink-0 ml-2`}>
-                    {getStatusIcon(consultation.status)}
-                    <span className="hidden xs:inline">{getStatusText(consultation.status)}</span>
-                  </span>
+                  <div className="flex-shrink-0 ml-2">
+                    {renderStatusDropdown(consultation, true)}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 text-xs">
@@ -672,15 +914,7 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 mt-3">
-                  <button className="flex-1 flex items-center justify-center gap-2 p-2.5 text-blue-600 bg-blue-50 rounded-lg transition-colors border border-blue-200">
-                    <Eye className="w-4 h-4" />
-                    <span className="text-sm font-medium">Детали</span>
-                  </button>
-                  <button className="p-2.5 text-gray-600 bg-gray-50 rounded-lg transition-colors border border-gray-200">
-                    <MoreHorizontal className="w-4 h-4" />
-                  </button>
-                </div>
+                {renderMobileActionButtons(consultation)}
               </div>
             </div>
           ))}

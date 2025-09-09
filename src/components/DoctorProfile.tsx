@@ -81,7 +81,7 @@ export default function DoctorProfile() {
       />
 
       {/* Main */}
-      <div className="flex-1 flex flex-col">
+      <div className={`flex-1 flex flex-col transition-all duration-500 ${sidebarCollapsed ? 'xl:ml-20' : 'xl:ml-80'}`}>
         {/* Header */}
         <DoctorHeader 
           onMenuClick={() => setSidebarOpen(true)}

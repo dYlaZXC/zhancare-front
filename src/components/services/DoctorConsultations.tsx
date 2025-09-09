@@ -109,6 +109,16 @@ const DoctorConsultations: React.FC = () => {
     setNewConsultation(null);
   };
 
+  const changeConsultationStatus = async (meeting_id: string, newStatus: string) => {
+    try {
+      await api.post(`/consultations/${meeting_id}/status/`, { status: newStatus });
+      toast.success("Статус консультации обновлен");
+      fetchConsultations();
+    } catch {
+      toast.error("Ошибка при изменении статуса консультации");
+    }
+  };
+
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50">
       {/* Background decorations */}
@@ -333,6 +343,9 @@ const DoctorConsultations: React.FC = () => {
           <ConsultationsTable
             consultations={filteredConsultations}
             showFilters={false}
+            onAccept={acceptConsultation}
+            onReject={rejectConsultation}
+            onStatusChange={changeConsultationStatus}
           />
         </motion.div>
       </div>

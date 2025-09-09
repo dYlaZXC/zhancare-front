@@ -32,6 +32,7 @@ interface InsurancePolicy {
 }
 
 interface InsuranceStatusCardProps {
+  insurance?: InsurancePolicy;
   onViewDetails?: () => void;
   onRenewPolicy?: () => void;
   onContactInsurance?: () => void;
@@ -39,6 +40,7 @@ interface InsuranceStatusCardProps {
 }
 
 export const InsuranceStatusCard = ({
+  insurance,
   onViewDetails,
   onRenewPolicy,
   onContactInsurance,
@@ -47,19 +49,21 @@ export const InsuranceStatusCard = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showFullDetails, setShowFullDetails] = useState(false);
 
-  // Mock insurance data
-  const insurance: InsurancePolicy = {
-    id: "INS-2024-001",
-    company: "Халық Страхование",
-    policyNumber: "POL-789456123",
-    status: "active",
-    coverage: "Комплексное медицинское страхование",
-    validFrom: new Date('2024-01-01'),
-    validTo: new Date('2026-12-31'),
-    premium: 85000,
-    deductible: 15000,
-    coverageLimit: 2000000
+  // Default values when no insurance data is provided
+  const defaultInsurance: InsurancePolicy = {
+    id: "Не указано",
+    company: "Не указано",
+    policyNumber: "Не указано",
+    status: "unknown" as any,
+    coverage: "Не указано",
+    validFrom: null as any,
+    validTo: null as any,
+    premium: 0,
+    deductible: 0,
+    coverageLimit: 0
   };
+
+  const insuranceData = insurance || defaultInsurance;
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -76,8 +80,8 @@ export const InsuranceStatusCard = ({
           bgColor: 'bg-green-50',
           borderColor: 'border-green-200',
           icon: CheckCircle,
-          text: 'Не активен',
-          description: 'Полис не действует'
+          text: 'Активен',
+          description: 'Полис действует'
         };
       case 'expired':
         return {
@@ -103,19 +107,20 @@ export const InsuranceStatusCard = ({
           bgColor: 'bg-gray-50',
           borderColor: 'border-gray-200',
           icon: Shield,
-          text: 'Неизвестно',
+          text: 'Не указано',
           description: 'Статус не определен'
         };
     }
   };
 
-  const statusInfo = getStatusInfo(insurance.status);
+  const statusInfo = getStatusInfo(insuranceData.status);
   const StatusIcon = statusInfo.icon;
 
-  const daysUntilExpiry = Math.ceil((insurance.validTo.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+  const daysUntilExpiry = insuranceData.validTo ? Math.ceil((insuranceData.validTo.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 0;
   const isExpiringSoon = daysUntilExpiry <= 30 && daysUntilExpiry > 0;
 
   const formatCurrency = (amount: number) => {
+    if (amount === 0) return 'Не указано';
     return new Intl.NumberFormat('kk-KZ', {
       style: 'currency',
       currency: 'KZT',
@@ -123,7 +128,8 @@ export const InsuranceStatusCard = ({
     }).format(amount);
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | null) => {
+    if (!date) return 'Не указано';
     return date.toLocaleDateString('ru-RU', {
       day: '2-digit',
       month: '2-digit',
@@ -182,15 +188,15 @@ export const InsuranceStatusCard = ({
         <div className="space-y-2">
           <div className="flex items-center space-x-2 text-sm">
             <Building className="w-4 h-4 text-gray-500" />
-            <span className="font-medium text-gray-900">{insurance.company}</span>
+            <span className="font-medium text-gray-900">{insuranceData.company}</span>
           </div>
           <div className="flex items-center space-x-2 text-sm text-gray-600">
             <FileText className="w-4 h-4" />
-            <span>Полис: {insurance.policyNumber}</span>
+            <span>Полис: {insuranceData.policyNumber}</span>
           </div>
           <div className="flex items-center space-x-2 text-sm text-gray-600">
             <Calendar className="w-4 h-4" />
-            <span>Действует до: {formatDate(insurance.validTo)}</span>
+            <span>Действует до: {formatDate(insuranceData.validTo)}</span>
           </div>
         </div>
       </div>
@@ -202,19 +208,19 @@ export const InsuranceStatusCard = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-100">
               <div className="text-base sm:text-lg font-bold text-blue-600 truncate">
-                {formatCurrency(insurance.coverageLimit)}
+                {formatCurrency(insuranceData.coverageLimit)}
               </div>
               <div className="text-xs text-gray-600">Лимит покрытия</div>
             </div>
             <div className="text-center p-3 bg-green-50 rounded-lg border border-green-100">
               <div className="text-base sm:text-lg font-bold text-green-600 truncate">
-                {formatCurrency(insurance.deductible)}
+                {formatCurrency(insuranceData.deductible)}
               </div>
               <div className="text-xs text-gray-600">Франшиза</div>
             </div>
             <div className="text-center p-3 bg-purple-50 rounded-lg border border-purple-100">
               <div className="text-base sm:text-lg font-bold text-purple-600 truncate">
-                {formatCurrency(insurance.premium)}
+                {formatCurrency(insuranceData.premium)}
               </div>
               <div className="text-xs text-gray-600">Годовая премия</div>
             </div>
@@ -300,7 +306,7 @@ export const InsuranceStatusCard = ({
       <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
         <div className="flex items-center space-x-1">
           <User className="w-3 h-3" />
-          <span>ID полиса: {insurance.id}</span>
+          <span>ID полиса: {insuranceData.id}</span>
         </div>
         <div className="flex items-center space-x-1">
           <Clock className="w-3 h-3" />

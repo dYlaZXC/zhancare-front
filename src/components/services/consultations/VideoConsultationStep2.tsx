@@ -350,15 +350,15 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
               <div className="bg-white p-1.5 md:p-2 rounded-lg border border-green-200">
                 <div className="text-center">
                   <div className="text-xs text-gray-500 mb-1">Первичная</div>
-                  <div className="font-bold text-green-600 text-sm">15,000 ₸</div>
-                  <div className="text-xs text-gray-400 line-through">20,000 ₸</div>
+                  <div className="font-bold text-green-600 text-sm">1500,00 ₸</div>
+                  <div className="text-xs text-gray-400 line-through">2000,00 ₸</div>
                 </div>
               </div>
               <div className="bg-white p-1.5 md:p-2 rounded-lg border border-green-200">
                 <div className="text-center">
                   <div className="text-xs text-gray-500 mb-1">Повторная</div>
-                  <div className="font-bold text-green-600 text-sm">12,000 ₸</div>
-                  <div className="text-xs text-gray-400 line-through">18,000 ₸</div>
+                  <div className="font-bold text-green-600 text-sm">1200,00 ₸</div>
+                  <div className="text-xs text-gray-400 line-through">1800,00 ₸</div>
                 </div>
               </div>
             </div>
