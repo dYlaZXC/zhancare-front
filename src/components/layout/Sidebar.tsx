@@ -168,7 +168,7 @@ export const Sidebar = ({
                     width={100} 
                     height={32} 
                     priority 
-                    className="w-20 h-6 xs:w-24 xs:h-7 sm:w-28 sm:h-8 transition-all duration-500 group-hover:scale-110 drop-shadow-lg" 
+                    className="w-auto h-8 transition-all duration-500 group-hover:scale-110 drop-shadow-lg" 
                   />
                   
                   {/* Animated glow behind logo */}
@@ -271,7 +271,7 @@ export const Sidebar = ({
                   width={280} 
                   height={55} 
                   priority 
-                  className="w-48 h-9 sm:w-52 sm:h-10 md:w-56 md:h-11 group-hover:scale-105 transition-all duration-500" 
+                  className="w-auto h-12 group-hover:scale-105 transition-all duration-500" 
                 />
               )}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
@@ -546,7 +546,7 @@ export const Sidebar = ({
                   width={280} 
                   height={55} 
                   priority 
-                  className="w-56 h-11 group-hover:scale-105 transition-all duration-500" 
+                  className="w-auto h-12 group-hover:scale-105 transition-all duration-500" 
                 />
               )}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
