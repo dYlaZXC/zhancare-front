@@ -9,7 +9,32 @@ interface User {
   email: string;
   first_name: string;
   last_name: string;
+  phone?: string;
   role: "patient" | "doctor" | "admin";
+  role_display?: string;
+
+  // Personal details
+  birth_date?: string;
+  gender?: "male" | "female" | "other";
+  gender_display?: string;
+  address?: string;
+  city?: string;
+  language?: "kz" | "ru" | "en" | "other";
+  language_display?: string;
+  citizenship?: string;
+  marital_status?: "single" | "married" | "divorced" | "widowed";
+  marital_status_display?: string;
+  profession?: string;
+
+  // Medical details
+  blood_type?: "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-" | "O+" | "O-";
+  blood_type_display?: string;
+
+  // Doctor specific
+  doctor_type?: string;
+
+  // Timestamps
+  date_joined?: string;
 }
 
 interface AuthContextProps {

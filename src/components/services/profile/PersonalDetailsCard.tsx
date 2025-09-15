@@ -1,21 +1,23 @@
 "use client";
 
-import { 
-  Phone, 
-  Languages, 
-  MapPin, 
-  Mail, 
-  Flag, 
-  Heart, 
-  Briefcase, 
-  Edit, 
+import {
+  Languages,
+  MapPin,
+  Mail,
+  Flag,
+  Heart,
+  Briefcase,
+  Edit,
   Check,
   X,
   User as UserIcon,
   Calendar,
-  Globe
+  Globe,
+  Phone,
+  Users,
+  Cake
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { InfoCard } from "./InfoCard";
 import { InfoRow } from "./InfoRow";
 import { User } from "./types";
@@ -23,7 +25,8 @@ import { User } from "./types";
 interface PersonalDetailsCardProps {
   user: User;
   isEditable?: boolean;
-  onSave?: (updatedUser: Partial<User>) => void;
+  onSave?: (updatedUser: Partial<User>) => Promise<void>;
+  onRefetch?: () => void;
   showCompletionProgress?: boolean;
 }
 
@@ -33,23 +36,126 @@ interface PersonalField {
   icon?: React.ComponentType<any>;
   required?: boolean;
   editable?: boolean;
-  type?: 'text' | 'email' | 'tel' | 'select';
-  options?: string[];
+  type?: 'text' | 'email' | 'tel' | 'select' | 'date';
+  options?: string[] | Array<{value: string, label: string}>;
   placeholder?: string;
   validator?: (value: string) => string | null;
 }
 
-export const PersonalDetailsCard = ({ 
-  user, 
+export const PersonalDetailsCard = ({
+  user: initialUser,
   isEditable = false,
   onSave,
+  onRefetch,
   showCompletionProgress = false
 }: PersonalDetailsCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedUser, setEditedUser] = useState<Partial<User>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [user, setUser] = useState<User>(initialUser);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch real API data on mount
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        setLoading(true);
+        const { api } = await import("@/utils/api");
+        const response = await api.get('/user-profile/profile/');
+        console.log('✅ [PersonalDetailsCard] API data loaded:', response.data);
+        setUser(response.data);
+      } catch (error: any) {
+        console.error('❌ [PersonalDetailsCard] API error:', error);
+        // Keep using initial user data if API fails
+        setUser(initialUser);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [initialUser]);
+
+  // Debug: log all user data
+  console.log('📋 [PersonalDetailsCard] Current user:', user);
+  console.log('📞 [PersonalDetailsCard] User phone field:', user.phone);
+  console.log('🔑 [PersonalDetailsCard] User keys:', Object.keys(user));
+
+
 
   const personalFields: PersonalField[] = [
+    {
+      key: 'first_name',
+      label: 'Имя',
+      icon: UserIcon,
+      required: true,
+      editable: true,
+      type: 'text',
+      placeholder: 'Введите имя',
+      validator: (value) => value.length < 2 ? 'Имя должно содержать минимум 2 символа' : null
+    },
+    {
+      key: 'last_name',
+      label: 'Фамилия',
+      icon: UserIcon,
+      required: true,
+      editable: true,
+      type: 'text',
+      placeholder: 'Введите фамилию',
+      validator: (value) => value.length < 2 ? 'Фамилия должна содержать минимум 2 символа' : null
+    },
+    {
+      key: 'phone',
+      label: 'Телефон',
+      icon: Phone,
+      required: true,
+      editable: true,
+      type: 'tel',
+      placeholder: '+7 (___) ___-__-__',
+      validator: (value) => {
+        const phoneRegex = /^\+7\d{10}$/;
+        return !phoneRegex.test(value.replace(/[\s\-\(\)]/g, ''))
+          ? 'Введите корректный номер телефона'
+          : null;
+      }
+    },
+    {
+      key: 'birth_date',
+      label: 'Дата рождения',
+      icon: Cake,
+      required: false,
+      editable: true,
+      type: 'date',
+      placeholder: 'Выберите дату рождения',
+      validator: (value) => {
+        if (!value) return null; // Optional field
+        const birthDate = new Date(value);
+        const today = new Date();
+        const oneYearAgo = new Date();
+        oneYearAgo.setFullYear(today.getFullYear() - 1);
+
+        if (birthDate > today) {
+          return 'Дата рождения не может быть в будущем';
+        }
+        if (birthDate > oneYearAgo) {
+          return 'Возраст должен быть не менее 1 года';
+        }
+        return null;
+      }
+    },
+    {
+      key: 'gender',
+      label: 'Пол',
+      icon: Users,
+      required: false,
+      editable: true,
+      type: 'select',
+      options: [
+        { value: 'male', label: 'Мужской' },
+        { value: 'female', label: 'Женский' },
+        { value: 'other', label: 'Другой' }
+      ]
+    },
     {
       key: 'address',
       label: 'Адрес',
@@ -68,21 +174,6 @@ export const PersonalDetailsCard = ({
       editable: true,
       type: 'text',
       placeholder: 'Название города'
-    },
-    {
-      key: 'phone',
-      label: 'Телефон',
-      icon: Phone,
-      required: true,
-      editable: true,
-      type: 'tel',
-      placeholder: '+7 (___) ___-__-__',
-      validator: (value) => {
-        const phoneRegex = /^\+7\d{10}$/;
-        return !phoneRegex.test(value.replace(/[\s\-\(\)]/g, '')) 
-          ? 'Введите корректный номер телефона' 
-          : null;
-      }
     },
     {
       key: 'email',
@@ -104,7 +195,12 @@ export const PersonalDetailsCard = ({
       required: false,
       editable: true,
       type: 'select',
-      options: ['Казахский', 'Русский', 'Английский', 'Другой']
+      options: [
+        { value: 'kz', label: 'Казахский' },
+        { value: 'ru', label: 'Русский' },
+        { value: 'en', label: 'Английский' },
+        { value: 'other', label: 'Другой' }
+      ]
     },
     {
       key: 'citizenship',
@@ -116,13 +212,18 @@ export const PersonalDetailsCard = ({
       options: ['Казахстан', 'Россия', 'Другое']
     },
     {
-      key: 'maritalStatus',
+      key: 'marital_status',
       label: 'Семейное положение',
       icon: Heart,
       required: false,
       editable: true,
       type: 'select',
-      options: ['Не женат/не замужем', 'Женат/замужем', 'Разведен/разведена', 'Вдовец/вдова']
+      options: [
+        { value: 'single', label: 'Не женат/не замужем' },
+        { value: 'married', label: 'Женат/замужем' },
+        { value: 'divorced', label: 'Разведен/разведена' },
+        { value: 'widowed', label: 'Вдовец/вдова' }
+      ]
     },
     {
       key: 'profession',
@@ -147,7 +248,18 @@ export const PersonalDetailsCard = ({
 
   const handleEdit = () => {
     setIsEditing(true);
-    setEditedUser({ ...user });
+    // Only set actual values, not "Не указано"
+    const actualUserData: Partial<User> = {};
+    Object.keys(user).forEach(key => {
+      const userKey = key as keyof User;
+      const value = user[userKey];
+      // Only include actual values, not empty/undefined ones
+      if (value && value.toString().trim() !== '') {
+        // Use type assertion to ensure compatibility
+        (actualUserData as any)[userKey] = value;
+      }
+    });
+    setEditedUser(actualUserData);
     setErrors({});
   };
 
@@ -169,7 +281,7 @@ export const PersonalDetailsCard = ({
 
   const handleSave = async () => {
     const newErrors: Record<string, string> = {};
-    
+
     // Validate all fields
     personalFields.forEach(field => {
       const value = editedUser[field.key as keyof User]?.toString() || '';
@@ -182,11 +294,27 @@ export const PersonalDetailsCard = ({
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
-      if (onSave) {
-        await onSave(editedUser);
+      try {
+        if (onSave) {
+          await onSave(editedUser);
+        }
+        setIsEditing(false);
+        setEditedUser({});
+
+        // Refetch the user data from API to get the updated information
+        const { api } = await import("@/utils/api");
+        const response = await api.get('/user-profile/profile/');
+        setUser(response.data);
+        console.log('✅ [PersonalDetailsCard] Data refreshed after save:', response.data);
+
+        // Also trigger parent refetch if provided
+        if (onRefetch) {
+          onRefetch();
+        }
+      } catch (error) {
+        console.error('Error saving personal data:', error);
+        // Keep the form in editing mode if save fails
       }
-      setIsEditing(false);
-      setEditedUser({});
     }
   };
 
@@ -201,13 +329,30 @@ export const PersonalDetailsCard = ({
 
   const getFieldValue = (field: PersonalField): string => {
     const value = user[field.key as keyof User];
-    return value?.toString() || 'Не указано';
+
+    // Use display field if available (e.g., language_display, marital_status_display)
+    const displayKey = `${field.key}_display` as keyof User;
+    const displayValue = user[displayKey];
+
+    if (displayValue && displayValue.toString().trim() !== '') {
+      return displayValue.toString();
+    }
+
+    if (value && value.toString().trim() !== '') {
+      return value.toString();
+    }
+
+    return 'Не указано';
   };
 
   const renderField = (field: PersonalField) => {
     const currentValue = getFieldValue(field);
-    const editValue = editedUser[field.key as keyof User]?.toString() || currentValue;
+    // For editing, use the actual value from editedUser or empty string (not "Не указано")
+    const rawValue = user[field.key as keyof User];
+    const editValue = editedUser[field.key as keyof User]?.toString() ||
+                     (rawValue && rawValue.toString().trim() !== '' ? rawValue.toString() : '');
     const hasError = errors[field.key];
+
 
     if (isEditing && field.editable) {
       return (
@@ -228,9 +373,12 @@ export const PersonalDetailsCard = ({
                 hasError ? 'border-red-500 bg-red-50' : 'border-gray-300'
               }`}
             >
-              {field.options?.map(option => (
-                <option key={option} value={option}>{option}</option>
-              ))}
+              {field.options?.map(option => {
+                if (typeof option === 'string') {
+                  return <option key={option} value={option}>{option}</option>;
+                }
+                return <option key={option.value} value={option.value}>{option.label}</option>;
+              })}
             </select>
           ) : (
             <input
@@ -324,16 +472,26 @@ export const PersonalDetailsCard = ({
 
       {/* Main Card */}
       <InfoCard title="Личные данные">
-        {/* Action buttons header */}
-        {renderActionButton() && (
-          <div className="flex justify-end mb-4">
-            {renderActionButton()}
+        {/* Action button header */}
+        <div className="flex justify-end items-center mb-4">
+          {renderActionButton()}
+        </div>
+
+        {/* Loading indicator */}
+        {loading && (
+          <div className="flex items-center justify-center py-8">
+            <div className="flex items-center space-x-2 text-gray-500">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              <span className="text-sm">Загрузка данных...</span>
+            </div>
           </div>
         )}
-        
-        <div className={`space-y-3 ${isEditing ? 'space-y-4' : 'space-y-0.5 sm:space-y-1'}`}>
-          {personalFields.map(renderField)}
-        </div>
+
+        {!loading && (
+          <div className={`space-y-3 ${isEditing ? 'space-y-4' : 'space-y-0.5 sm:space-y-1'}`}>
+            {personalFields.map(renderField)}
+          </div>
+        )}
 
         {/* Additional Info Section */}
         {!isEditing && (

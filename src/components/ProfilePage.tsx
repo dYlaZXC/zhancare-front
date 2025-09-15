@@ -4,6 +4,7 @@
 import { useAuth } from "@/context/AuthContext";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useUserProfile } from "@/components/services/profile/useUserProfile";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
@@ -18,6 +19,7 @@ import { ActivityLog } from "@/components/services/ActivityLog";
 
 const ProfilePage = () => {
   const { user, loading, setIsAuthOpen } = useAuth();
+  const { userProfile, loading: profileLoading, error: profileError, refetch } = useUserProfile();
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState("profile");
@@ -28,6 +30,13 @@ const ProfilePage = () => {
     setSidebarCollapsed(!sidebarCollapsed);
   };
 
+  // Profile error handling
+  useEffect(() => {
+    if (profileError) {
+      console.error('Profile loading error:', profileError);
+    }
+  }, [profileError]);
+
   useEffect(() => {
     if (!loading && !user) {
       // User is not authenticated, show auth popup immediately and redirect
@@ -35,13 +44,14 @@ const ProfilePage = () => {
       router.replace('/');
       return;
     }
-    
+
     if (!loading && user?.role === "doctor") {
       router.replace("/doctor-profile");
+      return;
     }
   }, [loading, user, router, setIsAuthOpen]);
 
-  if (loading) {
+  if (loading || profileLoading) {
     return null; // Don't show loading screen, let auth popup handle it
   }
 
@@ -50,18 +60,15 @@ const ProfilePage = () => {
     return null;
   }
 
-  // ✅ Convert id to string to match User type expectations
-  const userProfile = {
-    id: String(user.id || 0), // Convert number to string
-    first_name: user.first_name || "",
-    last_name: user.last_name || "",
-    email: user.email || "",
-  };
+  // If no userProfile data yet, don't render
+  if (!userProfile) {
+    return null;
+  }
 
   const renderContent = () => {
     switch (activeTab) {
       case "profile":
-        return <ProfileDetails user={userProfile} />;
+        return <ProfileDetails user={userProfile} onRefetch={refetch} />;
       case "video":
         return <VideoConsultation />;
       case "appointments":
