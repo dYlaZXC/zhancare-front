@@ -26,6 +26,7 @@ export const CallToAction = () => {
     }
   };
 
+  
   const translations = getTranslations();
 
   const sectionRef = useRef(null);
