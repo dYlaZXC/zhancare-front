@@ -558,12 +558,13 @@ const AuthPopup = () => {
               </div>
 
               {/* Right side - Form */}
-              <div className="flex-1 p-3 xs:p-4 sm:p-6 md:p-8 overflow-y-auto overflow-x-hidden max-h-[calc(90vh-120px)] xs:max-h-[calc(90vh-140px)] sm:max-h-[calc(95vh-160px)] md:max-h-none scroll-smooth">
+              <div className="flex-1 p-3 xs:p-4 sm:p-6 md:p-8 flex flex-col overflow-hidden">
                 <AuthTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-                <div ref={wrapperRef} className="relative overflow-hidden mt-3 xs:mt-4 sm:mt-6">
-                  <div ref={formContainerRef}>
-                    <form ref={formElementRef} onSubmit={handleSubmit} className="space-y-2 xs:space-y-3 sm:space-y-4 pb-4 xs:pb-6 sm:pb-8">
+                <div ref={wrapperRef} className="relative overflow-hidden mt-3 xs:mt-4 sm:mt-6 flex-1 min-h-0">
+                  <div ref={formContainerRef} className="h-full overflow-y-auto scroll-smooth">
+                    <form ref={formElementRef} onSubmit={handleSubmit} className="min-h-full flex flex-col">
+                      <div className="space-y-2 xs:space-y-3 sm:space-y-4 flex-1">
                       {activeTab === "login" ? (
                         <>
                           <InputField
@@ -707,13 +708,16 @@ const AuthPopup = () => {
                           />
                         </>
                       )}
+                      </div>
 
-                      <ErrorAlert error={error} />
+                      {/* Error and Submit Button - Fixed at bottom */}
+                      <div className="mt-auto pt-2 xs:pt-3 sm:pt-4 space-y-2 xs:space-y-3 sm:space-y-4">
+                        <ErrorAlert error={error} />
 
-                      <button
+                        <button
                         type="submit"
                         disabled={loading}
-                        className="w-full group relative overflow-hidden min-h-[44px] xs:min-h-[48px] sm:min-h-[52px] px-3 xs:px-4 sm:px-6 py-2.5 xs:py-3 sm:py-4 rounded-lg sm:rounded-xl text-white font-semibold flex items-center justify-center gap-2 sm:gap-3 transition-all duration-300 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; shadow-lg hover:shadow-2xl hover:-translate-y-0.5 active:scale-95 border-0 outline-none focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:hover:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:scale-100 mt-2 xs:mt-3 sm:mt-4"
+                        className="w-full group relative overflow-hidden min-h-[44px] xs:min-h-[48px] sm:min-h-[52px] px-3 xs:px-4 sm:px-6 py-2.5 xs:py-3 sm:py-4 rounded-lg sm:rounded-xl text-white font-semibold flex items-center justify-center gap-2 sm:gap-3 transition-all duration-300 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; shadow-lg hover:shadow-2xl hover:-translate-y-0.5 active:scale-95 border-0 outline-none focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:hover:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:scale-100"
                         style={{
                           background: loading 
                             ? 'linear-gradient(135deg, #6b7280 0%, #4b5563 50%, #374151 100%)'
@@ -755,6 +759,7 @@ const AuthPopup = () => {
                         <div className="absolute -inset-0.5 rounded-xl opacity-0 group-hover:opacity-30 transition-opacity duration-300 -z-10 blur-lg"
                              style={{ background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)' }}></div>
                       </button>
+                      </div>
                     </form>
                   </div>
                 </div>

@@ -135,6 +135,10 @@ export default function MobileMenu({ isOpen, onClose, onScrollToSection }: Props
   const handleLogout = useCallback(() => {
     logoutUser();
     onClose();
+    // Redirect to homepage after logout
+    setTimeout(() => {
+      window.location.href = "/";
+    }, 500);
   }, [logoutUser, onClose]);
 
   // Animation variants

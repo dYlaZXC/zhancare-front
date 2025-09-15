@@ -319,8 +319,10 @@ export const PersonalDetailsCard = ({
   };
 
   const handleFieldChange = (fieldKey: string, value: string) => {
-    setEditedUser(prev => ({ ...prev, [fieldKey]: value }));
-    
+    // If value is empty string (user selected "Не указано"), set it as undefined or null
+    const finalValue = value === '' ? undefined : value;
+    setEditedUser(prev => ({ ...prev, [fieldKey]: finalValue }));
+
     // Clear error when user starts typing
     if (errors[fieldKey]) {
       setErrors(prev => ({ ...prev, [fieldKey]: '' }));
@@ -356,12 +358,29 @@ export const PersonalDetailsCard = ({
 
     if (isEditing && field.editable) {
       return (
-        <div key={field.key} className="space-y-1">
+        <div key={field.key} className="space-y-3">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-gray-700 flex items-center space-x-2">
-              {field.icon && <field.icon className="w-4 h-4 text-gray-500" />}
-              <span>{field.label}</span>
-              {field.required && <span className="text-red-500">*</span>}
+            <label className="text-sm font-semibold flex items-center space-x-3 group">
+              {field.icon && (
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300"
+                     style={{
+                       background: 'linear-gradient(135deg, rgba(55, 114, 255, 0.1) 0%, rgba(50, 103, 230, 0.05) 100%)',
+                       border: '1px solid rgba(55, 114, 255, 0.1)'
+                     }}>
+                  <field.icon className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform duration-300" />
+                </div>
+              )}
+              <div>
+                <span className="bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                  {field.label}
+                </span>
+                {field.required && (
+                  <span className="ml-1 text-red-500 text-lg leading-none">*</span>
+                )}
+                <div className="text-xs text-gray-500 mt-0.5">
+                  {field.required ? 'Обязательное поле' : 'Опциональное'}
+                </div>
+              </div>
             </label>
           </div>
           
@@ -369,10 +388,38 @@ export const PersonalDetailsCard = ({
             <select
               value={editValue}
               onChange={(e) => handleFieldChange(field.key, e.target.value)}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                hasError ? 'border-red-500 bg-red-50' : 'border-gray-300'
+              className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-opacity-50 backdrop-blur-sm ${
+                hasError
+                  ? 'border-red-300 bg-red-50/80 text-red-900 focus:ring-red-500 focus:border-red-400'
+                  : 'text-gray-900 focus:ring-blue-500'
               }`}
+              style={{
+                background: hasError
+                  ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%)'
+                  : 'linear-gradient(135deg, rgba(55, 114, 255, 0.03) 0%, rgba(255, 255, 255, 0.8) 50%, rgba(50, 103, 230, 0.02) 100%)',
+                border: hasError
+                  ? '2px solid rgba(239, 68, 68, 0.3)'
+                  : '2px solid rgba(55, 114, 255, 0.1)',
+                boxShadow: hasError
+                  ? '0 4px 12px rgba(239, 68, 68, 0.1), inset 0 2px 4px rgba(239, 68, 68, 0.05)'
+                  : '0 4px 12px rgba(55, 114, 255, 0.05), inset 0 2px 4px rgba(255, 255, 255, 0.1)'
+              }}
+              onFocus={(e) => {
+                if (!hasError) {
+                  e.currentTarget.style.borderColor = 'rgba(55, 114, 255, 0.4)';
+                  e.currentTarget.style.boxShadow = '0 8px 25px rgba(55, 114, 255, 0.15), inset 0 2px 4px rgba(255, 255, 255, 0.1)';
+                  e.currentTarget.style.background = 'linear-gradient(135deg, rgba(55, 114, 255, 0.05) 0%, rgba(255, 255, 255, 0.9) 50%, rgba(50, 103, 230, 0.03) 100%)';
+                }
+              }}
+              onBlur={(e) => {
+                if (!hasError) {
+                  e.currentTarget.style.borderColor = 'rgba(55, 114, 255, 0.1)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(55, 114, 255, 0.05), inset 0 2px 4px rgba(255, 255, 255, 0.1)';
+                  e.currentTarget.style.background = 'linear-gradient(135deg, rgba(55, 114, 255, 0.03) 0%, rgba(255, 255, 255, 0.8) 50%, rgba(50, 103, 230, 0.02) 100%)';
+                }
+              }}
             >
+              <option value="">Не указано</option>
               {field.options?.map(option => {
                 if (typeof option === 'string') {
                   return <option key={option} value={option}>{option}</option>;
@@ -386,17 +433,58 @@ export const PersonalDetailsCard = ({
               value={editValue}
               onChange={(e) => handleFieldChange(field.key, e.target.value)}
               placeholder={field.placeholder}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                hasError ? 'border-red-500 bg-red-50' : 'border-gray-300'
+              className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-opacity-50 backdrop-blur-sm ${
+                hasError
+                  ? 'border-red-300 bg-red-50/80 text-red-900 focus:ring-red-500 focus:border-red-400 placeholder-red-400'
+                  : 'text-gray-900 focus:ring-blue-500 placeholder-gray-400'
               }`}
+              style={{
+                background: hasError
+                  ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%)'
+                  : 'linear-gradient(135deg, rgba(55, 114, 255, 0.03) 0%, rgba(255, 255, 255, 0.8) 50%, rgba(50, 103, 230, 0.02) 100%)',
+                border: hasError
+                  ? '2px solid rgba(239, 68, 68, 0.3)'
+                  : '2px solid rgba(55, 114, 255, 0.1)',
+                boxShadow: hasError
+                  ? '0 4px 12px rgba(239, 68, 68, 0.1), inset 0 2px 4px rgba(239, 68, 68, 0.05)'
+                  : '0 4px 12px rgba(55, 114, 255, 0.05), inset 0 2px 4px rgba(255, 255, 255, 0.1)'
+              }}
+              onFocus={(e) => {
+                if (!hasError) {
+                  e.currentTarget.style.borderColor = 'rgba(55, 114, 255, 0.4)';
+                  e.currentTarget.style.boxShadow = '0 8px 25px rgba(55, 114, 255, 0.15), inset 0 2px 4px rgba(255, 255, 255, 0.1)';
+                  e.currentTarget.style.background = 'linear-gradient(135deg, rgba(55, 114, 255, 0.05) 0%, rgba(255, 255, 255, 0.9) 50%, rgba(50, 103, 230, 0.03) 100%)';
+                }
+              }}
+              onBlur={(e) => {
+                if (!hasError) {
+                  e.currentTarget.style.borderColor = 'rgba(55, 114, 255, 0.1)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(55, 114, 255, 0.05), inset 0 2px 4px rgba(255, 255, 255, 0.1)';
+                  e.currentTarget.style.background = 'linear-gradient(135deg, rgba(55, 114, 255, 0.03) 0%, rgba(255, 255, 255, 0.8) 50%, rgba(50, 103, 230, 0.02) 100%)';
+                }
+              }}
             />
           )}
           
           {hasError && (
-            <p className="text-xs text-red-600 flex items-center space-x-1">
-              <X className="w-3 h-3" />
-              <span>{hasError}</span>
-            </p>
+            <div className="relative overflow-hidden p-3 rounded-xl border backdrop-blur-sm animate-in slide-in-from-top-2 duration-300"
+                 style={{
+                   background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%)',
+                   borderColor: 'rgba(239, 68, 68, 0.2)',
+                   boxShadow: '0 4px 12px rgba(239, 68, 68, 0.1)'
+                 }}>
+              <div className="flex items-center space-x-2">
+                <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                     style={{ background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' }}>
+                  <X className="w-3 h-3 text-white" />
+                </div>
+                <p className="text-sm font-medium text-red-700">{hasError}</p>
+              </div>
+
+              {/* Animated background element */}
+              <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full opacity-20 animate-pulse"
+                   style={{ background: 'radial-gradient(circle, rgba(239, 68, 68, 0.6) 0%, transparent 70%)' }}></div>
+            </div>
           )}
         </div>
       );
@@ -414,23 +502,65 @@ export const PersonalDetailsCard = ({
 
   const renderActionButton = () => {
     if (!isEditable) return null;
-    
+
     if (isEditing) {
       return (
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-3">
+          {/* Premium Cancel Button */}
           <button
             onClick={handleCancel}
-            className="flex items-center space-x-1 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+            className="group relative overflow-hidden flex items-center space-x-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50 hover:scale-105 active:scale-95"
+            style={{
+              background: 'linear-gradient(135deg, #e8e8e8 0%, #dddddd 100%)',
+              color: '#1b1b1b',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #dddddd 0%, #b8b8b8 100%)';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.15)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #e8e8e8 0%, #dddddd 100%)';
+              e.currentTarget.style.transform = '';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+            }}
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4 transition-transform duration-300 group-hover:rotate-90" />
             <span>Отмена</span>
+
+            {/* Shimmer effect */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
           </button>
+
+          {/* Premium Save Button */}
           <button
             onClick={handleSave}
-            className="flex items-center space-x-1 px-3 py-1.5 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+            className="group relative overflow-hidden flex items-center space-x-2 px-5 py-2.5 text-sm font-semibold text-white rounded-xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 hover:scale-105 active:scale-95"
+            style={{
+              background: 'linear-gradient(135deg, #3772ff 0%, #3267e6 50%, #2c5bcc 100%)',
+              boxShadow: '0 8px 25px rgba(55, 114, 255, 0.3)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #3267e6 0%, #2c5bcc 50%, #2956bf 100%)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 12px 35px rgba(55, 114, 255, 0.4)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #3772ff 0%, #3267e6 50%, #2c5bcc 100%)';
+              e.currentTarget.style.transform = '';
+              e.currentTarget.style.boxShadow = '0 8px 25px rgba(55, 114, 255, 0.3)';
+            }}
           >
-            <Check className="w-4 h-4" />
+            <Check className="w-4 h-4 transition-transform duration-300 group-hover:scale-110" />
             <span>Сохранить</span>
+
+            {/* Shimmer effect */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
+
+            {/* Glow effect */}
+            <div className="absolute -inset-0.5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10 blur-lg"
+                 style={{ background: 'linear-gradient(135deg, #3772ff 0%, #3267e6 100%)' }}></div>
           </button>
         </div>
       );
@@ -439,34 +569,124 @@ export const PersonalDetailsCard = ({
     return (
       <button
         onClick={handleEdit}
-        className="flex items-center space-x-1 px-3 py-1.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+        className="group relative overflow-hidden flex items-center space-x-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 hover:scale-105 active:scale-95"
+        style={{
+          background: 'linear-gradient(135deg, rgba(55, 114, 255, 0.1) 0%, rgba(50, 103, 230, 0.05) 100%)',
+          color: '#3772ff',
+          border: '1px solid rgba(55, 114, 255, 0.2)',
+          boxShadow: '0 4px 12px rgba(55, 114, 255, 0.1)'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = 'linear-gradient(135deg, rgba(55, 114, 255, 0.15) 0%, rgba(50, 103, 230, 0.1) 100%)';
+          e.currentTarget.style.transform = 'translateY(-1px)';
+          e.currentTarget.style.boxShadow = '0 6px 20px rgba(55, 114, 255, 0.2)';
+          e.currentTarget.style.borderColor = 'rgba(55, 114, 255, 0.3)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'linear-gradient(135deg, rgba(55, 114, 255, 0.1) 0%, rgba(50, 103, 230, 0.05) 100%)';
+          e.currentTarget.style.transform = '';
+          e.currentTarget.style.boxShadow = '0 4px 12px rgba(55, 114, 255, 0.1)';
+          e.currentTarget.style.borderColor = 'rgba(55, 114, 255, 0.2)';
+        }}
       >
-        <Edit className="w-4 h-4" />
+        <Edit className="w-4 h-4 transition-transform duration-300 group-hover:rotate-12" />
         <span>Редактировать</span>
+
+        {/* Shimmer effect */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
       </button>
     );
   };
 
   return (
-    <div className="space-y-4">
-      {/* Completion Progress */}
+    <div className="space-y-6">
+      {/* Premium Completion Progress */}
       {showCompletionProgress && (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">Заполненность профиля</span>
-            <span className="text-sm font-bold text-blue-600">{completionPercentage()}%</span>
+        <div className="relative overflow-hidden p-6 rounded-2xl border backdrop-blur-xl shadow-xl"
+             style={{
+               background: `
+                 linear-gradient(135deg,
+                   rgba(55, 114, 255, 0.1) 0%,
+                   rgba(50, 103, 230, 0.05) 50%,
+                   rgba(44, 91, 204, 0.02) 100%
+                 )
+               `,
+               borderColor: 'rgba(55, 114, 255, 0.2)',
+               boxShadow: `
+                 0 20px 25px -5px rgba(55, 114, 255, 0.1),
+                 0 10px 10px -5px rgba(55, 114, 255, 0.04),
+                 inset 0 1px 0 0 rgba(255, 255, 255, 0.1)
+               `
+             }}>
+
+          {/* Premium Background Elements */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute -top-4 -right-4 w-24 h-24 rounded-full opacity-30 blur-xl animate-pulse"
+                 style={{ background: 'radial-gradient(circle, rgba(55, 114, 255, 0.3) 0%, transparent 70%)', animationDuration: '3s' }}></div>
+            <div className="absolute -bottom-4 -left-4 w-20 h-20 rounded-full opacity-20 blur-lg animate-bounce"
+                 style={{ background: 'radial-gradient(circle, rgba(50, 103, 230, 0.4) 0%, transparent 70%)', animationDuration: '4s' }}></div>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
-              className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${completionPercentage()}%` }}
-            ></div>
+
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                     style={{ background: 'linear-gradient(135deg, #3772ff 0%, #3267e6 100%)' }}>
+                  <span className="text-white font-bold">📊</span>
+                </div>
+                <div>
+                  <h3 className="text-base font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                    Заполненность профиля
+                  </h3>
+                  <p className="text-xs text-gray-500">Профессиональный уровень</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">
+                  {completionPercentage()}%
+                </div>
+                <div className="text-xs text-gray-500">завершено</div>
+              </div>
+            </div>
+
+            {/* Premium Progress Bar */}
+            <div className="relative">
+              <div className="w-full h-3 rounded-full overflow-hidden"
+                   style={{ background: 'linear-gradient(135deg, #e8e8e8 0%, #dddddd 100%)' }}>
+                <div
+                  className="h-full rounded-full transition-all duration-1000 ease-out relative overflow-hidden"
+                  style={{
+                    width: `${completionPercentage()}%`,
+                    background: 'linear-gradient(135deg, #3772ff 0%, #3267e6 50%, #2c5bcc 100%)',
+                    boxShadow: '0 2px 8px rgba(55, 114, 255, 0.3)'
+                  }}>
+                  {/* Shimmer effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 transform translate-x-full animate-pulse"
+                       style={{ animationDuration: '2s', animationIterationCount: 'infinite' }}></div>
+                </div>
+              </div>
+
+              {/* Progress indicator dot */}
+              <div className="absolute top-1/2 transform -translate-y-1/2 w-5 h-5 rounded-full border-3 border-white shadow-lg transition-all duration-1000 ease-out"
+                   style={{
+                     left: `calc(${completionPercentage()}% - 10px)`,
+                     background: 'linear-gradient(135deg, #3772ff 0%, #3267e6 100%)',
+                     boxShadow: '0 4px 12px rgba(55, 114, 255, 0.4)'
+                   }}>
+                <div className="w-1.5 h-1.5 bg-white rounded-full absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
+              </div>
+            </div>
+
+            {completionPercentage() < 100 && (
+              <div className="mt-4 p-3 rounded-xl"
+                   style={{ background: 'rgba(55, 114, 255, 0.05)' }}>
+                <p className="text-sm text-gray-600 flex items-center space-x-2">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+                  <span>Заполните все обязательные поля для повышения качества медицинского обслуживания</span>
+                </p>
+              </div>
+            )}
           </div>
-          {completionPercentage() < 100 && (
-            <p className="text-xs text-gray-600 mt-2">
-              Заполните все обязательные поля для улучшения качества медицинского обслуживания
-            </p>
-          )}
         </div>
       )}
 
@@ -477,12 +697,33 @@ export const PersonalDetailsCard = ({
           {renderActionButton()}
         </div>
 
-        {/* Loading indicator */}
+        {/* Premium Loading indicator */}
         {loading && (
-          <div className="flex items-center justify-center py-8">
-            <div className="flex items-center space-x-2 text-gray-500">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-              <span className="text-sm">Загрузка данных...</span>
+          <div className="flex items-center justify-center py-12">
+            <div className="relative">
+              {/* Main loader */}
+              <div className="flex items-center space-x-3">
+                <div className="relative w-8 h-8">
+                  <div className="absolute inset-0 rounded-full border-4 border-transparent"
+                       style={{
+                         background: 'linear-gradient(135deg, #3772ff, #3267e6) padding-box, linear-gradient(135deg, #3772ff, transparent, #3267e6) border-box',
+                         animation: 'spin 1s linear infinite'
+                       }}></div>
+                  <div className="absolute inset-2 rounded-full"
+                       style={{ background: 'linear-gradient(135deg, rgba(55, 114, 255, 0.1) 0%, rgba(255, 255, 255, 0.9) 100%)' }}></div>
+                  <div className="absolute inset-3 rounded-full bg-white opacity-80"></div>
+                </div>
+                <div>
+                  <div className="text-base font-semibold bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">
+                    Загрузка данных
+                  </div>
+                  <div className="text-xs text-gray-500">Получение информации профиля...</div>
+                </div>
+              </div>
+
+              {/* Pulse rings */}
+              <div className="absolute -inset-4 rounded-full border border-blue-200 opacity-20 animate-ping"></div>
+              <div className="absolute -inset-8 rounded-full border border-blue-100 opacity-10 animate-ping" style={{ animationDelay: '0.5s' }}></div>
             </div>
           </div>
         )}
@@ -493,12 +734,43 @@ export const PersonalDetailsCard = ({
           </div>
         )}
 
-        {/* Additional Info Section */}
+        {/* Premium Additional Info Section */}
         {!isEditing && (
-          <div className="mt-6 pt-4 border-t border-gray-100">
-            <div className="flex items-center space-x-2 text-xs text-gray-500">
-              <UserIcon className="w-3 h-3" />
-              <span>Последнее обновление: {new Date().toLocaleDateString('ru-RU')}</span>
+          <div className="mt-8 pt-6 relative">
+            {/* Premium divider */}
+            <div className="absolute top-0 left-0 right-0 h-px"
+                 style={{ background: 'linear-gradient(135deg, transparent 0%, rgba(55, 114, 255, 0.2) 50%, transparent 100%)' }}></div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+                     style={{
+                       background: 'linear-gradient(135deg, rgba(55, 114, 255, 0.1) 0%, rgba(50, 103, 230, 0.05) 100%)',
+                       border: '1px solid rgba(55, 114, 255, 0.1)'
+                     }}>
+                  <UserIcon className="w-4 h-4 text-blue-600" />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-gray-700">
+                    Последнее обновление
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {new Date().toLocaleDateString('ru-RU', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Status indicator */}
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-xs font-medium text-green-600">Синхронизировано</span>
+              </div>
             </div>
           </div>
         )}

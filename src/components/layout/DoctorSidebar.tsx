@@ -59,11 +59,12 @@ export const DoctorSidebar = ({
   ];
 
   const handleLogout = () => {
-    toast.success("Вы успешно вышли!", { position: "top-right", autoClose: 3000 });
+    toast.success("Вы успешно вышли!", { position: "top-right", autoClose: 1000 });
     setTimeout(() => {
       logoutUser();
-      router.replace("/");
-    }, 1000);
+      // Use window.location.href for reliable redirect to homepage
+      window.location.href = "/";
+    }, 1200);
   };
 
   const handleTabChange = (tabId: string) => {

@@ -128,53 +128,151 @@ const FullVideoCallPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-100 text-gray-900 relative">
+    <div
+      className="min-h-screen flex flex-col text-white relative overflow-hidden"
+      style={{
+        background: `
+          radial-gradient(circle at 20% 50%, rgba(55, 114, 255, 0.15) 0%, transparent 50%),
+          radial-gradient(circle at 80% 20%, rgba(50, 103, 230, 0.1) 0%, transparent 50%),
+          radial-gradient(circle at 40% 80%, rgba(41, 53, 143, 0.1) 0%, transparent 50%),
+          linear-gradient(135deg, #0f1419 0%, #1a2332 25%, #243447 50%, #2d4a6b 75%, #3772ff 100%)
+        `
+      }}
+    >
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-10 left-10 w-32 h-32 rounded-full blur-xl animate-pulse"
+             style={{ background: 'radial-gradient(circle, rgba(55, 114, 255, 0.15) 0%, rgba(41, 53, 143, 0.1) 100%)', animationDuration: '4s' }}></div>
+        <div className="absolute bottom-20 right-10 w-24 h-24 rounded-full blur-lg animate-bounce"
+             style={{ background: 'radial-gradient(circle, rgba(50, 103, 230, 0.2) 0%, rgba(30, 38, 62, 0.1) 100%)', animationDuration: '3s' }}></div>
+        <div className="absolute top-1/2 left-1/2 w-16 h-16 rounded-full blur-md animate-ping"
+             style={{ background: 'radial-gradient(circle, rgba(67, 126, 255, 0.25) 0%, transparent 70%)', animationDuration: '2s' }}></div>
+      </div>
+
       <FloatingBadge isDoctor={isDoctor} doctor={doctor} />
       <VideoHeader meetingId={meetingId} isDoctor={isDoctor} doctor={doctor} />
 
       {callActive ? (
         <>
-          <main className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
-            {/* Видео */}
-            <div className="col-span-1 md:col-span-2 bg-white rounded-2xl shadow-md overflow-hidden relative">
-              <VideoFrame
-                meetingId={meetingId}
-                safeUserName={safeUserName}
-                userEmail={userEmail}
-                isDoctor={isDoctor}
-                otherPartyJoined={otherPartyJoined}
-              />
+          <main className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 p-6 relative z-10">
+            {/* Video Section */}
+            <div className="col-span-1 lg:col-span-2 relative group">
+              <div className="relative overflow-hidden rounded-3xl backdrop-blur-md border border-white/20 shadow-2xl transition-all duration-500 group-hover:shadow-blue-500/20 h-full min-h-[600px]"
+                   style={{
+                     background: `
+                       linear-gradient(135deg,
+                         rgba(255, 255, 255, 0.1) 0%,
+                         rgba(255, 255, 255, 0.05) 50%,
+                         rgba(55, 114, 255, 0.1) 100%
+                       )
+                     `
+                   }}>
+                <VideoFrame
+                  meetingId={meetingId}
+                  safeUserName={safeUserName}
+                  userEmail={userEmail}
+                  isDoctor={isDoctor}
+                  otherPartyJoined={otherPartyJoined}
+                  onDisconnect={handleEndCall}
+                />
+
+                {/* Glass effect overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-white/5 pointer-events-none rounded-3xl"></div>
+
+                {/* Hover glow effect */}
+                <div className="absolute -inset-1 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10 blur-lg"
+                     style={{ background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)' }}></div>
+              </div>
             </div>
 
-            {/* AI-чат */}
-            <div className="col-span-1 bg-white rounded-2xl shadow-md flex flex-col overflow-hidden">
-              <div className="bg-blue-700 text-white px-4 py-3 text-sm font-semibold">
-                🤖 {t.title}
+            {/* AI Chat Section */}
+            <div className="col-span-1 relative group">
+              <div className="h-full flex flex-col overflow-hidden rounded-3xl backdrop-blur-md border border-white/20 shadow-2xl transition-all duration-500 group-hover:shadow-blue-500/20"
+                   style={{
+                     background: `
+                       linear-gradient(135deg,
+                         rgba(255, 255, 255, 0.1) 0%,
+                         rgba(255, 255, 255, 0.05) 50%,
+                         rgba(55, 114, 255, 0.08) 100%
+                       )
+                     `
+                   }}>
+
+                {/* Chat Header */}
+                <div className="relative px-6 py-4 border-b border-white/10 backdrop-blur-sm"
+                     style={{
+                       background: `
+                         linear-gradient(135deg,
+                           rgba(55, 114, 255, 0.2) 0%,
+                           rgba(50, 103, 230, 0.15) 50%,
+                           rgba(41, 53, 143, 0.1) 100%
+                         )
+                       `
+                     }}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg backdrop-blur-sm border border-white/20"
+                         style={{ background: 'rgba(255, 255, 255, 0.15)' }}>
+                      🤖
+                    </div>
+                    <div>
+                      <h3 className="text-white font-semibold text-base">{t.title}</h3>
+                      <p className="text-white/70 text-xs">AI медицинский ассистент</p>
+                    </div>
+                  </div>
+
+                  {/* Header shimmer effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
+                </div>
+
+                <ChatBox
+                  messages={messages}
+                  loading={loading}
+                  error={error}
+                  chatBoxRef={chatBoxRef}
+                  t={t}
+                  formatResponse={formatResponse}
+                />
+
+                <ChatInput
+                  userInput={userInput}
+                  setUserInput={setUserInput}
+                  sendMessage={sendMessage}
+                  loading={loading}
+                  t={t}
+                />
+
+                {/* Glass effect overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-white/5 pointer-events-none rounded-3xl"></div>
+
+                {/* Hover glow effect */}
+                <div className="absolute -inset-1 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10 blur-lg"
+                     style={{ background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)' }}></div>
               </div>
-              <ChatBox
-                messages={messages}
-                loading={loading}
-                error={error}
-                chatBoxRef={chatBoxRef}
-                t={t}
-                formatResponse={formatResponse}
-              />
-              <ChatInput
-                userInput={userInput}
-                setUserInput={setUserInput}
-                sendMessage={sendMessage}
-                loading={loading}
-                t={t}
-              />
             </div>
           </main>
           <CallFooter handleEndCall={handleEndCall} />
         </>
       ) : (
-        <div className="text-center mt-20 text-xl font-semibold text-gray-700">
-          📞 Звонок завершен
+        <div className="flex-1 flex items-center justify-center relative z-10">
+          <div className="text-center p-8 rounded-3xl backdrop-blur-md border border-white/20 shadow-2xl"
+               style={{
+                 background: `
+                   linear-gradient(135deg,
+                     rgba(255, 255, 255, 0.1) 0%,
+                     rgba(255, 255, 255, 0.05) 50%,
+                     rgba(55, 114, 255, 0.1) 100%
+                   )
+                 `
+               }}>
+            <div className="text-6xl mb-4">📞</div>
+            <h2 className="text-2xl font-bold text-white mb-2">Звонок завершен</h2>
+            <p className="text-white/70">Спасибо за использование нашего сервиса</p>
+          </div>
         </div>
       )}
+
+      {/* Premium Glass Effect Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-white/5 pointer-events-none"></div>
     </div>
   );
 };

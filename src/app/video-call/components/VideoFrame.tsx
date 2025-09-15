@@ -15,6 +15,8 @@ interface VideoFrameProps {
   userEmail: string;
   isDoctor: boolean;
   otherPartyJoined: boolean;
+  onDisconnect?: () => void;
+  showMeetingId?: boolean;
 }
 
 const VideoFrame: React.FC<VideoFrameProps> = ({
@@ -23,6 +25,8 @@ const VideoFrame: React.FC<VideoFrameProps> = ({
   userEmail,
   isDoctor,
   otherPartyJoined,
+  onDisconnect,
+  showMeetingId = false,
 }) => {
   const [token, setToken] = useState<string | null>(null);
   const [livekitUrl, setLivekitUrl] = useState<string>("");
@@ -122,7 +126,12 @@ const VideoFrame: React.FC<VideoFrameProps> = ({
   }
 
   return (
-    <div className="w-full h-full rounded-2xl overflow-hidden shadow-lg border border-gray-200">
+    <div className="w-full h-full rounded-3xl overflow-hidden shadow-2xl border border-white/20 backdrop-blur-sm"
+         style={{
+           background: 'rgba(0, 0, 0, 0.3)',
+           minHeight: '500px',
+           position: 'relative'
+         }}>
       <LiveKitRoom
         token={token}
         serverUrl={livekitUrl}
@@ -132,12 +141,134 @@ const VideoFrame: React.FC<VideoFrameProps> = ({
         onDisconnected={(reason) => {
           console.warn("🚨 Disconnected:", reason);
           setToken(null); // 🔁 trigger retry
+          if (reason === "UNKNOWN_REASON" || reason === "USER_INITIATED") {
+            onDisconnect?.();
+          }
+        }}
+        onConnected={() => {
+          console.log("✅ Connected to LiveKit room");
         }}
         data-lk-theme="default"
-        style={{ height: "100%", width: "100%" }}
+        style={{
+          height: "100%",
+          width: "100%",
+          position: "absolute",
+          top: 0,
+          left: 0
+        }}
       >
-        <VideoConference />
+        <VideoConference
+          chatMessageFormatter={(message) => `${message.from?.name || 'Unknown'}: ${message.message}`}
+        />
       </LiveKitRoom>
+
+      {/* Optional subtle meeting ID corner badge */}
+      {showMeetingId && (
+        <div className="absolute top-4 right-4 z-20">
+          <div className="px-3 py-1 rounded-lg backdrop-blur-md border border-white/20 shadow-lg text-xs text-white/80 font-mono"
+               style={{ background: 'rgba(0, 0, 0, 0.3)' }}>
+            {meetingId}
+          </div>
+        </div>
+      )}
+
+      {/* Fix size jumping and hide disconnect button */}
+      <style jsx global>{`
+        .lk-disconnect-button {
+          display: none !important;
+        }
+
+        /* Hide meeting ID overlay from video */
+        .lk-room-info,
+        .lk-room-metadata,
+        .lk-participant-metadata,
+        .lk-room-name {
+          display: none !important;
+        }
+
+        /* Force stable dimensions at ALL levels */
+        .lk-video-conference {
+          width: 100% !important;
+          height: 100% !important;
+          min-height: 600px !important;
+          position: relative !important;
+        }
+
+        .lk-room-container {
+          width: 100% !important;
+          height: 100% !important;
+          min-height: 600px !important;
+        }
+
+        .lk-grid-layout {
+          width: 100% !important;
+          height: 100% !important;
+          min-height: 500px !important;
+          display: flex !important;
+          flex-direction: column !important;
+        }
+
+        .lk-focus-layout {
+          width: 100% !important;
+          height: 100% !important;
+          min-height: 500px !important;
+          position: relative !important;
+        }
+
+        .lk-focus-layout .lk-participant-tile:first-child {
+          width: 100% !important;
+          height: 100% !important;
+          min-height: 500px !important;
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+        }
+
+        .lk-participant-tile {
+          width: 100% !important;
+          height: 100% !important;
+          min-height: 400px !important;
+          flex-shrink: 0 !important;
+        }
+
+        .lk-participant-tile video {
+          width: 100% !important;
+          height: 100% !important;
+          object-fit: cover !important;
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+        }
+
+        .lk-participant-placeholder {
+          width: 100% !important;
+          height: 100% !important;
+          min-height: 400px !important;
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
+
+        /* Prevent ANY layout shifts */
+        .lk-participant-tile,
+        .lk-participant-placeholder,
+        .lk-grid-layout,
+        .lk-focus-layout,
+        .lk-video-conference {
+          transition: none !important;
+          animation: none !important;
+        }
+
+        /* Force container stability */
+        .lk-participant-tile > div,
+        .lk-participant-placeholder > div {
+          width: 100% !important;
+          height: 100% !important;
+        }
+      `}</style>
     </div>
   );
 };
@@ -151,9 +282,43 @@ interface PlaceholderProps {
   sub?: React.ReactNode;
 }
 const Placeholder: React.FC<PlaceholderProps> = ({ icon, headline, sub }) => (
-  <div className="w-full h-full flex flex-col items-center justify-center text-center text-gray-700 p-4">
-    {icon}
-    <p className="text-xl font-medium">{headline}</p>
-    {sub && <p className="text-sm text-gray-500 mt-2">{sub}</p>}
+  <div className="w-full h-full flex flex-col items-center justify-center text-center p-8 relative overflow-hidden"
+       style={{
+         background: `
+           radial-gradient(circle at center, rgba(55, 114, 255, 0.1) 0%, transparent 50%),
+           linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(55, 114, 255, 0.05) 100%)
+         `
+       }}>
+
+    {/* Background animated elements */}
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div className="absolute top-10 left-10 w-16 h-16 rounded-full blur-lg animate-pulse"
+           style={{ background: 'radial-gradient(circle, rgba(55, 114, 255, 0.2) 0%, transparent 70%)', animationDuration: '3s' }}></div>
+      <div className="absolute bottom-10 right-10 w-12 h-12 rounded-full blur-md animate-bounce"
+           style={{ background: 'radial-gradient(circle, rgba(50, 103, 230, 0.15) 0%, transparent 70%)', animationDuration: '2s' }}></div>
+    </div>
+
+    {/* Icon container */}
+    <div className="relative mb-6 p-4 rounded-2xl backdrop-blur-sm border border-white/20 shadow-lg"
+         style={{ background: 'rgba(255, 255, 255, 0.1)' }}>
+      <div className="text-white text-4xl">
+        {icon}
+      </div>
+    </div>
+
+    {/* Text content */}
+    <div className="relative z-10">
+      <h3 className="text-xl font-bold text-white mb-3 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+        {headline}
+      </h3>
+      {sub && (
+        <div className="text-white/70 text-sm leading-relaxed max-w-md">
+          {sub}
+        </div>
+      )}
+    </div>
+
+    {/* Glass effect overlay */}
+    <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-white/5 pointer-events-none"></div>
   </div>
 );
