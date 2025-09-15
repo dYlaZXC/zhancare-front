@@ -166,10 +166,6 @@ const ProfileDetails: React.FC<ProfileDetailsProps> = ({ user, onRefetch }) => {
     >
       {/* Header Component */}
       <ProfileHeader
-        isEditing={isEditing}
-        onEditToggle={handleEditToggle}
-        onSave={handleSave}
-        onCancel={handleCancel}
         onDownloadPDF={handleDownloadPDF}
       />
 

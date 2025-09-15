@@ -29,6 +29,14 @@ export interface FullUserProfile {
   // Medical details
   blood_type?: "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-" | "O+" | "O-";
   blood_type_display?: string;
+  rhesus_factor?: "positive" | "negative";
+  rhesus_factor_display?: string;
+  fluorography_status?: "normal" | "abnormal" | "pending" | "expired";
+  fluorography_status_display?: string;
+  fluorography_date?: string;
+  immunization_status?: "up_to_date" | "partial" | "expired" | "none";
+  immunization_status_display?: string;
+  immunization_date?: string;
 
   // Doctor specific
   doctor_type?: string;
@@ -120,20 +128,28 @@ export const useUserProfile = () => {
 
     // Personal details
     birth_date: fullUserProfile.birth_date || "",
-    gender: fullUserProfile.gender || "",
+    gender: fullUserProfile.gender || undefined,
     gender_display: fullUserProfile.gender_display || "",
     address: fullUserProfile.address || "",
     city: fullUserProfile.city || "",
     language: fullUserProfile.language || "ru",
     language_display: fullUserProfile.language_display || "",
     citizenship: fullUserProfile.citizenship || "",
-    marital_status: fullUserProfile.marital_status || "",
+    marital_status: fullUserProfile.marital_status || undefined,
     marital_status_display: fullUserProfile.marital_status_display || "",
     profession: fullUserProfile.profession || "",
 
     // Medical details
-    blood_type: fullUserProfile.blood_type || "",
+    blood_type: fullUserProfile.blood_type || undefined,
     blood_type_display: fullUserProfile.blood_type_display || "",
+    rhesus_factor: fullUserProfile.rhesus_factor || undefined,
+    rhesus_factor_display: fullUserProfile.rhesus_factor_display || "",
+    fluorography_status: fullUserProfile.fluorography_status || undefined,
+    fluorography_status_display: fullUserProfile.fluorography_status_display || "",
+    fluorography_date: fullUserProfile.fluorography_date || "",
+    immunization_status: fullUserProfile.immunization_status || undefined,
+    immunization_status_display: fullUserProfile.immunization_status_display || "",
+    immunization_date: fullUserProfile.immunization_date || "",
 
     // Doctor specific
     doctor_type: fullUserProfile.doctor_type || "",
