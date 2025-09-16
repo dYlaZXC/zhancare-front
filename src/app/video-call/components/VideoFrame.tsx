@@ -141,9 +141,8 @@ const VideoFrame: React.FC<VideoFrameProps> = ({
         onDisconnected={(reason) => {
           console.warn("🚨 Disconnected:", reason);
           setToken(null); // 🔁 trigger retry
-          if (reason === "UNKNOWN_REASON" || reason === "USER_INITIATED") {
-            onDisconnect?.();
-          }
+          // Call onDisconnect for any disconnection reason
+          onDisconnect?.();
         }}
         onConnected={() => {
           console.log("✅ Connected to LiveKit room");
@@ -157,9 +156,7 @@ const VideoFrame: React.FC<VideoFrameProps> = ({
           left: 0
         }}
       >
-        <VideoConference
-          chatMessageFormatter={(message) => `${message.from?.name || 'Unknown'}: ${message.message}`}
-        />
+        <VideoConference />
       </LiveKitRoom>
 
       {/* Optional subtle meeting ID corner badge */}

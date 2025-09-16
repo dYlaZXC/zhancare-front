@@ -114,7 +114,7 @@ export const useUserProfile = () => {
     } else {
       console.log('🔄 [useUserProfile] Still loading auth or no conditions met', { authLoading, user: !!user });
     }
-  }, [authLoading, user]); // Removed fetchUserProfile from dependencies
+  }, [authLoading, user, fetchUserProfile]);
 
   // Create the final user profile object with proper fallbacks
   const userProfile = fullUserProfile ? {
