@@ -300,7 +300,7 @@ export const PersonalDetailsCard = ({
           const cleanedData: Partial<User> = {};
           Object.keys(editedUser).forEach(key => {
             const value = editedUser[key as keyof User];
-            cleanedData[key as keyof User] = value === '' ? undefined : value;
+            (cleanedData as any)[key] = value === '' ? undefined : value;
           });
           await onSave(cleanedData);
         }
