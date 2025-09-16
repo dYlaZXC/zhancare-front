@@ -3,11 +3,12 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   LiveKitRoom,
-  VideoConference,
+  LayoutContextProvider,
 } from "@livekit/components-react";
 import "@livekit/components-styles";
 import { api } from "@/utils/api";
 import { Loader2, RefreshCw } from "lucide-react";
+import PiPLayout from "./PiPLayout";
 
 interface VideoFrameProps {
   meetingId: string;
@@ -136,8 +137,8 @@ const VideoFrame: React.FC<VideoFrameProps> = ({
         token={token}
         serverUrl={livekitUrl}
         connect
-        video
-        audio
+        video={true}
+        audio={true}
         onDisconnected={(reason) => {
           console.warn("🚨 Disconnected:", reason);
           setToken(null); // 🔁 trigger retry
@@ -146,6 +147,10 @@ const VideoFrame: React.FC<VideoFrameProps> = ({
         }}
         onConnected={() => {
           console.log("✅ Connected to LiveKit room");
+        }}
+        onError={(error) => {
+          console.error("❌ LiveKit room error:", error);
+          setError(`LiveKit error: ${error.message}`);
         }}
         data-lk-theme="default"
         style={{
@@ -156,7 +161,9 @@ const VideoFrame: React.FC<VideoFrameProps> = ({
           left: 0
         }}
       >
-        <VideoConference />
+        <LayoutContextProvider>
+          <PiPLayout />
+        </LayoutContextProvider>
       </LiveKitRoom>
 
       {/* Optional subtle meeting ID corner badge */}
@@ -169,7 +176,7 @@ const VideoFrame: React.FC<VideoFrameProps> = ({
         </div>
       )}
 
-      {/* Fix size jumping and hide disconnect button */}
+      {/* LiveKit CSS overrides */}
       <style jsx global>{`
         .lk-disconnect-button {
           display: none !important;
@@ -183,18 +190,20 @@ const VideoFrame: React.FC<VideoFrameProps> = ({
           display: none !important;
         }
 
-        /* Force stable dimensions at ALL levels */
+        /* Ensure video elements are visible and properly sized */
         .lk-video-conference {
           width: 100% !important;
           height: 100% !important;
           min-height: 600px !important;
           position: relative !important;
+          background: transparent !important;
         }
 
         .lk-room-container {
           width: 100% !important;
           height: 100% !important;
           min-height: 600px !important;
+          background: transparent !important;
         }
 
         .lk-grid-layout {
@@ -203,6 +212,7 @@ const VideoFrame: React.FC<VideoFrameProps> = ({
           min-height: 500px !important;
           display: flex !important;
           flex-direction: column !important;
+          background: transparent !important;
         }
 
         .lk-focus-layout {
@@ -210,15 +220,7 @@ const VideoFrame: React.FC<VideoFrameProps> = ({
           height: 100% !important;
           min-height: 500px !important;
           position: relative !important;
-        }
-
-        .lk-focus-layout .lk-participant-tile:first-child {
-          width: 100% !important;
-          height: 100% !important;
-          min-height: 500px !important;
-          position: absolute !important;
-          top: 0 !important;
-          left: 0 !important;
+          background: transparent !important;
         }
 
         .lk-participant-tile {
@@ -226,30 +228,37 @@ const VideoFrame: React.FC<VideoFrameProps> = ({
           height: 100% !important;
           min-height: 400px !important;
           flex-shrink: 0 !important;
+          background: #000 !important;
+          border-radius: 0 !important;
         }
 
         .lk-participant-tile video {
           width: 100% !important;
           height: 100% !important;
           object-fit: cover !important;
-          position: absolute !important;
-          top: 0 !important;
-          left: 0 !important;
+          background: #000 !important;
+          display: block !important;
+          opacity: 1 !important;
         }
 
         .lk-participant-placeholder {
           width: 100% !important;
           height: 100% !important;
           min-height: 400px !important;
-          position: absolute !important;
-          top: 0 !important;
-          left: 0 !important;
+          background: #1a1a1a !important;
           display: flex !important;
           align-items: center !important;
           justify-content: center !important;
         }
 
-        /* Prevent ANY layout shifts */
+        /* Ensure track elements are visible */
+        .lk-track {
+          display: block !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+        }
+
+        /* Remove any conflicting transforms or animations */
         .lk-participant-tile,
         .lk-participant-placeholder,
         .lk-grid-layout,
@@ -257,13 +266,7 @@ const VideoFrame: React.FC<VideoFrameProps> = ({
         .lk-video-conference {
           transition: none !important;
           animation: none !important;
-        }
-
-        /* Force container stability */
-        .lk-participant-tile > div,
-        .lk-participant-placeholder > div {
-          width: 100% !important;
-          height: 100% !important;
+          transform: none !important;
         }
       `}</style>
     </div>

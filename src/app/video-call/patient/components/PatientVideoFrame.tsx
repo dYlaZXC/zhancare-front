@@ -168,8 +168,8 @@ const PatientVideoFrame: React.FC<PatientVideoFrameProps> = ({
           token={token}
           serverUrl={livekitUrl}
           connect
-          video
-          audio
+          video={true}
+          audio={true}
           onDisconnected={(reason) => {
             console.warn("🚨 Patient disconnected:", reason);
             setToken(null); // trigger retry
@@ -177,6 +177,10 @@ const PatientVideoFrame: React.FC<PatientVideoFrameProps> = ({
           }}
           onConnected={() => {
             console.log("✅ Patient connected to LiveKit room");
+          }}
+          onError={(error) => {
+            console.error("❌ Patient LiveKit room error:", error);
+            setError(`LiveKit error: ${error.message}`);
           }}
           data-lk-theme="default"
           style={{
