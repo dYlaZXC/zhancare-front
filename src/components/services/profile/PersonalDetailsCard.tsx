@@ -296,7 +296,13 @@ export const PersonalDetailsCard = ({
     if (Object.keys(newErrors).length === 0) {
       try {
         if (onSave) {
-          await onSave(editedUser);
+          // Convert empty strings to null/undefined for API
+          const cleanedData: Partial<User> = {};
+          Object.keys(editedUser).forEach(key => {
+            const value = editedUser[key as keyof User];
+            cleanedData[key as keyof User] = value === '' ? undefined : value;
+          });
+          await onSave(cleanedData);
         }
         setIsEditing(false);
         setEditedUser({});
@@ -319,9 +325,8 @@ export const PersonalDetailsCard = ({
   };
 
   const handleFieldChange = (fieldKey: string, value: string) => {
-    // If value is empty string (user selected "Не указано"), set it as undefined or null
-    const finalValue = value === '' ? undefined : value;
-    setEditedUser(prev => ({ ...prev, [fieldKey]: finalValue }));
+    // Store the actual value, including empty string for cleared fields
+    setEditedUser(prev => ({ ...prev, [fieldKey]: value }));
 
     // Clear error when user starts typing
     if (errors[fieldKey]) {
@@ -349,10 +354,11 @@ export const PersonalDetailsCard = ({
 
   const renderField = (field: PersonalField) => {
     const currentValue = getFieldValue(field);
-    // For editing, use the actual value from editedUser or empty string (not "Не указано")
+    // For editing, prioritize editedUser value, including empty strings for cleared fields
     const rawValue = user[field.key as keyof User];
-    const editValue = editedUser[field.key as keyof User]?.toString() ||
-                     (rawValue && rawValue.toString().trim() !== '' ? rawValue.toString() : '');
+    const editValue = field.key in editedUser
+      ? (editedUser[field.key as keyof User]?.toString() || '')
+      : (rawValue && rawValue.toString().trim() !== '' ? rawValue.toString() : '');
     const hasError = errors[field.key];
 
 
