@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useAuth } from "@/context/AuthContext";
+import { api } from "@/utils/api";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 
@@ -18,17 +20,36 @@ import CallFooter from "./components/CallFooter";
 const API_KEY = "QqkMxELY0YVGkCx17Vya04Sq9nGvCahu";
 const ENDPOINT = "https://api.mistral.ai/v1/chat/completions";
 
+interface ConsultationData {
+  id: number;
+  patient_name: string;
+  patient_email: string;
+  doctor_first_name: string;
+  doctor_last_name: string;
+  meeting_id: string;
+  status: string;
+}
+
 const FullVideoCallPage: React.FC = () => {
   const router = useRouter();
+  const { user } = useAuth();
 
   const [meetingId, setMeetingId] = useState<string | null>(null);
-  const [doctor, setDoctor] = useState("Неизвестный врач");
-  const [userRole, setUserRole] = useState("patient");
-  const [userName, setUserName] = useState("Гость");
+  const [consultation, setConsultation] = useState<ConsultationData | null>(null);
+  const [consultationLoading, setConsultationLoading] = useState(true);
+  const [consultationError, setConsultationError] = useState<string | null>(null);
 
-  const isDoctor = userRole === "doctor";
-  const safeUserName = userName || "guest";
-  const userEmail = `${safeUserName.toLowerCase().replace(/\s+/g, "")}@example.com`;
+  const isDoctor = user?.role === "doctor";
+  const safeUserName = user?.first_name || user?.email?.split("@")[0] || "guest";
+  const userEmail = user?.email || `${safeUserName.toLowerCase().replace(/\s+/g, "")}@example.com`;
+
+  // Get the display name for the other party
+  const otherPartyName = consultation
+    ? (isDoctor
+        ? consultation.patient_name || "Пациент"
+        : `${consultation.doctor_first_name} ${consultation.doctor_last_name}`.trim() || "Доктор"
+      )
+    : (isDoctor ? "Пациент" : "Доктор");
 
   const [callActive, setCallActive] = useState(true);
   const [otherPartyJoined, setOtherPartyJoined] = useState(false);
@@ -41,13 +62,41 @@ const FullVideoCallPage: React.FC = () => {
   const { language } = useLanguage();
   const t = language === "ru" ? ru.chat : kz.chat;
 
-  // ✅ Use client-only params safely
+  // Fetch consultation data from API using meetingId
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setMeetingId(params.get("meetingId"));
-    setDoctor(params.get("doctor") || "Неизвестный врач");
-    setUserRole(params.get("role") || "patient");
-    setUserName(params.get("name") || "Гость");
+    const fetchConsultationData = async () => {
+      try {
+        setConsultationLoading(true);
+        setConsultationError(null);
+
+        // Get meetingId from URL
+        const params = new URLSearchParams(window.location.search);
+        const meetingIdParam = params.get("meetingId");
+
+        if (!meetingIdParam) {
+          setConsultationError("Meeting ID не найден в URL");
+          return;
+        }
+
+        setMeetingId(meetingIdParam);
+
+        // Fetch consultation data from API
+        const response = await api.get(`/consultations/?meeting_id=${meetingIdParam}`);
+
+        if (response.data && response.data.length > 0) {
+          setConsultation(response.data[0]);
+        } else {
+          setConsultationError("Консультация не найдена");
+        }
+      } catch (err: any) {
+        console.error('Error fetching consultation data:', err);
+        setConsultationError("Ошибка загрузки данных консультации");
+      } finally {
+        setConsultationLoading(false);
+      }
+    };
+
+    fetchConsultationData();
   }, []);
 
   const handleEndCall = () => {
@@ -118,11 +167,28 @@ const FullVideoCallPage: React.FC = () => {
     }
   }, [messages, loading]);
 
-  // ⏳ Until meetingId is available
-  if (!meetingId) {
+  // ⏳ Loading or error states
+  if (consultationLoading) {
     return (
       <div className="flex items-center justify-center h-screen text-blue-700 text-lg font-semibold">
-        ⏳ Загрузка параметров встречи...
+        <Loader2 className="animate-spin w-8 h-8 mr-2" />
+        ⏳ Загрузка данных консультации...
+      </div>
+    );
+  }
+
+  if (consultationError) {
+    return (
+      <div className="flex items-center justify-center h-screen text-red-600 text-lg font-semibold">
+        ❌ {consultationError}
+      </div>
+    );
+  }
+
+  if (!meetingId || !consultation) {
+    return (
+      <div className="flex items-center justify-center h-screen text-blue-700 text-lg font-semibold">
+        ⏳ Загрузка данных встречи...
       </div>
     );
   }
@@ -149,8 +215,8 @@ const FullVideoCallPage: React.FC = () => {
              style={{ background: 'radial-gradient(circle, rgba(67, 126, 255, 0.25) 0%, transparent 70%)', animationDuration: '2s' }}></div>
       </div>
 
-      <FloatingBadge isDoctor={isDoctor} doctor={doctor} />
-      <VideoHeader meetingId={meetingId} isDoctor={isDoctor} doctor={doctor} />
+      <FloatingBadge isDoctor={isDoctor} doctor={otherPartyName} />
+      <VideoHeader meetingId={meetingId} isDoctor={isDoctor} doctor={otherPartyName} />
 
       {callActive ? (
         <>

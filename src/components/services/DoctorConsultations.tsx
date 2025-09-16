@@ -81,6 +81,7 @@ const DoctorConsultations: React.FC = () => {
     try {
       const { data } = await api.post<{ meeting_id: string }>(`/consultations/${meeting_id}/accept/`, {});
       toast.success("Консультация принята");
+
       router.push(`/video-call?meetingId=${data.meeting_id}`);
     } catch {
       toast.error("Ошибка при принятии консультации");

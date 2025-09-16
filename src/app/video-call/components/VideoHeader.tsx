@@ -37,7 +37,7 @@ const VideoHeader: React.FC<VideoHeaderProps> = ({ meetingId, isDoctor, doctor }
             {isDoctor ? (
               <>
                 <FontAwesomeIcon icon={faStethoscope} className="text-blue-300" />
-                Вы ведете консультацию
+                Консультация с пациентом {doctor}
               </>
             ) : (
               <>

@@ -97,6 +97,7 @@ const VideoConsultation: React.FC = () => {
           toast.success("✅ Доктор подключился.");
           clearInterval(pollingRef.current!);
           setWaiting(false);
+
           router.push(`/video-call?meetingId=${meetingId}`);
         } else if (status === "cancelled") {
           toast.error("❌ Запрос отклонён.");
