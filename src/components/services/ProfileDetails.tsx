@@ -9,7 +9,7 @@ import { api } from "@/utils/api";
 import { ProfileHeader } from "./profile/ProfileHeader";
 import { PersonalDetailsCard } from "./profile/PersonalDetailsCard";
 import { MedicalDetailsCard } from "./profile/MedicalDetailsCard";
-import { InsuranceStatusCard } from "./profile/InsuranceStatusCard";
+// import { InsuranceStatusCard } from "./profile/InsuranceStatusCard";
 import { MarkersCard } from "./profile/MarkersCard";
 import { TabNavigation } from "./profile/TabNavigation";
 import { GeneralInfoTab } from "./profile/GeneralInfoTab";
@@ -181,7 +181,7 @@ const ProfileDetails: React.FC<ProfileDetailsProps> = ({ user, onRefetch }) => {
             showCompletionProgress={true}
           />
           <MedicalDetailsCard user={user} onRefetch={onRefetch} />
-          <InsuranceStatusCard />
+          {/* <InsuranceStatusCard /> */}
         </div>
 
         {/* Middle Column - Main Content with Tabs */}

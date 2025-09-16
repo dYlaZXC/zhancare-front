@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { User as UserType } from "./types";
 import { useProfileData } from "./useProfileData";
+import { InsuranceStatusCard } from "./InsuranceStatusCard";
 
 interface ChartDataPoint {
   date: string;
@@ -149,7 +150,6 @@ export const GeneralInfoTab = ({
             )}
           </div>
         </div>
-
         {/* Save Reminder */}
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
           <div className="flex items-center gap-2 text-amber-800">
@@ -303,7 +303,9 @@ export const GeneralInfoTab = ({
 
         {/* Consultation Chart */}
         <ConsultationChart data={consultationTrendData} />
+        
       </div>
+      <InsuranceStatusCard />
     </div>
   );
 };

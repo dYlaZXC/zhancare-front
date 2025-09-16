@@ -20,4 +20,5 @@ export interface Consultation {
   started_at?: string;
   ended_at?: string;
   type?: "video" | "phone" | "chat";
+  consultation_type?: 'general' | 'cardiology' | 'psychiatry' | 'pediatric';
 }

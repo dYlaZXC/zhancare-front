@@ -34,6 +34,17 @@ const FullVideoCallPage: React.FC = () => {
   const router = useRouter();
   const { user } = useAuth();
 
+  // Auto-redirect based on user role
+  useEffect(() => {
+    if (user?.role === "doctor") {
+      router.push(`/video-call/doctor${window.location.search}`);
+      return;
+    } else if (user?.role === "patient") {
+      router.push(`/video-call/patient${window.location.search}`);
+      return;
+    }
+  }, [user, router]);
+
   const [meetingId, setMeetingId] = useState<string | null>(null);
   const [consultation, setConsultation] = useState<ConsultationData | null>(null);
   const [consultationLoading, setConsultationLoading] = useState(true);

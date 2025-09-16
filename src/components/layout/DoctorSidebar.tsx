@@ -53,9 +53,9 @@ export const DoctorSidebar = ({
   if (!user) return null;
 
   const doctorMenu = [
-    { id: "appointments", icon: faCalendar, title: "Мои Записи", color: "#3772ff" },
-    { id: "patients", icon: faNotesMedical, title: "История Пациентов", color: "#3267e6" },
     { id: "consultations", icon: faVideo, title: "Видео Консультация", color: "#295bbf" },
+    { id: "appointments", icon: faCalendar, title: "Мои вызовы на дом", color: "#3772ff" },
+    { id: "patients", icon: faNotesMedical, title: "История Пациентов", color: "#3267e6" },
   ];
 
   const handleLogout = () => {

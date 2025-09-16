@@ -27,7 +27,7 @@ const itemVariants = {
 
 const statsData = [
   {
-    value: "700+",
+    value: "1000+",
     label: {
       ru: "Консультаций",
       kz: "Консультация",
