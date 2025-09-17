@@ -314,8 +314,8 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
 
         {/* Join Call Button for ongoing consultations */}
         {consultation.status === 'ongoing' && (
-          <button 
-            onClick={() => window.open(`/video-call?meetingId=${consultation.meeting_id}`, '_blank')}
+          <button
+            onClick={() => window.open(`/video-call?meetingId=${consultation.meeting_id}`)}
             className="p-3 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all duration-200 border border-blue-200 hover:border-blue-300 shadow-sm group-hover:shadow-md"
             title="Присоединиться к звонку"
           >
@@ -367,8 +367,8 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
 
         {/* Join Call Button for ongoing consultations */}
         {consultation.status === 'ongoing' && (
-          <button 
-            onClick={() => window.open(`/video-call?meetingId=${consultation.meeting_id}`, '_blank')}
+          <button
+            onClick={() => window.open(`/video-call?meetingId=${consultation.meeting_id}`)}
             className="p-2.5 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all duration-200 border border-blue-200 hover:border-blue-300 shadow-sm"
             title="Присоединиться к звонку"
           >
@@ -420,8 +420,8 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
 
         {/* Join Call Button for ongoing consultations */}
         {consultation.status === 'ongoing' && (
-          <button 
-            onClick={() => window.open(`/video-call?meetingId=${consultation.meeting_id}`, '_blank')}
+          <button
+            onClick={() => window.open(`/video-call?meetingId=${consultation.meeting_id}`)}
             className="flex-1 flex items-center justify-center gap-2 p-2.5 text-blue-600 bg-blue-50 rounded-lg transition-colors border border-blue-200"
           >
             <PhoneCall className="w-4 h-4" />

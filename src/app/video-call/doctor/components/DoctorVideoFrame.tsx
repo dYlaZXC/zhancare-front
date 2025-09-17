@@ -240,7 +240,7 @@ const DoctorVideoFrame: React.FC<DoctorVideoFrameProps> = ({
         >
           <VideoConference />
 
-          {/* Custom CSS for Doctor View: Patient Large, Doctor Small */}
+          {/* Responsive CSS for Doctor View: Patient Large, Doctor Small */}
           <style dangerouslySetInnerHTML={{
             __html: `
               .lk-video-conference .lk-focus-layout .lk-participant-tile {
@@ -258,14 +258,42 @@ const DoctorVideoFrame: React.FC<DoctorVideoFrameProps> = ({
 
               .lk-video-conference .lk-participant-tile[data-lk-local-participant="true"] {
                 position: absolute !important;
-                top: 1rem !important;
-                right: 1rem !important;
-                width: 12rem !important;
-                height: 9rem !important;
                 z-index: 10 !important;
-                border-radius: 0.5rem !important;
                 border: 2px solid white !important;
                 box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+              }
+
+              /* Mobile and small screens */
+              @media (max-width: 640px) {
+                .lk-video-conference .lk-participant-tile[data-lk-local-participant="true"] {
+                  top: 0.5rem !important;
+                  right: 0.5rem !important;
+                  width: 6rem !important;
+                  height: 4.5rem !important;
+                  border-radius: 0.375rem !important;
+                }
+              }
+
+              /* Medium screens */
+              @media (min-width: 641px) and (max-width: 1024px) {
+                .lk-video-conference .lk-participant-tile[data-lk-local-participant="true"] {
+                  top: 0.75rem !important;
+                  right: 0.75rem !important;
+                  width: 8rem !important;
+                  height: 6rem !important;
+                  border-radius: 0.5rem !important;
+                }
+              }
+
+              /* Large screens */
+              @media (min-width: 1025px) {
+                .lk-video-conference .lk-participant-tile[data-lk-local-participant="true"] {
+                  top: 1rem !important;
+                  right: 1rem !important;
+                  width: 12rem !important;
+                  height: 9rem !important;
+                  border-radius: 0.5rem !important;
+                }
               }
 
               .lk-video-conference .lk-grid-layout {

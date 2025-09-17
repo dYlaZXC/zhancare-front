@@ -16,7 +16,7 @@ import PatientVideoFrame from "./components/PatientVideoFrame";
 import PatientChatBox from "./components/PatientChatBox";
 import PatientChatInput from "./components/PatientChatInput";
 import PatientCallFooter from "./components/PatientCallFooter";
-import PatientFloatingBadge from "./components/PatientFloatingBadge";
+// import PatientFloatingBadge from "./components/PatientFloatingBadge";
 
 const API_KEY = "QqkMxELY0YVGkCx17Vya04Sq9nGvCahu";
 const ENDPOINT = "https://api.mistral.ai/v1/chat/completions";
@@ -188,7 +188,7 @@ const PatientVideoCallPage: React.FC = () => {
 
   return (
     <div
-      className="h-screen flex flex-col text-white relative overflow-hidden"
+      className="min-h-screen h-screen flex flex-col text-white relative overflow-hidden"
       style={{
         background: `
           radial-gradient(circle at 20% 50%, rgba(55, 114, 255, 0.15) 0%, transparent 50%),
@@ -198,13 +198,13 @@ const PatientVideoCallPage: React.FC = () => {
         `
       }}
     >
-      {/* Animated Background Elements */}
+      {/* Responsive Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-10 left-10 w-32 h-32 rounded-full blur-xl animate-pulse"
+        <div className="absolute top-4 left-4 sm:top-10 sm:left-10 w-16 h-16 sm:w-24 sm:h-24 lg:w-32 lg:h-32 rounded-full blur-xl animate-pulse"
              style={{ background: 'radial-gradient(circle, rgba(55, 114, 255, 0.15) 0%, rgba(41, 53, 143, 0.1) 100%)', animationDuration: '4s' }}></div>
-        <div className="absolute bottom-20 right-10 w-24 h-24 rounded-full blur-lg animate-bounce"
+        <div className="absolute bottom-10 right-4 sm:bottom-20 sm:right-10 w-12 h-12 sm:w-16 sm:h-16 lg:w-24 lg:h-24 rounded-full blur-lg animate-bounce"
              style={{ background: 'radial-gradient(circle, rgba(50, 103, 230, 0.2) 0%, rgba(30, 38, 62, 0.1) 100%)', animationDuration: '3s' }}></div>
-        <div className="absolute top-1/2 left-1/2 w-16 h-16 rounded-full blur-md animate-ping"
+        <div className="absolute top-1/2 left-1/2 w-8 h-8 sm:w-12 sm:h-12 lg:w-16 lg:h-16 rounded-full blur-md animate-ping"
              style={{ background: 'radial-gradient(circle, rgba(67, 126, 255, 0.25) 0%, transparent 70%)', animationDuration: '2s' }}></div>
       </div>
 
@@ -221,9 +221,9 @@ const PatientVideoCallPage: React.FC = () => {
 
       {callActive ? (
         <>
-          <main className="flex-1 grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 p-6 relative z-10 min-h-0 overflow-hidden">
-            {/* Video Section */}
-            <div className="relative group min-w-0 h-full overflow-hidden">
+          <main className="flex-1 flex flex-col lg:flex-row gap-2 sm:gap-3 lg:gap-4 xl:gap-6 p-2 sm:p-3 lg:p-4 xl:p-6 relative z-10 min-h-0 overflow-hidden">
+            {/* Video Section - Takes more space on desktop */}
+            <div className="relative group min-w-0 h-[35vh] sm:h-[40vh] md:h-[45vh] lg:h-full lg:flex-[2] xl:flex-[3] overflow-hidden">
               <PatientVideoFrame
                 meetingId={meetingId}
                 safeUserName={safeUserName}
@@ -234,9 +234,9 @@ const PatientVideoCallPage: React.FC = () => {
               />
             </div>
 
-            {/* Health Info Chat Section */}
-            <div className="relative group h-full min-h-0 min-w-0 overflow-hidden">
-              <div className="h-full max-h-full flex flex-col overflow-hidden rounded-3xl backdrop-blur-md border border-white/20 shadow-2xl transition-all duration-500 group-hover:shadow-blue-500/20"
+            {/* Health Info Chat Section - Constrained width on desktop */}
+            <div className="relative group flex-1 lg:flex-[1] xl:flex-[1] lg:h-full lg:max-w-[400px] xl:max-w-[450px] min-h-0 min-w-0 overflow-hidden">
+              <div className="h-full max-h-full flex flex-col overflow-hidden rounded-xl sm:rounded-2xl lg:rounded-3xl backdrop-blur-md border border-white/20 shadow-2xl transition-all duration-500 group-hover:shadow-blue-500/20"
                    style={{
                      background: `
                        linear-gradient(135deg,
@@ -248,7 +248,7 @@ const PatientVideoCallPage: React.FC = () => {
                    }}>
 
                 {/* Health Chat Header */}
-                <div className="relative px-6 py-4 border-b border-white/10 backdrop-blur-sm"
+                <div className="relative px-3 py-3 sm:px-4 sm:py-3 lg:px-4 lg:py-3 border-b border-white/10 backdrop-blur-sm flex-shrink-0"
                      style={{
                        background: `
                          linear-gradient(135deg,
@@ -258,33 +258,38 @@ const PatientVideoCallPage: React.FC = () => {
                          )
                        `
                      }}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg backdrop-blur-sm border border-white/20"
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9 rounded-lg sm:rounded-xl flex items-center justify-center text-sm sm:text-base backdrop-blur-sm border border-white/20"
                          style={{ background: 'rgba(255, 255, 255, 0.15)' }}>
                       🏥
                     </div>
-                    <div>
-                      <h3 className="text-white font-semibold text-base">Помощник пациента</h3>
-                      <p className="text-white/70 text-xs">Поддержка и информация о здоровье</p>
+                    <div className="min-w-0">
+                      <h3 className="text-white font-semibold text-sm sm:text-base truncate">Помощник пациента</h3>
+                      <p className="text-white/70 text-xs truncate">Поддержка и информация о здоровье</p>
                     </div>
                   </div>
                 </div>
 
-                <PatientChatBox
-                  messages={messages}
-                  loading={loading}
-                  error={error}
-                  chatBoxRef={chatBoxRef}
-                  t={t}
-                />
+                {/* Chat content container with proper flex */}
+                <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                  <PatientChatBox
+                    messages={messages}
+                    loading={loading}
+                    error={error}
+                    chatBoxRef={chatBoxRef}
+                    t={t}
+                  />
 
-                <PatientChatInput
-                  userInput={userInput}
-                  setUserInput={setUserInput}
-                  sendMessage={sendMessage}
-                  loading={loading}
-                  t={t}
-                />
+                  <div className="flex-shrink-0">
+                    <PatientChatInput
+                      userInput={userInput}
+                      setUserInput={setUserInput}
+                      sendMessage={sendMessage}
+                      loading={loading}
+                      t={t}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </main>

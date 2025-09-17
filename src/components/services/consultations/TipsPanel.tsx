@@ -183,7 +183,7 @@ const TipsPanel: React.FC<Props> = ({
 
   const handleAdClick = useCallback((ad: AdBanner) => {
     if (ad.url) {
-      window.open(ad.url, '_blank');
+      window.open(ad.url);
     }
   }, []);
 
