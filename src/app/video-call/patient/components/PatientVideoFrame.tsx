@@ -3,25 +3,16 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   LiveKitRoom,
-  TrackToggle,
-  ChatToggle,
-  LayoutContextProvider,
-  Chat,
-  useChat,
-  MediaDeviceSelect,
-  MediaDeviceMenu,
-  PreJoin,
+  VideoConference,
 } from "@livekit/components-react";
-import { Track, RoomOptions, VideoPresets, Room, LocalTrack, RemoteTrack, Participant } from "livekit-client";
-import PiPLayout from "../../components/PiPLayout";
+import { RoomOptions, VideoPresets } from "livekit-client";
 import "@livekit/components-styles";
 import { api } from "@/utils/api";
 import { Loader2, RefreshCw, MessageSquare } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faSignal,
-  faShieldAlt,
-  faComments
+  faShieldAlt
 } from "@fortawesome/free-solid-svg-icons";
 
 interface PatientVideoFrameProps {
@@ -66,7 +57,6 @@ const PatientVideoFrame: React.FC<PatientVideoFrameProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [retryCount, setRetryCount] = useState(0);
-  const [chatOpen, setChatOpen] = useState(false);
   const [audioPermissionGranted, setAudioPermissionGranted] = useState<boolean | null>(null);
   const [debugInfo, setDebugInfo] = useState<string[]>([]);
 
@@ -147,25 +137,13 @@ const PatientVideoFrame: React.FC<PatientVideoFrameProps> = ({
     publishVideo: true,
   }), []);
 
-  // Stable identity generation for LiveKit
+  // Consistent identity generation for LiveKit (prevents multiple device connections)
   const identity = useMemo(() => {
-    const key = `lk-id:${meetingId}`;
-    let cached = localStorage.getItem(key);
-    if (cached) return cached;
-
     const clean = safeUserName.toLowerCase().replace(/[^a-z0-9]/g, "") || "patient";
-    const hash = Math.random().toString(36).substring(2, 8);
-    const newId = `${meetingId}-patient-${clean}-${hash}`;
-    localStorage.setItem(key, newId);
-    return newId;
-  }, [meetingId, safeUserName]);
+    const emailHash = userEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+    return `${meetingId}-patient-${clean}-${emailHash}`;
+  }, [meetingId, safeUserName, userEmail]);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      localStorage.removeItem(`lk-id:${meetingId}`);
-    };
-  }, [meetingId]);
 
   // Token fetching logic
   const fetchToken = useCallback(async () => {
@@ -277,82 +255,7 @@ const PatientVideoFrame: React.FC<PatientVideoFrameProps> = ({
             left: 0
           }}
         >
-          <LayoutContextProvider>
-            <PiPLayout />
-
-            {/* Official LiveKit Chat Panel */}
-            <div className={`absolute top-0 right-0 w-80 h-full bg-slate-900/95 backdrop-blur-sm border-l border-blue-400/30 z-50 flex flex-col transform transition-transform duration-300 ease-in-out ${
-              chatOpen ? 'translate-x-0' : 'translate-x-full'
-            }`}>
-              <div className="flex items-center justify-between p-4 border-b border-blue-400/20">
-                <h3 className="text-white font-semibold flex items-center gap-2">
-                  <FontAwesomeIcon icon={faComments} className="text-blue-400" />
-                  Чат с врачом
-                </h3>
-                <button
-                  onClick={() => setChatOpen(false)}
-                  className="text-white/70 hover:text-white transition-colors"
-                >
-                  ✕
-                </button>
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <Chat
-                  className="h-full"
-                  style={{
-                    '--lk-bg': 'transparent',
-                    '--lk-fg': '#ffffff',
-                    '--lk-accent': '#3b82f6',
-                    height: '100%',
-                    background: 'transparent',
-                    border: 'none'
-                  } as React.CSSProperties}
-                />
-              </div>
-            </div>
-
-            {/* LiveKit Control Panel with Audio Device Selection */}
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-r from-blue-900/40 to-indigo-900/40 backdrop-blur-sm border-t border-blue-400/20 p-4 rounded-b-2xl z-30">
-              <div className="flex flex-col gap-3">
-                {/* Official LiveKit Device Selection Row */}
-                <div className="flex items-center justify-center gap-4">
-                  <MediaDeviceMenu
-                    kind="audioinput"
-                    className="flex items-center gap-2 bg-blue-800/50 rounded-lg px-3 py-2 text-white text-xs hover:bg-blue-700/50 transition-colors"
-                  >
-                    🎤 Microphone
-                  </MediaDeviceMenu>
-                  <MediaDeviceMenu
-                    kind="audiooutput"
-                    className="flex items-center gap-2 bg-blue-800/50 rounded-lg px-3 py-2 text-white text-xs hover:bg-blue-700/50 transition-colors"
-                  >
-                    🔊 Speakers
-                  </MediaDeviceMenu>
-                </div>
-
-                {/* Controls Row */}
-                <div className="flex items-center justify-center gap-4">
-                  <TrackToggle
-                    source={Track.Source.Microphone}
-                    className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 border-2 border-blue-400 transition-all duration-300 flex items-center justify-center text-white"
-                  />
-                  <TrackToggle
-                    source={Track.Source.Camera}
-                    className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 border-2 border-blue-400 transition-all duration-300 flex items-center justify-center text-white"
-                  />
-                  <TrackToggle
-                    source={Track.Source.ScreenShare}
-                    className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 border-2 border-blue-400 transition-all duration-300 flex items-center justify-center text-white"
-                  />
-                  {/* Official LiveKit Chat Toggle */}
-                  <ChatToggle
-                    className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 border-2 border-blue-400 transition-all duration-300 flex items-center justify-center text-white"
-                    onClick={() => setChatOpen(!chatOpen)}
-                  />
-                </div>
-              </div>
-            </div>
-          </LayoutContextProvider>
+          <VideoConference />
         </LiveKitRoom>
 
         {/* Patient-friendly Overlays - Outside LiveKit context */}

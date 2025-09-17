@@ -3,15 +3,9 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   LiveKitRoom,
-  TrackToggle,
-  ChatToggle,
-  DisconnectButton,
-  LayoutContextProvider,
-  Chat,
-  MediaDeviceMenu,
+  VideoConference,
 } from "@livekit/components-react";
-import { Track, RoomOptions, VideoPresets } from "livekit-client";
-import PiPLayout from "../../components/PiPLayout";
+import { RoomOptions, VideoPresets } from "livekit-client";
 import "@livekit/components-styles";
 import { api } from "@/utils/api";
 import { Loader2, RefreshCw } from "lucide-react";
@@ -19,8 +13,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faHeartbeat,
   faSignal,
-  faRecordVinyl,
-  faComments
+  faRecordVinyl
 } from "@fortawesome/free-solid-svg-icons";
 
 interface DoctorVideoFrameProps {
@@ -74,59 +67,7 @@ const DoctorVideoFrame: React.FC<DoctorVideoFrameProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [retryCount, setRetryCount] = useState(0);
-  const [chatOpen, setChatOpen] = useState(false);
-  const [audioPermissionGranted, setAudioPermissionGranted] = useState<boolean | null>(null);
-  const [debugInfo, setDebugInfo] = useState<string[]>([]);
 
-  // Debug logging helper
-  const addDebugLog = useCallback((message: string) => {
-    console.log(`🎯 Doctor Audio Debug: ${message}`);
-    setDebugInfo(prev => [...prev.slice(-4), `${new Date().toLocaleTimeString()}: ${message}`]);
-  }, []);
-
-  // Check browser permissions
-  useEffect(() => {
-    const checkPermissions = async () => {
-      try {
-        addDebugLog("Checking audio permissions...");
-
-        // Check if getUserMedia is available
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          addDebugLog("❌ getUserMedia not available");
-          return;
-        }
-
-        // Request audio permission
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true
-          }
-        });
-
-        addDebugLog("✅ Audio permission granted");
-        setAudioPermissionGranted(true);
-
-        // Check audio tracks
-        const audioTracks = stream.getAudioTracks();
-        addDebugLog(`Found ${audioTracks.length} audio tracks`);
-
-        audioTracks.forEach((track, index) => {
-          addDebugLog(`Audio track ${index}: ${track.label}, enabled: ${track.enabled}, readyState: ${track.readyState}`);
-        });
-
-        // Clean up
-        stream.getTracks().forEach(track => track.stop());
-
-      } catch (error: any) {
-        addDebugLog(`❌ Audio permission error: ${error.message}`);
-        setAudioPermissionGranted(false);
-      }
-    };
-
-    checkPermissions();
-  }, [addDebugLog]);
 
   // LiveKit room options with explicit audio configuration
   const roomOptions = useMemo<RoomOptions>(() => ({
@@ -162,25 +103,13 @@ const DoctorVideoFrame: React.FC<DoctorVideoFrameProps> = ({
     temperature: "36.6"
   });
 
-  // Stable identity generation for LiveKit
+  // Consistent identity generation for LiveKit (prevents multiple device connections)
   const identity = useMemo(() => {
-    const key = `lk-id:${meetingId}`;
-    let cached = localStorage.getItem(key);
-    if (cached) return cached;
-
     const clean = safeUserName.toLowerCase().replace(/[^a-z0-9]/g, "") || "doctor";
-    const hash = Math.random().toString(36).substring(2, 8);
-    const newId = `${meetingId}-doctor-${clean}-${hash}`;
-    localStorage.setItem(key, newId);
-    return newId;
-  }, [meetingId, safeUserName]);
+    const emailHash = userEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+    return `${meetingId}-doctor-${clean}-${emailHash}`;
+  }, [meetingId, safeUserName, userEmail]);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      localStorage.removeItem(`lk-id:${meetingId}`);
-    };
-  }, [meetingId]);
 
   // Token fetching logic
   const fetchToken = useCallback(async () => {
@@ -291,11 +220,9 @@ const DoctorVideoFrame: React.FC<DoctorVideoFrameProps> = ({
           }}
           onConnected={() => {
             console.log("✅ Doctor connected to LiveKit room");
-            addDebugLog("✅ Connected to LiveKit room");
           }}
           onError={(error) => {
             console.error("❌ Doctor LiveKit room error:", error);
-            addDebugLog(`❌ LiveKit error: ${error.message}`);
             setError(`LiveKit error: ${error.message}`);
           }}
           data-lk-theme="default"
@@ -307,88 +234,7 @@ const DoctorVideoFrame: React.FC<DoctorVideoFrameProps> = ({
             left: 0
           }}
         >
-          <LayoutContextProvider>
-            <PiPLayout />
-
-            {/* Official LiveKit Chat Panel */}
-            <div className={`absolute top-0 right-0 w-80 h-full bg-slate-900/95 backdrop-blur-sm border-l border-emerald-400/30 z-50 flex flex-col transform transition-transform duration-300 ease-in-out ${
-              chatOpen ? 'translate-x-0' : 'translate-x-full'
-            }`}>
-              <div className="flex items-center justify-between p-4 border-b border-emerald-400/20">
-                <h3 className="text-white font-semibold flex items-center gap-2">
-                  <FontAwesomeIcon icon={faComments} className="text-emerald-400" />
-                  Чат с пациентом
-                </h3>
-                <button
-                  onClick={() => setChatOpen(false)}
-                  className="text-white/70 hover:text-white transition-colors"
-                >
-                  ✕
-                </button>
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <Chat
-                  className="h-full"
-                  style={{
-                    '--lk-bg': 'transparent',
-                    '--lk-fg': '#ffffff',
-                    '--lk-accent': '#10b981',
-                    height: '100%',
-                    background: 'transparent',
-                    border: 'none'
-                  } as React.CSSProperties}
-                />
-              </div>
-            </div>
-
-            {/* LiveKit Control Panel with Audio Device Selection */}
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-r from-emerald-900/40 to-teal-900/40 backdrop-blur-sm border-t border-emerald-400/20 p-4 rounded-b-2xl z-30">
-              <div className="flex items-center justify-center gap-4">
-                {/* Official LiveKit Microphone Control with Dropdown */}
-                <div className="flex items-center">
-                  <TrackToggle
-                    source={Track.Source.Microphone}
-                    className="w-12 h-12 rounded-l-full bg-emerald-600 hover:bg-emerald-700 border-2 border-emerald-400 border-r-0 transition-all duration-300 flex items-center justify-center text-white"
-                  />
-                  <MediaDeviceMenu
-                    kind="audioinput"
-                    className="w-8 h-12 rounded-r-full bg-emerald-600 hover:bg-emerald-700 border-2 border-emerald-400 border-l-0 transition-all duration-300 flex items-center justify-center text-white text-xs"
-                  >
-                    ▼
-                  </MediaDeviceMenu>
-                </div>
-
-                {/* Camera Control */}
-                <TrackToggle
-                  source={Track.Source.Camera}
-                  className="w-12 h-12 rounded-full bg-emerald-600 hover:bg-emerald-700 border-2 border-emerald-400 transition-all duration-300 flex items-center justify-center text-white"
-                />
-
-                {/* Screen Share Control */}
-                <TrackToggle
-                  source={Track.Source.ScreenShare}
-                  className="w-12 h-12 rounded-full bg-emerald-600 hover:bg-emerald-700 border-2 border-emerald-400 transition-all duration-300 flex items-center justify-center text-white"
-                />
-
-                {/* Speaker Selection */}
-                <MediaDeviceMenu
-                  kind="audiooutput"
-                  className="w-12 h-12 rounded-full bg-emerald-600 hover:bg-emerald-700 border-2 border-emerald-400 transition-all duration-300 flex items-center justify-center text-white text-xs"
-                >
-                  🔊
-                </MediaDeviceMenu>
-
-                {/* Chat Toggle */}
-                <ChatToggle
-                  className="w-12 h-12 rounded-full bg-emerald-600 hover:bg-emerald-700 border-2 border-emerald-400 transition-all duration-300 flex items-center justify-center text-white"
-                  onClick={() => setChatOpen(!chatOpen)}
-                />
-
-                {/* Disconnect Button */}
-                <DisconnectButton className="w-12 h-12 rounded-full bg-red-600 hover:bg-red-700 border-2 border-red-400 transition-all duration-300 flex items-center justify-center text-white" />
-              </div>
-            </div>
-          </LayoutContextProvider>
+          <VideoConference />
         </LiveKitRoom>
 
         {/* Medical Overlays - Outside LiveKit context */}
