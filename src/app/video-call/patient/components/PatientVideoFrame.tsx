@@ -260,6 +260,40 @@ const PatientVideoFrame: React.FC<PatientVideoFrameProps> = ({
           }}
         >
           <VideoConference />
+
+          {/* Custom CSS for Patient View: Doctor Large, Patient Small */}
+          <style dangerouslySetInnerHTML={{
+            __html: `
+              .lk-video-conference .lk-focus-layout .lk-participant-tile {
+                position: relative !important;
+              }
+
+              .lk-video-conference .lk-participant-tile[data-lk-local-participant="false"] {
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                z-index: 1 !important;
+              }
+
+              .lk-video-conference .lk-participant-tile[data-lk-local-participant="true"] {
+                position: absolute !important;
+                top: 1rem !important;
+                right: 1rem !important;
+                width: 12rem !important;
+                height: 9rem !important;
+                z-index: 10 !important;
+                border-radius: 0.5rem !important;
+                border: 2px solid white !important;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+              }
+
+              .lk-video-conference .lk-grid-layout {
+                position: relative !important;
+              }
+            `
+          }} />
         </LiveKitRoom>
 
         {/* Patient-friendly Overlays - Outside LiveKit context */}
