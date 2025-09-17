@@ -320,6 +320,16 @@ const PatientVideoFrame: React.FC<PatientVideoFrameProps> = ({
               .lk-video-conference .lk-grid-layout {
                 position: relative !important;
               }
+
+              /* Hide leave button from LiveKit interface */
+              .lk-video-conference .lk-button.lk-disconnect-button,
+              .lk-video-conference button[data-lk-unpin-button],
+              .lk-video-conference .lk-control-bar .lk-disconnect-button,
+              .lk-video-conference .lk-control-bar button[aria-label="Leave"],
+              .lk-video-conference .lk-control-bar button[aria-label*="disconnect"],
+              .lk-video-conference .lk-control-bar button[aria-label*="leave"] {
+                display: none !important;
+              }
             `
           }} />
         </LiveKitRoom>
