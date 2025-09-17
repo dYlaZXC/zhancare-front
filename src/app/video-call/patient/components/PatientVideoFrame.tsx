@@ -8,8 +8,11 @@ import {
   LayoutContextProvider,
   Chat,
   useChat,
+  MediaDeviceSelect,
+  MediaDeviceMenu,
+  PreJoin,
 } from "@livekit/components-react";
-import { Track } from "livekit-client";
+import { Track, RoomOptions, VideoPresets, Room, LocalTrack, RemoteTrack, Participant } from "livekit-client";
 import PiPLayout from "../../components/PiPLayout";
 import "@livekit/components-styles";
 import { api } from "@/utils/api";
@@ -64,6 +67,85 @@ const PatientVideoFrame: React.FC<PatientVideoFrameProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [retryCount, setRetryCount] = useState(0);
   const [chatOpen, setChatOpen] = useState(false);
+  const [audioPermissionGranted, setAudioPermissionGranted] = useState<boolean | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string[]>([]);
+
+  // Debug logging helper
+  const addDebugLog = useCallback((message: string) => {
+    console.log(`🎯 Patient Audio Debug: ${message}`);
+    setDebugInfo(prev => [...prev.slice(-4), `${new Date().toLocaleTimeString()}: ${message}`]);
+  }, []);
+
+  // Check browser permissions
+  useEffect(() => {
+    const checkPermissions = async () => {
+      try {
+        addDebugLog("Checking audio permissions...");
+
+        // Check if getUserMedia is available
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          addDebugLog("❌ getUserMedia not available");
+          return;
+        }
+
+        // Request audio permission
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        });
+
+        addDebugLog("✅ Audio permission granted");
+        setAudioPermissionGranted(true);
+
+        // Check audio tracks
+        const audioTracks = stream.getAudioTracks();
+        addDebugLog(`Found ${audioTracks.length} audio tracks`);
+
+        audioTracks.forEach((track, index) => {
+          addDebugLog(`Audio track ${index}: ${track.label}, enabled: ${track.enabled}, readyState: ${track.readyState}`);
+        });
+
+        // Clean up
+        stream.getTracks().forEach(track => track.stop());
+
+      } catch (error: any) {
+        addDebugLog(`❌ Audio permission error: ${error.message}`);
+        setAudioPermissionGranted(false);
+      }
+    };
+
+    checkPermissions();
+  }, [addDebugLog]);
+
+  // LiveKit room options with explicit audio configuration
+  const roomOptions = useMemo<RoomOptions>(() => ({
+    adaptiveStream: true,
+    dynacast: true,
+    publishDefaults: {
+      audioPreset: {
+        maxBitrate: 20_000,
+      },
+      videoPreset: VideoPresets.h720,
+    },
+    videoCaptureDefaults: {
+      resolution: VideoPresets.h720.resolution,
+    },
+    audioCaptureDefaults: {
+      autoGainControl: true,
+      echoCancellation: true,
+      noiseSuppression: true,
+    },
+  }), []);
+
+  // Connect options to force audio publishing
+  const connectOptions = useMemo(() => ({
+    autoSubscribe: true,
+    publishAudio: true,
+    publishVideo: true,
+  }), []);
 
   // Stable identity generation for LiveKit
   const identity = useMemo(() => {
@@ -167,9 +249,11 @@ const PatientVideoFrame: React.FC<PatientVideoFrameProps> = ({
         <LiveKitRoom
           token={token}
           serverUrl={livekitUrl}
-          connect
+          connect={true}
           video={true}
           audio={true}
+          options={roomOptions}
+          connectOptions={connectOptions}
           onDisconnected={(reason) => {
             console.warn("🚨 Patient disconnected:", reason);
             setToken(null); // trigger retry
@@ -177,9 +261,11 @@ const PatientVideoFrame: React.FC<PatientVideoFrameProps> = ({
           }}
           onConnected={() => {
             console.log("✅ Patient connected to LiveKit room");
+            addDebugLog("✅ Connected to LiveKit room");
           }}
           onError={(error) => {
             console.error("❌ Patient LiveKit room error:", error);
+            addDebugLog(`❌ LiveKit error: ${error.message}`);
             setError(`LiveKit error: ${error.message}`);
           }}
           data-lk-theme="default"
@@ -225,26 +311,45 @@ const PatientVideoFrame: React.FC<PatientVideoFrameProps> = ({
               </div>
             </div>
 
-            {/* LiveKit Control Panel - Removed DisconnectButton */}
+            {/* LiveKit Control Panel with Audio Device Selection */}
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-r from-blue-900/40 to-indigo-900/40 backdrop-blur-sm border-t border-blue-400/20 p-4 rounded-b-2xl z-30">
-              <div className="flex items-center justify-center gap-4">
-                <TrackToggle
-                  source={Track.Source.Microphone}
-                  className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 border-2 border-blue-400 transition-all duration-300 flex items-center justify-center text-white"
-                />
-                <TrackToggle
-                  source={Track.Source.Camera}
-                  className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 border-2 border-blue-400 transition-all duration-300 flex items-center justify-center text-white"
-                />
-                <TrackToggle
-                  source={Track.Source.ScreenShare}
-                  className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 border-2 border-blue-400 transition-all duration-300 flex items-center justify-center text-white"
-                />
-                {/* Official LiveKit Chat Toggle */}
-                <ChatToggle
-                  className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 border-2 border-blue-400 transition-all duration-300 flex items-center justify-center text-white"
-                  onClick={() => setChatOpen(!chatOpen)}
-                />
+              <div className="flex flex-col gap-3">
+                {/* Official LiveKit Device Selection Row */}
+                <div className="flex items-center justify-center gap-4">
+                  <MediaDeviceMenu
+                    kind="audioinput"
+                    className="flex items-center gap-2 bg-blue-800/50 rounded-lg px-3 py-2 text-white text-xs hover:bg-blue-700/50 transition-colors"
+                  >
+                    🎤 Microphone
+                  </MediaDeviceMenu>
+                  <MediaDeviceMenu
+                    kind="audiooutput"
+                    className="flex items-center gap-2 bg-blue-800/50 rounded-lg px-3 py-2 text-white text-xs hover:bg-blue-700/50 transition-colors"
+                  >
+                    🔊 Speakers
+                  </MediaDeviceMenu>
+                </div>
+
+                {/* Controls Row */}
+                <div className="flex items-center justify-center gap-4">
+                  <TrackToggle
+                    source={Track.Source.Microphone}
+                    className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 border-2 border-blue-400 transition-all duration-300 flex items-center justify-center text-white"
+                  />
+                  <TrackToggle
+                    source={Track.Source.Camera}
+                    className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 border-2 border-blue-400 transition-all duration-300 flex items-center justify-center text-white"
+                  />
+                  <TrackToggle
+                    source={Track.Source.ScreenShare}
+                    className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 border-2 border-blue-400 transition-all duration-300 flex items-center justify-center text-white"
+                  />
+                  {/* Official LiveKit Chat Toggle */}
+                  <ChatToggle
+                    className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 border-2 border-blue-400 transition-all duration-300 flex items-center justify-center text-white"
+                    onClick={() => setChatOpen(!chatOpen)}
+                  />
+                </div>
               </div>
             </div>
           </LayoutContextProvider>
@@ -256,6 +361,26 @@ const PatientVideoFrame: React.FC<PatientVideoFrameProps> = ({
           <FontAwesomeIcon icon={faShieldAlt} className="text-white" />
           <span className="text-white text-sm font-medium">Защищено</span>
         </div>
+
+        {/* Audio Debug Overlay */}
+        {/* <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm rounded-lg p-3 border border-blue-400/30 z-30 max-w-sm">
+          <h4 className="text-blue-300 font-semibold text-xs mb-2 flex items-center gap-2">
+            🎵 Audio Debug
+          </h4>
+          <div className="space-y-1 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-white/70">Permission:</span>
+              <span className={`font-mono ${audioPermissionGranted === true ? 'text-green-400' : audioPermissionGranted === false ? 'text-red-400' : 'text-yellow-400'}`}>
+                {audioPermissionGranted === true ? '✅ Granted' : audioPermissionGranted === false ? '❌ Denied' : '⏳ Checking...'}
+              </span>
+            </div>
+            {debugInfo.map((log, index) => (
+              <div key={index} className="text-blue-300 text-xs font-mono">
+                {log}
+              </div>
+            ))}
+          </div>
+        </div> */}
 
         {/* Connection Quality Indicator */}
         <div className="absolute top-4 right-4 flex items-center gap-2 px-3 py-2 bg-blue-600/90 backdrop-blur-sm rounded-lg border border-blue-400 z-30">

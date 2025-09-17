@@ -171,7 +171,7 @@ const PiPLayout: React.FC = () => {
       )}
 
       {/* Debug info (always show for now) */}
-      <div className="absolute top-4 left-4 bg-black/80 text-white text-xs p-2 rounded z-50 max-w-xs">
+      {/* <div className="absolute top-4 left-4 bg-black/80 text-white text-xs p-2 rounded z-50 max-w-xs">
         <div>Role: {isDoctor ? 'Doctor' : isPatient ? 'Patient' : 'Unknown'}</div>
         <div>Local: {localParticipant?.identity || 'None'}</div>
         <div>Total Tracks: {tracks.length}</div>
@@ -179,7 +179,7 @@ const PiPLayout: React.FC = () => {
         <div>Remote Tracks: {remoteTracks.length}</div>
         <div>Primary: {primaryTrack?.participant.identity || 'None'}</div>
         <div>Secondary: {secondaryTrack?.participant.identity || 'None'}</div>
-      </div>
+      </div> */}
     </div>
   );
 };
