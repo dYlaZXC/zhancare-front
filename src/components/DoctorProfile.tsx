@@ -16,7 +16,7 @@ export default function DoctorProfile() {
   const { user, logoutUser, loading } = useAuth();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState("appointments");
+  const [activeTab, setActiveTab] = useState("consultations");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 

@@ -94,7 +94,11 @@ const DoctorVideoFrame: React.FC<DoctorVideoFrameProps> = ({
     autoSubscribe: true,
     publishAudio: true,
     publishVideo: true,
-  }), []);
+    metadata: JSON.stringify({
+      displayName: safeUserName,
+      role: 'doctor'
+    })
+  }), [safeUserName]);
 
   // UI states
   const [patientVitals, setPatientVitals] = useState({

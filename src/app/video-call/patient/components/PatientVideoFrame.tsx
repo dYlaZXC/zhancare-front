@@ -135,7 +135,11 @@ const PatientVideoFrame: React.FC<PatientVideoFrameProps> = ({
     autoSubscribe: true,
     publishAudio: true,
     publishVideo: true,
-  }), []);
+    metadata: JSON.stringify({
+      displayName: safeUserName,
+      role: 'patient'
+    })
+  }), [safeUserName]);
 
   // Consistent identity generation for LiveKit (prevents multiple device connections)
   const identity = useMemo(() => {
