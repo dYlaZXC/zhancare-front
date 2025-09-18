@@ -48,7 +48,7 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
 }) => {
   const { user } = useAuth();
   const { consultations: hookConsultations, fetchConsultations } = useConsultationManager();
-  const consultations = propConsultations || hookConsultations;
+  const consultations = propConsultations || hookConsultations || [];
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
   const [typeFilter, setTypeFilter] = useState<FilterType>("all");
@@ -62,6 +62,11 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
 
   // Apply filters
   const filteredConsultations = useMemo(() => {
+    // Ensure consultations is an array
+    if (!Array.isArray(consultations)) {
+      return [];
+    }
+
     let filtered = consultations;
 
     // Search filter

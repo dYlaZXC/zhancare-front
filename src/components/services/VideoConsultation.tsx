@@ -14,6 +14,12 @@ interface Doctor {
   name: string;
   email: string;
   doctor_type: string;
+  specialization?: {
+    id: number;
+    name_ru: string;
+    name_kz: string;
+    name_en: string;
+  } | null;
 }
 
 interface RecommendedDoctor {
@@ -56,7 +62,11 @@ const VideoConsultation: React.FC = () => {
     try {
       const res = await api.get("/auth/doctor/available/", {
         headers: { Authorization: `Token ${token}` },
+        params: { lang: 'ru' } // Request Russian by default, can be made dynamic later
       });
+
+      console.log("Enhanced doctor data:", res.data); // Debug log to see the new structure
+
       const filtered = res.data?.doctors?.filter(
         (doc: Doctor) => doc.doctor_type !== "Сестринское дело"
       );
@@ -292,6 +302,7 @@ const VideoConsultation: React.FC = () => {
                   onCancel={cancelConsultation}
                   loading={loadingCall}
                   waiting={waiting}
+                  recommendedDoctor={recommendedDoctor}
                 />
               )}
             </div>

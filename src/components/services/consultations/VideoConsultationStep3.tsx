@@ -123,9 +123,9 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
               exit={{ opacity: 0, y: 10 }}
               className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200"
             >
-              <div className="flex items-center gap-2">
-                <Loader2 className="animate-spin text-blue-600" size={16} />
-                <span className="text-blue-700 font-medium text-sm md:text-base">Пересканирование...</span>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Loader2 className="animate-spin text-blue-600 w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="text-blue-700 font-medium text-sm sm:text-base md:text-lg">Пересканирование...</span>
               </div>
             </motion.div>
           ) : (
@@ -134,11 +134,11 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
-              className={`flex items-center justify-between p-3 rounded-lg border ${
-                hasErrors 
-                  ? 'bg-red-50 border-red-200' 
-                  : hasWarnings 
-                  ? 'bg-yellow-50 border-yellow-200' 
+              className={`flex items-center justify-between p-3 sm:p-4 md:p-5 rounded-lg sm:rounded-xl border shadow-md ${
+                hasErrors
+                  ? 'bg-red-50 border-red-200'
+                  : hasWarnings
+                  ? 'bg-yellow-50 border-yellow-200'
                   : 'bg-green-50 border-green-200'
               }`}
             >
@@ -342,6 +342,14 @@ interface Step3Props {
   loading: boolean;
   waiting: boolean;
   activeStep?: number;
+  recommendedDoctor?: {
+    id: number;
+    name: string;
+    doctor_type: string;
+    reason: string;
+    urgency: string;
+    confidence?: number;
+  };
 }
 
 const steps = [
@@ -378,14 +386,17 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
   loading,
   waiting,
   activeStep = 3,
+  recommendedDoctor,
 }) => {
   const [waitingTime, setWaitingTime] = useState(0);
   const [cameraPermission, setCameraPermission] = useState<'granted' | 'denied' | 'checking'>('checking');
   const [micPermission, setMicPermission] = useState<'granted' | 'denied' | 'checking'>('checking');
   const [showTechCheck, setShowTechCheck] = useState(false);
   const [connectionQuality, setConnectionQuality] = useState<'good' | 'fair' | 'poor'>('good');
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const doctor = doctors.find((d) => d.id === selectedDoctorId);
+  const isUrgent = recommendedDoctor?.urgency === 'urgent';
 
   // Check permissions on mount
   useEffect(() => {
@@ -547,9 +558,9 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
   };
 
   return (
-    <div className="min-h-full flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-blue-50 flex flex-col">
       <motion.div
-        className="flex-1 p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 w-full"
+        className="flex-1 p-3 sm:p-4 md:p-6 lg:p-8 space-y-3 sm:space-y-4 md:space-y-6 w-full"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
@@ -559,15 +570,15 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="text-center space-y-3"
+          className="text-center space-y-2 sm:space-y-3"
         >
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 text-white">
-              <CheckCircle2 size={20} />
+          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3">
+            <div className="p-2 sm:p-2.5 md:p-3 rounded-xl md:rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg">
+              <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
             </div>
-            Все готово для консультации
+            <span className="leading-tight">Все готово для консультации</span>
           </h2>
-          <p className="text-gray-600 text-sm md:text-base leading-relaxed">
+          <p className="text-gray-600 text-sm sm:text-base md:text-lg leading-relaxed max-w-2xl mx-auto px-4">
             Проверьте информацию и начните видеоконсультацию с врачом
           </p>
         </motion.div>
@@ -577,14 +588,14 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="bg-white border border-gray-200 rounded-2xl p-6"
+        className="bg-white border border-gray-200 rounded-xl sm:rounded-2xl lg:rounded-3xl p-4 sm:p-5 md:p-6 lg:p-8 shadow-xl"
       >
-        <h3 className="font-semibold text-gray-900 mb-4 md:mb-6 flex items-center gap-2 text-base md:text-lg">
-          <FileText size={20} />
+        <h3 className="font-semibold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2 text-sm sm:text-base md:text-lg lg:text-xl">
+          <FileText className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
           Сводка консультации
         </h3>
 
-        <div className="space-y-4 md:space-y-6">
+        <div className="space-y-3 sm:space-y-4 md:space-y-6">
           {steps.map((step, index) => {
             const Icon = step.icon;
             const status = getStepStatus(step.id);
@@ -595,49 +606,57 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3 + index * 0.1 }}
-                className="flex items-start gap-4"
+                className="flex items-start gap-3 sm:gap-4 md:gap-5"
               >
-                <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${
-                  status === "completed" 
-                    ? "bg-green-100 text-green-600" 
-                    : status === "current" 
-                    ? "bg-blue-100 text-blue-600" 
-                    : "bg-gray-100 text-gray-400"
+                <div className={`flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-lg sm:rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg ${
+                  status === "completed"
+                    ? "bg-gradient-to-br from-green-100 to-green-200 text-green-600"
+                    : status === "current"
+                    ? "bg-gradient-to-br from-blue-100 to-blue-200 text-blue-600"
+                    : "bg-gradient-to-br from-gray-100 to-gray-200 text-gray-400"
                 }`}>
-                  {status === "completed" ? <CheckCircle2 size={20} /> : <Icon size={20} />}
+                  {status === "completed" ? (
+                    <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
+                  ) : (
+                    <Icon className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
+                  )}
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h4 className="font-medium text-gray-900 text-sm md:text-base">{step.label}</h4>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                    <h4 className="font-medium text-gray-900 text-sm sm:text-base md:text-lg">{step.label}</h4>
                     {status === "current" && (
-                      <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
+                      <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs sm:text-sm rounded-full font-medium self-start">
                         Активный шаг
                       </span>
                     )}
                   </div>
-                  <p className="text-xs md:text-sm text-gray-600 mb-2">{step.description}</p>
+                  <p className="text-xs sm:text-sm md:text-base text-gray-600 mb-2 sm:mb-3 leading-relaxed">{step.description}</p>
                   
                   <div className="text-sm">
                     {step.key === "symptoms" && (
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <p className="text-gray-700 line-clamp-3 text-sm md:text-base">{symptoms}</p>
+                      <div className="p-3 sm:p-4 md:p-5 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg sm:rounded-xl border border-gray-200">
+                        <p className="text-gray-700 line-clamp-3 text-sm sm:text-base md:text-lg leading-relaxed">{symptoms}</p>
                       </div>
                     )}
                     {step.key === "doctor" && doctor && (
-                      <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold">
-                          {doctor.avatar || doctor.name.charAt(0)}
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 md:p-5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg sm:rounded-xl border border-blue-200">
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg flex-shrink-0">
+                          <span className="text-sm sm:text-base md:text-lg">
+                            {doctor.avatar || doctor.name.charAt(0)}
+                          </span>
                         </div>
-                        <div>
-                          <p className="font-medium text-gray-900 text-sm md:text-base">{doctor.name}</p>
-                          <p className="text-xs md:text-sm text-blue-600">{doctor.doctor_type}</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-gray-900 text-base sm:text-lg md:text-xl mb-1">{doctor.name}</p>
+                          <p className="text-sm sm:text-base md:text-lg text-blue-600 font-medium mb-2">{doctor.doctor_type}</p>
                           {doctor.rating && (
-                            <div className="flex items-center gap-1 mt-1">
-                              <Star className="fill-yellow-400 text-yellow-400" size={12} />
-                              <span className="text-xs text-gray-600">{doctor.rating}</span>
+                            <div className="flex items-center gap-1 sm:gap-2">
+                              <div className="flex items-center gap-1">
+                                <Star className="fill-yellow-400 text-yellow-400 w-3 h-3 sm:w-4 sm:h-4" />
+                                <span className="text-xs sm:text-sm md:text-base text-gray-600 font-medium">{doctor.rating}</span>
+                              </div>
                               {doctor.experience && (
-                                <span className="text-xs text-gray-500">• {doctor.experience} лет опыта</span>
+                                <span className="text-xs sm:text-sm md:text-base text-gray-500">• {doctor.experience} лет опыта</span>
                               )}
                             </div>
                           )}
@@ -666,28 +685,28 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
-        className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-6"
+        className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl sm:rounded-2xl lg:rounded-3xl p-4 sm:p-5 md:p-6 lg:p-8 shadow-lg"
       >
-        <div className="flex items-start gap-3">
-          <Shield className="text-blue-600 flex-shrink-0 mt-1" size={20} />
-          <div className="space-y-3">
-            <h3 className="font-semibold text-blue-900 text-sm md:text-base">Важная информация</h3>
-            <div className="grid md:grid-cols-2 gap-3 md:gap-4 text-xs md:text-sm text-blue-800">
-              <div className="flex items-start gap-2">
-                <Clock size={14} className="mt-0.5 flex-shrink-0" />
-                <span>Средняя продолжительность: 15-30 минут</span>
+        <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
+          <Shield className="text-blue-600 flex-shrink-0 mt-1 w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
+          <div className="space-y-3 sm:space-y-4 flex-1">
+            <h3 className="font-bold text-blue-900 text-base sm:text-lg md:text-xl">Важная информация</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:gap-6 text-xs sm:text-sm md:text-base text-blue-800">
+              <div className="flex items-start gap-2 sm:gap-3">
+                <Clock className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 text-blue-600" />
+                <span className="leading-relaxed">Средняя продолжительность: 15-30 минут</span>
               </div>
-              <div className="flex items-start gap-2">
-                <Info size={14} className="mt-0.5 flex-shrink-0" />
-                <span>Консультация записывается в мед. карту</span>
+              <div className="flex items-start gap-2 sm:gap-3">
+                <Info className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 text-blue-600" />
+                <span className="leading-relaxed">Консультация записывается в мед. карту</span>
               </div>
-              <div className="flex items-start gap-2">
-                <Calendar size={14} className="mt-0.5 flex-shrink-0" />
-                <span>После консультации вы получите рекомендации врача</span>
+              <div className="flex items-start gap-2 sm:gap-3">
+                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 text-blue-600" />
+                <span className="leading-relaxed">После консультации вы получите рекомендации врача</span>
               </div>
-              <div className="flex items-start gap-2">
-                <HelpCircle size={14} className="mt-0.5 flex-shrink-0" />
-                <span>В случае технических проблем обратитесь в поддержку</span>
+              <div className="flex items-start gap-2 sm:gap-3">
+                <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 text-blue-600" />
+                <span className="leading-relaxed">В случае технических проблем обратитесь в поддержку</span>
               </div>
             </div>
           </div>
@@ -699,43 +718,51 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6 }}
-        className="flex justify-between items-center pt-6 border-t border-gray-200"
+        className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-between items-center pt-4 sm:pt-6 border-t border-gray-200"
       >
         <motion.button
           onClick={onBack}
           whileHover={{ x: -3 }}
           whileTap={{ scale: 0.97 }}
-          className="flex items-center gap-2 px-4 md:px-5 py-2.5 md:py-3 rounded-xl font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition-all text-sm md:text-base"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-5 md:px-6 py-3 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition-all text-sm sm:text-base md:text-lg shadow-md hover:shadow-lg"
         >
-          <ArrowLeft size={16} />
-          Изменить данные
+          <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+          <span>Изменить данные</span>
         </motion.button>
 
         <motion.button
-          onClick={onCall}
+          onClick={() => {
+            if (isUrgent) {
+              onCall();
+            } else {
+              setShowConfirmDialog(true);
+            }
+          }}
           disabled={loading || !selectedDoctorId || waiting}
           whileTap={!loading && !waiting ? { scale: 0.97 } : {}}
           whileHover={!loading && !waiting ? { scale: 1.02 } : {}}
-          className={`flex items-center gap-2 md:gap-3 px-6 md:px-8 py-3 md:py-4 rounded-xl font-bold text-base md:text-lg transition-all min-w-[160px] md:min-w-[200px] justify-center ${
+          className={`w-full sm:w-auto flex items-center justify-center gap-2 sm:gap-3 px-6 sm:px-8 md:px-10 py-3 sm:py-3.5 md:py-4 rounded-lg sm:rounded-xl font-bold text-base sm:text-lg md:text-xl transition-all min-w-[200px] sm:min-w-[240px] md:min-w-[280px] shadow-xl ${
             loading || waiting
               ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-              : "bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:shadow-lg hover:shadow-green-500/25"
+              : isUrgent
+              ? "bg-gradient-to-r from-red-600 to-orange-600 text-white hover:shadow-2xl hover:shadow-red-500/25 hover:from-red-700 hover:to-orange-700"
+              : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-2xl hover:shadow-blue-500/25 hover:from-blue-700 hover:to-indigo-700"
           }`}
         >
           {loading ? (
             <>
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              Подготовка...
+              <div className="w-5 h-5 sm:w-6 sm:h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              <span>Подготовка...</span>
             </>
           ) : waiting ? (
             <>
-              <Clock size={20} />
-              Ожидание ({formatWaitingTime(waitingTime)})
+              <Clock className="w-5 h-5 sm:w-6 sm:h-6" />
+              <span>Ожидание ({formatWaitingTime(waitingTime)})</span>
             </>
           ) : (
             <>
-              <Video size={20} />
-              Начать консультацию
+              <Video className="w-5 h-5 sm:w-6 sm:h-6" />
+              <span>{isUrgent ? 'Начать консультацию' : 'Назначить консультацию'}</span>
             </>
           )}
         </motion.button>
@@ -748,28 +775,28 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="bg-yellow-50 border border-yellow-200 rounded-2xl p-6"
+            className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 rounded-xl sm:rounded-2xl lg:rounded-3xl p-4 sm:p-5 md:p-6 lg:p-8 shadow-lg"
           >
-            <div className="text-center space-y-4">
-              <div className="flex items-center justify-center gap-3">
-                <div className="w-3 h-3 bg-yellow-500 rounded-full animate-bounce"></div>
-                <div className="w-3 h-3 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-3 h-3 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+            <div className="text-center space-y-3 sm:space-y-4 md:space-y-6">
+              <div className="flex items-center justify-center gap-2 sm:gap-3">
+                <div className="w-3 h-3 sm:w-4 sm:h-4 bg-yellow-500 rounded-full animate-bounce"></div>
+                <div className="w-3 h-3 sm:w-4 sm:h-4 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                <div className="w-3 h-3 sm:w-4 sm:h-4 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
               </div>
-              <div>
-                <h3 className="font-semibold text-yellow-900 mb-1 text-sm md:text-base">
+              <div className="space-y-2 sm:space-y-3">
+                <h3 className="font-bold text-yellow-900 text-base sm:text-lg md:text-xl lg:text-2xl">
                   Ожидаем подключения врача
                 </h3>
-                <p className="text-xs md:text-sm text-yellow-700">
+                <p className="text-sm sm:text-base md:text-lg text-yellow-700 leading-relaxed">
                   Доктор {doctor?.name} скоро подключится к видеоконсультации
                 </p>
-                <p className="text-xs text-yellow-600 mt-2">
+                <p className="text-xs sm:text-sm md:text-base text-yellow-600 font-medium">
                   Время ожидания: {formatWaitingTime(waitingTime)}
                 </p>
               </div>
               <button
                 onClick={onCancel}
-                className="text-red-600 hover:text-red-700 text-xs md:text-sm font-medium underline transition-colors"
+                className="text-red-600 hover:text-red-700 text-sm sm:text-base font-medium underline transition-colors hover:underline-offset-4"
               >
                 Отменить консультацию
               </button>
@@ -779,6 +806,55 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
       </AnimatePresence>
 
       <TechCheckModal />
+
+      {/* Confirmation Dialog for Non-Urgent Consultations */}
+      <AnimatePresence>
+        {showConfirmDialog && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowConfirmDialog(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl p-6 max-w-md w-full space-y-6"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="text-center space-y-4">
+                <div className="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center">
+                  <Calendar className="w-8 h-8 text-blue-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">Подтверждение записи</h3>
+                <p className="text-gray-600 leading-relaxed">
+                  Вы готовы назначить консультацию на это время с доктором {doctor?.name}?
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowConfirmDialog(false)}
+                  className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-colors"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={() => {
+                    setShowConfirmDialog(false);
+                    onCall();
+                  }}
+                  className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors"
+                >
+                  Да, назначить
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
     </div>
   );

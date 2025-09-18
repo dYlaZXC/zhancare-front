@@ -18,15 +18,29 @@ export const useConsultationManager = () => {
   const fetchConsultations = useCallback(async (status?: string) => {
     try {
       // Different endpoints based on user role
-      const baseUrl = user?.role === 'patient' 
+      const baseUrl = user?.role === 'patient'
         ? '/consultations/my-consultations/'
         : '/consultations/';
-      
+
       const url = status ? `${baseUrl}?status=${status}` : baseUrl;
-      const { data } = await api.get<Consultation[]>(url);
-      setConsultations(data);
+      const { data } = await api.get<Consultation[] | any>(url);
+
+      // Handle different response formats
+      if (Array.isArray(data)) {
+        setConsultations(data);
+      } else if (data && Array.isArray((data as any).results)) {
+        // Handle paginated response
+        setConsultations((data as any).results);
+      } else if (data && Array.isArray((data as any).consultations)) {
+        // Handle wrapped response
+        setConsultations((data as any).consultations);
+      } else {
+        console.warn("Unexpected API response format:", data);
+        setConsultations([]);
+      }
     } catch (error) {
       console.error("Failed to fetch consultations:", error);
+      setConsultations([]);
     }
   }, [user?.role]);
 
@@ -48,12 +62,23 @@ export const useConsultationManager = () => {
   const fetchNewConsultations = useCallback(async () => {
     try {
       // Use same role-based endpoint logic
-      const baseUrl = user?.role === 'patient' 
+      const baseUrl = user?.role === 'patient'
         ? '/consultations/my-consultations/'
         : '/consultations/';
-        
-      const { data } = await api.get<Consultation[]>(baseUrl);
-      const pending = data.find(
+
+      const { data } = await api.get<Consultation[] | any>(baseUrl);
+
+      // Handle different response formats and extract array
+      let consultationsArray: Consultation[] = [];
+      if (Array.isArray(data)) {
+        consultationsArray = data;
+      } else if (data && Array.isArray((data as any).results)) {
+        consultationsArray = (data as any).results;
+      } else if (data && Array.isArray((data as any).consultations)) {
+        consultationsArray = (data as any).consultations;
+      }
+
+      const pending = consultationsArray.find(
         (c) =>
           c.status === "pending" &&
           !seenIds.current.has(c.id) &&

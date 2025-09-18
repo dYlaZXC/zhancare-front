@@ -44,7 +44,19 @@ export const useProfileData = () => {
           api.get("/appointments/my-appointments/"),
         ]);
 
-        setConsultations(consultationRes.data);
+        // Handle different response formats like in consultation manager
+        if (Array.isArray(consultationRes.data)) {
+          setConsultations(consultationRes.data);
+        } else if (consultationRes.data && Array.isArray(consultationRes.data.results)) {
+          // Handle paginated response
+          setConsultations(consultationRes.data.results);
+        } else if (consultationRes.data && Array.isArray(consultationRes.data.consultations)) {
+          // Handle wrapped response
+          setConsultations(consultationRes.data.consultations);
+        } else {
+          console.warn("Unexpected consultation API response format:", consultationRes.data);
+          setConsultations([]);
+        }
 
         setAppointments(
           appointmentRes.data.map((a: any) => ({
@@ -65,7 +77,7 @@ export const useProfileData = () => {
   }, [user?.role]);
 
   const consultationTrendData: ChartDataPoint[] = Object.values(
-    consultations.reduce((acc, cur) => {
+    (Array.isArray(consultations) ? consultations : []).reduce((acc, cur) => {
       const date = new Intl.DateTimeFormat("ru-RU", {
         day: "2-digit",
         month: "2-digit",

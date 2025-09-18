@@ -54,11 +54,36 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
 
   // Smart suggestions based on input
   const suggestions = [
-    "Головная боль с утра, усиливается при движении",
-    "Температура 38.2°C, озноб, ломота в теле",
-    "Боль в горле, трудно глотать, кашель",
-    "Тошнота, головокружение, слабость",
-    "Боль в животе, спазмы после еды",
+    {
+      text: "Температура 36.2, головная боль с утра, усиливается при движении",
+      urgency: "non_urgent",
+      urgencyLabel: "Плановая",
+      urgencyColor: "blue"
+    },
+    {
+      text: "Температура 39.5°C, сильный озноб, затрудненное дыхание",
+      urgency: "urgent",
+      urgencyLabel: "Срочная",
+      urgencyColor: "red"
+    },
+    {
+      text: "Боль в горле, трудно глотать, кашель",
+      urgency: "non_urgent",
+      urgencyLabel: "Плановая",
+      urgencyColor: "blue"
+    },
+    {
+      text: "Острая боль в груди, одышка, учащенное сердцебиение",
+      urgency: "urgent",
+      urgencyLabel: "Срочная",
+      urgencyColor: "red"
+    },
+    {
+      text: "Боль в животе, спазмы после еды",
+      urgency: "non_urgent",
+      urgencyLabel: "Плановая",
+      urgencyColor: "blue"
+    },
   ];
 
   useEffect(() => {
@@ -73,9 +98,9 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
     }
   };
 
-  const insertSuggestion = (suggestion: string) => {
+  const insertSuggestion = (suggestionText: string) => {
     const currentText = symptoms.trim();
-    const newText = currentText ? `${currentText}. ${suggestion}` : suggestion;
+    const newText = currentText ? `${currentText}. ${suggestionText}` : suggestionText;
     onChange(newText);
     setShowSuggestions(false);
     if (textareaRef.current) {
@@ -217,19 +242,40 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
               exit={{ opacity: 0, height: 0 }}
               className="space-y-2"
             >
-              <h4 className="text-sm font-semibold text-gray-700">💡 Готовые примеры:</h4>
+              <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                💡 Готовые примеры:
+                <span className="text-xs text-gray-500">(
+                  <span className="text-red-600">●</span> срочные,
+                  <span className="text-blue-600"> ●</span> плановые
+                )</span>
+              </h4>
               <div className="space-y-2">
-                {suggestions.slice(0, 2).map((suggestion, index) => (
+                {suggestions.slice(0, 3).map((suggestion, index) => (
                   <motion.button
                     key={index}
-                    onClick={() => insertSuggestion(suggestion)}
+                    onClick={() => insertSuggestion(suggestion.text)}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all text-sm text-gray-700"
+                    className={`w-full text-left p-3 rounded-lg border transition-all text-sm relative ${
+                      suggestion.urgencyColor === 'red'
+                        ? 'border-red-200 hover:border-red-300 hover:bg-red-50 text-gray-700'
+                        : 'border-blue-200 hover:border-blue-300 hover:bg-blue-50 text-gray-700'
+                    }`}
                   >
-                    <ClipboardPaste className="inline w-4 h-4 mr-2 text-gray-400" />
-                    {suggestion}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <ClipboardPaste className="inline w-4 h-4 mr-2 text-gray-400" />
+                        {suggestion.text}
+                      </div>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
+                        suggestion.urgencyColor === 'red'
+                          ? 'bg-red-100 text-red-700 border border-red-200'
+                          : 'bg-blue-100 text-blue-700 border border-blue-200'
+                      }`}>
+                        {suggestion.urgencyLabel}
+                      </span>
+                    </div>
                   </motion.button>
                 ))}
               </div>
