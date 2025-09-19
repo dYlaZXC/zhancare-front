@@ -28,7 +28,7 @@ interface Step2Props {
   fallbackUsed?: boolean;
   // Timeslot integration props
   aiRecommendationId?: number;
-  onConsultationBooked?: (consultationId: number) => void;
+  onConsultationBooked?: (consultationId: number, consultationData?: any) => void;
 }
 
 const VideoConsultationStep2: React.FC<Step2Props> = ({
@@ -61,6 +61,11 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
   const [lastUpdateTime, setLastUpdateTime] = useState<Record<number, number>>({});
   const [isPolling, setIsPolling] = useState(false);
   const [isUserActive, setIsUserActive] = useState(true);
+
+  // Confirmation modal state
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [selectedTimeslot, setSelectedTimeslot] = useState<TimeSlot | null>(null);
+  const [selectedDoctorForBooking, setSelectedDoctorForBooking] = useState<Doctor | null>(null);
 
   // Use our custom hook for filtering
   const { filteredDoctors, doctorTypes } = useDoctorFiltering({
@@ -172,18 +177,38 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
           const slotEnd = new Date(slotStart.getTime() + 15 * 60 * 1000); // +15 minutes
 
           const slotId = Date.parse(slotStart.toISOString()) + doctorId; // Unique numeric ID
-          const isBooked = bookedSlots.includes(slotStart.toISOString());
+          const slotTimeString = slotStart.toISOString();
 
-          // Only include available slots
+          // More robust booking check - compare both exact string and parsed time
+          let isBooked = bookedSlots.includes(slotTimeString);
+
+          // If exact string match fails, try comparing parsed times (account for timezone/precision differences)
           if (!isBooked) {
-            slots.push({
-              id: slotId,
-              start_time: slotStart.toISOString(),
-              end_time: slotEnd.toISOString(),
-              available_spots: 1,
-              max_consultations: 1
+            const slotTime = slotStart.getTime();
+            isBooked = bookedSlots.some(bookedSlot => {
+              try {
+                const bookedTime = new Date(bookedSlot).getTime();
+                return Math.abs(slotTime - bookedTime) < 60000; // Within 1 minute tolerance
+              } catch {
+                return false;
+              }
             });
           }
+
+          // Debug: Log first few slots to see what's happening
+          if (slots.length < 5) {
+            console.log(`🔍 Slot debug - Time: ${slotTimeString}, Booked: ${isBooked}, BookedSlots sample:`, bookedSlots.slice(0, 3));
+          }
+
+          // Include ALL slots but mark booked ones
+          slots.push({
+            id: slotId,
+            start_time: slotStart.toISOString(),
+            end_time: slotEnd.toISOString(),
+            available_spots: isBooked ? 0 : 1,
+            max_consultations: 1,
+            is_booked: isBooked
+          });
         }
       }
     }
@@ -277,8 +302,8 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
 
     if (aiRecommendationId && recommendedDoctor) {
       if (isUrgent) {
-        // Create urgent consultation immediately
-        await createUrgentConsultation(doctorId);
+        // For urgent consultations, just proceed to Step 3 (consultation will be created there)
+        onNext();
       }
       // For non-urgent, user needs to select timeslot first
     } else {
@@ -287,53 +312,79 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
     }
   };
 
-  const createUrgentConsultation = async (doctorId: number) => {
+
+  const handleTimeslotSelect = async (timeslot: TimeSlot) => {
+    console.log(`🕐 handleTimeslotSelect called at top level:`, {
+      timeslot: timeslot.start_time,
+      selectedDoctorId,
+      aiRecommendationId,
+      isUrgent,
+      showConfirmModal,
+      selectedTimeslot
+    });
+
+    if (!selectedDoctorId) {
+      console.warn('⚠️ No doctor selected yet');
+      return;
+    }
+
+    if (!aiRecommendationId) {
+      console.warn('⚠️ No AI recommendation ID available');
+      return;
+    }
+
+    // Find the selected doctor
+    const doctor = doctors.find(d => d.id === selectedDoctorId);
+    if (!doctor) {
+      console.warn('⚠️ Doctor not found');
+      return;
+    }
+
+    // Show confirmation modal instead of immediate booking
+    setSelectedTimeslot(timeslot);
+    setSelectedDoctorForBooking(doctor);
+    setShowConfirmModal(true);
+  };
+
+  const confirmTimeslotBooking = async () => {
+    if (!selectedTimeslot || !selectedDoctorForBooking || !selectedDoctorId || !aiRecommendationId) {
+      return;
+    }
+
     try {
       setBookingLoading(true);
-      const { data } = await api.post('/consultations/ai-process/', {
-        ai_recommendation_id: aiRecommendationId,
-        preferred_doctor_id: doctorId,
-      });
+      console.log(`🔄 Timeslot confirmed: ${selectedTimeslot.start_time} for doctor ${selectedDoctorId}`);
 
-      if (data.consultation) {
-        onConsultationBooked?.(data.consultation.id);
-      }
+      // Don't create consultation yet - just confirm the timeslot selection
+      // Remove the selected slot from available slots (temporarily)
+      setDoctorTimeslots(prev => ({
+        ...prev,
+        [selectedDoctorId]: prev[selectedDoctorId]?.filter(slot => slot.id !== selectedTimeslot.id) || []
+      }));
+
+      // Create consultation data for Step 3
+      const consultationData = {
+        scheduled_at: selectedTimeslot.start_time,
+        scheduled_time: selectedTimeslot.start_time,
+        doctor_id: selectedDoctorId,
+        ai_recommendation_id: aiRecommendationId
+      };
+
+      console.log(`🎉 Timeslot confirmed successfully`);
+      setShowConfirmModal(false);
+      onConsultationBooked?.(0, consultationData); // Pass 0 as consultationId since not created yet
     } catch (error) {
-      console.error('Error creating urgent consultation:', error);
-      // Fallback to regular flow
-      onNext();
+      console.error('❌ Error confirming timeslot:', error);
+      alert('Ошибка при подтверждении времени. Попробуйте снова.');
     } finally {
       setBookingLoading(false);
     }
   };
 
-  const handleTimeslotSelect = async (timeslot: TimeSlot) => {
-    if (!selectedDoctorId || !aiRecommendationId) return;
-
-    try {
-      setBookingLoading(true);
-
-      // Book with dynamic timeslot data (no pre-existing timeslot_id)
-      const { data } = await api.post('/consultations/book-dynamic-slot/', {
-        doctor_id: selectedDoctorId,
-        scheduled_time: timeslot.start_time,
-        ai_recommendation_id: aiRecommendationId,
-      });
-
-      if (data.consultation) {
-        // Remove the booked slot from available slots
-        setDoctorTimeslots(prev => ({
-          ...prev,
-          [selectedDoctorId]: prev[selectedDoctorId]?.filter(slot => slot.id !== timeslot.id) || []
-        }));
-
-        onConsultationBooked?.(data.consultation.id);
-      }
-    } catch (error) {
-      console.error('Error booking consultation:', error);
-    } finally {
-      setBookingLoading(false);
-    }
+  const cancelTimeslotBooking = () => {
+    setShowConfirmModal(false);
+    setSelectedTimeslot(null);
+    setSelectedDoctorForBooking(null);
   };
 
   const toggleCalendarView = (doctorId: number) => {
@@ -348,6 +399,22 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
   };
 
   const renderDoctorCard = (doctor: Doctor, isRecommended: boolean, isSelected: boolean) => {
+    const lastUpdate = lastUpdateTime[doctor.id];
+    const lastUpdateDisplay = lastUpdate
+      ? new Date(lastUpdate).toLocaleTimeString('ru-RU', {
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      : null;
+
+    console.log(`🃏 Rendering DoctorCard for doctor ${doctor.id}:`, {
+      isSelected,
+      isUrgent,
+      timeslots: doctorTimeslots[doctor.id]?.length || 0,
+      selectedDate,
+      hasHandleTimeslotSelect: !!handleTimeslotSelect
+    });
+
     return (
       <DoctorCard
         doctor={doctor}
@@ -359,6 +426,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
         selectedDate={selectedDate}
         showFullCalendar={showFullCalendar[doctor.id]}
         doctorTimeslotsByDate={doctorTimeslotsByDate[doctor.id]}
+        lastUpdateTime={lastUpdateDisplay}
         onDateSelect={handleDateSelect}
         onTimeslotSelect={handleTimeslotSelect}
         onToggleCalendar={() => toggleCalendarView(doctor.id)}
@@ -452,6 +520,82 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
         canProceed={!!selectedDoctorId}
         disabled={bookingLoading}
       />
+
+      {/* Timeslot Confirmation Modal */}
+      {showConfirmModal && selectedTimeslot && selectedDoctorForBooking && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
+          >
+            <div className="text-center space-y-4">
+              {/* Header */}
+              <div className="p-3 rounded-full bg-blue-100 w-16 h-16 mx-auto flex items-center justify-center">
+                <div className="text-2xl">📅</div>
+              </div>
+
+              <h3 className="text-xl font-bold text-gray-900">
+                Подтвердите запись
+              </h3>
+
+              {/* Doctor Info */}
+              <div className="bg-gray-50 rounded-lg p-4 text-left">
+                <div className="font-semibold text-gray-900">
+                  {selectedDoctorForBooking.name}
+                </div>
+                <div className="text-sm text-gray-600 mt-1">
+                  {getSpecializationName(selectedDoctorForBooking, language)}
+                </div>
+                <div className="text-sm text-gray-500 mt-2 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  {new Date(selectedTimeslot.start_time).toLocaleDateString('ru-RU', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </div>
+                <div className="text-lg font-bold text-blue-600 mt-1">
+                  {new Date(selectedTimeslot.start_time).toLocaleTimeString('ru-RU', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </div>
+              </div>
+
+              <p className="text-gray-600 text-sm">
+                Вы записываетесь на консультацию в указанное время. Подтвердите, если всё верно.
+              </p>
+
+              {/* Buttons */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={cancelTimeslotBooking}
+                  disabled={bookingLoading}
+                  className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={confirmTimeslotBooking}
+                  disabled={bookingLoading}
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg font-medium hover:from-blue-600 hover:to-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {bookingLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Записываем...
+                    </>
+                  ) : (
+                    'Подтвердить запись'
+                  )}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </motion.div>
   );
 };

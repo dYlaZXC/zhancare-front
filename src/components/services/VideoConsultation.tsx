@@ -51,6 +51,19 @@ const VideoConsultation: React.FC = () => {
   const [recommendedDoctor, setRecommendedDoctor] = useState<RecommendedDoctor | undefined>(undefined);
   const [aiErrorData, setAiErrorData] = useState<AIErrorData | undefined>();
   const [fallbackUsed, setFallbackUsed] = useState(false);
+  const [aiRecommendationId, setAiRecommendationId] = useState<number | undefined>(undefined);
+  const [scheduledConsultation, setScheduledConsultation] = useState<{
+    id: number;
+    scheduled_time: string;
+    doctor_name: string;
+    doctor_type: string;
+    booking_type: 'urgent' | 'scheduled';
+  } | null>(null);
+  const [pendingConsultationData, setPendingConsultationData] = useState<{
+    scheduled_time: string;
+    doctor_id: number;
+    ai_recommendation_id: number;
+  } | null>(null);
 
   const [loadingAI, setLoadingAI] = useState(false);
   const [loadingCall, setLoadingCall] = useState(false);
@@ -170,6 +183,12 @@ const VideoConsultation: React.FC = () => {
           urgency,
         });
 
+        // Store the AI recommendation ID for timeslot booking
+        if (res.data.ai_recommendation_id) {
+          setAiRecommendationId(res.data.ai_recommendation_id);
+          console.log("AI recommendation ID stored:", res.data.ai_recommendation_id);
+        }
+
         setSelectedDoctorId(doctor.id);
         toast.success(`🤖 AI рекомендовал врача: ${doctor.name}`);
       } else if (!res.data.success && res.data.ai_data) {
@@ -195,6 +214,12 @@ const VideoConsultation: React.FC = () => {
           setAiErrorData(res.data.ai_data);
           setFallbackUsed(true);
 
+          // Store AI recommendation ID for fallback case too
+          if (res.data.ai_recommendation_id) {
+            setAiRecommendationId(res.data.ai_recommendation_id);
+            console.log("AI recommendation ID stored (fallback):", res.data.ai_recommendation_id);
+          }
+
           toast.info("❌ Специалист не найден. Назначен терапевт.");
         } else {
           setAiErrorData(res.data.ai_data);
@@ -210,6 +235,51 @@ const VideoConsultation: React.FC = () => {
     }
   };
 
+  const handleScheduleConsultation = async () => {
+    if (!pendingConsultationData || !token) {
+      toast.error("⚠️ Данные для планирования консультации отсутствуют.");
+      return;
+    }
+
+    setLoadingCall(true);
+
+    try {
+      console.log("🔄 Scheduling consultation...");
+      const createRes = await api.post(
+        "/consultations/book-dynamic-slot/",
+        {
+          doctor_id: pendingConsultationData.doctor_id,
+          scheduled_time: pendingConsultationData.scheduled_time,
+          ai_recommendation_id: pendingConsultationData.ai_recommendation_id
+        },
+        { headers: { Authorization: `Token ${token}` } }
+      );
+
+      if (createRes.data?.consultation) {
+        console.log("✅ Consultation scheduled successfully:", createRes.data.consultation.id);
+
+        // Show success message
+        toast.success("✅ Консультация успешно запланирована! Вы можете подключиться к ней в назначенное время.");
+
+        // Reset state
+        setScheduledConsultation(null);
+        setPendingConsultationData(null);
+        setSelectedDoctorId(null);
+        setRecommendedDoctor(undefined);
+        setSymptoms("");
+        setAiRecommendationId(undefined);
+
+        // Return to Step 1
+        setStep(1);
+      }
+    } catch (error) {
+      console.error("❌ Error scheduling consultation:", error);
+      toast.error("⚠️ Не удалось запланировать консультацию.");
+    } finally {
+      setLoadingCall(false);
+    }
+  };
+
   const handleStartCall = async () => {
     if (!selectedDoctorId || !token) {
       toast.error("⚠️ Пожалуйста, выберите врача.");
@@ -221,6 +291,9 @@ const VideoConsultation: React.FC = () => {
     setWaiting(true);
 
     try {
+      console.log("🔄 Starting consultation...");
+
+      // Create and start the consultation (all consultations created here in Step 3)
       const res = await api.post(
         "/consultations/start/",
         { doctor_id: selectedDoctorId, symptoms },
@@ -233,7 +306,8 @@ const VideoConsultation: React.FC = () => {
       } else {
         throw new Error("Invalid meeting ID response");
       }
-    } catch {
+    } catch (error) {
+      console.error("❌ Error starting consultation:", error);
       toast.error("⚠️ Не удалось начать консультацию.");
       setWaiting(false);
     } finally {
@@ -290,6 +364,48 @@ const VideoConsultation: React.FC = () => {
                   recommendedDoctor={recommendedDoctor}
                   aiErrorData={aiErrorData}
                   fallbackUsed={fallbackUsed}
+                  aiRecommendationId={aiRecommendationId}
+                  onConsultationBooked={(consultationId, consultationData) => {
+                    console.log("🎉 Consultation booked:", consultationId, consultationData);
+
+                    // Find the selected doctor for the consultation details
+                    const selectedDoctor = doctors.find(d => d.id === selectedDoctorId);
+
+                    if (consultationId === 0 && consultationData) {
+                      // Step 2: Timeslot confirmed, not yet created
+                      setPendingConsultationData({
+                        scheduled_time: consultationData.scheduled_at || consultationData.scheduled_time,
+                        doctor_id: consultationData.doctor_id,
+                        ai_recommendation_id: consultationData.ai_recommendation_id
+                      });
+
+                      if (selectedDoctor) {
+                        setScheduledConsultation({
+                          id: 0, // Not created yet
+                          scheduled_time: consultationData.scheduled_at || consultationData.scheduled_time,
+                          doctor_name: selectedDoctor.name,
+                          doctor_type: selectedDoctor.doctor_type || selectedDoctor.specialization?.name_ru || 'Врач',
+                          booking_type: recommendedDoctor?.urgency === 'urgent' ? 'urgent' : 'scheduled'
+                        });
+                      }
+
+                      toast.success("✅ Время для консультации выбрано!");
+                    } else if (consultationId > 0) {
+                      // Step 3: Actual consultation created
+                      if (consultationData && selectedDoctor) {
+                        setScheduledConsultation({
+                          id: consultationId,
+                          scheduled_time: consultationData.scheduled_at || consultationData.scheduled_time,
+                          doctor_name: selectedDoctor.name,
+                          doctor_type: selectedDoctor.doctor_type || selectedDoctor.specialization?.name_ru || 'Врач',
+                          booking_type: recommendedDoctor?.urgency === 'urgent' ? 'urgent' : 'scheduled'
+                        });
+                      }
+                      toast.success("✅ Консультация успешно создана!");
+                    }
+
+                    setStep(3);
+                  }}
                 />
               )}
               {step === 3 && (
@@ -299,10 +415,13 @@ const VideoConsultation: React.FC = () => {
                   selectedDoctorId={selectedDoctorId}
                   onBack={() => setStep(2)}
                   onCall={handleStartCall}
+                  onScheduleConsultation={handleScheduleConsultation}
                   onCancel={cancelConsultation}
                   loading={loadingCall}
                   waiting={waiting}
                   recommendedDoctor={recommendedDoctor}
+                  scheduledConsultation={scheduledConsultation}
+                  pendingConsultationData={pendingConsultationData}
                 />
               )}
             </div>

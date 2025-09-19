@@ -338,6 +338,7 @@ interface Step3Props {
   selectedDoctorId: number | null;
   onBack: () => void;
   onCall: () => void;
+  onScheduleConsultation?: () => void;
   onCancel: () => void;
   loading: boolean;
   waiting: boolean;
@@ -350,6 +351,18 @@ interface Step3Props {
     urgency: string;
     confidence?: number;
   };
+  scheduledConsultation?: {
+    id: number;
+    scheduled_time: string;
+    doctor_name: string;
+    doctor_type: string;
+    booking_type: 'urgent' | 'scheduled';
+  } | null;
+  pendingConsultationData?: {
+    scheduled_time: string;
+    doctor_id: number;
+    ai_recommendation_id: number;
+  } | null;
 }
 
 const steps = [
@@ -382,11 +395,14 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
   selectedDoctorId,
   onBack,
   onCall,
+  onScheduleConsultation,
   onCancel,
   loading,
   waiting,
   activeStep = 3,
   recommendedDoctor,
+  scheduledConsultation,
+  pendingConsultationData,
 }) => {
   const [waitingTime, setWaitingTime] = useState(0);
   const [cameraPermission, setCameraPermission] = useState<'granted' | 'denied' | 'checking'>('checking');
@@ -663,6 +679,56 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
                         </div>
                       </div>
                     )}
+
+                    {/* Scheduled Consultation Information */}
+                    {step.key === "doctor" && scheduledConsultation && (
+                      <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center flex-shrink-0">
+                            <Calendar className="w-5 h-5 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900 mb-2">
+                              {scheduledConsultation.booking_type === 'urgent' ? 'Экстренная консультация' : 'Запланированная консультация'}
+                            </h4>
+                            <div className="space-y-2 text-sm">
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-green-600" />
+                                <span className="text-gray-700">
+                                  {scheduledConsultation.booking_type === 'urgent'
+                                    ? 'Консультация начнется немедленно'
+                                    : `Запланировано на ${new Date(scheduledConsultation.scheduled_time).toLocaleDateString('ru-RU', {
+                                        weekday: 'long',
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric'
+                                      })} в ${new Date(scheduledConsultation.scheduled_time).toLocaleTimeString('ru-RU', {
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      })}`
+                                  }
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <User className="w-4 h-4 text-green-600" />
+                                <span className="text-gray-700">
+                                  Врач: {scheduledConsultation.doctor_name} ({scheduledConsultation.doctor_type})
+                                </span>
+                              </div>
+                              {scheduledConsultation.booking_type === 'scheduled' && (
+                                <div className="flex items-center gap-2 mt-3 p-2 bg-blue-50 rounded-lg">
+                                  <Info className="w-4 h-4 text-blue-600" />
+                                  <span className="text-blue-700 text-xs">
+                                    Вы можете начать консультацию в назначенное время. Врач получит уведомление.
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {step.key === "connect" && (
                       <AILiveChecker 
                         onComplete={() => {}}
@@ -694,7 +760,7 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:gap-6 text-xs sm:text-sm md:text-base text-blue-800">
               <div className="flex items-start gap-2 sm:gap-3">
                 <Clock className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 text-blue-600" />
-                <span className="leading-relaxed">Средняя продолжительность: 15-30 минут</span>
+                <span className="leading-relaxed">Средняя продолжительность: 10-15 минут</span>
               </div>
               <div className="flex items-start gap-2 sm:gap-3">
                 <Info className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 text-blue-600" />
@@ -732,10 +798,16 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
 
         <motion.button
           onClick={() => {
-            if (isUrgent) {
+            if (isUrgent || (scheduledConsultation && scheduledConsultation.booking_type === 'urgent')) {
+              // Urgent consultations: start video call immediately
               onCall();
             } else {
-              setShowConfirmDialog(true);
+              // Non-urgent consultations: schedule and return to Step 1
+              if (onScheduleConsultation) {
+                onScheduleConsultation();
+              } else {
+                setShowConfirmDialog(true);
+              }
             }
           }}
           disabled={loading || !selectedDoctorId || waiting}
@@ -762,7 +834,14 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
           ) : (
             <>
               <Video className="w-5 h-5 sm:w-6 sm:h-6" />
-              <span>{isUrgent ? 'Начать консультацию' : 'Назначить консультацию'}</span>
+              <span>
+                {scheduledConsultation
+                  ? (scheduledConsultation.booking_type === 'urgent'
+                      ? 'Начать экстренную консультацию'
+                      : 'Назначить консультацию')
+                  : (isUrgent ? 'Начать консультацию' : 'Назначить консультацию')
+                }
+              </span>
             </>
           )}
         </motion.button>

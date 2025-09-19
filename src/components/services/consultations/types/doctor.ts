@@ -22,6 +22,7 @@ export interface TimeSlot {
   end_time: string;
   available_spots: number;
   max_consultations: number;
+  is_booked?: boolean; // Add field to track if slot is booked
 }
 
 export interface RecommendedDoctor {

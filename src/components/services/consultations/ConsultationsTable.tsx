@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { 
   Calendar,
   Clock,
@@ -36,7 +36,7 @@ interface ConsultationsTableProps {
   onStatusChange?: (meetingId: string, newStatus: string) => void;
 }
 
-type FilterStatus = "all" | "pending" | "ongoing" | "completed" | "cancelled" | "missed";
+type FilterStatus = "all" | "pending" | "ongoing" | "completed" | "cancelled" | "missed" | "planned" | "scheduled";
 type FilterType = "all" | "video" | "chat" | "phone";
 
 const ConsultationsTable: React.FC<ConsultationsTableProps> = ({ 
@@ -55,10 +55,62 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [showStatusDropdown, setShowStatusDropdown] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const itemsPerPage = 10;
 
   // Check if user is doctor
   const isDoctor = user?.role === 'doctor';
+
+  // Real-time updates for scheduled consultations
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Trigger re-render every minute to update countdown timers
+      setRefreshTrigger(prev => prev + 1);
+    }, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Helper function to check if consultation can be joined (10 minutes before start time)
+  // Uses refreshTrigger to ensure real-time updates
+  const canJoinConsultation = (consultation: Consultation): { canJoin: boolean; timeUntil: string; isReady: boolean } => {
+    // Force re-evaluation when refreshTrigger changes for real-time updates
+    refreshTrigger;
+    if (!consultation.scheduled_at) {
+      return { canJoin: false, timeUntil: '', isReady: false };
+    }
+
+    const now = new Date();
+    const scheduledTime = new Date(consultation.scheduled_at);
+    const timeDiffMs = scheduledTime.getTime() - now.getTime();
+    const timeDiffMinutes = Math.floor(timeDiffMs / (1000 * 60));
+
+    // Can join 10 minutes before scheduled time
+    const canJoin = timeDiffMinutes <= 10 && timeDiffMinutes >= -30; // Allow joining up to 30 minutes after start
+    const isReady = timeDiffMinutes <= 0; // Consultation time has arrived
+
+    let timeUntil = '';
+    if (timeDiffMinutes > 0) {
+      const hours = Math.floor(timeDiffMinutes / 60);
+      const minutes = timeDiffMinutes % 60;
+      if (hours > 0) {
+        timeUntil = `${hours}ч ${minutes}м`;
+      } else {
+        timeUntil = `${minutes}м`;
+      }
+    } else if (timeDiffMinutes < 0) {
+      const minutesLate = Math.abs(timeDiffMinutes);
+      if (minutesLate < 60) {
+        timeUntil = `опоздание ${minutesLate}м`;
+      } else {
+        timeUntil = 'просрочено';
+      }
+    } else {
+      timeUntil = 'сейчас';
+    }
+
+    return { canJoin, timeUntil, isReady };
+  };
 
   // Apply filters
   const filteredConsultations = useMemo(() => {
@@ -126,6 +178,9 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
         return <XCircle className="w-4 h-4 text-red-500" />;
       case "missed":
         return <XCircle className="w-4 h-4 text-orange-500" />;
+      case "planned":
+      case "scheduled":
+        return <Calendar className="w-4 h-4 text-purple-500" />;
       default:
         return <Clock className="w-4 h-4 text-gray-500" />;
     }
@@ -143,6 +198,9 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
         return "bg-red-50 text-red-700 border-red-200";
       case "missed":
         return "bg-orange-50 text-orange-700 border-orange-200";
+      case "planned":
+      case "scheduled":
+        return "bg-purple-50 text-purple-700 border-purple-200";
       default:
         return "bg-gray-50 text-gray-700 border-gray-200";
     }
@@ -160,6 +218,10 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
         return "Отменена";
       case "missed":
         return "Пропущена";
+      case "planned":
+        return "Запланированна";
+      case "scheduled":
+        return "Запланированна";
       default:
         return "Неизвестно";
     }
@@ -170,10 +232,13 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
     { value: 'ongoing', label: 'В процессе', color: 'text-yellow-700' },
     { value: 'completed', label: 'Завершена', color: 'text-green-700' },
     { value: 'cancelled', label: 'Отменена', color: 'text-red-700' },
-    { value: 'missed', label: 'Пропущена', color: 'text-orange-700' }
+    { value: 'missed', label: 'Пропущена', color: 'text-orange-700' },
+    { value: 'planned', label: 'Запланированна', color: 'text-purple-700' },
+    { value: 'scheduled', label: 'Запланированна', color: 'text-purple-700' }
   ];
 
   const handleStatusChange = (meetingId: string, newStatus: string) => {
+    console.log(`🔄 Status change requested: ${meetingId} -> ${newStatus}, onStatusChange available: ${!!onStatusChange}`);
     if (onStatusChange) {
       onStatusChange(meetingId, newStatus);
     }
@@ -182,11 +247,13 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
 
   const renderStatusDropdown = (consultation: Consultation, isCompact = false) => {
     const isOpen = showStatusDropdown === consultation.meeting_id;
-    
-    const buttonClasses = isCompact 
+
+    const buttonClasses = isCompact
       ? "inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold border-2 shadow-sm"
       : "inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border-2 shadow-sm";
-    
+
+    console.log(`🔍 Status dropdown - isDoctor: ${isDoctor}, user role: ${user?.role}, consultation: ${consultation.meeting_id}`);
+
     if (!isDoctor) {
       return (
         <span className={`${buttonClasses} ${getStatusColor(consultation.status)}`}>
@@ -292,12 +359,13 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
     const isPending = consultation.status === 'pending';
     const canAccept = isPending && onAccept;
     const canReject = isPending && onReject;
+    const joinInfo = canJoinConsultation(consultation);
 
     return (
       <div className="flex items-center justify-center gap-2">
         {/* Accept Call Button */}
         {canAccept && (
-          <button 
+          <button
             onClick={() => onAccept(consultation.meeting_id)}
             className="p-3 text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 rounded-xl transition-all duration-200 border border-green-200 hover:border-green-300 shadow-sm group-hover:shadow-md"
             title="Принять вызов"
@@ -308,7 +376,7 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
 
         {/* Reject Call Button */}
         {canReject && (
-          <button 
+          <button
             onClick={() => onReject(consultation.meeting_id)}
             className="p-3 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-xl transition-all duration-200 border border-red-200 hover:border-red-300 shadow-sm group-hover:shadow-md"
             title="Отклонить вызов"
@@ -328,6 +396,32 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
           </button>
         )}
 
+        {/* Connect Button for Scheduled Consultations (10 minutes before) */}
+        {(consultation.status === 'scheduled' || consultation.status === 'planned') && consultation.scheduled_at && (
+          joinInfo.canJoin ? (
+            <button
+              onClick={() => window.open(`/video-call?meetingId=${consultation.meeting_id}`)}
+              className={`p-3 text-white rounded-xl transition-all duration-200 shadow-sm group-hover:shadow-md ${
+                joinInfo.isReady
+                  ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 border border-green-500'
+                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 border border-blue-500'
+              }`}
+              title={joinInfo.isReady ? "Подключиться к консультации" : `Подключиться к консультации (через ${joinInfo.timeUntil})`}
+            >
+              <Video className="w-5 h-5" />
+            </button>
+          ) : (
+            <div className="flex flex-col items-center gap-1 p-2">
+              <div className="p-2 text-gray-400 bg-gray-100 rounded-lg border border-gray-200">
+                <Clock className="w-4 h-4" />
+              </div>
+              <span className="text-xs text-gray-500 font-medium">
+                {joinInfo.timeUntil}
+              </span>
+            </div>
+          )
+        )}
+
         {/* View Details Button */}
         <button className="p-3 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all duration-200 border border-blue-200 hover:border-blue-300 shadow-sm group-hover:shadow-md">
           <Eye className="w-5 h-5" />
@@ -345,12 +439,13 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
     const isPending = consultation.status === 'pending';
     const canAccept = isPending && onAccept;
     const canReject = isPending && onReject;
+    const joinInfo = canJoinConsultation(consultation);
 
     return (
       <div className="flex items-center justify-center gap-2">
         {/* Accept Call Button */}
         {canAccept && (
-          <button 
+          <button
             onClick={() => onAccept(consultation.meeting_id)}
             className="p-2.5 text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-all duration-200 border border-green-200 hover:border-green-300 shadow-sm"
             title="Принять вызов"
@@ -361,7 +456,7 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
 
         {/* Reject Call Button */}
         {canReject && (
-          <button 
+          <button
             onClick={() => onReject(consultation.meeting_id)}
             className="p-2.5 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-all duration-200 border border-red-200 hover:border-red-300 shadow-sm"
             title="Отклонить вызов"
@@ -381,6 +476,32 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
           </button>
         )}
 
+        {/* Connect Button for Scheduled Consultations (10 minutes before) */}
+        {(consultation.status === 'scheduled' || consultation.status === 'planned') && consultation.scheduled_at && (
+          joinInfo.canJoin ? (
+            <button
+              onClick={() => window.open(`/video-call?meetingId=${consultation.meeting_id}`)}
+              className={`p-2.5 text-white rounded-lg transition-all duration-200 shadow-sm ${
+                joinInfo.isReady
+                  ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 border border-green-500'
+                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 border border-blue-500'
+              }`}
+              title={joinInfo.isReady ? "Подключиться к консультации" : `Подключиться к консультации (через ${joinInfo.timeUntil})`}
+            >
+              <Video className="w-4 h-4" />
+            </button>
+          ) : (
+            <div className="flex flex-col items-center gap-1 p-1.5">
+              <div className="p-1.5 text-gray-400 bg-gray-100 rounded-md border border-gray-200">
+                <Clock className="w-3 h-3" />
+              </div>
+              <span className="text-xs text-gray-500 font-medium">
+                {joinInfo.timeUntil}
+              </span>
+            </div>
+          )
+        )}
+
         {/* View Details Button */}
         <button className="p-2.5 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all duration-200 border border-blue-200 hover:border-blue-300 shadow-sm">
           <Eye className="w-4 h-4" />
@@ -398,12 +519,13 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
     const isPending = consultation.status === 'pending';
     const canAccept = isPending && onAccept;
     const canReject = isPending && onReject;
+    const joinInfo = canJoinConsultation(consultation);
 
     return (
       <div className="flex items-center gap-2 mt-3">
         {/* Accept Call Button - Full width when pending */}
         {canAccept && (
-          <button 
+          <button
             onClick={() => onAccept(consultation.meeting_id)}
             className="flex-1 flex items-center justify-center gap-2 p-2.5 text-green-600 bg-green-50 rounded-lg transition-colors border border-green-200"
           >
@@ -414,7 +536,7 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
 
         {/* Reject Call Button - Full width when pending */}
         {canReject && (
-          <button 
+          <button
             onClick={() => onReject(consultation.meeting_id)}
             className="flex-1 flex items-center justify-center gap-2 p-2.5 text-red-600 bg-red-50 rounded-lg transition-colors border border-red-200"
           >
@@ -432,6 +554,32 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
             <PhoneCall className="w-4 h-4" />
             <span className="text-sm font-medium">Подключиться</span>
           </button>
+        )}
+
+        {/* Connect Button for Scheduled Consultations (10 minutes before) */}
+        {(consultation.status === 'scheduled' || consultation.status === 'planned') && consultation.scheduled_at && (
+          joinInfo.canJoin ? (
+            <button
+              onClick={() => window.open(`/video-call?meetingId=${consultation.meeting_id}`)}
+              className={`flex-1 flex items-center justify-center gap-2 p-2.5 text-white rounded-lg transition-colors ${
+                joinInfo.isReady
+                  ? 'bg-gradient-to-r from-green-600 to-emerald-600 border border-green-500'
+                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 border border-blue-500'
+              }`}
+            >
+              <Video className="w-4 h-4" />
+              <span className="text-sm font-medium">
+                {joinInfo.isReady ? 'Подключиться' : 'Подключиться'}
+              </span>
+            </button>
+          ) : (
+            <div className="flex-1 flex items-center justify-center gap-2 p-2.5 bg-gray-100 rounded-lg border border-gray-200">
+              <Clock className="w-4 h-4 text-gray-400" />
+              <span className="text-sm font-medium text-gray-500">
+                {joinInfo.timeUntil}
+              </span>
+            </div>
+          )
         )}
 
         {/* View Details Button - Always present when no primary actions */}
@@ -592,6 +740,8 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
                   <option value="completed">Завершена</option>
                   <option value="cancelled">Отменена</option>
                   <option value="missed">Пропущена</option>
+                  <option value="planned">Запланированна</option>
+                  <option value="scheduled">Запланированна</option>
                 </select>
               </div>
 

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { 
   Stethoscope, 
   Clock, 
@@ -27,23 +27,18 @@ import {
 import { api } from "@/utils/api";
 import { useAuth } from "@/context/AuthContext";
 import { useConsultationManager } from "./consultations/useConsultationManager";
-import { ConsultationPopup } from "./consultations/ConsultationPopup";
 import ConsultationsTable from "./consultations/ConsultationsTable";
 
 const DoctorConsultations: React.FC = () => {
   const { user } = useAuth();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'ongoing' | 'completed'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'ongoing' | 'completed' | 'planned'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showSettings, setShowSettings] = useState(false);
 
   const {
     consultations,
-    newConsultation,
-    setNewConsultation,
-    dismissedIds,
     fetchConsultations,
-    stopSound,
   } = useConsultationManager();
 
   // Calculate statistics
@@ -53,8 +48,9 @@ const DoctorConsultations: React.FC = () => {
     const ongoing = consultations.filter(c => c.status === 'ongoing').length;
     const completed = consultations.filter(c => c.status === 'completed').length;
     const cancelled = consultations.filter(c => c.status === 'cancelled').length;
+    const planned = consultations.filter(c => c.status === 'planned' || c.status === 'scheduled').length;
 
-    return { total, pending, ongoing, completed, cancelled };
+    return { total, pending, ongoing, completed, cancelled, planned };
   }, [consultations]);
 
   // Filter consultations based on active tab and search
@@ -62,7 +58,11 @@ const DoctorConsultations: React.FC = () => {
     let filtered = consultations;
     
     if (activeTab !== 'all') {
-      filtered = filtered.filter(c => c.status === activeTab);
+      if (activeTab === 'planned') {
+        filtered = filtered.filter(c => c.status === 'planned' || c.status === 'scheduled');
+      } else {
+        filtered = filtered.filter(c => c.status === activeTab);
+      }
     }
     
     if (searchTerm) {
@@ -76,8 +76,7 @@ const DoctorConsultations: React.FC = () => {
     return filtered;
   }, [consultations, activeTab, searchTerm]);
 
-  const acceptConsultation = async (meeting_id: string) => {
-    stopSound();
+  const acceptConsultationInTable = async (meeting_id: string) => {
     try {
       const { data } = await api.post<{ meeting_id: string }>(`/consultations/${meeting_id}/accept/`, {});
       toast.success("Консультация принята");
@@ -86,28 +85,17 @@ const DoctorConsultations: React.FC = () => {
     } catch {
       toast.error("Ошибка при принятии консультации");
     }
-    setNewConsultation(null);
     fetchConsultations();
   };
 
-  const rejectConsultation = async (meeting_id: string) => {
-    stopSound();
+  const rejectConsultationInTable = async (meeting_id: string) => {
     try {
       await api.post(`/consultations/${meeting_id}/reject/`, {});
       toast.info("Консультация отклонена");
     } catch {
       toast.error("Ошибка при отклонении консультации");
     }
-    setNewConsultation(null);
     fetchConsultations();
-  };
-
-  const dismissPopup = () => {
-    if (newConsultation) {
-      dismissedIds.current.add(newConsultation.id);
-    }
-    stopSound();
-    setNewConsultation(null);
   };
 
   const changeConsultationStatus = async (meeting_id: string, newStatus: string) => {
@@ -173,7 +161,7 @@ const DoctorConsultations: React.FC = () => {
           </div>
 
           {/* Statistics Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mt-8">
+          <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mt-8">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -248,6 +236,21 @@ const DoctorConsultations: React.FC = () => {
                 <XCircle className="w-8 h-8 text-gray-600" />
               </div>
             </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.6 }}
+              className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-2xl p-4 border border-purple-200/50"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-purple-700">Запланировано</p>
+                  <p className="text-2xl font-bold text-purple-900">{stats.planned}</p>
+                </div>
+                <Calendar className="w-8 h-8 text-purple-600" />
+              </div>
+            </motion.div>
           </div>
         </motion.div>
 
@@ -266,6 +269,7 @@ const DoctorConsultations: React.FC = () => {
                 { key: 'pending', label: 'Ожидают', count: stats.pending },
                 { key: 'ongoing', label: 'Активные', count: stats.ongoing },
                 { key: 'completed', label: 'Завершено', count: stats.completed },
+                { key: 'planned', label: 'Запланировано', count: stats.planned },
               ].map((tab) => (
                 <motion.button
                   key={tab.key}
@@ -304,24 +308,7 @@ const DoctorConsultations: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Consultation Popup */}
-        <AnimatePresence>
-          {newConsultation && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-            >
-              <ConsultationPopup
-                consultation={newConsultation}
-                onAccept={() => acceptConsultation(newConsultation.meeting_id)}
-                onReject={() => rejectConsultation(newConsultation.meeting_id)}
-                onDismiss={dismissPopup}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Global consultation popup will appear automatically from ConsultationProvider */}
 
         {/* Main Content */}
         <motion.div
@@ -342,9 +329,10 @@ const DoctorConsultations: React.FC = () => {
           </div>
 
           <ConsultationsTable
+            consultations={filteredConsultations}
             showFilters={false}
-            onAccept={acceptConsultation}
-            onReject={rejectConsultation}
+            onAccept={acceptConsultationInTable}
+            onReject={rejectConsultationInTable}
             onStatusChange={changeConsultationStatus}
           />
         </motion.div>

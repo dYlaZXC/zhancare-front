@@ -5,7 +5,9 @@ const statusTranslations: Record<Consultation["status"], string> = {
   ongoing: "🟢 В процессе",
   completed: "✅ Завершено",
   cancelled: "❌ Отменено",
-  missed: "🔕 Пропущено", // 🆕 добавлено для соответствия типу
+  missed: "🔕 Пропущено",
+  scheduled: "📅 Запланировано",
+  planned: "📋 Запланированна",
 };
 
 

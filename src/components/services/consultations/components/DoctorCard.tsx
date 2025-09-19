@@ -37,6 +37,7 @@ interface DoctorCardProps {
   selectedDate?: string;
   showFullCalendar?: boolean;
   doctorTimeslotsByDate?: Record<string, TimeSlot[]>;
+  lastUpdateTime?: string | null;
   onDateSelect?: (date: string) => void;
   onTimeslotSelect?: (timeslot: TimeSlot) => void;
   onToggleCalendar?: () => void;
@@ -53,6 +54,7 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
   selectedDate,
   showFullCalendar = false,
   doctorTimeslotsByDate = {},
+  lastUpdateTime,
   onDateSelect,
   onTimeslotSelect,
   onToggleCalendar,
@@ -307,15 +309,51 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
                             slotsForDate.map((timeslot) => (
                               <button
                                 key={timeslot.id}
+                                disabled={timeslot.is_booked || timeslot.available_spots === 0}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  if (isSelected) {
+
+                                  // Prevent interaction with booked slots
+                                  if (timeslot.is_booked || timeslot.available_spots === 0) {
+                                    console.log(`🚫 Booked slot clicked - ignoring: ${timeslot.start_time}`);
+                                    return;
+                                  }
+
+                                  console.log(`🕐 Timeslot clicked: ${timeslot.start_time}`, {
+                                    isSelected,
+                                    isUrgent,
+                                    hasOnTimeslotSelect: !!onTimeslotSelect,
+                                    hasOnClick: !!onClick
+                                  });
+
+                                  if (!isUrgent) {
+                                    console.log(`🔄 Non-urgent consultation - processing timeslot selection`);
+
+                                    // For non-urgent consultations, allow timeslot selection
+                                    // First select the doctor if not already selected
+                                    if (!isSelected) {
+                                      console.log(`👨‍⚕️ Selecting doctor first`);
+                                      onClick?.(); // Select the doctor first
+                                    }
+
+                                    // Then select the timeslot
+                                    console.log(`⏰ Calling onTimeslotSelect with:`, timeslot);
                                     onTimeslotSelect?.(timeslot);
+                                  } else {
+                                    console.log(`🚨 Urgent consultation - timeslot selection skipped`);
                                   }
                                 }}
-                                className="px-2 py-1.5 bg-white border border-indigo-200 text-indigo-600 rounded-lg text-xs font-medium hover:bg-indigo-50 hover:border-indigo-300 transition-colors"
+                                className={clsx(
+                                  "px-2 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                                  timeslot.is_booked || timeslot.available_spots === 0
+                                    ? "bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed"
+                                    : "bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50 hover:border-indigo-300"
+                                )}
                               >
                                 {formatTime(timeslot.start_time)}
+                                {(timeslot.is_booked || timeslot.available_spots === 0) && (
+                                  <div className="text-[10px] mt-0.5 text-gray-400">Занято</div>
+                                )}
                               </button>
                             ))
                           ) : (
@@ -407,12 +445,13 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
                     <>
                       <div className="grid grid-cols-2 gap-2 md:gap-3">
                         {timeslots.length > 0 ? (
-                          timeslots.slice(0, 4).map((timeslot, index) => (
+                          // Show only available slots in quick view
+                          timeslots.filter(slot => !slot.is_booked && slot.available_spots > 0).slice(0, 4).map((timeslot, index) => (
                             <div
                               key={timeslot.id}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (isSelected) {
+                                if (isSelected && !timeslot.is_booked && timeslot.available_spots > 0) {
                                   onTimeslotSelect?.(timeslot);
                                 }
                               }}

@@ -5,6 +5,7 @@ import { twMerge } from "tailwind-merge";
 import "./globals.css";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { AuthProvider } from "@/context/AuthContext";
+import { ConsultationProvider } from "@/context/ConsultationContext";
 import AuthPopup from "@/components/AuthPopup";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -67,9 +68,11 @@ export default function RootLayout({
       <body className={twMerge(dmSans.className, "antialiased bg-[#F8FAFF]")}>
         <AuthProvider>
           <LanguageProvider>
-            <ClientCSRFLoader /> {/* ✅ Set CSRF cookie once on load */}
-            <main>{children}</main>
-            <AuthPopup />
+            <ConsultationProvider>
+              <ClientCSRFLoader /> {/* ✅ Set CSRF cookie once on load */}
+              <main>{children}</main>
+              <AuthPopup />
+            </ConsultationProvider>
           </LanguageProvider>
         </AuthProvider>
         <ToastContainer position="top-right" autoClose={3000} />

@@ -20,24 +20,36 @@ export const useConsultationManager = () => {
       // Different endpoints based on user role
       const baseUrl = user?.role === 'patient'
         ? '/consultations/my-consultations/'
-        : '/consultations/';
+        : '/consultations/doctor-consultations/';
 
       const url = status ? `${baseUrl}?status=${status}` : baseUrl;
+      console.log(`🔄 Fetching consultations from: ${url}`);
       const { data } = await api.get<Consultation[] | any>(url);
 
       // Handle different response formats
+      let consultationsArray: Consultation[] = [];
       if (Array.isArray(data)) {
-        setConsultations(data);
+        consultationsArray = data;
       } else if (data && Array.isArray((data as any).results)) {
         // Handle paginated response
-        setConsultations((data as any).results);
+        consultationsArray = (data as any).results;
       } else if (data && Array.isArray((data as any).consultations)) {
         // Handle wrapped response
-        setConsultations((data as any).consultations);
+        consultationsArray = (data as any).consultations;
       } else {
         console.warn("Unexpected API response format:", data);
-        setConsultations([]);
+        consultationsArray = [];
       }
+
+      // Sort by created_at descending (most recent first) to ensure latest consultations appear first
+      const sortedConsultations = consultationsArray.sort((a, b) => {
+        const dateA = new Date(a.created_at);
+        const dateB = new Date(b.created_at);
+        return dateB.getTime() - dateA.getTime();
+      });
+
+      console.log(`✅ Fetched ${sortedConsultations.length} consultations`);
+      setConsultations(sortedConsultations);
     } catch (error) {
       console.error("Failed to fetch consultations:", error);
       setConsultations([]);
@@ -59,50 +71,17 @@ export const useConsultationManager = () => {
     }
   }, []);
 
-  const fetchNewConsultations = useCallback(async () => {
-    try {
-      // Use same role-based endpoint logic
-      const baseUrl = user?.role === 'patient'
-        ? '/consultations/my-consultations/'
-        : '/consultations/';
-
-      const { data } = await api.get<Consultation[] | any>(baseUrl);
-
-      // Handle different response formats and extract array
-      let consultationsArray: Consultation[] = [];
-      if (Array.isArray(data)) {
-        consultationsArray = data;
-      } else if (data && Array.isArray((data as any).results)) {
-        consultationsArray = (data as any).results;
-      } else if (data && Array.isArray((data as any).consultations)) {
-        consultationsArray = (data as any).consultations;
-      }
-
-      const pending = consultationsArray.find(
-        (c) =>
-          c.status === "pending" &&
-          !seenIds.current.has(c.id) &&
-          !dismissedIds.current.has(c.id)
-      );
-
-      if (pending && !newConsultation) {
-        setNewConsultation(pending);
-        seenIds.current.add(pending.id);
-        // Only play sound for doctors
-        if (isDoctor) {
-          playSound();
-        }
-      }
-    } catch (error) {
-      console.error("Failed to fetch new consultations:", error);
-    }
-  }, [newConsultation, playSound, isDoctor, user?.role]);
+  // Note: fetchNewConsultations removed - now handled via WebSocket in ConsultationContext
 
   useEffect(() => {
     fetchConsultations();
-    const interval = setInterval(fetchNewConsultations, 5000);
+    // Only poll for main consultations list (table data)
+    // New consultations are now handled via WebSocket in ConsultationContext
+    const interval = setInterval(() => {
+      fetchConsultations(); // Update main consultations list only
+    }, 10000); // Reduced frequency since urgent notifications are real-time
     return () => clearInterval(interval);
-  }, [fetchConsultations, fetchNewConsultations]);
+  }, [fetchConsultations]);
 
   return {
     consultations,

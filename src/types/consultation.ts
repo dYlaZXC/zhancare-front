@@ -4,7 +4,9 @@ export type ConsultationStatus =
   | "ongoing"
   | "completed"
   | "cancelled"
-  | "missed"; // 🆕 добавлен пропущенный статус
+  | "missed"
+  | "scheduled" // 🆕 добавлен статус для запланированных консультаций
+  | "planned"; // 🆕 добавлен статус "Запланированна" для пользовательского интерфейса
 
 export interface Consultation {
   id: number;
@@ -19,6 +21,8 @@ export interface Consultation {
   created_at: string;
   started_at?: string;
   ended_at?: string;
+  scheduled_at?: string; // 🆕 добавлено поле для запланированного времени
+  symptoms?: string; // 🆕 добавлено поле для симптомов (может прийти из WebSocket)
   type?: "video" | "phone" | "chat";
   consultation_type?: 'general' | 'cardiology' | 'psychiatry' | 'pediatric';
 }
