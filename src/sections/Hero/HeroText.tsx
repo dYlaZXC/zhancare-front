@@ -44,7 +44,7 @@ export default function HeroText({
   return (
     <div className="space-y-4 xs:space-y-5 sm:space-y-6 lg:space-y-8 text-center lg:text-left px-2 sm:px-0">
       <TypingHeading 
-        text={translations.content.heroHeading}
+        text={translations.content.heroHeadingss}
         isInView={isInView}
         language={language}
       />
