@@ -245,89 +245,166 @@ const UrgentConsultationPopup: React.FC<{
   const progress = ((15 - remainingTime) / 15) * 100;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 py-8">
-      <div className="relative w-full max-w-sm sm:max-w-md rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl p-5 sm:p-6 text-white space-y-5 transition-all animate-pulse">
-        {/* Radial Countdown */}
-        <div className="absolute -top-4 -right-4">
-          <div className="relative w-14 h-14 sm:w-16 sm:h-16">
-            <svg className="absolute inset-0" viewBox="0 0 36 36">
-              <path
-                className="text-white/20"
-                strokeWidth="3"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845
-                a 15.9155 15.9155 0 0 1 0 31.831
-                a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-              <path
-                className="text-yellow-400"
-                strokeWidth="3"
-                strokeDasharray={`${(progress / 100) * 100}, 100`}
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845
-                a 15.9155 15.9155 0 0 1 0 31.831
-                a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center text-xs sm:text-sm font-semibold">
-              {remainingTime}s
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md px-4 py-8">
+      <div className="relative w-full max-w-md rounded-3xl bg-gradient-to-br from-[#ebf1ff] to-[#e1eaff] border border-[#c1d3ff] shadow-2xl p-6 text-[#132859] space-y-6 transition-all duration-300 transform scale-100 hover:scale-[1.02]">
+        
+        {/* Header with urgent indicator */}
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#3772ff] to-[#2956bf] flex items-center justify-center text-xl font-bold text-white shadow-lg">
+                {consultation.patient_name?.[0] ?? "P"}
+              </div>
+              <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+              </div>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-[#132859] flex items-center gap-2">
+                🚨 Срочная консультация
+              </h3>
+              <p className="text-sm text-[#2956bf] font-medium">Требует немедленного внимания</p>
+            </div>
+          </div>
+
+          {/* Countdown Timer */}
+          <div className="flex flex-col items-center">
+            <div className="relative w-16 h-16">
+              <svg className="absolute inset-0 -rotate-90" viewBox="0 0 36 36">
+                <path
+                  className="text-[#c1d3ff]"
+                  strokeWidth="3"
+                  stroke="currentColor"
+                  fill="none"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
+                <path
+                  className={`transition-all duration-1000 ${remainingTime <= 5 ? 'text-red-500' : remainingTime <= 10 ? 'text-yellow-500' : 'text-[#3772ff]'}`}
+                  strokeWidth="3"
+                  strokeDasharray={`${100 - progress}, 100`}
+                  strokeLinecap="round"
+                  stroke="currentColor"
+                  fill="none"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className={`text-lg font-bold ${remainingTime <= 5 ? 'text-red-500' : 'text-[#132859]'}`}>
+                  {remainingTime}
+                </span>
+                <span className="text-xs text-[#2956bf]">сек</span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center text-base sm:text-lg font-bold uppercase shadow-md">
-            {consultation.patient_name?.[0] ?? "P"}
-          </div>
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold">🚨 Срочная консультация</h3>
-            <p className="text-xs sm:text-sm text-white/70">Ожидает подтверждения</p>
+        {/* Patient Information Card */}
+        <div className="bg-white/70 rounded-2xl p-4 border border-[#c1d3ff]/50 space-y-3">
+          <div className="grid grid-cols-1 gap-3 text-sm">
+            <div className="flex items-center gap-3 p-2 rounded-xl bg-[#ebf1ff] border border-[#c1d3ff]/30">
+              <div className="w-8 h-8 rounded-full bg-[#3772ff] flex items-center justify-center text-white text-xs">
+                👤
+              </div>
+              <div>
+                <p className="text-xs text-[#2956bf] font-medium">Пациент</p>
+                <p className="font-semibold text-[#132859]">{consultation.patient_name || "Неизвестный пациент"}</p>
+              </div>
+            </div>
+
+            {consultation.patient_email && (
+              <div className="flex items-center gap-3 p-2 rounded-xl bg-[#ebf1ff] border border-[#c1d3ff]/30">
+                <div className="w-8 h-8 rounded-full bg-[#3772ff] flex items-center justify-center text-white text-xs">
+                  📧
+                </div>
+                <div>
+                  <p className="text-xs text-[#2956bf] font-medium">Email</p>
+                  <p className="font-semibold text-[#132859] text-xs">{consultation.patient_email}</p>
+                </div>
+              </div>
+            )}
+
+            {consultation.symptoms && (
+              <div className="flex items-start gap-3 p-2 rounded-xl bg-[#ebf1ff] border border-[#c1d3ff]/30">
+                <div className="w-8 h-8 rounded-full bg-[#3772ff] flex items-center justify-center text-white text-xs mt-0.5">
+                  🩺
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs text-[#2956bf] font-medium">Симптомы</p>
+                  <p className="font-semibold text-[#132859] text-sm leading-relaxed">{consultation.symptoms}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center gap-3 p-2 rounded-xl bg-[#ebf1ff] border border-[#c1d3ff]/30">
+              <div className="w-8 h-8 rounded-full bg-[#3772ff] flex items-center justify-center text-white text-xs">
+                ⏰
+              </div>
+              <div>
+                <p className="text-xs text-[#2956bf] font-medium">Время обращения</p>
+                <p className="font-semibold text-[#132859]">{new Date(consultation.created_at).toLocaleString("ru-RU")}</p>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Patient Info */}
-        <div className="space-y-1 text-sm sm:text-base">
-          <p>
-            👤 <b>Пациент:</b> {consultation.patient_name || "Неизвестный пациент"}
-          </p>
-          {consultation.patient_email && (
-            <p>
-              📧 <b>Email:</b> {consultation.patient_email}
-            </p>
-          )}
-          {consultation.symptoms && (
-            <p>
-              🩺 <b>Симптомы:</b> {consultation.symptoms}
-            </p>
-          )}
-          <p>
-            ⏰ <b>Время:</b> {new Date(consultation.created_at).toLocaleString("ru-RU")}
-          </p>
-        </div>
-
-        {/* Premium Action Buttons */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 pt-2">
+        {/* Action Buttons */}
+        <div className="flex gap-3 pt-2">
           <button
             onClick={onAccept}
-            className="group flex items-center justify-center gap-2 bg-gradient-to-br from-green-400 to-emerald-600 hover:from-green-500 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-green-300 shadow-md hover:shadow-lg text-white py-2 rounded-xl text-sm sm:text-base font-semibold transition-all duration-200"
+            className="flex-1 group relative overflow-hidden bg-gradient-to-br from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-4 focus:ring-green-200 shadow-lg hover:shadow-xl text-white py-3 px-4 rounded-2xl font-semibold transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
           >
-            ✅ Принять
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+            <div className="relative flex items-center justify-center gap-2">
+              <span className="text-lg">✅</span>
+              <span>Принять</span>
+            </div>
           </button>
+          
           <button
             onClick={handleReject}
-            className="group flex items-center justify-center gap-2 bg-gradient-to-br from-rose-400 to-rose-600 hover:from-rose-500 hover:to-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-300 shadow-md hover:shadow-lg text-white py-2 rounded-xl text-sm sm:text-base font-semibold transition-all duration-200"
+            className="flex-1 group relative overflow-hidden bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 focus:outline-none focus:ring-4 focus:ring-red-200 shadow-lg hover:shadow-xl text-white py-3 px-4 rounded-2xl font-semibold transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
           >
-            ❌ Отклонить
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+            <div className="relative flex items-center justify-center gap-2">
+              <span className="text-lg">❌</span>
+              <span>Отклонить</span>
+            </div>
           </button>
+          
           <button
             onClick={onDismiss}
-            className="group flex items-center justify-center gap-2 bg-gradient-to-br from-slate-400 to-slate-600 hover:from-slate-500 hover:to-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-300 shadow-md hover:shadow-lg text-white py-2 rounded-xl text-sm sm:text-base font-semibold transition-all duration-200"
+            className="group relative overflow-hidden bg-gradient-to-br from-[#283353] to-[#202942] hover:from-[#202942] hover:to-[#1e263e] focus:outline-none focus:ring-4 focus:ring-[#c1d3ff] shadow-lg hover:shadow-xl text-white py-3 px-3 rounded-2xl font-semibold transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
           >
-            💤 Закрыть
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+            <div className="relative flex items-center justify-center">
+              <span className="text-lg">💤</span>
+            </div>
           </button>
+        </div>
+
+        {/* Progress bar at the bottom */}
+        <div className="w-full bg-[#c1d3ff] rounded-full h-2 overflow-hidden">
+          <div 
+            className={`h-full transition-all duration-1000 ease-linear ${
+              remainingTime <= 5 
+                ? 'bg-gradient-to-r from-red-500 to-red-600' 
+                : remainingTime <= 10 
+                ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' 
+                : 'bg-gradient-to-r from-[#3772ff] to-[#2956bf]'
+            }`}
+            style={{ width: `${100 - progress}%` }}
+          />
+        </div>
+
+        {/* Urgency indicator */}
+        <div className="text-center">
+          <p className="text-sm font-medium text-[#2956bf]">
+            {remainingTime <= 5 
+              ? "⚠️ Критически важно!" 
+              : remainingTime <= 10 
+              ? "⏰ Требует внимания" 
+              : "🩺 Новая консультация"}
+          </p>
         </div>
       </div>
     </div>
