@@ -17,7 +17,7 @@ import {
   CheckCircle2,
   ArrowRight
 } from "lucide-react";
-import ConsultationsTable from "./ConsultationsTable";
+import PatientConsultationsTable from "./PatientConsultationsTable";
 
 interface Step1Props {
   symptoms: string;
@@ -382,7 +382,7 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
       </motion.div>
       
       {/* Consultations History Table */}
-      <ConsultationsTable />
+      <PatientConsultationsTable/>
       
       {/* Extended Bottom Spacing */}
       <div className="pb-8 md:pb-12"></div>

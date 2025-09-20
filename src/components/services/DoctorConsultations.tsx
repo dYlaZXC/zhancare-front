@@ -27,7 +27,7 @@ import {
 import { api } from "@/utils/api";
 import { useAuth } from "@/context/AuthContext";
 import { useConsultationManager } from "./consultations/useConsultationManager";
-import ConsultationsTable from "./consultations/ConsultationsTable";
+import DoctorConsultationsTable from "./consultations/DoctorConsultationsTable";
 
 const DoctorConsultations: React.FC = () => {
   const { user } = useAuth();
@@ -328,7 +328,7 @@ const DoctorConsultations: React.FC = () => {
             </div>
           </div>
 
-          <ConsultationsTable
+          <DoctorConsultationsTable
             consultations={filteredConsultations}
             showFilters={false}
             onAccept={acceptConsultationInTable}

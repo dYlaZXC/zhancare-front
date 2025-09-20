@@ -451,17 +451,40 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
                               key={timeslot.id}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (isSelected && !timeslot.is_booked && timeslot.available_spots > 0) {
+
+                                // Prevent interaction with booked slots
+                                if (timeslot.is_booked || timeslot.available_spots === 0) {
+                                  console.log(`🚫 Booked slot clicked - ignoring: ${timeslot.start_time}`);
+                                  return;
+                                }
+
+                                console.log(`🕐 Quick timeslot clicked: ${timeslot.start_time}`, {
+                                  isSelected,
+                                  isUrgent,
+                                  hasOnTimeslotSelect: !!onTimeslotSelect,
+                                  hasOnClick: !!onClick
+                                });
+
+                                if (!isUrgent) {
+                                  // For non-urgent consultations, allow timeslot selection
+                                  // First select the doctor if not already selected
+                                  if (!isSelected) {
+                                    console.log(`👨‍⚕️ Selecting doctor first via quick slot`);
+                                    onClick?.(); // Select the doctor first
+                                  }
+
+                                  // Then select the timeslot
+                                  console.log(`⏰ Calling onTimeslotSelect from quick view:`, timeslot);
                                   onTimeslotSelect?.(timeslot);
+                                } else {
+                                  console.log(`🚨 Urgent consultation - timeslot selection skipped`);
                                 }
                               }}
                               className={clsx(
-                                "px-3 py-2 md:px-4 md:py-3 rounded-lg md:rounded-xl text-center shadow-lg transition-colors",
+                                "px-3 py-2 md:px-4 md:py-3 rounded-lg md:rounded-xl text-center shadow-lg transition-colors cursor-pointer",
                                 index === 0
-                                  ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white"
-                                  : isSelected
-                                  ? "bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50 cursor-pointer"
-                                  : "bg-white border border-indigo-200 text-indigo-600"
+                                  ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700"
+                                  : "bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50 hover:border-indigo-300"
                               )}
                             >
                               <div className="font-bold text-sm md:text-base">

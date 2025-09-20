@@ -323,54 +323,71 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
       selectedTimeslot
     });
 
-    if (!selectedDoctorId) {
-      console.warn('⚠️ No doctor selected yet');
-      return;
-    }
-
     if (!aiRecommendationId) {
       console.warn('⚠️ No AI recommendation ID available');
       return;
     }
 
-    // Find the selected doctor
-    const doctor = doctors.find(d => d.id === selectedDoctorId);
-    if (!doctor) {
-      console.warn('⚠️ Doctor not found');
+    // Find which doctor this timeslot belongs to by searching through doctorTimeslots
+    let timeslotDoctorId: number | null = null;
+    let timeslotDoctor: Doctor | null = null;
+
+    for (const [doctorIdStr, slots] of Object.entries(doctorTimeslots)) {
+      const doctorId = parseInt(doctorIdStr);
+      if (slots.some(slot => slot.id === timeslot.id)) {
+        timeslotDoctorId = doctorId;
+        timeslotDoctor = doctors.find(d => d.id === doctorId) || null;
+        break;
+      }
+    }
+
+    if (!timeslotDoctorId || !timeslotDoctor) {
+      console.warn('⚠️ Could not find doctor for this timeslot');
       return;
     }
 
-    // Show confirmation modal instead of immediate booking
+    console.log(`🔄 Timeslot belongs to doctor ${timeslotDoctorId} (${timeslotDoctor.name})`);
+
+    // If the timeslot belongs to a different doctor than currently selected, update selection
+    if (selectedDoctorId !== timeslotDoctorId) {
+      console.log(`🔄 Switching from doctor ${selectedDoctorId} to doctor ${timeslotDoctorId}`);
+      onSelect(timeslotDoctorId); // Update the selected doctor
+    }
+
+    // Show confirmation modal with the correct doctor
     setSelectedTimeslot(timeslot);
-    setSelectedDoctorForBooking(doctor);
+    setSelectedDoctorForBooking(timeslotDoctor);
     setShowConfirmModal(true);
   };
 
   const confirmTimeslotBooking = async () => {
-    if (!selectedTimeslot || !selectedDoctorForBooking || !selectedDoctorId || !aiRecommendationId) {
+    if (!selectedTimeslot || !selectedDoctorForBooking || !aiRecommendationId) {
       return;
     }
 
+    // Use the doctor from the booking state, not the global selectedDoctorId
+    const bookingDoctorId = selectedDoctorForBooking.id;
+
     try {
       setBookingLoading(true);
-      console.log(`🔄 Timeslot confirmed: ${selectedTimeslot.start_time} for doctor ${selectedDoctorId}`);
+      console.log(`🔄 Timeslot confirmed: ${selectedTimeslot.start_time} for doctor ${bookingDoctorId} (${selectedDoctorForBooking.name})`);
 
       // Don't create consultation yet - just confirm the timeslot selection
       // Remove the selected slot from available slots (temporarily)
       setDoctorTimeslots(prev => ({
         ...prev,
-        [selectedDoctorId]: prev[selectedDoctorId]?.filter(slot => slot.id !== selectedTimeslot.id) || []
+        [bookingDoctorId]: prev[bookingDoctorId]?.filter(slot => slot.id !== selectedTimeslot.id) || []
       }));
 
       // Create consultation data for Step 3
       const consultationData = {
         scheduled_at: selectedTimeslot.start_time,
         scheduled_time: selectedTimeslot.start_time,
-        doctor_id: selectedDoctorId,
+        doctor_id: bookingDoctorId,
         ai_recommendation_id: aiRecommendationId
       };
 
-      console.log(`🎉 Timeslot confirmed successfully`);
+      console.log(`🎉 Timeslot confirmed successfully for doctor ${bookingDoctorId}`);
       setShowConfirmModal(false);
       onConsultationBooked?.(0, consultationData); // Pass 0 as consultationId since not created yet
     } catch (error) {
