@@ -308,7 +308,7 @@ const DoctorConsultations: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Global consultation popup will appear automatically from ConsultationProvider */}
+        {/* Global consultation popup will appear automatically from OptimizedConsultationProvider */}
 
         {/* Main Content */}
         <motion.div

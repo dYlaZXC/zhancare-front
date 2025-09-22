@@ -7,6 +7,27 @@ import { logoutUser } from "@/utils/auth";
 const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 export const baseURLImg = process.env.NEXT_PUBLIC_API_IMG_URL || "http://localhost:8000/api/v1";
 
+// ✅ WebSocket URL configuration
+export const getWebSocketURL = () => {
+  if (typeof window === 'undefined') return 'ws://localhost:8000/ws';
+
+  const isSecure = window.location.protocol === 'https:';
+  const baseWsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws';
+
+  // Auto-detect protocol based on current page protocol
+  if (isSecure) {
+    return baseWsUrl.replace('ws://', 'wss://');
+  }
+
+  return baseWsUrl;
+};
+
+// ✅ Get API base URL without /api/v1 suffix for WebSocket
+export const getAPIHost = () => {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+  return apiUrl.replace('/api/v1', '');
+};
+
 const axiosInstance = axios.create({
   baseURL,
   withCredentials: true, // ✅ Include cookies like csrftoken in requests

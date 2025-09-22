@@ -40,6 +40,11 @@ export const ConsultationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     if (message.type === 'consultation_created' && message.data) {
       const consultation: Consultation = message.data;
+      console.log("🔍 Consultation data:", consultation);
+      console.log("🔍 Consultation status:", consultation.status);
+      console.log("🔍 Current newConsultation:", newConsultation);
+      console.log("🔍 seenIds:", Array.from(seenIds.current));
+      console.log("🔍 dismissedIds:", Array.from(dismissedIds.current));
 
       // Only show popup for pending consultations that haven't been seen or dismissed
       if (
@@ -72,7 +77,7 @@ export const ConsultationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     },
     onDisconnect: () => {
       if (isDoctor) {
-        console.log("💡 WebSocket not available - using polling fallback");
+        console.log("💡 WebSocket connection lost - will reconnect automatically");
         // Don't show error toast since WebSocket server isn't implemented yet
       }
     },
@@ -121,70 +126,8 @@ export const ConsultationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, [token]);
 
-  // Fallback polling when WebSocket is not available
-  const fetchNewConsultationsFallback = useCallback(async () => {
-    if (!isDoctor || !token || isConnected) return; // Only use fallback when WebSocket is not connected
-
-    try {
-      const { data } = await api.get<Consultation[] | any>('/consultations/doctor-consultations/');
-
-      let consultationsArray: Consultation[] = [];
-      if (Array.isArray(data)) {
-        consultationsArray = data;
-      } else if (data && Array.isArray((data as any).results)) {
-        consultationsArray = (data as any).results;
-      } else if (data && Array.isArray((data as any).consultations)) {
-        consultationsArray = (data as any).consultations;
-      }
-
-      const pending = consultationsArray.find(
-        (c) =>
-          c.status === "pending" &&
-          !seenIds.current.has(c.id) &&
-          !dismissedIds.current.has(c.id)
-      );
-
-      if (pending && !newConsultation) {
-        console.log("🚨 New urgent consultation found via fallback polling:", pending);
-        setNewConsultation(pending);
-        seenIds.current.add(pending.id);
-
-        toast.info(`🚨 Новый срочный вызов от пациента!`, {
-          autoClose: false,
-          closeOnClick: false,
-        });
-      }
-    } catch (error) {
-      console.error("Failed to fetch new consultations via fallback:", error);
-    }
-  }, [isDoctor, token, isConnected, newConsultation]);
-
-  // Use fallback polling when WebSocket is not connected
-  useEffect(() => {
-    if (!isDoctor) return;
-
-    let interval: NodeJS.Timeout | null = null;
-
-    // Add a small delay to let WebSocket attempt to connect first
-    const fallbackTimer = setTimeout(() => {
-      if (!isConnected) {
-        console.log("🔄 Using polling fallback since WebSocket is not available");
-
-        // Initial fetch
-        fetchNewConsultationsFallback();
-
-        // Set up polling interval as fallback
-        interval = setInterval(fetchNewConsultationsFallback, 5000); // Check every 5 seconds
-      }
-    }, 3000); // Wait 3 seconds for WebSocket to connect
-
-    return () => {
-      clearTimeout(fallbackTimer);
-      if (interval) {
-        clearInterval(interval);
-      }
-    };
-  }, [isDoctor, isConnected, fetchNewConsultationsFallback]);
+  // WebSocket handles real-time consultation notifications
+  // No fallback polling needed since WebSocket is reliable
 
   const value = {
     newConsultation,

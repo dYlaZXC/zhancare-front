@@ -29,6 +29,9 @@ interface Step2Props {
   // Timeslot integration props
   aiRecommendationId?: number;
   onConsultationBooked?: (consultationId: number, consultationData?: any) => void;
+  // Real-time updates props
+  doctorsError?: string | null;
+  websocketConnected?: boolean;
 }
 
 const VideoConsultationStep2: React.FC<Step2Props> = ({
@@ -44,6 +47,8 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
   fallbackUsed,
   aiRecommendationId,
   onConsultationBooked,
+  doctorsError,
+  websocketConnected,
 }) => {
   // UI state
   const [searchTerm, setSearchTerm] = useState("");
@@ -60,7 +65,6 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
   // Real-time updates
   const [lastUpdateTime, setLastUpdateTime] = useState<Record<number, number>>({});
   const [isPolling, setIsPolling] = useState(false);
-  const [isUserActive, setIsUserActive] = useState(true);
 
   // Confirmation modal state
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -88,60 +92,32 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
     }
   }, [doctors, isUrgent]);
 
-  // Track user activity for optimized polling
-  useEffect(() => {
-    let activityTimer: NodeJS.Timeout;
 
-    const resetTimer = () => {
-      setIsUserActive(true);
-      clearTimeout(activityTimer);
-      activityTimer = setTimeout(() => {
-        setIsUserActive(false);
-      }, 2 * 60 * 1000); // Consider inactive after 2 minutes
-    };
-
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
-    events.forEach(event => {
-      document.addEventListener(event, resetTimer, true);
-    });
-
-    resetTimer(); // Initialize
-
-    return () => {
-      clearTimeout(activityTimer);
-      events.forEach(event => {
-        document.removeEventListener(event, resetTimer, true);
-      });
-    };
-  }, []);
-
-  // Real-time polling for timeslot updates
+  // Minimal fallback polling for timeslot updates (WebSocket handles real-time updates)
   useEffect(() => {
     if (!isUrgent && doctors.length > 0) {
       setIsPolling(true);
 
-      // Adaptive polling: faster when user is active
+      // Minimal fallback polling - WebSocket should handle most real-time updates
       const pollInterval = setInterval(() => {
-        if (isUserActive) {
-          doctors.forEach(doctor => {
-            const lastUpdate = lastUpdateTime[doctor.id] || 0;
-            const now = Date.now();
-            const minInterval = isUserActive ? 15000 : 60000; // 15s active, 60s inactive
+        doctors.forEach(doctor => {
+          const lastUpdate = lastUpdateTime[doctor.id] || 0;
+          const now = Date.now();
+          const minInterval = 5 * 60 * 1000; // 5 minutes - much less aggressive
 
-            // Only update if enough time has passed
-            if (now - lastUpdate > minInterval) {
-              fetchDoctorTimeslots(doctor.id, true); // Silent update
-            }
-          });
-        }
-      }, 15000); // Check every 15 seconds, but actual updates are controlled by minInterval
+          // Only update if enough time has passed
+          if (now - lastUpdate > minInterval) {
+            fetchDoctorTimeslots(doctor.id, true); // Silent update
+          }
+        });
+      }, 5 * 60 * 1000); // Check every 5 minutes instead of 15 seconds
 
       return () => {
         clearInterval(pollInterval);
         setIsPolling(false);
       };
     }
-  }, [doctors, isUrgent, lastUpdateTime, isUserActive]);
+  }, [doctors, isUrgent, lastUpdateTime]);
 
   const generateDynamicTimeslots = (doctorId: number, bookedSlots: string[] = []) => {
     const slots: TimeSlot[] = [];
@@ -466,10 +442,22 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
           Шаг 2 из 3
         </div>
         <div className="flex items-center gap-3 text-sm text-gray-500">
+          {websocketConnected && (
+            <div className="flex items-center gap-1 text-green-600">
+              <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></div>
+              <span className="text-xs">Обновления в реальном времени</span>
+            </div>
+          )}
+          {!websocketConnected && (
+            <div className="flex items-center gap-1 text-orange-600">
+              <div className="w-2 h-2 bg-orange-600 rounded-full"></div>
+              <span className="text-xs">Подключение...</span>
+            </div>
+          )}
           {isPolling && (
             <div className="flex items-center gap-1 text-blue-600">
               <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
-              <span className="text-xs">Обновление в реальном времени</span>
+              <span className="text-xs">Обновление расписания</span>
             </div>
           )}
           <div className="flex items-center gap-2">
@@ -528,6 +516,8 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
         recommendedDoctor={recommendedDoctor}
         onDoctorSelect={handleDoctorSelect}
         renderDoctorCard={renderDoctorCard}
+        doctorsError={doctorsError}
+        websocketConnected={websocketConnected}
       />
 
       {/* Navigation */}

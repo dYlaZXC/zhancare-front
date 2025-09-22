@@ -23,6 +23,7 @@ export interface Consultation {
   ended_at?: string;
   scheduled_at?: string; // 🆕 добавлено поле для запланированного времени
   symptoms?: string; // 🆕 добавлено поле для симптомов (может прийти из WebSocket)
+  is_urgent?: boolean; // 🆕 добавлено поле для срочности (приходит из WebSocket)
   type?: "video" | "phone" | "chat";
   consultation_type?: 'general' | 'cardiology' | 'psychiatry' | 'pediatric';
 }

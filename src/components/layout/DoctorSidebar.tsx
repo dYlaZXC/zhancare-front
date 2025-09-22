@@ -16,7 +16,6 @@ import {
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import Link from "next/link";
 
@@ -36,7 +35,6 @@ export const DoctorSidebar = ({
   isCollapsed = false,
 }: DoctorSidebarProps) => {
   const { user, logoutUser, setIsAuthOpen } = useAuth();
-  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
@@ -99,6 +97,7 @@ export const DoctorSidebar = ({
       default: return { bg: 'linear-gradient(135deg, #295bbf 0%, #173373 100%)', border: 'rgba(41, 91, 191, 0.3)' };
     }
   };
+
 
   return (
     <>
@@ -335,6 +334,7 @@ export const DoctorSidebar = ({
           </div>
         </div>
 
+
         {/* Responsive Navigation */}
         <nav className={`mt-2 space-y-2 xs:space-y-3 ${isCollapsed ? 'px-2' : 'px-3 xs:px-4 sm:px-6'} flex-1 overflow-y-auto overflow-x-hidden relative z-10`}>
           {doctorMenu.map((item, index) => (
@@ -570,7 +570,7 @@ export const DoctorSidebar = ({
               <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-2xl"></div>
               <div className="absolute -inset-1 bg-gradient-to-br from-white/30 to-transparent rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               
-              {/* Status indicator - online/offline only */}
+              {/* Status indicator - online */}
               <div className={`absolute -bottom-1 -right-1 ${isCollapsed ? 'w-3 h-3' : 'w-6 h-6'} bg-white rounded-full flex items-center justify-center shadow-lg border-2 border-white`}>
                 <div className={`${isCollapsed ? 'w-1.5 h-1.5' : 'w-3 h-3'} bg-emerald-400 rounded-full animate-pulse`}></div>
               </div>
@@ -596,6 +596,7 @@ export const DoctorSidebar = ({
             </>
           )}
         </div>
+
 
         {/* Desktop Navigation */}
         <nav className={`mt-2 space-y-3 ${isCollapsed ? 'px-2' : 'px-6'} flex-1 overflow-y-auto overflow-x-hidden relative z-10`}>

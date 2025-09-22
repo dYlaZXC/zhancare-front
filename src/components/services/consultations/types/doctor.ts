@@ -6,6 +6,9 @@ export interface Doctor {
   rating?: number;
   experience?: number;
   availability?: string;
+  availability_status?: 'available' | 'busy' | 'offline' | 'break';
+  availability_note?: string;
+  last_seen?: string;
   avatar?: string;
   specialties?: string[];
   specialization?: {

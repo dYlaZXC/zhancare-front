@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { api } from "@/utils/api";
 import { useAuth } from "@/context/AuthContext";
+import { websocketService, type DoctorAvailabilityChangeData } from "@/services/websocketService";
 
 import Step1 from "./consultations/VideoConsultationStep1";
 import Step2 from "./consultations/VideoConsultationStep2";
@@ -69,9 +70,12 @@ const VideoConsultation: React.FC = () => {
   const [loadingCall, setLoadingCall] = useState(false);
   const [fetchingDoctors, setFetchingDoctors] = useState(true);
   const [waiting, setWaiting] = useState(false);
+  const [doctorsError, setDoctorsError] = useState<string | null>(null);
+  const [websocketConnected, setWebsocketConnected] = useState(false);
 
-  const fetchDoctors = useCallback(async () => {
+  const fetchDoctors = useCallback(async (showToast = true) => {
     setFetchingDoctors(true);
+    setDoctorsError(null);
     try {
       const res = await api.get("/auth/doctor/available/", {
         headers: { Authorization: `Token ${token}` },
@@ -84,8 +88,21 @@ const VideoConsultation: React.FC = () => {
         (doc: Doctor) => doc.doctor_type !== "Сестринское дело"
       );
       setDoctors(filtered || []);
-    } catch {
-      toast.error("⚠️ Ошибка загрузки врачей.");
+
+      if ((filtered || []).length === 0) {
+        setDoctorsError("В данный момент нет доступных врачей. Попробуйте позже или врачи появятся автоматически при изменении их статуса.");
+      }
+    } catch (error: any) {
+      const errorMessage = error?.response?.status === 404
+        ? "В данный момент нет доступных врачей. Попробуйте позже или врачи появятся автоматически при изменении их статуса."
+        : "Ошибка загрузки врачей. Проверьте подключение к интернету.";
+
+      setDoctorsError(errorMessage);
+      setDoctors([]);
+
+      if (showToast) {
+        toast.error(`⚠️ ${errorMessage}`);
+      }
     } finally {
       setFetchingDoctors(false);
     }
@@ -97,60 +114,137 @@ const VideoConsultation: React.FC = () => {
     toast.info("🚫 Консультация отменена.");
   }, []);
 
-  const startPolling = useCallback(() => {
-    const start = Date.now();
-    const timeout = 2 * 60 * 1000;
 
-    return setInterval(async () => {
-      if (!meetingId || !token) return;
-      if (Date.now() - start > timeout) {
-        toast.error("⏳ Время ожидания истекло.");
-        cancelConsultation();
-        return;
-      }
-
-      try {
-        const res = await api.get("/consultations/status/", {
-          headers: { Authorization: `Token ${token}` },
-          params: { meeting_id: meetingId },
-        });
-
-        const status = res.data?.status;
-        if (status === "ongoing") {
-          toast.success("✅ Доктор подключился.");
-          clearInterval(pollingRef.current!);
-          setWaiting(false);
-
-          router.push(`/video-call/patient?meetingId=${meetingId}`);
-        } else if (status === "cancelled") {
-          toast.error("❌ Запрос отклонён.");
-          cancelConsultation();
-        }
-      } catch (err) {
-        console.error("Ошибка при проверке статуса:", err);
-      }
-    }, 3000);
-  }, [cancelConsultation, meetingId, token, router]);
-
+  // Initialize WebSocket connection
   useEffect(() => {
     if (!token) {
       toast.error("❌ Вы не авторизованы. Пожалуйста, войдите.");
       return;
     }
+
+    // Connect to WebSocket
+    websocketService.connect(token);
+
+    // Setup WebSocket event handlers
+    const handleWebSocketConnect = () => {
+      console.log('🔌 WebSocket connected in VideoConsultation');
+      setWebsocketConnected(true);
+    };
+
+    const handleWebSocketDisconnect = () => {
+      console.log('🔌 WebSocket disconnected in VideoConsultation');
+      setWebsocketConnected(false);
+    };
+
+    const handleDoctorAvailabilityChange = (data: { data: DoctorAvailabilityChangeData }) => {
+      console.log('👩‍⚕️ Doctor availability changed:', data);
+
+      const { doctor_id, availability_status, doctor_info } = data.data;
+
+      if (availability_status === 'available') {
+        // Doctor became available - refresh the doctor list
+        console.log(`✅ Dr. ${doctor_info.name} is now available, refreshing doctor list`);
+        fetchDoctors(false); // Don't show toast for automatic refresh
+
+        toast.success(`✅ Dr. ${doctor_info.name} теперь доступен для консультации!`, {
+          autoClose: 5000,
+          position: 'top-right'
+        });
+      } else {
+        // Doctor became unavailable - remove from current list
+        console.log(`❌ Dr. ${doctor_info.name} is no longer available (${availability_status})`);
+
+        setDoctors(prevDoctors => {
+          const updatedDoctors = prevDoctors.filter(doctor => doctor.id !== doctor_id);
+
+          // If the currently selected doctor became unavailable, reset selection
+          if (selectedDoctorId === doctor_id) {
+            setSelectedDoctorId(null);
+            toast.info(`⚠️ Выбранный врач ${doctor_info.name} больше недоступен. Пожалуйста, выберите другого врача.`);
+          }
+
+          // If no doctors left, show error message
+          if (updatedDoctors.length === 0) {
+            setDoctorsError("В данный момент нет доступных врачей. Попробуйте позже или врачи появятся автоматически при изменении их статуса.");
+          }
+
+          return updatedDoctors;
+        });
+
+        const statusText = availability_status === 'offline' ? 'завершил работу' :
+                          availability_status === 'busy' ? 'занят' :
+                          availability_status === 'break' ? 'на перерыве' : 'недоступен';
+
+        toast.info(`ℹ️ Dr. ${doctor_info.name} ${statusText}`, {
+          autoClose: 3000,
+          position: 'top-right'
+        });
+      }
+    };
+
+    const handleConsultationStatusChange = (data: any) => {
+      console.log('🏥 Consultation status changed:', data);
+
+      const consultation = data.data?.consultation;
+      if (!consultation || !meetingId) return;
+
+      // Only handle status changes for the current consultation
+      if (consultation.meeting_id === meetingId) {
+        console.log(`📋 Current consultation status changed: ${consultation.old_status} → ${consultation.new_status}`);
+
+        if (consultation.new_status === 'ongoing') {
+          toast.success("✅ Доктор подключился.");
+          // Clear any existing polling
+          if (pollingRef.current) {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+          }
+          setWaiting(false);
+          router.push(`/video-call/patient?meetingId=${meetingId}`);
+        } else if (consultation.new_status === 'cancelled') {
+          toast.error("❌ Запрос отклонён.");
+          cancelConsultation();
+        }
+      }
+    };
+
+    // Subscribe to WebSocket events
+    websocketService.on('connect', handleWebSocketConnect);
+    websocketService.on('disconnect', handleWebSocketDisconnect);
+    websocketService.onDoctorAvailabilityChanged(handleDoctorAvailabilityChange);
+    websocketService.on('consultation_status_changed', handleConsultationStatusChange);
+
+    // Initial doctor fetch
     fetchDoctors();
-  }, [token, fetchDoctors]);
+
+    // Cleanup WebSocket on unmount
+    return () => {
+      websocketService.off('connect', handleWebSocketConnect);
+      websocketService.off('disconnect', handleWebSocketDisconnect);
+      websocketService.offDoctorAvailabilityChanged(handleDoctorAvailabilityChange);
+      websocketService.off('consultation_status_changed', handleConsultationStatusChange);
+      websocketService.disconnect();
+    };
+  }, [token, fetchDoctors, selectedDoctorId]);
 
   useEffect(() => {
     if (waiting && meetingId) {
-      pollingRef.current = startPolling();
+      console.log(`🔌 Starting to listen for consultation status changes for meeting: ${meetingId}`);
+
+      // Set up timeout for consultation waiting period
+      const timeoutDuration = 2 * 60 * 1000; // 2 minutes
+      const timeoutRef = setTimeout(() => {
+        if (waiting) {
+          toast.error("⏳ Время ожидания истекло.");
+          cancelConsultation();
+        }
+      }, timeoutDuration);
+
+      return () => {
+        clearTimeout(timeoutRef);
+      };
     }
-    return () => {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-        pollingRef.current = null;
-      }
-    };
-  }, [waiting, meetingId, startPolling]);
+  }, [waiting, meetingId, cancelConsultation]);
 
   const handleAIRecommend = async () => {
     if (loadingAI || !token) return;
@@ -365,6 +459,8 @@ const VideoConsultation: React.FC = () => {
                   aiErrorData={aiErrorData}
                   fallbackUsed={fallbackUsed}
                   aiRecommendationId={aiRecommendationId}
+                  doctorsError={doctorsError}
+                  websocketConnected={websocketConnected}
                   onConsultationBooked={(consultationId, consultationData) => {
                     console.log("🎉 Consultation booked:", consultationId, consultationData);
 

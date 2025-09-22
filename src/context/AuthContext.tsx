@@ -32,6 +32,9 @@ interface User {
 
   // Doctor specific
   doctor_type?: string;
+  availability_status?: 'available' | 'busy' | 'offline' | 'break';
+  availability_note?: string;
+  last_seen?: string;
 
   // Timestamps
   date_joined?: string;

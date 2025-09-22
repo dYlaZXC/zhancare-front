@@ -15,7 +15,6 @@ import { api } from "@/utils/api";
 import Logo from "@/assets/logosaas.png";
 
 import AuthTabs from "@/components/auth/AuthTabs";
-import ErrorAlert from "@/components/auth/ErrorAlert";
 import ForgotPasswordPopup from "@/components/auth/ForgotPasswordPopup";
 
 interface FormData {
@@ -186,7 +185,7 @@ const AuthPopup = () => {
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
   const [isForgotOpen, setIsForgotOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  // Note: error state removed - using toast messages only
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Partial<FormData>>({});
@@ -285,7 +284,6 @@ const AuthPopup = () => {
       first_name: "",
       last_name: "",
     });
-    setError("");
     setValidationErrors({});
   }, [activeTab]);
 
@@ -309,8 +307,7 @@ const AuthPopup = () => {
     if (validationErrors[name as keyof FormData]) {
       setValidationErrors(prev => ({ ...prev, [name]: undefined }));
     }
-    if (error) setError("");
-  }, [validationErrors, error]);
+  }, [validationErrors]);
 
   const handleTogglePassword = useCallback((field: 'password' | 'confirmPassword') => {
     if (field === 'password') {
@@ -328,7 +325,6 @@ const AuthPopup = () => {
     }
 
     setLoading(true);
-    setError("");
 
     const apiUrl = activeTab === "login" ? "/auth/login/" : "/auth/register/";
     const payload = activeTab === "login"
@@ -394,7 +390,6 @@ const AuthPopup = () => {
       }
 
       toast.error(errorMessage);
-      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -710,9 +705,8 @@ const AuthPopup = () => {
                       )}
                       </div>
 
-                      {/* Error and Submit Button - Fixed at bottom */}
-                      <div className="mt-auto pt-2 xs:pt-3 sm:pt-4 space-y-2 xs:space-y-3 sm:space-y-4">
-                        <ErrorAlert error={error} />
+                      {/* Submit Button - Fixed at bottom */}
+                      <div className="mt-auto pt-2 xs:pt-3 sm:pt-4">
 
                         <button
                         type="submit"

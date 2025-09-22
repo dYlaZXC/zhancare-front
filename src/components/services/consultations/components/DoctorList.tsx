@@ -13,6 +13,8 @@ interface DoctorListProps {
   recommendedDoctor?: RecommendedDoctor;
   onDoctorSelect: (doctorId: number) => void;
   renderDoctorCard: (doctor: Doctor, isRecommended: boolean, isSelected: boolean) => React.ReactNode;
+  doctorsError?: string | null;
+  websocketConnected?: boolean;
 }
 
 const DoctorList: React.FC<DoctorListProps> = ({
@@ -23,6 +25,8 @@ const DoctorList: React.FC<DoctorListProps> = ({
   recommendedDoctor,
   onDoctorSelect,
   renderDoctorCard,
+  doctorsError,
+  websocketConnected,
 }) => {
   return (
     <div className="w-full">
@@ -46,12 +50,28 @@ const DoctorList: React.FC<DoctorListProps> = ({
             className="text-center py-12 bg-gray-50 rounded-xl"
           >
             <Users className="mx-auto text-gray-400 mb-3" size={32} />
-            <p className="text-gray-600 text-sm">
-              {doctors.length === 0
-                ? "Нет доступных врачей"
-                : "Врачи не найдены"
-              }
-            </p>
+            <div className="space-y-3">
+              <p className="text-gray-600 text-sm">
+                {doctorsError || (doctors.length === 0
+                  ? "Нет доступных врачей"
+                  : "Врачи не найдены"
+                )}
+              </p>
+
+              {doctorsError && websocketConnected && (
+                <div className="flex items-center justify-center gap-2 text-green-600 text-xs">
+                  <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></div>
+                  <span>Ожидаем появления врачей в реальном времени</span>
+                </div>
+              )}
+
+              {doctorsError && !websocketConnected && (
+                <div className="flex items-center justify-center gap-2 text-orange-600 text-xs">
+                  <div className="w-2 h-2 bg-orange-600 rounded-full"></div>
+                  <span>Подключение к серверу обновлений...</span>
+                </div>
+              )}
+            </div>
           </motion.div>
         ) : (
           <motion.div

@@ -91,8 +91,13 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
             )}
           </div>
 
-          {/* Status indicators */}
-          <div className="absolute bottom-0 right-0 w-3 h-3 sm:w-4 sm:h-4 bg-green-500 rounded-full flex items-center justify-center shadow-lg border-1 sm:border-2 border-white z-10">
+          {/* Availability Status Indicator */}
+          <div className={`absolute bottom-0 right-0 w-3 h-3 sm:w-4 sm:h-4 rounded-full flex items-center justify-center shadow-lg border-1 sm:border-2 border-white z-10 ${
+            doctor.availability_status === 'available' ? 'bg-green-500' :
+            doctor.availability_status === 'busy' ? 'bg-yellow-500' :
+            doctor.availability_status === 'break' ? 'bg-blue-500' :
+            'bg-red-500'
+          }`}>
             <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 bg-white rounded-full"></div>
           </div>
 
@@ -120,6 +125,18 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
                   <p className="text-blue-600 font-bold text-xs sm:text-sm md:text-sm lg:text-base">
                     {getSpecializationName(doctor, language)}
                   </p>
+                  {/* Availability Status */}
+                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-medium ${
+                    doctor.availability_status === 'available' ? 'bg-green-100 text-green-700' :
+                    doctor.availability_status === 'busy' ? 'bg-yellow-100 text-yellow-700' :
+                    doctor.availability_status === 'break' ? 'bg-blue-100 text-blue-700' :
+                    'bg-red-100 text-red-700'
+                  }`}>
+                    {doctor.availability_status === 'available' ? 'Доступен' :
+                     doctor.availability_status === 'busy' ? 'Занят' :
+                     doctor.availability_status === 'break' ? 'На перерыве' :
+                     'Не работает'}
+                  </span>
                 </div>
               </div>
               <div className="flex items-center gap-1 bg-gradient-to-r from-green-100 to-emerald-100 px-2 py-1 rounded-full self-start">
