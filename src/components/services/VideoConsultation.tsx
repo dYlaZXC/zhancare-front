@@ -9,6 +9,7 @@ import Step1 from "./consultations/VideoConsultationStep1";
 import Step2 from "./consultations/VideoConsultationStep2";
 import Step3 from "./consultations/VideoConsultationStep3";
 import TipsPanel from "./consultations/TipsPanel";
+// import WebSocketTester from "../debug/WebSocketTester";
 
 interface Doctor {
   id: number;
@@ -138,8 +139,10 @@ const VideoConsultation: React.FC = () => {
       setWebsocketConnected(false);
     };
 
-    const handleDoctorAvailabilityChange = (data: DoctorAvailabilityChangeData) => {
-      // console.log('👩‍⚕️ Doctor availability changed:', data);
+    const handleDoctorAvailabilityChange = (eventData: { data: DoctorAvailabilityChangeData } | DoctorAvailabilityChangeData) => {
+      // Extract the actual data from the event wrapper
+      const data = 'data' in eventData ? eventData.data : eventData;
+      console.log('👩‍⚕️ Doctor availability changed:', data);
 
       const { doctor_id, availability_status, doctor_info } = data;
 
@@ -514,6 +517,9 @@ const VideoConsultation: React.FC = () => {
                 />
               </div>
             </div>
+
+            {/* Debug component - remove in production */}
+            {/* <WebSocketTester /> */}
 
             {/* Step content - no extra spacing */}
             <div className="w-full">

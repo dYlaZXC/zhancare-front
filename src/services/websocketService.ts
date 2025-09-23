@@ -385,7 +385,7 @@ class WebSocketService {
     if (!this.socket) return;
 
     this.socket.onopen = () => {
-      // console.log('✅ WebSocket connected to Django Channels');
+      console.log('✅ WebSocket connected to Django Channels');
       this.state.isConnected = true;
       this.state.reconnectAttempts = 0;
       this.setStatus('connected');
@@ -407,7 +407,7 @@ class WebSocketService {
     };
 
     this.socket.onclose = (event) => {
-      // console.log('❌ WebSocket disconnected:', event.code, event.reason);
+      console.log('❌ WebSocket disconnected:', event.code, event.reason);
       this.state.isConnected = false;
       this.state.isAuthenticated = false;
       this.setStatus('disconnected');
@@ -498,7 +498,7 @@ class WebSocketService {
 
         switch (data.type) {
           case 'connect':
-            // console.log('🔌 WebSocket connected, sending authentication...');
+            console.log('🔌 WebSocket connected, sending authentication...');
             this.triggerCallbacks('connect', data.data);
 
             // Send authentication message
@@ -516,7 +516,7 @@ class WebSocketService {
             this.clearStoredTokens();
             break;
           case 'doctor_availability_changed':
-            // console.log('👩‍⚕️ Doctor availability changed:', data.data);
+            console.log('👩‍⚕️ Doctor availability changed:', data.data);
             this.triggerCallbacks('doctor_availability_changed', { data: data.data });
             break;
           case 'message':
