@@ -17,7 +17,7 @@ export const ChatComponent = ({ onClose }: { onClose: () => void }) => {
     setError("");
 
     try {
-      console.log("Sending message to the API...");
+      // console.log("Sending message to the API...");
       // Make the request to your server API
       const res = await fetch("/api/mistral", {
         method: "POST",
@@ -25,7 +25,7 @@ export const ChatComponent = ({ onClose }: { onClose: () => void }) => {
         body: JSON.stringify({ user_text: userInput, language: "ru" }),
       });
 
-      console.log("Response status:", res.status);
+      // console.log("Response status:", res.status);
 
       if (!res.ok) {
         const errorDetails = await res.json();
@@ -34,7 +34,7 @@ export const ChatComponent = ({ onClose }: { onClose: () => void }) => {
       }
 
       const data = await res.json();
-      console.log("Response from API:", data);
+      // console.log("Response from API:", data);
 
       setMessages((prev) => {
         const lastMessage = prev[prev.length - 1];

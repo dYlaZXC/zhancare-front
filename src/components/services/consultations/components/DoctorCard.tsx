@@ -314,13 +314,13 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
                             return slotLocalDate.getTime() === targetLocalDate.getTime();
                           }).sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
 
-                          console.log(`📅 DoctorCard: Selected date ${selectedDate}`);
-                          console.log(`📅 Found ${slotsForDate.length} slots for this specific date`);
+                          // console.log(`📅 DoctorCard: Selected date ${selectedDate}`);
+                          // console.log(`📅 Found ${slotsForDate.length} slots for this specific date`);
                           if (slotsForDate.length > 0) {
-                            console.log(`📅 First slot: ${slotsForDate[0].start_time} (${new Date(slotsForDate[0].start_time).toLocaleString()})`);
-                            console.log(`📅 Last slot: ${slotsForDate[slotsForDate.length - 1].start_time} (${new Date(slotsForDate[slotsForDate.length - 1].start_time).toLocaleString()})`);
+                            // console.log(`📅 First slot: ${slotsForDate[0].start_time} (${new Date(slotsForDate[0].start_time).toLocaleString()})`);
+                            // console.log(`📅 Last slot: ${slotsForDate[slotsForDate.length - 1].start_time} (${new Date(slotsForDate[slotsForDate.length - 1].start_time).toLocaleString()})`);
                           }
-                          console.log(`📅 Total timeslots available: ${timeslots.length}`);
+                          // console.log(`📅 Total timeslots available: ${timeslots.length}`);
 
                           return slotsForDate.length > 0 ? (
                             slotsForDate.map((timeslot) => (
@@ -332,32 +332,32 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
 
                                   // Prevent interaction with booked slots
                                   if (timeslot.is_booked || timeslot.available_spots === 0) {
-                                    console.log(`🚫 Booked slot clicked - ignoring: ${timeslot.start_time}`);
+                                    // console.log(`🚫 Booked slot clicked - ignoring: ${timeslot.start_time}`);
                                     return;
                                   }
 
-                                  console.log(`🕐 Timeslot clicked: ${timeslot.start_time}`, {
-                                    isSelected,
-                                    isUrgent,
-                                    hasOnTimeslotSelect: !!onTimeslotSelect,
-                                    hasOnClick: !!onClick
-                                  });
+                                  // console.log(`🕐 Timeslot clicked: ${timeslot.start_time}`, {
+                                  //   isSelected,
+                                  //   isUrgent,
+                                  //   hasOnTimeslotSelect: !!onTimeslotSelect,
+                                  //   hasOnClick: !!onClick
+                                  // });
 
                                   if (!isUrgent) {
-                                    console.log(`🔄 Non-urgent consultation - processing timeslot selection`);
+                                    // console.log(`🔄 Non-urgent consultation - processing timeslot selection`);
 
                                     // For non-urgent consultations, allow timeslot selection
                                     // First select the doctor if not already selected
                                     if (!isSelected) {
-                                      console.log(`👨‍⚕️ Selecting doctor first`);
+                                      // console.log(`👨‍⚕️ Selecting doctor first`);
                                       onClick?.(); // Select the doctor first
                                     }
 
                                     // Then select the timeslot
-                                    console.log(`⏰ Calling onTimeslotSelect with:`, timeslot);
+                                    // console.log(`⏰ Calling onTimeslotSelect with:`, timeslot);
                                     onTimeslotSelect?.(timeslot);
                                   } else {
-                                    console.log(`🚨 Urgent consultation - timeslot selection skipped`);
+                                    // console.log(`🚨 Urgent consultation - timeslot selection skipped`);
                                   }
                                 }}
                                 className={clsx(
@@ -471,30 +471,30 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
 
                                 // Prevent interaction with booked slots
                                 if (timeslot.is_booked || timeslot.available_spots === 0) {
-                                  console.log(`🚫 Booked slot clicked - ignoring: ${timeslot.start_time}`);
+                                  // console.log(`🚫 Booked slot clicked - ignoring: ${timeslot.start_time}`);
                                   return;
                                 }
 
-                                console.log(`🕐 Quick timeslot clicked: ${timeslot.start_time}`, {
-                                  isSelected,
-                                  isUrgent,
-                                  hasOnTimeslotSelect: !!onTimeslotSelect,
-                                  hasOnClick: !!onClick
-                                });
+                                // console.log(`🕐 Quick timeslot clicked: ${timeslot.start_time}`, {
+                                //   isSelected,
+                                //   isUrgent,
+                                //   hasOnTimeslotSelect: !!onTimeslotSelect,
+                                //   hasOnClick: !!onClick
+                                // });
 
                                 if (!isUrgent) {
                                   // For non-urgent consultations, allow timeslot selection
                                   // First select the doctor if not already selected
                                   if (!isSelected) {
-                                    console.log(`👨‍⚕️ Selecting doctor first via quick slot`);
+                                    // console.log(`👨‍⚕️ Selecting doctor first via quick slot`);
                                     onClick?.(); // Select the doctor first
                                   }
 
                                   // Then select the timeslot
-                                  console.log(`⏰ Calling onTimeslotSelect from quick view:`, timeslot);
+                                  // console.log(`⏰ Calling onTimeslotSelect from quick view:`, timeslot);
                                   onTimeslotSelect?.(timeslot);
                                 } else {
-                                  console.log(`🚨 Urgent consultation - timeslot selection skipped`);
+                                  // console.log(`🚨 Urgent consultation - timeslot selection skipped`);
                                 }
                               }}
                               className={clsx(

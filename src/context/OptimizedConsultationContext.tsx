@@ -54,7 +54,7 @@ export const OptimizedConsultationProvider: React.FC<{ children: React.ReactNode
   // ==========================================
 
   const handleConsultationCreated = useCallback((consultation: ConsultationData) => {
-    console.log("🆕 New consultation created:", consultation);
+    // console.log("🆕 New consultation created:", consultation);
 
     // Add to history
     setConsultationHistory(prev => [consultation, ...prev.slice(0, 9)]); // Keep last 10
@@ -68,7 +68,7 @@ export const OptimizedConsultationProvider: React.FC<{ children: React.ReactNode
       !dismissedConsultationIds.current.has(consultation.id) &&
       !activeConsultation // Don't show if there's already an active consultation
     ) {
-      console.log("🚨 Showing urgent consultation popup:", consultation);
+      // console.log("🚨 Showing urgent consultation popup:", consultation);
 
       setActiveConsultation(consultation);
       seenConsultationIds.current.add(consultation.id);
@@ -83,7 +83,7 @@ export const OptimizedConsultationProvider: React.FC<{ children: React.ReactNode
   }, [isDoctor, activeConsultation]);
 
   const handleConsultationUpdated = useCallback((consultation: ConsultationData) => {
-    console.log("📝 Consultation updated:", consultation);
+    // console.log("📝 Consultation updated:", consultation);
 
     // Update in history
     setConsultationHistory(prev =>
@@ -97,7 +97,7 @@ export const OptimizedConsultationProvider: React.FC<{ children: React.ReactNode
   }, [activeConsultation]);
 
   const handleConsultationStatusChanged = useCallback((consultation: ConsultationData) => {
-    console.log("🔄 Consultation status changed:", consultation);
+    // console.log("🔄 Consultation status changed:", consultation);
 
     // Update in history
     setConsultationHistory(prev =>
@@ -120,7 +120,7 @@ export const OptimizedConsultationProvider: React.FC<{ children: React.ReactNode
   }, [activeConsultation]);
 
   const handleWebSocketConnect = useCallback(() => {
-    console.log("✅ Consultation WebSocket connected");
+    // console.log("✅ Consultation WebSocket connected");
     if (isDoctor) {
       toast.success("🔗 Подключено к системе консультаций", {
         autoClose: 2000,
@@ -130,7 +130,7 @@ export const OptimizedConsultationProvider: React.FC<{ children: React.ReactNode
   }, [isDoctor]);
 
   const handleWebSocketDisconnect = useCallback(() => {
-    console.log("📡 Consultation WebSocket disconnected");
+    // console.log("📡 Consultation WebSocket disconnected");
     if (isDoctor) {
       toast.warning("⚠️ Соединение с системой консультаций потеряно", {
         autoClose: 3000,
@@ -167,7 +167,7 @@ export const OptimizedConsultationProvider: React.FC<{ children: React.ReactNode
   // ==========================================
 
   const dismissConsultation = useCallback((id: number) => {
-    console.log(`💤 Dismissing consultation ${id}`);
+    // console.log(`💤 Dismissing consultation ${id}`);
     dismissedConsultationIds.current.add(id);
     setActiveConsultation(null);
 
@@ -178,7 +178,7 @@ export const OptimizedConsultationProvider: React.FC<{ children: React.ReactNode
   }, []);
 
   const acceptConsultation = useCallback(async (consultation: ConsultationData) => {
-    console.log(`✅ Accepting consultation ${consultation.id}`);
+    // console.log(`✅ Accepting consultation ${consultation.id}`);
 
     try {
       // Update consultation status to ongoing
@@ -213,7 +213,7 @@ export const OptimizedConsultationProvider: React.FC<{ children: React.ReactNode
   }, [token]);
 
   const rejectConsultation = useCallback(async (consultation: ConsultationData) => {
-    console.log(`❌ Rejecting consultation ${consultation.id}`);
+    // console.log(`❌ Rejecting consultation ${consultation.id}`);
 
     try {
       const response = await fetch(`/api/v1/consultations/${consultation.meeting_id}/reject/`, {

@@ -325,7 +325,7 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
   );
 };
 
-interface Step3Props {
+export interface Step3Props {
   symptoms: string;
   doctors: {
     id: number;
@@ -342,6 +342,7 @@ interface Step3Props {
   onCancel: () => void;
   loading: boolean;
   waiting: boolean;
+  connecting?: boolean;
   activeStep?: number;
   recommendedDoctor?: {
     id: number;
@@ -399,6 +400,7 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
   onCancel,
   loading,
   waiting,
+  connecting = false,
   activeStep = 3,
   recommendedDoctor,
   scheduledConsultation,
@@ -810,12 +812,14 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
               }
             }
           }}
-          disabled={loading || !selectedDoctorId || waiting}
-          whileTap={!loading && !waiting ? { scale: 0.97 } : {}}
-          whileHover={!loading && !waiting ? { scale: 1.02 } : {}}
+          disabled={loading || !selectedDoctorId || waiting || connecting}
+          whileTap={!loading && !waiting && !connecting ? { scale: 0.97 } : {}}
+          whileHover={!loading && !waiting && !connecting ? { scale: 1.02 } : {}}
           className={`w-full sm:w-auto flex items-center justify-center gap-2 sm:gap-3 px-6 sm:px-8 md:px-10 py-3 sm:py-3.5 md:py-4 rounded-lg sm:rounded-xl font-bold text-base sm:text-lg md:text-xl transition-all min-w-[200px] sm:min-w-[240px] md:min-w-[280px] shadow-xl ${
             loading || waiting
               ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+              : connecting
+              ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white cursor-not-allowed"
               : isUrgent
               ? "bg-gradient-to-r from-red-600 to-orange-600 text-white hover:shadow-2xl hover:shadow-red-500/25 hover:from-red-700 hover:to-orange-700"
               : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-2xl hover:shadow-blue-500/25 hover:from-blue-700 hover:to-indigo-700"
@@ -825,6 +829,11 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
             <>
               <div className="w-5 h-5 sm:w-6 sm:h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               <span>Подготовка...</span>
+            </>
+          ) : connecting ? (
+            <>
+              <div className="w-5 h-5 sm:w-6 sm:h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              <span>Подключаемся...</span>
             </>
           ) : waiting ? (
             <>

@@ -36,15 +36,15 @@ export const ConsultationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   // Handle WebSocket messages for real-time consultation updates
   const handleWebSocketMessage = useCallback((message: any) => {
-    console.log("📥 Received WebSocket message:", message);
+    // console.log("📥 Received WebSocket message:", message);
 
     if (message.type === 'consultation_created' && message.data) {
       const consultation: Consultation = message.data;
-      console.log("🔍 Consultation data:", consultation);
-      console.log("🔍 Consultation status:", consultation.status);
-      console.log("🔍 Current newConsultation:", newConsultation);
-      console.log("🔍 seenIds:", Array.from(seenIds.current));
-      console.log("🔍 dismissedIds:", Array.from(dismissedIds.current));
+      // console.log("🔍 Consultation data:", consultation);
+      // console.log("🔍 Consultation status:", consultation.status);
+      // console.log("🔍 Current newConsultation:", newConsultation);
+      // console.log("🔍 seenIds:", Array.from(seenIds.current));
+      // console.log("🔍 dismissedIds:", Array.from(dismissedIds.current));
 
       // Only show popup for pending consultations that haven't been seen or dismissed
       if (
@@ -53,7 +53,7 @@ export const ConsultationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         !dismissedIds.current.has(consultation.id) &&
         !newConsultation
       ) {
-        console.log("🚨 New urgent consultation received via WebSocket:", consultation);
+        // console.log("🚨 New urgent consultation received via WebSocket:", consultation);
         setNewConsultation(consultation);
         seenIds.current.add(consultation.id);
 
@@ -71,19 +71,19 @@ export const ConsultationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     onMessage: isDoctor ? handleWebSocketMessage : undefined,
     onConnect: () => {
       if (isDoctor) {
-        console.log("✅ WebSocket connected - listening for urgent consultations");
+        // console.log("✅ WebSocket connected - listening for urgent consultations");
         toast.success("🔗 Подключено к системе уведомлений", { autoClose: 2000 });
       }
     },
     onDisconnect: () => {
       if (isDoctor) {
-        console.log("💡 WebSocket connection lost - will reconnect automatically");
+        // console.log("💡 WebSocket connection lost - will reconnect automatically");
         // Don't show error toast since WebSocket server isn't implemented yet
       }
     },
     onError: (error) => {
       if (isDoctor) {
-        console.log("💡 WebSocket server not ready - this is expected until backend implements WebSocket support");
+        // console.log("💡 WebSocket server not ready - this is expected until backend implements WebSocket support");
       }
     }
   });

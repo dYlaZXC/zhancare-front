@@ -12,7 +12,7 @@ interface Doctor {
   name: string;
   email: string;
   doctor_type: string;
-  availability_status: string;
+  availability_status: "available" | "busy" | "offline" | "break";
   availability_note?: string;
   last_seen?: string;
 }
@@ -32,20 +32,20 @@ const DoctorAvailabilityTest: React.FC = () => {
 
     // Setup WebSocket event handlers
     const handleWebSocketConnect = () => {
-      console.log('🔌 WebSocket connected in DoctorAvailabilityTest');
+      // console.log('🔌 WebSocket connected in DoctorAvailabilityTest');
       setWebsocketConnected(true);
       addEvent('✅ WebSocket connected');
     };
 
     const handleWebSocketDisconnect = () => {
-      console.log('🔌 WebSocket disconnected in DoctorAvailabilityTest');
+      // console.log('🔌 WebSocket disconnected in DoctorAvailabilityTest');
       setWebsocketConnected(false);
-      addEvent('❌ WebSocket disconnected');
+      // addEvent('❌ WebSocket disconnected');
     };
 
-    const handleDoctorAvailabilityChange = (data: { data: DoctorAvailabilityChangeData }) => {
-      console.log('👩‍⚕️ Doctor availability changed:', data);
-      const { doctor_id, availability_status, doctor_info, old_status } = data.data;
+    const handleDoctorAvailabilityChange = (data: DoctorAvailabilityChangeData) => {
+      // console.log('👩‍⚕️ Doctor availability changed:', data);
+      const { doctor_id, availability_status, doctor_info, old_status } = data;
 
       addEvent(`👩‍⚕️ Dr. ${doctor_info.name} status: ${old_status} → ${availability_status}`);
 
@@ -84,7 +84,7 @@ const DoctorAvailabilityTest: React.FC = () => {
         params: { lang: 'ru' }
       });
 
-      console.log("Doctors data:", res.data);
+      // console.log("Doctors data:", res.data);
       setAvailableDoctors(res.data?.doctors || []);
 
       if (showToast) {
@@ -106,7 +106,9 @@ const DoctorAvailabilityTest: React.FC = () => {
     name: `${user.first_name} ${user.last_name}`,
     email: user.email,
     doctor_type: user.doctor_type || 'Doctor',
-    availability_status: user.availability_status || 'offline',
+    availability_status: (user.availability_status && ['available', 'busy', 'offline', 'break'].includes(user.availability_status)
+      ? user.availability_status
+      : 'offline') as "available" | "busy" | "offline" | "break",
     availability_note: user.availability_note || '',
     last_seen: user.last_seen
   } : null;
@@ -140,7 +142,7 @@ const DoctorAvailabilityTest: React.FC = () => {
                     addEvent(`🔄 You changed status to: ${newStatus}`);
                     // Update local state
                     if (currentUserAsDoctor) {
-                      currentUserAsDoctor.availability_status = newStatus;
+                      currentUserAsDoctor.availability_status = newStatus as "available" | "busy" | "offline" | "break";
                     }
                   }}
                 />

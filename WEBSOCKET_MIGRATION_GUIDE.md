@@ -162,9 +162,9 @@ elif self.user_role == 'patient':
 ### 4. **Built-in Debugging**
 ```typescript
 // Comprehensive logging for easy debugging
-console.log("🆕 New consultation created:", consultation);
-console.log("🔄 Consultation status changed:", consultation);
-console.log("✅ Consultation WebSocket connected");
+// console.log("🆕 New consultation created:", consultation);
+// console.log("🔄 Consultation status changed:", consultation);
+// console.log("✅ Consultation WebSocket connected");
 ```
 
 ### 5. **Enhanced Popup Logic**

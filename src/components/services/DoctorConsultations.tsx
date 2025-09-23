@@ -2,44 +2,172 @@
 
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
-import { 
-  Stethoscope, 
-  Clock, 
-  Users, 
-  Video, 
-  Phone, 
-  MessageSquare,
-  TrendingUp,
+import {
+  Stethoscope,
+  Clock,
   Calendar,
-  Bell,
   Settings,
-  Filter,
   Search,
   RefreshCw,
   BarChart3,
   Activity,
   CheckCircle2,
-  AlertCircle,
   XCircle
 } from "lucide-react";
 import { api } from "@/utils/api";
 import { useAuth } from "@/context/AuthContext";
 import { useConsultationManager } from "./consultations/useConsultationManager";
 import DoctorConsultationsTable from "./consultations/DoctorConsultationsTable";
+import UrgentConsultationPopup, { IncomingConsultation } from "./consultations/UrgentConsultationPopup";
+import { websocketService } from "@/services/websocketService";
+
 
 const DoctorConsultations: React.FC = () => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'ongoing' | 'completed' | 'planned'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showSettings, setShowSettings] = useState(false);
 
+  // ✅ Popup notification state
+  const [incomingConsultation, setIncomingConsultation] = useState<IncomingConsultation | null>(null);
+  const [showNotificationPopup, setShowNotificationPopup] = useState(false);
+  const [isProcessingRequest, setIsProcessingRequest] = useState(false);
+  const [notificationSound] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const audio = new Audio('/sounds/notification.mp3');
+      audio.volume = 0.7;
+      return audio;
+    }
+    return null;
+  });
+
   const {
     consultations,
     fetchConsultations,
   } = useConsultationManager();
+
+  // ✅ WebSocket setup for real-time notifications
+  useEffect(() => {
+    if (user?.role === 'doctor') {
+      // console.log('🔌 Setting up WebSocket listeners for doctor consultations');
+
+      // Connect to WebSocket with token
+      websocketService.connect(token || undefined);
+
+      // Define callback functions for cleanup
+      const handleConsultationCreated = (data: any) => {
+        // console.log('🔔 New consultation request received:', data);
+
+        // Handle both data.data and direct data structures
+        const consultation = data.consultation || data.data || data;
+
+        const consultationData: IncomingConsultation = {
+          id: consultation.id,
+          meeting_id: consultation.meeting_id,
+          patient_name: consultation.patient_name,
+          patient_email: consultation.patient_email,
+          symptoms: consultation.symptoms,
+          is_urgent: consultation.is_urgent,
+          created_at: consultation.created_at
+        };
+
+        // Show popup notification
+        setIncomingConsultation(consultationData);
+        setShowNotificationPopup(true);
+
+        // Play notification sound
+        if (notificationSound) {
+          notificationSound.play().catch(console.error);
+        }
+
+        // Show toast notification
+        toast.info(`📞 Новый запрос на консультацию от ${consultationData.patient_name}`, {
+          autoClose: 8000,
+          onClick: () => setShowNotificationPopup(true)
+        });
+
+        // Auto-refresh consultations list
+        fetchConsultations();
+      };
+
+      const handleStatusChanged = (data: any) => {
+        // console.log('📊 Consultation status changed:', data);
+        fetchConsultations();
+      };
+
+      // Listen for new consultation requests
+      websocketService.on('consultation_created', handleConsultationCreated);
+
+      // Listen for consultation status changes
+      websocketService.on('consultation_status_changed', handleStatusChanged);
+
+      // Cleanup listeners on unmount
+      return () => {
+        websocketService.off('consultation_created', handleConsultationCreated);
+        websocketService.off('consultation_status_changed', handleStatusChanged);
+      };
+    }
+  }, [user, token, notificationSound, fetchConsultations]);
+
+  // ✅ Popup handlers
+  const handlePopupAccept = async () => {
+    if (incomingConsultation) {
+      setIsProcessingRequest(true);
+      try {
+        await api.post(`/consultations/${incomingConsultation.meeting_id}/accept/`, {});
+        toast.success("✅ Консультация принята! Переход к видеозвонку...");
+
+        // Close popup
+        setShowNotificationPopup(false);
+        setIncomingConsultation(null);
+
+        // Redirect to video call
+        router.push(`/video-call/doctor?meetingId=${incomingConsultation.meeting_id}`);
+        fetchConsultations();
+      } catch (error) {
+        console.error("Ошибка при принятии консультации:", error);
+        toast.error("❌ Ошибка при принятии консультации.");
+      } finally {
+        setIsProcessingRequest(false);
+      }
+    }
+  };
+
+  const handlePopupReject = async (isTimerExpired = false) => {
+    if (incomingConsultation) {
+      setIsProcessingRequest(true);
+      try {
+        if (isTimerExpired) {
+          // Timer expired - mark as missed
+          await api.post(`/consultations/${incomingConsultation.meeting_id}/mark-missed/`, {});
+          toast.info("⏰ Время ответа истекло.");
+        } else {
+          // Manual rejection
+          await api.post(`/consultations/${incomingConsultation.meeting_id}/reject/`, {});
+          toast.info("❌ Консультация отклонена.");
+        }
+
+        // Close popup
+        setShowNotificationPopup(false);
+        setIncomingConsultation(null);
+
+        fetchConsultations();
+      } catch (error) {
+        console.error("Ошибка при отклонении консультации:", error);
+        toast.error("❌ Ошибка при отклонении консультации.");
+      } finally {
+        setIsProcessingRequest(false);
+      }
+    }
+  };
+
+  const handlePopupClose = () => {
+    setShowNotificationPopup(false);
+    // Don't clear incomingConsultation immediately in case user wants to reopen
+  };
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -308,7 +436,15 @@ const DoctorConsultations: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Global consultation popup will appear automatically from OptimizedConsultationProvider */}
+        {/* ✅ Popup Notification for Urgent Consultations */}
+        <UrgentConsultationPopup
+          isVisible={showNotificationPopup}
+          consultation={incomingConsultation}
+          isProcessing={isProcessingRequest}
+          onAccept={handlePopupAccept}
+          onReject={handlePopupReject}
+          onClose={handlePopupClose}
+        />
 
         {/* Main Content */}
         <motion.div

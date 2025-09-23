@@ -53,7 +53,7 @@ export const useUserProfile = () => {
 
   const fetchUserProfile = useCallback(async () => {
     if (!user) {
-      console.log('❌ [useUserProfile] No user found, skipping API call');
+      // console.log('❌ [useUserProfile] No user found, skipping API call');
       return;
     }
 
@@ -61,20 +61,20 @@ export const useUserProfile = () => {
       setLoading(true);
       setError(null);
 
-      console.log('🔑 [useUserProfile] Starting API call...');
-      console.log('🔑 [useUserProfile] User from AuthContext:', user);
+      // console.log('🔑 [useUserProfile] Starting API call...');
+      // console.log('🔑 [useUserProfile] User from AuthContext:', user);
 
       // Check authentication before making the call
       const token = localStorage.getItem("access_token");
-      console.log('🔑 [useUserProfile] Access token exists:', !!token);
-      console.log('🔑 [useUserProfile] Token preview:', token ? token.substring(0, 20) + '...' : 'none');
+      // console.log('🔑 [useUserProfile] Access token exists:', !!token);
+      // console.log('🔑 [useUserProfile] Token preview:', token ? token.substring(0, 20) + '...' : 'none');
 
-      console.log('🔑 [useUserProfile] Making API call to /user-profile/profile/...');
+      // console.log('🔑 [useUserProfile] Making API call to /user-profile/profile/...');
       const response = await api.get('/user-profile/profile/');
 
-      console.log('✅ [useUserProfile] SUCCESS! API Response:', response.data);
-      console.log('📞 [useUserProfile] Phone in API response:', response.data?.phone);
-      console.log('🎯 [useUserProfile] Full response keys:', Object.keys(response.data));
+      // console.log('✅ [useUserProfile] SUCCESS! API Response:', response.data);
+      // console.log('📞 [useUserProfile] Phone in API response:', response.data?.phone);
+      // console.log('🎯 [useUserProfile] Full response keys:', Object.keys(response.data));
 
       setFullUserProfile(response.data);
     } catch (error: any) {
@@ -88,7 +88,7 @@ export const useUserProfile = () => {
 
       // Fallback to basic user data on error
       if (user) {
-        console.log('📄 [useUserProfile] Using fallback user data:', user);
+        // console.log('📄 [useUserProfile] Using fallback user data:', user);
         setFullUserProfile({
           id: user.id,
           first_name: user.first_name,
@@ -104,15 +104,15 @@ export const useUserProfile = () => {
   }, [user]);
 
   useEffect(() => {
-    console.log('🔄 [useUserProfile] useEffect triggered:', { authLoading, user: !!user });
+    // console.log('🔄 [useUserProfile] useEffect triggered:', { authLoading, user: !!user });
     if (!authLoading && user) {
-      console.log('🔄 [useUserProfile] Calling fetchUserProfile...');
+      // console.log('🔄 [useUserProfile] Calling fetchUserProfile...');
       fetchUserProfile();
     } else if (!authLoading && !user) {
-      console.log('🔄 [useUserProfile] No user, setting loading to false');
+      // console.log('🔄 [useUserProfile] No user, setting loading to false');
       setLoading(false);
     } else {
-      console.log('🔄 [useUserProfile] Still loading auth or no conditions met', { authLoading, user: !!user });
+      // console.log('🔄 [useUserProfile] Still loading auth or no conditions met', { authLoading, user: !!user });
     }
   }, [authLoading, user, fetchUserProfile]);
 
@@ -158,12 +158,12 @@ export const useUserProfile = () => {
     date_joined: fullUserProfile.date_joined || "",
   } : null;
 
-  console.log('🎯 [useUserProfile] Final userProfile creation:');
-  console.log('🎯 [useUserProfile] - fullUserProfile exists:', !!fullUserProfile);
-  console.log('🎯 [useUserProfile] - fullUserProfile data:', fullUserProfile);
-  console.log('🎯 [useUserProfile] - Final userProfile object:', userProfile);
-  console.log('📞 [useUserProfile] - Final userProfile.phone:', userProfile?.phone);
-  console.log('🔍 [useUserProfile] - Current states:', { loading, error, hasFullProfile: !!fullUserProfile });
+  // console.log('🎯 [useUserProfile] Final userProfile creation:');
+  // console.log('🎯 [useUserProfile] - fullUserProfile exists:', !!fullUserProfile);
+  // console.log('🎯 [useUserProfile] - fullUserProfile data:', fullUserProfile);
+  // console.log('🎯 [useUserProfile] - Final userProfile object:', userProfile);
+  // console.log('📞 [useUserProfile] - Final userProfile.phone:', userProfile?.phone);
+  // console.log('🔍 [useUserProfile] - Current states:', { loading, error, hasFullProfile: !!fullUserProfile });
 
   return {
     userProfile,

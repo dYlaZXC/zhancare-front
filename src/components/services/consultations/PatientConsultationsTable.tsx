@@ -37,7 +37,10 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
   showFilters = true,
 }) => {
   const { consultations: hookConsultations, fetchConsultations } = useConsultationManager();
-  const consultations = propConsultations || hookConsultations || [];
+  const consultations = useMemo(() =>
+    propConsultations || hookConsultations || [],
+    [propConsultations, hookConsultations]
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
   const [typeFilter, setTypeFilter] = useState<FilterType>("all");
@@ -56,6 +59,7 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
 
   // Helper function to check if consultation can be joined (10 minutes before start time)
   const canJoinConsultation = (consultation: Consultation): { canJoin: boolean; timeUntil: string; isReady: boolean } => {
+    // Use refreshTrigger to force re-evaluation of time-dependent logic
     refreshTrigger;
     if (!consultation.scheduled_at) {
       return { canJoin: false, timeUntil: '', isReady: false };

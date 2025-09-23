@@ -62,7 +62,7 @@ export const PersonalDetailsCard = ({
         setLoading(true);
         const { api } = await import("@/utils/api");
         const response = await api.get('/user-profile/profile/');
-        console.log('✅ [PersonalDetailsCard] API data loaded:', response.data);
+        // console.log('✅ [PersonalDetailsCard] API data loaded:', response.data);
         setUser(response.data);
       } catch (error: any) {
         console.error('❌ [PersonalDetailsCard] API error:', error);
@@ -77,9 +77,9 @@ export const PersonalDetailsCard = ({
   }, [initialUser]);
 
   // Debug: log all user data
-  console.log('📋 [PersonalDetailsCard] Current user:', user);
-  console.log('📞 [PersonalDetailsCard] User phone field:', user.phone);
-  console.log('🔑 [PersonalDetailsCard] User keys:', Object.keys(user));
+  // console.log('📋 [PersonalDetailsCard] Current user:', user);
+  // console.log('📞 [PersonalDetailsCard] User phone field:', user.phone);
+  // console.log('🔑 [PersonalDetailsCard] User keys:', Object.keys(user));
 
 
 
@@ -311,7 +311,7 @@ export const PersonalDetailsCard = ({
         const { api } = await import("@/utils/api");
         const response = await api.get('/user-profile/profile/');
         setUser(response.data);
-        console.log('✅ [PersonalDetailsCard] Data refreshed after save:', response.data);
+        // console.log('✅ [PersonalDetailsCard] Data refreshed after save:', response.data);
 
         // Also trigger parent refetch if provided
         if (onRefetch) {

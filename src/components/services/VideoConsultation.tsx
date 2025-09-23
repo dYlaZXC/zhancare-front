@@ -70,6 +70,7 @@ const VideoConsultation: React.FC = () => {
   const [loadingCall, setLoadingCall] = useState(false);
   const [fetchingDoctors, setFetchingDoctors] = useState(true);
   const [waiting, setWaiting] = useState(false);
+  const [connecting, setConnecting] = useState(false);
   const [doctorsError, setDoctorsError] = useState<string | null>(null);
   const [websocketConnected, setWebsocketConnected] = useState(false);
 
@@ -82,7 +83,7 @@ const VideoConsultation: React.FC = () => {
         params: { lang: 'ru' } // Request Russian by default, can be made dynamic later
       });
 
-      console.log("Enhanced doctor data:", res.data); // Debug log to see the new structure
+      // console.log("Enhanced doctor data:", res.data); // Debug log to see the new structure
 
       const filtered = res.data?.doctors?.filter(
         (doc: Doctor) => doc.doctor_type !== "Сестринское дело"
@@ -110,6 +111,7 @@ const VideoConsultation: React.FC = () => {
 
   const cancelConsultation = useCallback(() => {
     setWaiting(false);
+    setConnecting(false);
     setMeetingId(null);
     toast.info("🚫 Консультация отменена.");
   }, []);
@@ -136,14 +138,14 @@ const VideoConsultation: React.FC = () => {
       setWebsocketConnected(false);
     };
 
-    const handleDoctorAvailabilityChange = (data: { data: DoctorAvailabilityChangeData }) => {
-      console.log('👩‍⚕️ Doctor availability changed:', data);
+    const handleDoctorAvailabilityChange = (data: DoctorAvailabilityChangeData) => {
+      // console.log('👩‍⚕️ Doctor availability changed:', data);
 
-      const { doctor_id, availability_status, doctor_info } = data.data;
+      const { doctor_id, availability_status, doctor_info } = data;
 
       if (availability_status === 'available') {
         // Doctor became available - refresh the doctor list
-        console.log(`✅ Dr. ${doctor_info.name} is now available, refreshing doctor list`);
+        // console.log(`✅ Dr. ${doctor_info.name} is now available, refreshing doctor list`);
         fetchDoctors(false); // Don't show toast for automatic refresh
 
         toast.success(`✅ Dr. ${doctor_info.name} теперь доступен для консультации!`, {
@@ -152,7 +154,7 @@ const VideoConsultation: React.FC = () => {
         });
       } else {
         // Doctor became unavailable - remove from current list
-        console.log(`❌ Dr. ${doctor_info.name} is no longer available (${availability_status})`);
+        // console.log(`❌ Dr. ${doctor_info.name} is no longer available (${availability_status})`);
 
         setDoctors(prevDoctors => {
           const updatedDoctors = prevDoctors.filter(doctor => doctor.id !== doctor_id);
@@ -185,24 +187,57 @@ const VideoConsultation: React.FC = () => {
     const handleConsultationStatusChange = (data: any) => {
       console.log('🏥 Consultation status changed:', data);
 
-      const consultation = data.data?.consultation;
-      if (!consultation || !meetingId) return;
+      const consultation = data.consultation || data.data?.consultation || data;
 
-      // Only handle status changes for the current consultation
-      if (consultation.meeting_id === meetingId) {
-        console.log(`📋 Current consultation status changed: ${consultation.old_status} → ${consultation.new_status}`);
+      if (!consultation) {
+        console.log('⚠️ No consultation data in status change event');
+        return;
+      }
+
+      console.log(`📋 Consultation ${consultation.id} status: ${consultation.old_status} → ${consultation.new_status}`);
+      console.log(`🔍 Current meetingId: ${meetingId}, Event meetingId: ${consultation.meeting_id}`);
+
+      // Handle status changes for the current consultation (exact meeting ID match)
+      if (meetingId && consultation.meeting_id === meetingId) {
+        console.log(`✅ Exact meeting ID match - handling status change`);
 
         if (consultation.new_status === 'ongoing') {
-          toast.success("✅ Доктор подключился.");
+          setConnecting(true);
+          toast.success("✅ Доктор подключился. Подождите, подключаемся к консультации...");
           // Clear any existing polling
           if (pollingRef.current) {
             clearInterval(pollingRef.current);
             pollingRef.current = null;
           }
           setWaiting(false);
-          router.push(`/video-call/patient?meetingId=${meetingId}`);
+
+          // Add a small delay to show the connecting state
+          setTimeout(() => {
+            router.push(`/video-call/patient?meetingId=${meetingId}`);
+          }, 1500);
         } else if (consultation.new_status === 'cancelled') {
-          toast.error("❌ Запрос отклонён.");
+          toast.error("❌ Доктор отклонил консультацию. Попробуйте выбрать другого врача.");
+          cancelConsultation();
+        } else if (consultation.new_status === 'missed') {
+          toast.error("⏰ Доктор не ответил в течение времени ожидания. Попробуйте выбрать другого врача.");
+          cancelConsultation();
+        }
+      }
+      // Fallback: if patient is waiting and any consultation is cancelled or missed, check if it's relevant
+      else if (waiting && (consultation.new_status === 'cancelled' || consultation.new_status === 'missed')) {
+        // console.log(`🔄 Patient waiting, checking cancellation/missed relevance`);
+
+        // Handle auto-decline/timeout scenarios where:
+        // 1. Patient is waiting but hasn't gotten a meeting ID yet (meetingId is null)
+        // 2. The consultation is urgent (auto-decline from doctor popup timer)
+        // 3. Or any cancellation/missed when we don't have a meeting ID yet
+        if (!meetingId || consultation.is_urgent) {
+          // console.log(`⚠️ Applying fallback cancellation logic - no meetingId or urgent consultation`);
+          if (consultation.new_status === 'missed') {
+            toast.error("⏰ Доктор не ответил в течение времени ожидания. Попробуйте выбрать другого врача.");
+          } else {
+            toast.error("❌ Доктор отклонил консультацию. Попробуйте выбрать другого врача.");
+          }
           cancelConsultation();
         }
       }
@@ -230,6 +265,42 @@ const VideoConsultation: React.FC = () => {
   useEffect(() => {
     if (waiting && meetingId) {
       console.log(`🔌 Starting to listen for consultation status changes for meeting: ${meetingId}`);
+      console.log(`🔌 WebSocket connected: ${websocketConnected}`);
+      console.log(`🔌 WebSocket service connected: ${websocketService.connected}`);
+
+      // Set up polling as a fallback mechanism to check consultation status
+      const pollConsultationStatus = async () => {
+        try {
+          const response = await api.get(`/consultations/${meetingId}/`, {
+            headers: { Authorization: `Token ${token}` }
+          });
+          const consultation = response.data;
+          console.log(`🔄 Polling consultation status: ${consultation.status}`);
+
+          if (consultation.status === 'ongoing') {
+            console.log('✅ Doctor accepted via polling - redirecting');
+            setConnecting(true);
+            toast.success("✅ Доктор подключился. Подождите, подключаемся к консультации...");
+            setWaiting(false);
+
+            // Add a small delay to show the connecting state
+            setTimeout(() => {
+              router.push(`/video-call/patient?meetingId=${meetingId}`);
+            }, 1500);
+          } else if (consultation.status === 'cancelled') {
+            toast.error("❌ Доктор отклонил консультацию. Попробуйте выбрать другого врача.");
+            cancelConsultation();
+          } else if (consultation.status === 'missed') {
+            toast.error("⏰ Доктор не ответил в течение времени ожидания. Попробуйте выбрать другого врача.");
+            cancelConsultation();
+          }
+        } catch (error) {
+          console.error('❌ Error polling consultation status:', error);
+        }
+      };
+
+      // Poll every 3 seconds as fallback
+      const pollingInterval = setInterval(pollConsultationStatus, 3000);
 
       // Set up timeout for consultation waiting period
       const timeoutDuration = 2 * 60 * 1000; // 2 minutes
@@ -242,9 +313,10 @@ const VideoConsultation: React.FC = () => {
 
       return () => {
         clearTimeout(timeoutRef);
+        clearInterval(pollingInterval);
       };
     }
-  }, [waiting, meetingId, cancelConsultation]);
+  }, [waiting, meetingId, cancelConsultation, websocketConnected, token, router]);
 
   const handleAIRecommend = async () => {
     if (loadingAI || !token) return;
@@ -265,12 +337,12 @@ const VideoConsultation: React.FC = () => {
         { headers: { Authorization: `Token ${token}` } }
       );
 
-      console.log("AI response:", res.data);
+      // console.log("AI response:", res.data);
 
       if (res.data.success && res.data.recommended_doctor) {
         const doctor = res.data.recommended_doctor;
         const urgency = doctor.urgency === "urgent" ? "urgent" : "non_urgent";
-        console.log("Urgency extracted from recommended_doctor:", urgency);
+        // console.log("Urgency extracted from recommended_doctor:", urgency);
 
         setRecommendedDoctor({
           ...doctor,
@@ -280,7 +352,7 @@ const VideoConsultation: React.FC = () => {
         // Store the AI recommendation ID for timeslot booking
         if (res.data.ai_recommendation_id) {
           setAiRecommendationId(res.data.ai_recommendation_id);
-          console.log("AI recommendation ID stored:", res.data.ai_recommendation_id);
+          // console.log("AI recommendation ID stored:", res.data.ai_recommendation_id);
         }
 
         setSelectedDoctorId(doctor.id);
@@ -294,7 +366,7 @@ const VideoConsultation: React.FC = () => {
           const urgency =
             res.data.ai_data?.urgency === "non_urgent" ? "non_urgent" : "urgent";
 
-          console.log("Fallback urgency (from ai_data or default):", urgency);
+          // console.log("Fallback urgency (from ai_data or default):", urgency);
 
           setRecommendedDoctor({
             id: fallback.id,
@@ -311,7 +383,7 @@ const VideoConsultation: React.FC = () => {
           // Store AI recommendation ID for fallback case too
           if (res.data.ai_recommendation_id) {
             setAiRecommendationId(res.data.ai_recommendation_id);
-            console.log("AI recommendation ID stored (fallback):", res.data.ai_recommendation_id);
+            // console.log("AI recommendation ID stored (fallback):", res.data.ai_recommendation_id);
           }
 
           toast.info("❌ Специалист не найден. Назначен терапевт.");
@@ -338,7 +410,7 @@ const VideoConsultation: React.FC = () => {
     setLoadingCall(true);
 
     try {
-      console.log("🔄 Scheduling consultation...");
+      // console.log("🔄 Scheduling consultation...");
       const createRes = await api.post(
         "/consultations/book-dynamic-slot/",
         {
@@ -350,7 +422,7 @@ const VideoConsultation: React.FC = () => {
       );
 
       if (createRes.data?.consultation) {
-        console.log("✅ Consultation scheduled successfully:", createRes.data.consultation.id);
+        // console.log("✅ Consultation scheduled successfully:", createRes.data.consultation.id);
 
         // Show success message
         toast.success("✅ Консультация успешно запланирована! Вы можете подключиться к ней в назначенное время.");
@@ -385,12 +457,19 @@ const VideoConsultation: React.FC = () => {
     setWaiting(true);
 
     try {
-      console.log("🔄 Starting consultation...");
+      // console.log("🔄 Starting consultation...");
 
       // Create and start the consultation (all consultations created here in Step 3)
+      const isUrgentConsultation = recommendedDoctor?.urgency === 'urgent';
+      // console.log("🔥 Creating consultation with urgency:", isUrgentConsultation, "for doctor:", selectedDoctorId);
+
       const res = await api.post(
         "/consultations/start/",
-        { doctor_id: selectedDoctorId, symptoms },
+        {
+          doctor_id: selectedDoctorId,
+          symptoms,
+          is_urgent: isUrgentConsultation
+        },
         { headers: { Authorization: `Token ${token}` } }
       );
 
@@ -462,7 +541,7 @@ const VideoConsultation: React.FC = () => {
                   doctorsError={doctorsError}
                   websocketConnected={websocketConnected}
                   onConsultationBooked={(consultationId, consultationData) => {
-                    console.log("🎉 Consultation booked:", consultationId, consultationData);
+                    // console.log("🎉 Consultation booked:", consultationId, consultationData);
 
                     // Find the selected doctor for the consultation details
                     const selectedDoctor = doctors.find(d => d.id === selectedDoctorId);
@@ -506,18 +585,21 @@ const VideoConsultation: React.FC = () => {
               )}
               {step === 3 && (
                 <Step3
-                  symptoms={symptoms}
-                  doctors={doctors}
-                  selectedDoctorId={selectedDoctorId}
-                  onBack={() => setStep(2)}
-                  onCall={handleStartCall}
-                  onScheduleConsultation={handleScheduleConsultation}
-                  onCancel={cancelConsultation}
-                  loading={loadingCall}
-                  waiting={waiting}
-                  recommendedDoctor={recommendedDoctor}
-                  scheduledConsultation={scheduledConsultation}
-                  pendingConsultationData={pendingConsultationData}
+                  {...{
+                    symptoms,
+                    doctors,
+                    selectedDoctorId,
+                    onBack: () => setStep(2),
+                    onCall: handleStartCall,
+                    onScheduleConsultation: handleScheduleConsultation,
+                    onCancel: cancelConsultation,
+                    loading: loadingCall,
+                    waiting,
+                    connecting,
+                    recommendedDoctor,
+                    scheduledConsultation,
+                    pendingConsultationData,
+                  } as any}
                 />
               )}
             </div>

@@ -22,7 +22,7 @@ export default function Header() {
     
   // Debug: Log language changes
   useEffect(() => {
-    console.log(`Header component language changed to: ${language}`);
+    // console.log(`Header component language changed to: ${language}`);
   }, [language]);
     
   // Memoize translations to prevent unnecessary re-renders

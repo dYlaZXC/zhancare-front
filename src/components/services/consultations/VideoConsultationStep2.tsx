@@ -127,7 +127,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
     const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const timezoneOffset = now.getTimezoneOffset() * 60000; // Convert to milliseconds
 
-    console.log(`🌍 User timezone: ${userTimezone}, offset: ${now.getTimezoneOffset()} minutes`);
+    // console.log(`🌍 User timezone: ${userTimezone}, offset: ${now.getTimezoneOffset()} minutes`);
 
     // Generate slots for next 14 days
     for (let day = 0; day < 14; day++) {
@@ -173,7 +173,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
 
           // Debug: Log first few slots to see what's happening
           if (slots.length < 5) {
-            console.log(`🔍 Slot debug - Time: ${slotTimeString}, Booked: ${isBooked}, BookedSlots sample:`, bookedSlots.slice(0, 3));
+            // console.log(`🔍 Slot debug - Time: ${slotTimeString}, Booked: ${isBooked}, BookedSlots sample:`, bookedSlots.slice(0, 3));
           }
 
           // Include ALL slots but mark booked ones
@@ -190,11 +190,11 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
     }
 
     if (slots.length > 0) {
-      console.log(`🕐 Generated ${slots.length} slots in timezone ${userTimezone}`);
-      console.log(`🕐 First slot: ${new Date(slots[0].start_time).toLocaleString()}`);
-      console.log(`🕐 Last slot: ${new Date(slots[slots.length - 1].start_time).toLocaleString()}`);
-      console.log(`🕐 First slot ISO: ${slots[0].start_time}`);
-      console.log(`🕐 Last slot ISO: ${slots[slots.length - 1].start_time}`);
+      // console.log(`🕐 Generated ${slots.length} slots in timezone ${userTimezone}`);
+      // console.log(`🕐 First slot: ${new Date(slots[0].start_time).toLocaleString()}`);
+      // console.log(`🕐 Last slot: ${new Date(slots[slots.length - 1].start_time).toLocaleString()}`);
+      // console.log(`🕐 First slot ISO: ${slots[0].start_time}`);
+      // console.log(`🕐 Last slot ISO: ${slots[slots.length - 1].start_time}`);
     }
 
     return slots;
@@ -207,7 +207,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
       const startDate = new Date().toISOString().split('T')[0];
       const endDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-      console.log(`🔍 Fetching booked slots: ${apiUrl}?start_date=${startDate}&end_date=${endDate}`);
+      // console.log(`🔍 Fetching booked slots: ${apiUrl}?start_date=${startDate}&end_date=${endDate}`);
 
       const { data } = await api.get(apiUrl, {
         params: {
@@ -216,13 +216,13 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
         }
       });
 
-      console.log(`📨 Backend response:`, data);
+      // console.log(`📨 Backend response:`, data);
 
       const bookedSlots = data.booked_slots || [];
-      console.log(`📅 Booked slots array:`, bookedSlots);
+      // console.log(`📅 Booked slots array:`, bookedSlots);
 
       if (!silent) {
-        console.log(`Doctor ${doctorId}: Found ${bookedSlots.length} booked slots`);
+        // console.log(`Doctor ${doctorId}: Found ${bookedSlots.length} booked slots`);
       }
 
       // Generate dynamic available slots (excluding booked ones)
@@ -240,12 +240,12 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
         }));
 
         if (!silent) {
-          console.log(`Generated ${availableSlots.length} available slots for doctor ${doctorId}`);
+          // console.log(`Generated ${availableSlots.length} available slots for doctor ${doctorId}`);
           if (availableSlots.length > 0) {
-            console.log(`First slot: ${availableSlots[0].start_time}, Last slot: ${availableSlots[availableSlots.length - 1].start_time}`);
+            // console.log(`First slot: ${availableSlots[0].start_time}, Last slot: ${availableSlots[availableSlots.length - 1].start_time}`);
           }
         } else {
-          console.log(`🔄 Real-time update: Doctor ${doctorId} slots changed (${availableSlots.length} available)`);
+          // console.log(`🔄 Real-time update: Doctor ${doctorId} slots changed (${availableSlots.length} available)`);
         }
       }
 
@@ -267,7 +267,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
           [doctorId]: availableSlots
         }));
 
-        console.log(`Fallback: Generated ${availableSlots.length} slots for doctor ${doctorId}`);
+        // console.log(`Fallback: Generated ${availableSlots.length} slots for doctor ${doctorId}`);
       }
       // Silent errors in polling - don't update state to avoid overriding good data
     }
@@ -290,14 +290,14 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
 
 
   const handleTimeslotSelect = async (timeslot: TimeSlot) => {
-    console.log(`🕐 handleTimeslotSelect called at top level:`, {
-      timeslot: timeslot.start_time,
-      selectedDoctorId,
-      aiRecommendationId,
-      isUrgent,
-      showConfirmModal,
-      selectedTimeslot
-    });
+    // console.log(`🕐 handleTimeslotSelect called at top level:`, {
+    //   timeslot: timeslot.start_time,
+    //   selectedDoctorId,
+    //   aiRecommendationId,
+    //   isUrgent,
+    //   showConfirmModal,
+    //   selectedTimeslot
+    // });
 
     if (!aiRecommendationId) {
       console.warn('⚠️ No AI recommendation ID available');
@@ -322,11 +322,11 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
       return;
     }
 
-    console.log(`🔄 Timeslot belongs to doctor ${timeslotDoctorId} (${timeslotDoctor.name})`);
+    // console.log(`🔄 Timeslot belongs to doctor ${timeslotDoctorId} (${timeslotDoctor.name})`);
 
     // If the timeslot belongs to a different doctor than currently selected, update selection
     if (selectedDoctorId !== timeslotDoctorId) {
-      console.log(`🔄 Switching from doctor ${selectedDoctorId} to doctor ${timeslotDoctorId}`);
+      // console.log(`🔄 Switching from doctor ${selectedDoctorId} to doctor ${timeslotDoctorId}`);
       onSelect(timeslotDoctorId); // Update the selected doctor
     }
 
@@ -346,7 +346,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
 
     try {
       setBookingLoading(true);
-      console.log(`🔄 Timeslot confirmed: ${selectedTimeslot.start_time} for doctor ${bookingDoctorId} (${selectedDoctorForBooking.name})`);
+      // console.log(`🔄 Timeslot confirmed: ${selectedTimeslot.start_time} for doctor ${bookingDoctorId} (${selectedDoctorForBooking.name})`);
 
       // Don't create consultation yet - just confirm the timeslot selection
       // Remove the selected slot from available slots (temporarily)
@@ -363,7 +363,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
         ai_recommendation_id: aiRecommendationId
       };
 
-      console.log(`🎉 Timeslot confirmed successfully for doctor ${bookingDoctorId}`);
+      // console.log(`🎉 Timeslot confirmed successfully for doctor ${bookingDoctorId}`);
       setShowConfirmModal(false);
       onConsultationBooked?.(0, consultationData); // Pass 0 as consultationId since not created yet
     } catch (error) {
@@ -400,13 +400,13 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
         })
       : null;
 
-    console.log(`🃏 Rendering DoctorCard for doctor ${doctor.id}:`, {
-      isSelected,
-      isUrgent,
-      timeslots: doctorTimeslots[doctor.id]?.length || 0,
-      selectedDate,
-      hasHandleTimeslotSelect: !!handleTimeslotSelect
-    });
+    // console.log(`🃏 Rendering DoctorCard for doctor ${doctor.id}:`, {
+    //   isSelected,
+    //   isUrgent,
+    //   timeslots: doctorTimeslots[doctor.id]?.length || 0,
+    //   selectedDate,
+    //   hasHandleTimeslotSelect: !!handleTimeslotSelect
+    // });
 
     return (
       <DoctorCard

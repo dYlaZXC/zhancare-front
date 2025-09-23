@@ -238,7 +238,7 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
   ];
 
   const handleStatusChange = (meetingId: string, newStatus: string) => {
-    console.log(`🔄 Status change requested: ${meetingId} -> ${newStatus}, onStatusChange available: ${!!onStatusChange}`);
+    // console.log(`🔄 Status change requested: ${meetingId} -> ${newStatus}, onStatusChange available: ${!!onStatusChange}`);
     if (onStatusChange) {
       onStatusChange(meetingId, newStatus);
     }
@@ -252,7 +252,7 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
       ? "inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold border-2 shadow-sm"
       : "inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border-2 shadow-sm";
 
-    console.log(`🔍 Status dropdown - isDoctor: ${isDoctor}, user role: ${user?.role}, consultation: ${consultation.meeting_id}`);
+    // console.log(`🔍 Status dropdown - isDoctor: ${isDoctor}, user role: ${user?.role}, consultation: ${consultation.meeting_id}`);
 
     if (!isDoctor) {
       return (

@@ -102,7 +102,7 @@ export const useChat = ({
   };
 
   const callPixtralAPI = async (payload: any) => {
-    console.log("Starting API call...");
+    // console.log("Starting API call...");
     
     // Create new AbortController for this request
     const abortController = new AbortController();
@@ -112,7 +112,7 @@ export const useChat = ({
 
     // Generate unique ID for bot message
     const botMessageId = generateMessageId();
-    console.log("Generated bot message ID:", botMessageId);
+    // console.log("Generated bot message ID:", botMessageId);
 
     // Add placeholder bot message
     setMessages((prev) => {
@@ -135,7 +135,7 @@ export const useChat = ({
     });
 
     try {
-      console.log("Making fetch request...");
+      // console.log("Making fetch request...");
       const res = await fetch(ENDPOINT, {
         method: "POST",
         headers: {
@@ -146,7 +146,7 @@ export const useChat = ({
         signal: abortController.signal, // Add abort signal
       });
 
-      console.log("Response status:", res.status);
+      // console.log("Response status:", res.status);
 
       if (!res.ok) {
         const errorText = await res.text();
@@ -155,7 +155,7 @@ export const useChat = ({
       }
 
       const data = await res.json();
-      console.log("API response:", data);
+      // console.log("API response:", data);
 
       let fullText = data?.choices?.[0]?.message?.content;
       
@@ -167,7 +167,7 @@ export const useChat = ({
       const showDoctorButton = fullText.includes("<show_doctor_button>true</show_doctor_button>");
       fullText = fullText.replace("<show_doctor_button>true</show_doctor_button>", "").trim();
 
-      console.log("Processing text:", fullText);
+      // console.log("Processing text:", fullText);
 
       let index = 0;
       let animationId: NodeJS.Timeout;
@@ -175,7 +175,7 @@ export const useChat = ({
       const typeChar = () => {
         // Check if request was aborted
         if (abortController.signal.aborted) {
-          console.log("Animation aborted");
+          // console.log("Animation aborted");
           return;
         }
 
@@ -193,7 +193,7 @@ export const useChat = ({
           index++;
           animationId = setTimeout(typeChar, 30);
         } else {
-          console.log("Finished typing, setting final state...");
+          // console.log("Finished typing, setting final state...");
           // Final update with doctor button
           setMessages((prev) => 
             prev.map((msg) => 
@@ -204,7 +204,7 @@ export const useChat = ({
           );
           setStreaming(false);
           activeRequestRef.current = null; // Clear active request
-          console.log("Streaming complete!");
+          // console.log("Streaming complete!");
         }
       };
 

@@ -80,7 +80,7 @@ class WebSocketService {
   private statusCallbacks: Set<(status: ConnectionStatus) => void> = new Set();
 
   constructor() {
-    console.log('🔌 WebSocketService initialized with optimized configuration');
+    // console.log('🔌 WebSocketService initialized with optimized configuration');
 
     // ✅ Listen for network status changes
     if (typeof window !== 'undefined') {
@@ -99,9 +99,11 @@ class WebSocketService {
    * ✅ Handle network coming back online
    */
   private handleNetworkOnline() {
-    console.log('🌐 Network is back online, attempting to reconnect WebSocket');
+    // console.log('🌐 Network is back online, attempting to reconnect WebSocket');
     if (!this.state.isConnected && this.token) {
-      this.connect(this.token);
+      this.connect(this.token).catch(() => {
+        // Error is already logged in connect method, no need to re-log
+      });
     }
   }
 
@@ -109,7 +111,7 @@ class WebSocketService {
    * ✅ Handle network going offline
    */
   private handleNetworkOffline() {
-    console.log('🌐 Network went offline, pausing WebSocket reconnection attempts');
+    // console.log('🌐 Network went offline, pausing WebSocket reconnection attempts');
     this.clearTimers();
   }
 
@@ -251,6 +253,10 @@ class WebSocketService {
 
     try {
       await this.connectionPromise;
+    } catch (error) {
+      // console.log('🔌 WebSocket connection failed, will retry automatically:', error instanceof Error ? error.message : error);
+      // Don't re-throw the error to avoid unhandled promise rejections
+      // The reconnection logic will handle retries automatically
     } finally {
       this.connectionPromise = null;
     }
@@ -261,7 +267,7 @@ class WebSocketService {
    */
   private async performConnect(token?: string): Promise<void> {
     if (this.socket?.readyState === WebSocket.OPEN) {
-      console.log('🔌 WebSocket already connected');
+      // console.log('🔌 WebSocket already connected');
       return;
     }
 
@@ -289,19 +295,19 @@ class WebSocketService {
       throw new Error('Authentication token is expired');
     }
 
-    console.log('🔌 Connecting to Django Channels WebSocket...');
+    // console.log('🔌 Connecting to Django Channels WebSocket...');
 
     // ✅ Use the centralized URL configuration
     const baseWsUrl = getWebSocketURL();
     const wsUrl = `${baseWsUrl}/socketio/?token=${encodeURIComponent(this.token)}`;
 
-    console.log('🔍 Debug info:', {
-      baseWsUrl,
-      finalUrl: wsUrl.replace(/token=[^&]+/, 'token=[REDACTED]'),
-      tokenExists: !!this.token,
-      tokenLength: this.token?.length,
-      protocol: window.location.protocol
-    });
+    // console.log('🔍 Debug info:', {
+    //   baseWsUrl,
+    //   finalUrl: wsUrl.replace(/token=[^&]+/, 'token=[REDACTED]'),
+    //   tokenExists: !!this.token,
+    //   tokenLength: this.token?.length,
+    //   protocol: window.location.protocol
+    // });
 
     try {
       // Validate environment
@@ -379,7 +385,7 @@ class WebSocketService {
     if (!this.socket) return;
 
     this.socket.onopen = () => {
-      console.log('✅ WebSocket connected to Django Channels');
+      // console.log('✅ WebSocket connected to Django Channels');
       this.state.isConnected = true;
       this.state.reconnectAttempts = 0;
       this.setStatus('connected');
@@ -401,7 +407,7 @@ class WebSocketService {
     };
 
     this.socket.onclose = (event) => {
-      console.log('❌ WebSocket disconnected:', event.code, event.reason);
+      // console.log('❌ WebSocket disconnected:', event.code, event.reason);
       this.state.isConnected = false;
       this.state.isAuthenticated = false;
       this.setStatus('disconnected');
@@ -436,21 +442,31 @@ class WebSocketService {
     };
 
     this.socket.onerror = (error) => {
-      console.error('❌ WebSocket error:', error);
-      console.error('❌ WebSocket connection details:', {
-        readyState: this.socket?.readyState,
-        url: this.socket?.url,
-        protocol: this.socket?.protocol,
-        extensions: this.socket?.extensions,
-        binaryType: this.socket?.binaryType
-      });
-      
+      // Reduce log noise for normal disconnections
+      if (this.socket?.readyState === WebSocket.CLOSED || this.socket?.readyState === WebSocket.CLOSING) {
+        // console.log('🔌 WebSocket disconnected normally');
+      } else {
+        // Extract meaningful error information instead of logging the Event object
+        const errorMessage = error instanceof ErrorEvent
+          ? error.message || 'WebSocket connection failed'
+          : 'WebSocket error occurred';
+
+        console.warn('⚠️ WebSocket error:', errorMessage);
+        console.warn('⚠️ WebSocket connection details:', {
+          readyState: this.socket?.readyState,
+          url: this.socket?.url ? this.socket.url.replace(/token=[^&]+/, 'token=[REDACTED]') : undefined,
+          protocol: this.socket?.protocol,
+          extensions: this.socket?.extensions,
+          binaryType: this.socket?.binaryType
+        });
+      }
+
       // Clear connection timeout
       if (this.connectionTimeout) {
         clearTimeout(this.connectionTimeout);
         this.connectionTimeout = null;
       }
-      
+
       // Try to provide more meaningful error information
       let errorDetails = {
         error,
@@ -468,21 +484,21 @@ class WebSocketService {
       } else if (!navigator.onLine) {
         errorDetails.message = 'No internet connection available';
       }
-      
+
       this.triggerCallbacks('connect_error', errorDetails);
     };
 
     this.socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('📨 WebSocket message received:', data);
+        // console.log('📨 WebSocket message received:', data);
 
         // Handle different message types
-        console.log('📨 WebSocket message received:', { type: data.type, data: data.data });
+        // console.log('📨 WebSocket message received:', { type: data.type, data: data.data });
 
         switch (data.type) {
           case 'connect':
-            console.log('🔌 WebSocket connected, sending authentication...');
+            // console.log('🔌 WebSocket connected, sending authentication...');
             this.triggerCallbacks('connect', data.data);
 
             // Send authentication message
@@ -500,15 +516,15 @@ class WebSocketService {
             this.clearStoredTokens();
             break;
           case 'doctor_availability_changed':
-            console.log('👩‍⚕️ Doctor availability changed:', data.data);
+            // console.log('👩‍⚕️ Doctor availability changed:', data.data);
             this.triggerCallbacks('doctor_availability_changed', { data: data.data });
             break;
           case 'message':
-            console.log('💬 WebSocket message:', data.data);
+            // console.log('💬 WebSocket message:', data.data);
             this.triggerCallbacks('message', data.data);
             break;
           case 'notification':
-            console.log('🔔 WebSocket notification:', data.data);
+            // console.log('🔔 WebSocket notification:', data.data);
             this.triggerCallbacks('notification', data.data);
             break;
           case 'error':
@@ -518,14 +534,27 @@ class WebSocketService {
           case 'pong':
             // ✅ Handle pong response with heartbeat tracking
             this.state.lastPongTime = Date.now();
-            const latency = this.state.lastPongTime - this.state.lastPingTime;
-            console.log(`🏓 Received pong (latency: ${latency}ms)`);
+            // Calculate latency for potential future use
+            // const latency = this.state.lastPongTime - this.state.lastPingTime;
+            // console.log(`🏓 Received pong (latency: ${latency}ms)`);
 
             // Restart heartbeat monitoring
             this.startHeartbeatMonitoring();
             break;
+          case 'consultation_created':
+            // console.log('🆕 New consultation created:', data.data || data);
+            this.triggerCallbacks('consultation_created', data.data || data);
+            break;
+          case 'consultation_updated':
+            // console.log('📋 Consultation updated:', data.data || data);
+            this.triggerCallbacks('consultation_updated', data.data || data);
+            break;
+          case 'consultation_status_changed':
+            console.log('🔄 Consultation status changed:', data.data || data);
+            this.triggerCallbacks('consultation_status_changed', data.data || data);
+            break;
           default:
-            console.log('📨 Unknown message type:', data.type, data);
+            // console.log('📨 Unknown message type:', data.type, data);
         }
       } catch (error) {
         console.error('❌ Failed to parse WebSocket message:', error, event.data);
@@ -594,7 +623,7 @@ class WebSocketService {
   private attemptReconnect() {
     // Don't attempt reconnection if offline
     if (!navigator.onLine) {
-      console.log('🌐 Offline, skipping reconnection attempt');
+      // console.log('🌐 Offline, skipping reconnection attempt');
       return;
     }
 
@@ -614,7 +643,7 @@ class WebSocketService {
 
     this.state.reconnectAttempts++;
 
-    console.log(`🔄 Attempting to reconnect in ${Math.round(delay)}ms (attempt ${this.state.reconnectAttempts}/${this.config.maxReconnectAttempts})`);
+    // console.log(`🔄 Attempting to reconnect in ${Math.round(delay)}ms (attempt ${this.state.reconnectAttempts}/${this.config.maxReconnectAttempts})`);
 
     this.triggerCallbacks('reconnecting', {
       attempt: this.state.reconnectAttempts,
@@ -660,7 +689,7 @@ class WebSocketService {
     };
 
     try {
-      console.log('📤 Sending WebSocket message:', message);
+      // console.log('📤 Sending WebSocket message:', message);
       this.socket.send(JSON.stringify(message));
       return true;
     } catch (error) {
@@ -678,7 +707,7 @@ class WebSocketService {
       return;
     }
 
-    console.log('🔐 Authenticating with WebSocket...');
+    // console.log('🔐 Authenticating with WebSocket...');
     this.token = token;
 
     this.sendMessage('authenticate', {
@@ -695,7 +724,7 @@ class WebSocketService {
       return false;
     }
 
-    console.log(`🏠 Joining room: ${roomName}`);
+    // console.log(`🏠 Joining room: ${roomName}`);
     return this.sendMessage('join_room', {
       room: roomName
     });
@@ -710,7 +739,7 @@ class WebSocketService {
       return false;
     }
 
-    console.log(`🚪 Leaving room: ${roomName}`);
+    // console.log(`🚪 Leaving room: ${roomName}`);
     return this.sendMessage('leave_room', {
       room: roomName
     });
@@ -740,7 +769,7 @@ class WebSocketService {
     }
     this.eventCallbacks.get(event)?.push(callback);
 
-    console.log(`📢 Subscribed to event: ${event}`);
+    // console.log(`📢 Subscribed to event: ${event}`);
   }
 
   /**
@@ -750,7 +779,7 @@ class WebSocketService {
     if (!callback) {
       // Remove all callbacks for this event
       this.eventCallbacks.delete(event);
-      console.log(`📢 Unsubscribed from all callbacks for event: ${event}`);
+      // console.log(`📢 Unsubscribed from all callbacks for event: ${event}`);
       return;
     }
 
@@ -759,7 +788,7 @@ class WebSocketService {
       const index = callbacks.indexOf(callback);
       if (index > -1) {
         callbacks.splice(index, 1);
-        console.log(`📢 Unsubscribed from event: ${event}`);
+        // console.log(`📢 Unsubscribed from event: ${event}`);
       }
     }
   }
@@ -795,7 +824,7 @@ class WebSocketService {
    */
   disconnect() {
     if (this.socket) {
-      console.log('🔌 Disconnecting WebSocket...');
+      // console.log('🔌 Disconnecting WebSocket...');
       this.clearTimers();
 
       this.socket.close(1000, 'Client disconnect'); // Normal closure
@@ -826,7 +855,7 @@ class WebSocketService {
       clearTimeout(timeoutId);
       
       if (response.ok) {
-        console.log('✅ Server connectivity test passed');
+        // console.log('✅ Server connectivity test passed');
         return true;
       } else {
         console.warn('⚠️ Server responded but not OK:', response.status);
@@ -853,7 +882,7 @@ class WebSocketService {
     }
 
     // Test server connectivity first
-    console.log('🔍 Testing server connectivity...');
+    // console.log('🔍 Testing server connectivity...');
     const isServerReachable = await this.testServerConnectivity();
     
     if (!isServerReachable) {
@@ -864,7 +893,9 @@ class WebSocketService {
     }
 
     // Proceed with WebSocket connection
-    this.connect(token);
+    this.connect(token).catch(() => {
+      // Error is already logged in connect method, no need to re-log
+    });
   }
   // ✅ Public getters for connection state
   get connected(): boolean {
@@ -895,12 +926,14 @@ class WebSocketService {
    * Refresh connection with new token
    */
   refreshConnection(newToken: string) {
-    console.log('🔄 Refreshing WebSocket connection with new token');
+    // console.log('🔄 Refreshing WebSocket connection with new token');
     this.disconnect();
-    
+
     // Wait a bit before reconnecting
     setTimeout(() => {
-      this.connect(newToken);
+      this.connect(newToken).catch(() => {
+        // Error is already logged in connect method, no need to re-log
+      });
     }, 1000);
   }
 

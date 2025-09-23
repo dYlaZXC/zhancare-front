@@ -22,7 +22,8 @@ const TabLayout = ({ children }: TabLayoutProps) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Map pathnames to tab IDs
-  const getActiveTabFromPath = (pathname: string): string => {
+  const getActiveTabFromPath = (pathname: string | null): string => {
+    if (!pathname) return 'profile';
     const path = pathname.split('/').pop() || '';
     switch (path) {
       case 'profile': return 'profile';

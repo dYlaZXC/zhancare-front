@@ -39,7 +39,7 @@ async function forwardRequest(
   path: string[]
 ): Promise<Response> {
   const url = buildBackendUrl(path, req);
-  console.log("🔁 Proxying to:", url);
+  // console.log("🔁 Proxying to:", url);
 
   // Prepare headers to forward the request with cookies and authorization
   const headers: Record<string, string> = {

@@ -223,9 +223,16 @@ const DoctorVideoFrame: React.FC<DoctorVideoFrameProps> = ({
             onDisconnect?.();
           }}
           onConnected={() => {
-            console.log("✅ Doctor connected to LiveKit room");
+            // console.log("✅ Doctor connected to LiveKit room");
           }}
           onError={(error) => {
+            // Don't log client-initiated disconnects as errors
+            if (error.message?.includes('Client initiated disconnect')) {
+              console.log("ℹ️ Doctor client disconnected normally");
+              return;
+            }
+
+            // Only log actual errors
             console.error("❌ Doctor LiveKit room error:", error);
             setError(`LiveKit error: ${error.message}`);
           }}

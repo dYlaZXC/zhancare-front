@@ -102,7 +102,7 @@ const PatientVideoCallPage: React.FC = () => {
 
   const handleEndCall = () => {
     setCallActive(false);
-    router.push("/profile");
+    router.push("/video");
   };
 
   const sendMessage = async () => {

@@ -103,7 +103,7 @@ class ConsultationWebSocketService {
     try {
       // Use dedicated consultation WebSocket endpoint
       const wsUrl = `ws://localhost:8001/ws/consultations/`;
-      console.log(`🔌 Connecting to consultation WebSocket: ${wsUrl}`);
+      // console.log(`🔌 Connecting to consultation WebSocket: ${wsUrl}`);
 
       this.ws = new WebSocket(wsUrl);
       this.setupEventHandlers();
@@ -121,7 +121,7 @@ class ConsultationWebSocketService {
     if (!this.ws) return;
 
     this.ws.onopen = () => {
-      console.log('✅ Consultation WebSocket connected');
+      // console.log('✅ Consultation WebSocket connected');
       this.isConnected = true;
       this.isReconnecting = false;
       this.reconnectAttempts = 0;
@@ -143,7 +143,7 @@ class ConsultationWebSocketService {
     };
 
     this.ws.onclose = (event) => {
-      console.log(`🔌 Consultation WebSocket disconnected: ${event.code} - ${event.reason}`);
+      // console.log(`🔌 Consultation WebSocket disconnected: ${event.code} - ${event.reason}`);
       this.isConnected = false;
 
       this.config.onDisconnect?.();
@@ -173,7 +173,7 @@ class ConsultationWebSocketService {
       user_id: this.config.userId
     };
 
-    console.log('🔐 Authenticating consultation WebSocket:', { role: this.userRole });
+    // console.log('🔐 Authenticating consultation WebSocket:', { role: this.userRole });
     this.send(authMessage);
   }
 
@@ -181,31 +181,31 @@ class ConsultationWebSocketService {
    * Handle incoming WebSocket messages
    */
   private handleMessage(message: any): void {
-    console.log('📥 Consultation WebSocket message:', message);
+    // console.log('📥 Consultation WebSocket message:', message);
 
     switch (message.type) {
       case 'authenticated':
-        console.log(`✅ Consultation WebSocket authenticated as ${message.data?.role}`);
+        // console.log(`✅ Consultation WebSocket authenticated as ${message.data?.role}`);
         this.handleAuthenticated(message.data);
         break;
 
       case 'consultation_created':
-        console.log('🆕 New consultation created:', message.data);
+        // console.log('🆕 New consultation created:', message.data);
         this.config.onConsultationCreated?.(message.data);
         break;
 
       case 'consultation_updated':
-        console.log('📝 Consultation updated:', message.data);
+        // console.log('📝 Consultation updated:', message.data);
         this.config.onConsultationUpdated?.(message.data);
         break;
 
       case 'consultation_status_changed':
-        console.log('🔄 Consultation status changed:', message.data);
+        // console.log('🔄 Consultation status changed:', message.data);
         this.config.onConsultationStatusChanged?.(message.data);
         break;
 
       case 'doctor_availability_changed':
-        console.log('👨‍⚕️ Doctor availability changed:', message.data);
+        // console.log('👨‍⚕️ Doctor availability changed:', message.data);
         this.config.onDoctorAvailabilityChanged?.(message.data);
         break;
 
@@ -215,7 +215,7 @@ class ConsultationWebSocketService {
         break;
 
       default:
-        console.log('❓ Unknown consultation WebSocket message type:', message.type);
+        // console.log('❓ Unknown consultation WebSocket message type:', message.type);
     }
   }
 
@@ -224,13 +224,13 @@ class ConsultationWebSocketService {
    */
   private handleAuthenticated(data: any): void {
     if (data?.role === 'doctor') {
-      console.log('👨‍⚕️ Doctor authenticated - ready to receive consultation notifications');
+      // console.log('👨‍⚕️ Doctor authenticated - ready to receive consultation notifications');
       toast.success('🔗 Подключено к системе консультаций', {
         autoClose: 2000,
         position: 'top-right'
       });
     } else if (data?.role === 'patient') {
-      console.log('👤 Patient authenticated - ready to receive consultation updates');
+      // console.log('👤 Patient authenticated - ready to receive consultation updates');
     }
   }
 
@@ -256,7 +256,7 @@ class ConsultationWebSocketService {
     this.isReconnecting = true;
     this.reconnectAttempts++;
 
-    console.log(`🔄 Attempting to reconnect consultation WebSocket (${this.reconnectAttempts}/${this.maxReconnectAttempts}) in ${this.reconnectDelay}ms`);
+    // console.log(`🔄 Attempting to reconnect consultation WebSocket (${this.reconnectAttempts}/${this.maxReconnectAttempts}) in ${this.reconnectDelay}ms`);
 
     setTimeout(() => {
       this.connect();
@@ -270,7 +270,7 @@ class ConsultationWebSocketService {
    */
   disconnect(): void {
     if (this.ws) {
-      console.log('👋 Manually disconnecting consultation WebSocket');
+      // console.log('👋 Manually disconnecting consultation WebSocket');
       this.ws.close(1000, 'Manual disconnect');
       this.ws = null;
     }

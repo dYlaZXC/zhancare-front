@@ -246,6 +246,14 @@ const PatientVideoFrame: React.FC<PatientVideoFrameProps> = ({
             addDebugLog("✅ Connected to LiveKit room");
           }}
           onError={(error) => {
+            // Don't log client-initiated disconnects as errors
+            if (error.message?.includes('Client initiated disconnect')) {
+              console.log("ℹ️ Patient client disconnected normally");
+              addDebugLog("ℹ️ Client disconnected normally");
+              return;
+            }
+
+            // Only log actual errors
             console.error("❌ Patient LiveKit room error:", error);
             addDebugLog(`❌ LiveKit error: ${error.message}`);
             setError(`LiveKit error: ${error.message}`);

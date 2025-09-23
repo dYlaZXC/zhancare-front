@@ -23,7 +23,7 @@ export const useConsultationManager = () => {
         : '/consultations/doctor-consultations/';
 
       const url = status ? `${baseUrl}?status=${status}` : baseUrl;
-      console.log(`🔄 Fetching consultations from: ${url}`);
+      // console.log(`🔄 Fetching consultations from: ${url}`);
       const { data } = await api.get<Consultation[] | any>(url);
 
       // Handle different response formats
@@ -48,7 +48,7 @@ export const useConsultationManager = () => {
         return dateB.getTime() - dateA.getTime();
       });
 
-      console.log(`✅ Fetched ${sortedConsultations.length} consultations`);
+      // console.log(`✅ Fetched ${sortedConsultations.length} consultations`);
       setConsultations(sortedConsultations);
     } catch (error) {
       console.error("Failed to fetch consultations:", error);

@@ -51,21 +51,21 @@ const DoctorDashboard: React.FC = () => {
 
     // ✅ Setup WebSocket listeners for real-time notifications
     if (user?.role === 'doctor') {
-      console.log('🔌 Setting up WebSocket listeners for doctor dashboard');
+      // console.log('🔌 Setting up WebSocket listeners for doctor dashboard');
 
       // Connect to WebSocket with token
-      console.log('🔌 DoctorDashboard connecting to WebSocket with token:', {
-        hasToken: !!token,
-        tokenLength: token?.length,
-        userRole: user?.role,
-        userId: user?.id
-      });
+      // console.log('🔌 DoctorDashboard connecting to WebSocket with token:', {
+      //   hasToken: !!token,
+      //   tokenLength: token?.length,
+      //   userRole: user?.role,
+      //   userId: user?.id
+      // });
 
-      websocketService.connect(token);
+      websocketService.connect(token || undefined);
 
       // Listen for new consultation requests
-      const unsubscribeConsultationCreated = websocketService.on('consultation_created', (data: any) => {
-        console.log('🔔 New consultation request received:', data);
+      const handleConsultationCreated = (data: any) => {
+        // console.log('🔔 New consultation request received:', data);
 
         const consultationData: IncomingConsultation = {
           id: data.data?.id || data.id,
@@ -94,18 +94,21 @@ const DoctorDashboard: React.FC = () => {
 
         // Auto-refresh consultations list
         fetchConsultations();
-      });
+      };
 
       // Listen for consultation status changes
-      const unsubscribeStatusChanged = websocketService.on('consultation_status_changed', (data: any) => {
-        console.log('📊 Consultation status changed:', data);
+      const handleStatusChanged = () => {
         fetchConsultations();
-      });
+      };
+
+      // Setup WebSocket listeners
+      websocketService.on('consultation_created', handleConsultationCreated);
+      websocketService.on('consultation_status_changed', handleStatusChanged);
 
       // Cleanup listeners on unmount
       return () => {
-        unsubscribeConsultationCreated();
-        unsubscribeStatusChanged();
+        websocketService.off('consultation_created', handleConsultationCreated);
+        websocketService.off('consultation_status_changed', handleStatusChanged);
       };
     }
   }, [user, notificationSound]);

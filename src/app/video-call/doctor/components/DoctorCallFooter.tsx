@@ -50,12 +50,12 @@ const DoctorCallFooter: React.FC<DoctorCallFooterProps> = ({
 
   const saveConsultationData = () => {
     // Implement API call to save consultation notes, prescriptions, etc.
-    console.log("Saving consultation data:", {
-      consultationId: consultation.id,
-      sessionNotes,
-      prescription,
-      recommendations
-    });
+    // console.log("Saving consultation data:", {
+    //   consultationId: consultation.id,
+    //   sessionNotes,
+    //   prescription,
+    //   recommendations
+    // });
   };
 
   const generateReport = () => {
@@ -71,7 +71,7 @@ const DoctorCallFooter: React.FC<DoctorCallFooterProps> = ({
       recommendations
     };
 
-    console.log("Generating report:", reportData);
+    // console.log("Generating report:", reportData);
   };
 
   return (

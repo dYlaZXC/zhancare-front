@@ -17,19 +17,19 @@ const PiPLayout: React.FC = () => {
 
   // Debug logging
   React.useEffect(() => {
-    console.log("🎥 PiPLayout - Tracks:", tracks.length);
-    console.log("🎥 PiPLayout - Local participant:", localParticipant?.identity);
+    // console.log("🎥 PiPLayout - Tracks:", tracks.length);
+    // console.log("🎥 PiPLayout - Local participant:", localParticipant?.identity);
     tracks.forEach((track, index) => {
-      console.log(`🎥 Track ${index}:`, {
-        identity: track.participant.identity,
-        isLocal: track.participant.isLocal,
-        trackSid: track.publication?.trackSid,
-        kind: track.publication?.kind,
-        source: track.publication?.source,
-        isEnabled: track.publication?.isEnabled,
-        isMuted: track.publication?.isMuted,
-        isSubscribed: track.publication?.isSubscribed,
-      });
+      // console.log(`🎥 Track ${index}:`, {
+      //   identity: track.participant.identity,
+      //   isLocal: track.participant.isLocal,
+      //   trackSid: track.publication?.trackSid,
+      //   kind: track.publication?.kind,
+      //   source: track.publication?.source,
+      //   isEnabled: track.publication?.isEnabled,
+      //   isMuted: track.publication?.isMuted,
+      //   isSubscribed: track.publication?.isSubscribed,
+      // });
     });
   }, [tracks, localParticipant]);
 

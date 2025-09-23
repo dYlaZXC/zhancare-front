@@ -47,17 +47,17 @@ const PatientCallFooter: React.FC<PatientCallFooterProps> = ({
 
   const savePatientData = () => {
     // Implement API call to save patient notes, symptoms, questions
-    console.log("Saving patient data:", {
-      consultationId: consultation.id,
-      patientNotes,
-      symptomsDescription,
-      questions
-    });
+    // console.log("Saving patient data:", {
+    //   consultationId: consultation.id,
+    //   patientNotes,
+    //   symptomsDescription,
+    //   questions
+    // });
   };
 
   const requestSummary = () => {
     // Request consultation summary from doctor
-    console.log("Requesting consultation summary");
+    // console.log("Requesting consultation summary");
   };
 
   return (

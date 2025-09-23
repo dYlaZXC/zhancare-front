@@ -146,7 +146,7 @@ const VideoFrame: React.FC<VideoFrameProps> = ({
           onDisconnect?.();
         }}
         onConnected={() => {
-          console.log("✅ Connected to LiveKit room");
+          // console.log("✅ Connected to LiveKit room");
         }}
         onError={(error) => {
           console.error("❌ LiveKit room error:", error);
