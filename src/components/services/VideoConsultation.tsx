@@ -9,20 +9,8 @@ import Step1 from "./consultations/VideoConsultationStep1";
 import Step2 from "./consultations/VideoConsultationStep2";
 import Step3 from "./consultations/VideoConsultationStep3";
 import TipsPanel from "./consultations/TipsPanel";
+import type { Doctor } from "./consultations/types/doctor";
 // import WebSocketTester from "../debug/WebSocketTester";
-
-interface Doctor {
-  id: number;
-  name: string;
-  email: string;
-  doctor_type: string;
-  specialization?: {
-    id: number;
-    name_ru: string;
-    name_kz: string;
-    name_en: string;
-  } | null;
-}
 
 interface RecommendedDoctor {
   id: number;
@@ -147,33 +135,68 @@ const VideoConsultation: React.FC = () => {
       const { doctor_id, availability_status, doctor_info } = data;
 
       if (availability_status === 'available') {
-        // Doctor became available - refresh the doctor list
-        // console.log(`✅ Dr. ${doctor_info.name} is now available, refreshing doctor list`);
-        fetchDoctors(false); // Don't show toast for automatic refresh
+        // Doctor became available - update existing doctor or add new one
+        console.log(`✅ Dr. ${doctor_info.name} is now available`);
+
+        setDoctors(prevDoctors => {
+          // Check if doctor is already in the list
+          const existingDoctorIndex = prevDoctors.findIndex(doctor => doctor.id === doctor_id);
+
+          if (existingDoctorIndex !== -1) {
+            // Update existing doctor's status
+            const updatedDoctors = [...prevDoctors];
+            updatedDoctors[existingDoctorIndex] = {
+              ...updatedDoctors[existingDoctorIndex],
+              availability_status: 'available' as const
+            };
+            return updatedDoctors;
+          } else {
+            // Doctor not in list - refresh the doctor list to get new doctors
+            fetchDoctors(false);
+            return prevDoctors;
+          }
+        });
 
         toast.success(`✅ Dr. ${doctor_info.name} теперь доступен для консультации!`, {
           autoClose: 5000,
           position: 'top-right'
         });
       } else {
-        // Doctor became unavailable - remove from current list
-        // console.log(`❌ Dr. ${doctor_info.name} is no longer available (${availability_status})`);
+        // Doctor status changed to unavailable - update status in place or remove if offline
+        console.log(`⚠️ Dr. ${doctor_info.name} status changed to ${availability_status}`);
 
         setDoctors(prevDoctors => {
-          const updatedDoctors = prevDoctors.filter(doctor => doctor.id !== doctor_id);
+          const existingDoctorIndex = prevDoctors.findIndex(doctor => doctor.id === doctor_id);
 
-          // If the currently selected doctor became unavailable, reset selection
-          if (selectedDoctorId === doctor_id) {
-            setSelectedDoctorId(null);
-            toast.info(`⚠️ Выбранный врач ${doctor_info.name} больше недоступен. Пожалуйста, выберите другого врача.`);
+          if (existingDoctorIndex !== -1) {
+            if (availability_status === 'offline') {
+              // Remove offline doctors completely
+              const updatedDoctors = prevDoctors.filter(doctor => doctor.id !== doctor_id);
+
+              // If the currently selected doctor became offline, reset selection
+              if (selectedDoctorId === doctor_id) {
+                setSelectedDoctorId(null);
+                toast.info(`⚠️ Выбранный врач ${doctor_info.name} завершил работу. Пожалуйста, выберите другого врача.`);
+              }
+
+              // If no doctors left, show error message
+              if (updatedDoctors.length === 0) {
+                setDoctorsError("В данный момент нет доступных врачей. Попробуйте позже или врачи появятся автоматически при изменении их статуса.");
+              }
+
+              return updatedDoctors;
+            } else {
+              // Update doctor's status (busy, break, etc.) but keep them visible
+              const updatedDoctors = [...prevDoctors];
+              updatedDoctors[existingDoctorIndex] = {
+                ...updatedDoctors[existingDoctorIndex],
+                availability_status: availability_status as 'available' | 'busy' | 'offline' | 'break'
+              };
+              return updatedDoctors;
+            }
           }
 
-          // If no doctors left, show error message
-          if (updatedDoctors.length === 0) {
-            setDoctorsError("В данный момент нет доступных врачей. Попробуйте позже или врачи появятся автоматически при изменении их статуса.");
-          }
-
-          return updatedDoctors;
+          return prevDoctors;
         });
 
         const statusText = availability_status === 'offline' ? 'завершил работу' :
