@@ -259,13 +259,23 @@
       "stories": [
         {
           "icon": "faClock",
-          "title": "Doctors save 20+ hours per week",
-          "description": "AI automation reduces time on administrative tasks, allowing doctors to focus on patients."
+          "title": "Enactus",
+          "description": "We are the winners of the Enactus Kazakhstan National Cup 2025! We are proud to announce that the team of medical students ZhanCare took 1st place at the 30th Anniversary Enactus Kazakhstan National Expo 2025 and became the two-time Champion of Kazakhstan!"
         },
         {
           "icon": "faGlobe",
-          "title": "3x faster access to doctors in remote areas",
-          "description": "Telemedicine eliminates healthcare gaps, helping patients get medical care from anywhere."
+          "title": "Astana medical university",
+          "description": "Support from Astana Medical University. The team received strong support from their alma mater — Astana Medical University, where a solemn farewell ceremony was held. Leading experts and public figures were present:Darkhan Mynbai, Kuanysh Yergaliev, Gani Khamzin, Erlan Karimov, Meiramgul Balgozhina."
+        },
+        {
+          "icon": "faGlobe",
+          "title": "Ministry of the Republic of Kazakhstan",
+          "description": "In order to strengthen partnerships and implement joint initiatives, ZhanCare.Ai cooperates with key Ministries of the Republic of Kazakhstan."
+        },
+        {
+          "icon": "faGlobe",
+          "title": "OMRON",
+          "description": "In partnership with the international company Omron Healthcare, the ZhanCare team of doctors and specialists carried out a large-scale social campaign in a shopping mall, offering free health check-ups. Over two days, 2,341 people visited our booth. Visitors were calling their relatives and friends, inviting them to come. By the second day, a long queue of dozens had formed, and the campaign turned into a city-wide event."
         }
       ]
     }

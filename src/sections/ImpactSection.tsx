@@ -21,6 +21,11 @@ import { useLanguage } from "@/context/LanguageContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import en from "@/locales/en.json";
+import enactusLogo from "@/assets/enactus-logo-white.png";
+import astanamuaLogo from "@/assets/astanamua.png";
+import akimatLogo from "@/assets/kazakhemblem.png";
+import omronLogo from "@/assets/omron.png";
+import impactVideo from "@/assets/impact_video.mp4";
 
 type IconName =
   | "faUserMd"
@@ -181,7 +186,7 @@ export const ImpactSection = () => {
         </motion.div>
 
         <motion.div
-          className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-10 desktop-qhd:gap-12 desktop-4k:gap-16"
+          className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 lg:gap-10 desktop-qhd:gap-12 desktop-4k:gap-16"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
@@ -191,22 +196,63 @@ export const ImpactSection = () => {
           }}
         >
           {translations.successStories.stories.map((story, index) => {
-            const icon = iconMapping[story.icon as IconName] || faGlobe;
+            // Map logos to the 4 cards
+            const logos = [enactusLogo.src, astanamuaLogo.src, akimatLogo.src, omronLogo.src];
+            const logoAlts = ["Enactus Logo", "Astana MUA Logo", "Министерства Республики Казахстан", "OMRON Logo"];
+            const logoSrc = logos[index] || logos[0];
+            const logoAlt = logoAlts[index] || logoAlts[0];
+
             return (
               <motion.div
                 key={index}
-                className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 lg:gap-8 desktop-qhd:gap-10 desktop-4k:gap-12 p-4 sm:p-6 lg:p-8 desktop-qhd:p-10 desktop-4k:p-12 bg-white backdrop-blur-md border border-white/20 rounded-2xl lg:rounded-3xl shadow-md hover:shadow-2xl transition-all duration-300 ease-out hover:-translate-y-2 lg:hover:-translate-y-3"
+                className="group flex flex-col items-center text-center p-6 sm:p-8 lg:p-10 desktop-qhd:p-12 desktop-4k:p-14 bg-white backdrop-blur-md border border-white/30 rounded-3xl lg:rounded-4xl shadow-lg hover:shadow-2xl transition-all duration-300 ease-out hover:-translate-y-3 hover:scale-105"
                 variants={{ hidden: { opacity: 0, y: 40 }, visible: { opacity: 1, y: 0 } }}
                 transition={{ type: "spring", stiffness: 150, damping: 20 }}
               >
-                <div className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 desktop-qhd:w-20 desktop-qhd:h-20 desktop-4k:w-24 desktop-4k:h-24 flex-shrink-0 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white">
-                  <FontAwesomeIcon icon={icon} className="text-lg sm:text-xl lg:text-2xl desktop-qhd:text-3xl desktop-4k:text-4xl" />
+                <div className="w-full mb-6 sm:mb-8 p-4 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl group-hover:scale-105 group-hover:from-gray-700 group-hover:to-gray-800 transition-all duration-300">
+                  {index === 2 ? (
+                    <div className="flex items-center justify-center gap-4">
+                      <img
+                        src={logoSrc}
+                        alt={logoAlt}
+                        className="h-20 sm:h-24 lg:h-28 desktop-qhd:h-32 desktop-4k:h-36 object-contain flex-shrink-0"
+                      />
+                      <p className="text-white text-base sm:text-lg lg:text-xl desktop-qhd:text-2xl desktop-4k:text-3xl font-medium text-center">
+                        {story.title}
+                      </p>
+                    </div>
+                  ) : index === 3 ? (
+                    <div className="space-y-4">
+                      <img
+                        src={logoSrc}
+                        alt={logoAlt}
+                        className="w-full h-16 sm:h-20 lg:h-24 desktop-qhd:h-28 desktop-4k:h-32 object-contain"
+                      />
+                      <video
+                        src={impactVideo}
+                        className="w-full h-32 sm:h-36 lg:h-40 desktop-qhd:h-44 desktop-4k:h-48 object-cover rounded-lg"
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        preload="metadata"
+                      >
+                        Your browser does not support the video tag.
+                      </video>
+                    </div>
+                  ) : (
+                    <img
+                      src={logoSrc}
+                      alt={logoAlt}
+                      className="w-full h-20 sm:h-24 lg:h-28 desktop-qhd:h-32 desktop-4k:h-36 object-contain"
+                    />
+                  )}
                 </div>
-                <div className="text-center sm:text-left flex-1">
-                  <h3 className="text-base sm:text-lg lg:text-xl desktop-qhd:text-2xl desktop-4k:text-3xl font-bold mb-1 sm:mb-2">
+                <div className="flex-1">
+                  <h3 className="text-lg sm:text-xl lg:text-2xl desktop-qhd:text-3xl desktop-4k:text-4xl font-bold mb-3 sm:mb-4 text-[#001E80] group-hover:text-blue-700 transition-colors duration-300">
                     {story.title}
                   </h3>
-                  <p className="text-gray-600 text-xs sm:text-sm lg:text-base desktop-qhd:text-lg desktop-4k:text-xl leading-relaxed">
+                  <p className="text-gray-600 text-sm sm:text-base lg:text-lg desktop-qhd:text-xl desktop-4k:text-2xl leading-relaxed max-w-md mx-auto">
                     {story.description}
                   </p>
                 </div>
