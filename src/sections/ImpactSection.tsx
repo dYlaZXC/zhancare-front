@@ -26,6 +26,7 @@ import astanamuaLogo from "@/assets/astanamua.png";
 import akimatLogo from "@/assets/kazakhemblem.png";
 import omronLogo from "@/assets/omron.png";
 import impactVideo from "@/assets/impact_video.mp4";
+import enactusVideo from "@/assets/impact_video_enactus.mp4";
 
 type IconName =
   | "faUserMd"
@@ -195,10 +196,16 @@ export const ImpactSection = () => {
             visible: { transition: { staggerChildren: 0.3 } },
           }}
         >
-          {translations.successStories.stories.map((story, index) => {
-            // Map logos to the 4 cards
-            const logos = [enactusLogo.src, astanamuaLogo.src, akimatLogo.src, omronLogo.src];
-            const logoAlts = ["Enactus Logo", "Astana MUA Logo", "Министерства Республики Казахстан", "OMRON Logo"];
+          {/* Reorder stories so Enactus and OMRON are on the same row */}
+          {[
+            translations.successStories.stories[0], // Enactus
+            translations.successStories.stories[3], // OMRON
+            translations.successStories.stories[1], // Astana MUA
+            translations.successStories.stories[2]  // Ministry
+          ].map((story, index) => {
+            // Map logos to match the reordered stories
+            const logos = [enactusLogo.src, omronLogo.src, astanamuaLogo.src, akimatLogo.src];
+            const logoAlts = ["Enactus Logo", "OMRON Logo", "Astana MUA Logo", "Министерства Республики Казахстан"];
             const logoSrc = logos[index] || logos[0];
             const logoAlt = logoAlts[index] || logoAlts[0];
 
@@ -210,7 +217,7 @@ export const ImpactSection = () => {
                 transition={{ type: "spring", stiffness: 150, damping: 20 }}
               >
                 <div className="w-full mb-6 sm:mb-8 p-4 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl group-hover:scale-105 group-hover:from-gray-700 group-hover:to-gray-800 transition-all duration-300">
-                  {index === 2 ? (
+                  {index === 3 ? (
                     <div className="flex items-center justify-center gap-4">
                       <img
                         src={logoSrc}
@@ -221,7 +228,26 @@ export const ImpactSection = () => {
                         {story.title}
                       </p>
                     </div>
-                  ) : index === 3 ? (
+                  ) : index === 0 ? (
+                    <div className="space-y-4">
+                      <img
+                        src={logoSrc}
+                        alt={logoAlt}
+                        className="w-full h-16 sm:h-20 lg:h-24 desktop-qhd:h-28 desktop-4k:h-32 object-contain"
+                      />
+                      <video
+                        src={enactusVideo}
+                        className="w-full h-32 sm:h-36 lg:h-40 desktop-qhd:h-44 desktop-4k:h-48 object-cover rounded-lg"
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        preload="metadata"
+                      >
+                        Your browser does not support the video tag.
+                      </video>
+                    </div>
+                  ) : index === 1 ? (
                     <div className="space-y-4">
                       <img
                         src={logoSrc}
