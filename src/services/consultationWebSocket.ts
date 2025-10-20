@@ -56,6 +56,7 @@ class ConsultationWebSocketService {
   private isConnected = false;
   private isReconnecting = false;
   private userRole: string | null = null;
+  private hasAuthError = false;
 
   constructor() {
     this.connect = this.connect.bind(this);
@@ -70,6 +71,7 @@ class ConsultationWebSocketService {
     this.config = config;
     this.token = token;
     this.userRole = config.userRole || null;
+    this.hasAuthError = false;
 
     return new Promise((resolve) => {
       this.connect();
@@ -156,6 +158,9 @@ class ConsultationWebSocketService {
 
     this.ws.onerror = (error) => {
       console.error('❌ Consultation WebSocket error:', error);
+      if (this.hasAuthError) {
+        return;
+      }
       this.config.onError?.('WebSocket connection error');
     };
   }
@@ -210,13 +215,32 @@ class ConsultationWebSocketService {
         break;
 
       case 'error':
-        console.error('❌ Consultation WebSocket error:', message.data?.message);
-        this.config.onError?.(message.data?.message || 'Unknown error');
+        this.handleErrorMessage(message.data?.message);
         break;
 
       default:
         // console.log('❓ Unknown consultation WebSocket message type:', message.type);
     }
+  }
+
+  /**
+   * Handle error messages from the WebSocket server
+   */
+  private handleErrorMessage(rawMessage?: string): void {
+    const normalizedMessage = rawMessage?.toLowerCase() || '';
+
+    if (normalizedMessage.includes('authentication token')) {
+      // Suppress reconnect loops when authentication fails
+      this.hasAuthError = true;
+      this.isReconnecting = false;
+      this.reconnectAttempts = this.maxReconnectAttempts;
+      this.ws?.close(4001, 'Authentication failed');
+      console.warn('⚠️ Consultation WebSocket authentication failed:', rawMessage);
+      return;
+    }
+
+    console.error('❌ Consultation WebSocket error:', rawMessage);
+    this.config.onError?.(rawMessage || 'Unknown error');
   }
 
   /**
@@ -249,7 +273,11 @@ class ConsultationWebSocketService {
    * Handle reconnection logic with exponential backoff
    */
   private handleReconnect(): void {
-    if (this.isReconnecting || this.reconnectAttempts >= this.maxReconnectAttempts) {
+    if (
+      this.hasAuthError ||
+      this.isReconnecting ||
+      this.reconnectAttempts >= this.maxReconnectAttempts
+    ) {
       return;
     }
 
