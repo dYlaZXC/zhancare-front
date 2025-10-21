@@ -10,6 +10,7 @@
  */
 
 import { toast } from 'react-toastify';
+import { getWebSocketURL } from '@/utils/api';
 
 // Types for consultation WebSocket events
 export interface ConsultationData {
@@ -104,7 +105,7 @@ class ConsultationWebSocketService {
 
     try {
       // Use dedicated consultation WebSocket endpoint
-      const wsUrl = `ws://localhost:8001/ws/consultations/`;
+      const wsUrl = this.buildWebSocketUrl();
       // console.log(`🔌 Connecting to consultation WebSocket: ${wsUrl}`);
 
       this.ws = new WebSocket(wsUrl);
@@ -291,6 +292,14 @@ class ConsultationWebSocketService {
       // Exponential backoff: 1s, 2s, 4s, 8s, 16s
       this.reconnectDelay = Math.min(this.reconnectDelay * 2, 16000);
     }, this.reconnectDelay);
+  }
+
+  /**
+   * Build the full WebSocket URL for consultations.
+   */
+  private buildWebSocketUrl(): string {
+    const baseUrl = getWebSocketURL().replace(/\/$/, '');
+    return `${baseUrl}/consultations/`;
   }
 
   /**

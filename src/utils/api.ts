@@ -12,10 +12,11 @@ export const getWebSocketURL = () => {
   if (typeof window === 'undefined') return 'ws://localhost:8000/ws';
 
   const isSecure = window.location.protocol === 'https:';
-  const baseWsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws';
+  const defaultWsUrl = `${isSecure ? 'wss' : 'ws'}://${window.location.host}/ws`;
+  const baseWsUrl = process.env.NEXT_PUBLIC_WS_URL || defaultWsUrl;
 
   // Auto-detect protocol based on current page protocol
-  if (isSecure) {
+  if (isSecure && baseWsUrl.startsWith('ws://')) {
     return baseWsUrl.replace('ws://', 'wss://');
   }
 
