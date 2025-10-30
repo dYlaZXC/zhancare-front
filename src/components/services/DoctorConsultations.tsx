@@ -6,15 +6,9 @@ import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Stethoscope,
-  Clock,
-  Calendar,
   Settings,
   Search,
-  RefreshCw,
-  BarChart3,
-  Activity,
-  CheckCircle2,
-  XCircle
+  RefreshCw
 } from "lucide-react";
 import { api } from "@/utils/api";
 import { useAuth } from "@/context/AuthContext";
@@ -22,6 +16,7 @@ import { useConsultationManager } from "./consultations/useConsultationManager";
 import DoctorConsultationsTable from "./consultations/DoctorConsultationsTable";
 import UrgentConsultationPopup, { IncomingConsultation } from "./consultations/UrgentConsultationPopup";
 import { websocketService } from "@/services/websocketService";
+import { StatsCards } from "./consultations/StatsCards";
 
 
 const DoctorConsultations: React.FC = () => {
@@ -302,20 +297,26 @@ const DoctorConsultations: React.FC = () => {
             </div>
           </div>
 
-          {/* Statistics Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5 xs:gap-2 sm:gap-3 lg:gap-4 xl:gap-5 mt-2.5 xs:mt-3 sm:mt-4 md:mt-6 lg:mt-8 w-full">
+          {/* Statistics Cards - NEW CLEAN VERSION */}
+          <div className="mt-2.5 xs:mt-3 sm:mt-4 md:mt-6 lg:mt-8">
+            <StatsCards stats={stats} />
+          </div>
+
+          {/* OLD VERSION - COMMENTED OUT FOR COMPARISON
+          <div className="mt-2.5 xs:mt-3 sm:mt-4 md:mt-6 lg:mt-8">
+            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5 xs:gap-2 sm:gap-3 lg:gap-4 xl:gap-5 w-full">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.1 }}
               className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-md xs:rounded-lg sm:rounded-xl lg:rounded-2xl p-1.5 xs:p-2 sm:p-3 lg:p-4 xl:p-5 border border-blue-200/50 w-full"
             >
-              <div className="flex items-start justify-between gap-1 xs:gap-1.5 sm:gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-[8px] xs:text-[9px] sm:text-xs lg:text-sm xl:text-base font-medium text-blue-700 truncate leading-tight">Всего</p>
-                  <p className="text-sm xs:text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-blue-900 mt-0.5">{stats.total}</p>
+              <div className="flex items-start justify-between gap-1.5 xs:gap-2 sm:gap-3">
+                <div className="flex-1 min-w-0 overflow-hidden">
+                  <p className="text-[9px] xs:text-[10px] sm:text-xs lg:text-sm xl:text-base font-medium text-blue-700 truncate leading-tight">Всего</p>
+                  <p className="text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold text-blue-900 mt-0.5 truncate">{stats.total}</p>
                 </div>
-                <BarChart3 className="w-3.5 h-3.5 xs:w-4 xs:h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-8 lg:h-8 xl:w-10 xl:h-10 text-blue-600 flex-shrink-0" />
+                <BarChart3 className="w-5 h-5 xs:w-6 xs:h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 lg:w-10 lg:h-10 xl:w-12 xl:h-12 text-blue-600 flex-shrink-0" />
               </div>
             </motion.div>
 
@@ -325,12 +326,12 @@ const DoctorConsultations: React.FC = () => {
               transition={{ delay: 0.2 }}
               className="bg-gradient-to-br from-orange-50 to-yellow-50 rounded-md xs:rounded-lg sm:rounded-xl lg:rounded-2xl p-1.5 xs:p-2 sm:p-3 lg:p-4 xl:p-5 border border-orange-200/50 w-full"
             >
-              <div className="flex items-start justify-between gap-1 xs:gap-1.5 sm:gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-[8px] xs:text-[9px] sm:text-xs lg:text-sm xl:text-base font-medium text-orange-700 truncate leading-tight">Ожидают</p>
-                  <p className="text-sm xs:text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-orange-900 mt-0.5">{stats.pending}</p>
+              <div className="flex items-start justify-between gap-1.5 xs:gap-2 sm:gap-3">
+                <div className="flex-1 min-w-0 overflow-hidden">
+                  <p className="text-[9px] xs:text-[10px] sm:text-xs lg:text-sm xl:text-base font-medium text-orange-700 truncate leading-tight">Ожидают</p>
+                  <p className="text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold text-orange-900 mt-0.5 truncate">{stats.pending}</p>
                 </div>
-                <Clock className="w-3.5 h-3.5 xs:w-4 xs:h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-8 lg:h-8 xl:w-10 xl:h-10 text-orange-600 flex-shrink-0" />
+                <Clock className="w-5 h-5 xs:w-6 xs:h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 lg:w-10 lg:h-10 xl:w-12 xl:h-12 text-orange-600 flex-shrink-0" />
               </div>
             </motion.div>
 
@@ -340,12 +341,12 @@ const DoctorConsultations: React.FC = () => {
               transition={{ delay: 0.3 }}
               className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-md xs:rounded-lg sm:rounded-xl lg:rounded-2xl p-1.5 xs:p-2 sm:p-3 lg:p-4 xl:p-5 border border-green-200/50 w-full"
             >
-              <div className="flex items-start justify-between gap-1 xs:gap-1.5 sm:gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-[8px] xs:text-[9px] sm:text-xs lg:text-sm xl:text-base font-medium text-green-700 truncate leading-tight">Активные</p>
-                  <p className="text-sm xs:text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-green-900 mt-0.5">{stats.ongoing}</p>
+              <div className="flex items-start justify-between gap-1.5 xs:gap-2 sm:gap-3">
+                <div className="flex-1 min-w-0 overflow-hidden">
+                  <p className="text-[9px] xs:text-[10px] sm:text-xs lg:text-sm xl:text-base font-medium text-green-700 truncate leading-tight">Активные</p>
+                  <p className="text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold text-green-900 mt-0.5 truncate">{stats.ongoing}</p>
                 </div>
-                <Activity className="w-3.5 h-3.5 xs:w-4 xs:h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-8 lg:h-8 xl:w-10 xl:h-10 text-green-600 flex-shrink-0" />
+                <Activity className="w-5 h-5 xs:w-6 xs:h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 lg:w-10 lg:h-10 xl:w-12 xl:h-12 text-green-600 flex-shrink-0" />
               </div>
             </motion.div>
 
@@ -355,12 +356,12 @@ const DoctorConsultations: React.FC = () => {
               transition={{ delay: 0.4 }}
               className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-md xs:rounded-lg sm:rounded-xl lg:rounded-2xl p-1.5 xs:p-2 sm:p-3 lg:p-4 xl:p-5 border border-emerald-200/50 w-full"
             >
-              <div className="flex items-start justify-between gap-1 xs:gap-1.5 sm:gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-[8px] xs:text-[9px] sm:text-xs lg:text-sm xl:text-base font-medium text-emerald-700 truncate leading-tight">Завершено</p>
-                  <p className="text-sm xs:text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-emerald-900 mt-0.5">{stats.completed}</p>
+              <div className="flex items-start justify-between gap-1.5 xs:gap-2 sm:gap-3">
+                <div className="flex-1 min-w-0 overflow-hidden">
+                  <p className="text-[9px] xs:text-[10px] sm:text-xs lg:text-sm xl:text-base font-medium text-emerald-700 truncate leading-tight">Завершено</p>
+                  <p className="text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold text-emerald-900 mt-0.5 truncate">{stats.completed}</p>
                 </div>
-                <CheckCircle2 className="w-3.5 h-3.5 xs:w-4 xs:h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-8 lg:h-8 xl:w-10 xl:h-10 text-emerald-600 flex-shrink-0" />
+                <CheckCircle2 className="w-5 h-5 xs:w-6 xs:h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 lg:w-10 lg:h-10 xl:w-12 xl:h-12 text-emerald-600 flex-shrink-0" />
               </div>
             </motion.div>
 
@@ -370,12 +371,12 @@ const DoctorConsultations: React.FC = () => {
               transition={{ delay: 0.5 }}
               className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-md xs:rounded-lg sm:rounded-xl lg:rounded-2xl p-1.5 xs:p-2 sm:p-3 lg:p-4 xl:p-5 border border-gray-200/50 w-full"
             >
-              <div className="flex items-start justify-between gap-1 xs:gap-1.5 sm:gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-[8px] xs:text-[9px] sm:text-xs lg:text-sm xl:text-base font-medium text-gray-700 truncate leading-tight">Отменено</p>
-                  <p className="text-sm xs:text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-gray-900 mt-0.5">{stats.cancelled}</p>
+              <div className="flex items-start justify-between gap-1.5 xs:gap-2 sm:gap-3">
+                <div className="flex-1 min-w-0 overflow-hidden">
+                  <p className="text-[9px] xs:text-[10px] sm:text-xs lg:text-sm xl:text-base font-medium text-gray-700 truncate leading-tight">Отменено</p>
+                  <p className="text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold text-gray-900 mt-0.5 truncate">{stats.cancelled}</p>
                 </div>
-                <XCircle className="w-3.5 h-3.5 xs:w-4 xs:h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-8 lg:h-8 xl:w-10 xl:h-10 text-gray-600 flex-shrink-0" />
+                <XCircle className="w-5 h-5 xs:w-6 xs:h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 lg:w-10 lg:h-10 xl:w-12 xl:h-12 text-gray-600 flex-shrink-0" />
               </div>
             </motion.div>
 
@@ -385,15 +386,17 @@ const DoctorConsultations: React.FC = () => {
               transition={{ delay: 0.6 }}
               className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-md xs:rounded-lg sm:rounded-xl lg:rounded-2xl p-1.5 xs:p-2 sm:p-3 lg:p-4 xl:p-5 border border-purple-200/50 w-full"
             >
-              <div className="flex items-start justify-between gap-1 xs:gap-1.5 sm:gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-[8px] xs:text-[9px] sm:text-xs lg:text-sm xl:text-base font-medium text-purple-700 truncate leading-tight">Запланировано</p>
-                  <p className="text-sm xs:text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-purple-900 mt-0.5">{stats.planned}</p>
+              <div className="flex items-start justify-between gap-1.5 xs:gap-2 sm:gap-3">
+                <div className="flex-1 min-w-0 overflow-hidden">
+                  <p className="text-[9px] xs:text-[10px] sm:text-xs lg:text-sm xl:text-base font-medium text-purple-700 truncate leading-tight">Запланировано</p>
+                  <p className="text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold text-purple-900 mt-0.5 truncate">{stats.planned}</p>
                 </div>
-                <Calendar className="w-3.5 h-3.5 xs:w-4 xs:h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-8 lg:h-8 xl:w-10 xl:h-10 text-purple-600 flex-shrink-0" />
+                <Calendar className="w-5 h-5 xs:w-6 xs:h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 lg:w-10 lg:h-10 xl:w-12 xl:h-12 text-purple-600 flex-shrink-0" />
               </div>
             </motion.div>
+            </div>
           </div>
+          */}
         </motion.div>
 
         {/* Controls Section */}
