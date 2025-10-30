@@ -22,10 +22,14 @@ const config: Config = {
       },
     },
     screens: {
+      xs: "375px",  // Extra small devices (small phones)
       sm: "480px",
       md: "768px",
       lg: "1200px",
       xl: "1440px",
+      "2xl": "1920px",  // Full HD
+      "3xl": "2560px",  // 2K/QHD
+      "4xl": "3840px",  // 4K/UHD
     },
     extend: {
       colors: {
@@ -45,6 +49,15 @@ const config: Config = {
         "dark-card": "#161B22",
         "dark-muted": "#9CA3AF",
         "dark-border": "#30363D",
+      },
+      spacing: {
+        '4.5': '1.125rem',
+        '5.5': '1.375rem',
+      },
+      maxWidth: {
+        '8xl': '88rem',
+        '9xl': '96rem',
+        '10xl': '120rem',
       },
       animation: {
         pulseSlow: "pulse 3s infinite",

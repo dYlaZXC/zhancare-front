@@ -27,6 +27,12 @@ export const metadata: Metadata = {
   ],
   creator: "Adilan Akhramovich",
   publisher: "ТОО iTry, Алматы",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 5,
+    userScalable: true,
+  },
   openGraph: {
     title: "ZhanCare.AI - Будущее телемедицины",
     description: "ZhanCare.AI предоставляет современные технологии...",

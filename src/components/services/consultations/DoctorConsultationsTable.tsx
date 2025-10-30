@@ -472,34 +472,34 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
     const joinInfo = canJoinConsultation(consultation);
 
     return (
-      <div className="flex items-center gap-2 mt-3">
+      <div className="flex items-center gap-1.5 xs:gap-2 mt-2 xs:mt-2.5 sm:mt-3">
         {canAccept && (
           <button
             onClick={() => onAccept(consultation.meeting_id)}
-            className="flex-1 flex items-center justify-center gap-2 p-2.5 text-green-600 bg-green-50 rounded-lg transition-colors border border-green-200"
+            className="flex-1 flex items-center justify-center gap-1 xs:gap-1.5 sm:gap-2 p-1.5 xs:p-2 sm:p-2.5 text-green-600 bg-green-50 rounded-md xs:rounded-lg transition-colors border border-green-200"
           >
-            <Check className="w-4 h-4" />
-            <span className="text-sm font-medium">Принять</span>
+            <Check className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4" />
+            <span className="text-[10px] xs:text-xs sm:text-sm font-medium">Принять</span>
           </button>
         )}
 
         {canReject && (
           <button
             onClick={() => onReject(consultation.meeting_id)}
-            className="flex-1 flex items-center justify-center gap-2 p-2.5 text-red-600 bg-red-50 rounded-lg transition-colors border border-red-200"
+            className="flex-1 flex items-center justify-center gap-1 xs:gap-1.5 sm:gap-2 p-1.5 xs:p-2 sm:p-2.5 text-red-600 bg-red-50 rounded-md xs:rounded-lg transition-colors border border-red-200"
           >
-            <X className="w-4 h-4" />
-            <span className="text-sm font-medium">Отклонить</span>
+            <X className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4" />
+            <span className="text-[10px] xs:text-xs sm:text-sm font-medium">Отклонить</span>
           </button>
         )}
 
         {consultation.status === 'ongoing' && (
           <button
             onClick={() => window.open(`/video-call/doctor?meetingId=${consultation.meeting_id}`)}
-            className="flex-1 flex items-center justify-center gap-2 p-2.5 text-blue-600 bg-blue-50 rounded-lg transition-colors border border-blue-200"
+            className="flex-1 flex items-center justify-center gap-1 xs:gap-1.5 sm:gap-2 p-1.5 xs:p-2 sm:p-2.5 text-blue-600 bg-blue-50 rounded-md xs:rounded-lg transition-colors border border-blue-200"
           >
-            <PhoneCall className="w-4 h-4" />
-            <span className="text-sm font-medium">Подключиться</span>
+            <PhoneCall className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4" />
+            <span className="text-[10px] xs:text-xs sm:text-sm font-medium">Подключиться</span>
           </button>
         )}
 
@@ -507,21 +507,21 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
           joinInfo.canJoin ? (
             <button
               onClick={() => window.open(`/video-call/doctor?meetingId=${consultation.meeting_id}`)}
-              className={`flex-1 flex items-center justify-center gap-2 p-2.5 text-white rounded-lg transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-1 xs:gap-1.5 sm:gap-2 p-1.5 xs:p-2 sm:p-2.5 text-white rounded-md xs:rounded-lg transition-colors ${
                 joinInfo.isReady
                   ? 'bg-gradient-to-r from-green-600 to-emerald-600 border border-green-500'
                   : 'bg-gradient-to-r from-blue-600 to-indigo-600 border border-blue-500'
               }`}
             >
-              <Video className="w-4 h-4" />
-              <span className="text-sm font-medium">
+              <Video className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4" />
+              <span className="text-[10px] xs:text-xs sm:text-sm font-medium">
                 {joinInfo.isReady ? 'Подключиться' : 'Подключиться'}
               </span>
             </button>
           ) : (
-            <div className="flex-1 flex items-center justify-center gap-2 p-2.5 bg-gray-100 rounded-lg border border-gray-200">
-              <Clock className="w-4 h-4 text-gray-400" />
-              <span className="text-sm font-medium text-gray-500">
+            <div className="flex-1 flex items-center justify-center gap-1 xs:gap-1.5 sm:gap-2 p-1.5 xs:p-2 sm:p-2.5 bg-gray-100 rounded-md xs:rounded-lg border border-gray-200">
+              <Clock className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4 text-gray-400" />
+              <span className="text-[10px] xs:text-xs sm:text-sm font-medium text-gray-500">
                 {joinInfo.timeUntil}
               </span>
             </div>
@@ -529,24 +529,24 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
         )}
 
         {!isPending && consultation.status !== 'ongoing' && (
-          <button className="flex-1 flex items-center justify-center gap-2 p-2.5 text-blue-600 bg-blue-50 rounded-lg transition-colors border border-blue-200">
-            <Eye className="w-4 h-4" />
-            <span className="text-sm font-medium">Детали</span>
+          <button className="flex-1 flex items-center justify-center gap-1 xs:gap-1.5 sm:gap-2 p-1.5 xs:p-2 sm:p-2.5 text-blue-600 bg-blue-50 rounded-md xs:rounded-lg transition-colors border border-blue-200">
+            <Eye className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4" />
+            <span className="text-[10px] xs:text-xs sm:text-sm font-medium">Детали</span>
           </button>
         )}
 
-        <button className="p-2.5 text-gray-600 bg-gray-50 rounded-lg transition-colors border border-gray-200">
-          <MoreHorizontal className="w-4 h-4" />
+        <button className="p-1.5 xs:p-2 sm:p-2.5 text-gray-600 bg-gray-50 rounded-md xs:rounded-lg transition-colors border border-gray-200 flex-shrink-0">
+          <MoreHorizontal className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4" />
         </button>
       </div>
     );
   };
 
   return (
-    <div className="relative mt-8 space-y-6 px-4 md:px-6">
+    <div className="relative w-full mt-4 xs:mt-6 sm:mt-8 space-y-3 xs:space-y-4 sm:space-y-5 md:space-y-6 px-2 xs:px-3 sm:px-4 md:px-6 lg:px-8 overflow-x-hidden">
       {/* Floating background decorations */}
-      <div className="absolute -top-6 -right-6 w-32 h-32 bg-gradient-to-br from-blue-200/15 to-purple-200/15 rounded-full blur-3xl" />
-      <div className="absolute -bottom-6 -left-6 w-40 h-40 bg-gradient-to-tr from-indigo-200/15 to-blue-200/15 rounded-full blur-3xl" />
+      <div className="absolute -top-6 -right-6 w-32 h-32 bg-gradient-to-br from-blue-200/15 to-purple-200/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-6 -left-6 w-40 h-40 bg-gradient-to-tr from-indigo-200/15 to-blue-200/15 rounded-full blur-3xl pointer-events-none" />
 
       {/* Header */}
       <div className="relative">
@@ -921,72 +921,74 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
 
         {/* Mobile Card Layout */}
         {filteredConsultations.length > 0 && (
-          <div className="md:hidden space-y-3">
+          <div className="md:hidden space-y-2 xs:space-y-2.5 sm:space-y-3 w-full">
             {visibleConsultations.map((consultation) => (
               <div
                 key={consultation.id}
-                className="bg-white/95 backdrop-blur-sm rounded-xl border border-gray-200 shadow-md overflow-hidden"
+                className="bg-white/95 backdrop-blur-sm rounded-lg xs:rounded-xl border border-gray-200 shadow-md overflow-hidden w-full"
               >
-                <div className="p-3">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-white font-bold text-xs">
+                <div className="p-2 xs:p-2.5 sm:p-3">
+                  <div className="flex items-start justify-between mb-2 xs:mb-2.5 sm:mb-3">
+                    <div className="flex items-center gap-1.5 xs:gap-2 flex-1 min-w-0">
+                      <div className="w-8 h-8 xs:w-9 xs:h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-white font-bold text-[10px] xs:text-xs">
                           {(consultation.patient_name || consultation.patient_first_name || "П").charAt(0).toUpperCase()}
                         </span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold text-gray-900 truncate">
+                        <div className="text-xs xs:text-sm font-semibold text-gray-900 truncate leading-tight">
                           {consultation.patient_name || `${consultation.patient_first_name || ''} ${consultation.patient_last_name || ''}`.trim() || "Пациент не указан"}
                         </div>
-                        <div className="text-xs text-blue-600 font-medium truncate">
+                        <div className="text-[10px] xs:text-xs text-blue-600 font-medium truncate">
                           {consultation.patient_email || "Email не указан"}
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex-shrink-0 ml-2">
+                    <div className="flex-shrink-0 ml-1.5 xs:ml-2">
                       {renderStatusDropdown(consultation, true)}
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-3 h-3 text-blue-500 flex-shrink-0" />
+                  <div className="grid grid-cols-2 gap-2 xs:gap-2.5 sm:gap-3 text-[10px] xs:text-xs">
+                    <div className="flex items-center gap-1.5 xs:gap-2">
+                      <Calendar className="w-2.5 h-2.5 xs:w-3 xs:h-3 text-blue-500 flex-shrink-0" />
                       <div className="min-w-0">
                         <div className="font-medium text-gray-900 truncate">
                           {consultation.created_at ? formatDate(consultation.created_at) : "Не указано"}
                         </div>
-                        <div className="text-gray-500 flex items-center gap-1">
-                          <Clock className="w-2.5 h-2.5" />
-                          {consultation.started_at
-                            ? new Date(consultation.started_at).toLocaleTimeString('ru-RU', {
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })
-                            : "Не начата"
-                          }
+                        <div className="text-gray-500 flex items-center gap-0.5 xs:gap-1">
+                          <Clock className="w-2 h-2 xs:w-2.5 xs:h-2.5" />
+                          <span className="text-[9px] xs:text-[10px]">
+                            {consultation.started_at
+                              ? new Date(consultation.started_at).toLocaleTimeString('ru-RU', {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })
+                              : "Не начата"
+                            }
+                          </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 bg-blue-500">
+                    <div className="flex items-center gap-1.5 xs:gap-2">
+                      <div className="w-5 h-5 xs:w-6 xs:h-6 rounded-md flex items-center justify-center flex-shrink-0 bg-blue-500">
                         {getTypeIcon(consultation.type || "video")}
                       </div>
                       <div className="min-w-0">
                         <div className="font-medium truncate text-blue-700">
                           {getTypeText(consultation.type || "video")}
                         </div>
-                        <div className="text-gray-500">Консультация</div>
+                        <div className="text-gray-500 text-[9px] xs:text-[10px]">Консультация</div>
                       </div>
                     </div>
                   </div>
 
                   {consultation.symptoms && (
-                    <div className="mt-3 p-2 bg-blue-50 rounded-lg border border-blue-200">
-                      <div className="text-xs text-gray-600 mb-1">Симптомы:</div>
-                      <div className="text-xs text-gray-900">
+                    <div className="mt-2 xs:mt-2.5 sm:mt-3 p-1.5 xs:p-2 bg-blue-50 rounded-md xs:rounded-lg border border-blue-200">
+                      <div className="text-[10px] xs:text-xs text-gray-600 mb-0.5 xs:mb-1">Симптомы:</div>
+                      <div className="text-[10px] xs:text-xs text-gray-900 leading-snug">
                         {consultation.symptoms.length > 80
                           ? `${consultation.symptoms.substring(0, 80)}...`
                           : consultation.symptoms}
@@ -994,11 +996,11 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
                     </div>
                   )}
 
-                  <div className="mt-3 p-2 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
-                      <span className="text-xs text-gray-600">ID:</span>
-                      <span className="text-xs font-mono text-gray-900 truncate">
+                  <div className="mt-2 xs:mt-2.5 sm:mt-3 p-1.5 xs:p-2 bg-gray-50 rounded-md xs:rounded-lg border border-gray-200">
+                    <div className="flex items-center gap-1.5 xs:gap-2">
+                      <div className="w-1.5 h-1.5 xs:w-2 xs:h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
+                      <span className="text-[9px] xs:text-xs text-gray-600">ID:</span>
+                      <span className="text-[9px] xs:text-xs font-mono text-gray-900 truncate">
                         {consultation.meeting_id}
                       </span>
                     </div>
@@ -1014,34 +1016,34 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
 
       {/* Pagination Controls */}
       {totalPages > 1 && (
-        <div className="mt-6 p-4 bg-white/95 backdrop-blur-sm rounded-2xl border border-gray-200 shadow-lg">
-          <div className="bg-gradient-to-r from-slate-50 to-blue-50/30 p-4 rounded-xl">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-600">
+        <div className="mt-3 xs:mt-4 sm:mt-5 md:mt-6 p-2 xs:p-3 sm:p-4 bg-white/95 backdrop-blur-sm rounded-lg xs:rounded-xl sm:rounded-2xl border border-gray-200 shadow-lg">
+          <div className="bg-gradient-to-r from-slate-50 to-blue-50/30 p-2 xs:p-3 sm:p-4 rounded-md xs:rounded-lg sm:rounded-xl">
+            <div className="flex flex-col xs:flex-row items-center justify-between gap-2 xs:gap-3">
+              <div className="text-[10px] xs:text-xs sm:text-sm text-gray-600 text-center xs:text-left">
                 Показано {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredConsultations.length)} из {filteredConsultations.length}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 xs:gap-1.5 sm:gap-2">
                 <button
                   onClick={() => goToPage(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className={`p-2 rounded-lg transition-all ${
+                  className={`p-1.5 xs:p-2 rounded-md xs:rounded-lg transition-all ${
                     currentPage === 1
                       ? 'text-gray-400 cursor-not-allowed'
                       : 'text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-200 hover:border-blue-300'
                   }`}
                 >
-                  <ChevronLeft className="w-4 h-4" />
+                  <ChevronLeft className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4" />
                 </button>
 
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0.5 xs:gap-1">
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
                     if (totalPages <= 5 || page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1) {
                       return (
                         <button
                           key={page}
                           onClick={() => goToPage(page)}
-                          className={`w-8 h-8 rounded-lg text-sm font-semibold transition-all ${
+                          className={`w-6 h-6 xs:w-7 xs:h-7 sm:w-8 sm:h-8 rounded-md xs:rounded-lg text-[10px] xs:text-xs sm:text-sm font-semibold transition-all ${
                             page === currentPage
                               ? 'bg-blue-600 text-white shadow-md'
                               : 'text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-200 hover:border-blue-300'
@@ -1051,9 +1053,9 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
                         </button>
                       );
                     } else if (page === 2 && currentPage > 3) {
-                      return <span key={page} className="text-gray-400 px-1">...</span>;
+                      return <span key={page} className="text-gray-400 px-0.5 xs:px-1 text-xs">...</span>;
                     } else if (page === totalPages - 1 && currentPage < totalPages - 2) {
-                      return <span key={page} className="text-gray-400 px-1">...</span>;
+                      return <span key={page} className="text-gray-400 px-0.5 xs:px-1 text-xs">...</span>;
                     }
                     return null;
                   })}
@@ -1062,13 +1064,13 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
                 <button
                   onClick={() => goToPage(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className={`p-2 rounded-lg transition-all ${
+                  className={`p-1.5 xs:p-2 rounded-md xs:rounded-lg transition-all ${
                     currentPage === totalPages
                       ? 'text-gray-400 cursor-not-allowed'
                       : 'text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-200 hover:border-blue-300'
                   }`}
                 >
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4" />
                 </button>
               </div>
             </div>

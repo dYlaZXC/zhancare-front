@@ -237,71 +237,85 @@ const DoctorConsultations: React.FC = () => {
   };
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50">
-      {/* Background decorations */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-indigo-400/20 to-blue-400/20 rounded-full blur-3xl" />
-      </div>
+    <>
+      <style jsx global>{`
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        body {
+          overflow-x: hidden;
+        }
+      `}</style>
 
-      <div className="relative z-10 p-6 lg:p-8 space-y-6">
+      <div className="relative min-h-screen w-full bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 overflow-x-hidden">
+        {/* Background decorations */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl" />
+          <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-indigo-400/20 to-blue-400/20 rounded-full blur-3xl" />
+        </div>
+
+      <div className="relative z-10 w-full px-1.5 xs:px-2 sm:px-4 md:px-6 lg:px-8 xl:px-10 2xl:px-12 py-2 xs:py-3 sm:py-4 md:py-6 space-y-2.5 xs:space-y-3 sm:space-y-4 md:space-y-6 max-w-[2560px] mx-auto overflow-x-hidden">
         {/* Header Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white/95 backdrop-blur-sm rounded-3xl border border-white/50 shadow-xl p-6 lg:p-8"
+          className="bg-white/95 backdrop-blur-sm rounded-lg xs:rounded-xl sm:rounded-2xl md:rounded-3xl border border-white/50 shadow-xl p-2.5 xs:p-3 sm:p-4 md:p-6 lg:p-8 xl:p-10 w-full"
         >
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl shadow-lg">
-                <Stethoscope className="w-8 h-8 text-white" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 xs:gap-4 sm:gap-6">
+            <div className="flex items-center gap-2 xs:gap-3 sm:gap-4 min-w-0 flex-1">
+              <div className="p-2 xs:p-2.5 sm:p-3 lg:p-4 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-lg xs:rounded-xl sm:rounded-2xl shadow-lg flex-shrink-0">
+                <Stethoscope className="w-5 h-5 xs:w-6 xs:h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 xl:w-9 xl:h-9 text-white" />
               </div>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">
-                  Панель врачаыв
+              <div className="min-w-0 flex-1">
+                <h1 className="text-base xs:text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900 truncate leading-tight">
+                  Панель врача
                 </h1>
-                <p className="text-gray-600 mt-1">
+                <p className="text-xs xs:text-sm sm:text-base md:text-lg text-gray-600 mt-0.5 xs:mt-1 truncate">
                   Добро пожаловать, {user?.first_name} {user?.last_name}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 xs:gap-2.5 sm:gap-3 self-end sm:self-auto flex-shrink-0">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => fetchConsultations()}
-                className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-medium shadow-lg hover:bg-blue-700 transition-colors"
+                className="flex items-center gap-1.5 xs:gap-2 px-2.5 xs:px-3 sm:px-4 lg:px-5 py-1.5 xs:py-2 sm:py-2.5 lg:py-3 bg-blue-600 text-white rounded-lg xs:rounded-xl text-xs xs:text-sm sm:text-base font-medium shadow-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
               >
-                <RefreshCw className="w-4 h-4" />
-                Обновить
+                <RefreshCw className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
+                <span className="hidden xs:inline">Обновить</span>
               </motion.button>
-              
+
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setShowSettings(!showSettings)}
-                className="p-2.5 text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+                className="p-1.5 xs:p-2 sm:p-2.5 lg:p-3 text-gray-600 hover:bg-gray-100 rounded-lg xs:rounded-xl transition-colors flex-shrink-0"
               >
-                <Settings className="w-5 h-5" />
+                <Settings className="w-4 h-4 xs:w-4.5 xs:h-4.5 sm:w-5 sm:h-5 lg:w-6 lg:h-6" />
               </motion.button>
             </div>
           </div>
 
           {/* Statistics Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mt-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5 xs:gap-2 sm:gap-3 lg:gap-4 xl:gap-5 mt-2.5 xs:mt-3 sm:mt-4 md:mt-6 lg:mt-8 w-full">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.1 }}
-              className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-4 border border-blue-200/50"
+              className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-md xs:rounded-lg sm:rounded-xl lg:rounded-2xl p-1.5 xs:p-2 sm:p-3 lg:p-4 xl:p-5 border border-blue-200/50 w-full"
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-blue-700">Всего</p>
-                  <p className="text-2xl font-bold text-blue-900">{stats.total}</p>
+              <div className="flex items-start justify-between gap-1 xs:gap-1.5 sm:gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[8px] xs:text-[9px] sm:text-xs lg:text-sm xl:text-base font-medium text-blue-700 truncate leading-tight">Всего</p>
+                  <p className="text-sm xs:text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-blue-900 mt-0.5">{stats.total}</p>
                 </div>
-                <BarChart3 className="w-8 h-8 text-blue-600" />
+                <BarChart3 className="w-3.5 h-3.5 xs:w-4 xs:h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-8 lg:h-8 xl:w-10 xl:h-10 text-blue-600 flex-shrink-0" />
               </div>
             </motion.div>
 
@@ -309,14 +323,14 @@ const DoctorConsultations: React.FC = () => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2 }}
-              className="bg-gradient-to-br from-orange-50 to-yellow-50 rounded-2xl p-4 border border-orange-200/50"
+              className="bg-gradient-to-br from-orange-50 to-yellow-50 rounded-md xs:rounded-lg sm:rounded-xl lg:rounded-2xl p-1.5 xs:p-2 sm:p-3 lg:p-4 xl:p-5 border border-orange-200/50 w-full"
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-orange-700">Ожидают</p>
-                  <p className="text-2xl font-bold text-orange-900">{stats.pending}</p>
+              <div className="flex items-start justify-between gap-1 xs:gap-1.5 sm:gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[8px] xs:text-[9px] sm:text-xs lg:text-sm xl:text-base font-medium text-orange-700 truncate leading-tight">Ожидают</p>
+                  <p className="text-sm xs:text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-orange-900 mt-0.5">{stats.pending}</p>
                 </div>
-                <Clock className="w-8 h-8 text-orange-600" />
+                <Clock className="w-3.5 h-3.5 xs:w-4 xs:h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-8 lg:h-8 xl:w-10 xl:h-10 text-orange-600 flex-shrink-0" />
               </div>
             </motion.div>
 
@@ -324,14 +338,14 @@ const DoctorConsultations: React.FC = () => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.3 }}
-              className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-4 border border-green-200/50"
+              className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-md xs:rounded-lg sm:rounded-xl lg:rounded-2xl p-1.5 xs:p-2 sm:p-3 lg:p-4 xl:p-5 border border-green-200/50 w-full"
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-green-700">Активные</p>
-                  <p className="text-2xl font-bold text-green-900">{stats.ongoing}</p>
+              <div className="flex items-start justify-between gap-1 xs:gap-1.5 sm:gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[8px] xs:text-[9px] sm:text-xs lg:text-sm xl:text-base font-medium text-green-700 truncate leading-tight">Активные</p>
+                  <p className="text-sm xs:text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-green-900 mt-0.5">{stats.ongoing}</p>
                 </div>
-                <Activity className="w-8 h-8 text-green-600" />
+                <Activity className="w-3.5 h-3.5 xs:w-4 xs:h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-8 lg:h-8 xl:w-10 xl:h-10 text-green-600 flex-shrink-0" />
               </div>
             </motion.div>
 
@@ -339,14 +353,14 @@ const DoctorConsultations: React.FC = () => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.4 }}
-              className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-4 border border-emerald-200/50"
+              className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-md xs:rounded-lg sm:rounded-xl lg:rounded-2xl p-1.5 xs:p-2 sm:p-3 lg:p-4 xl:p-5 border border-emerald-200/50 w-full"
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-emerald-700">Завершено</p>
-                  <p className="text-2xl font-bold text-emerald-900">{stats.completed}</p>
+              <div className="flex items-start justify-between gap-1 xs:gap-1.5 sm:gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[8px] xs:text-[9px] sm:text-xs lg:text-sm xl:text-base font-medium text-emerald-700 truncate leading-tight">Завершено</p>
+                  <p className="text-sm xs:text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-emerald-900 mt-0.5">{stats.completed}</p>
                 </div>
-                <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+                <CheckCircle2 className="w-3.5 h-3.5 xs:w-4 xs:h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-8 lg:h-8 xl:w-10 xl:h-10 text-emerald-600 flex-shrink-0" />
               </div>
             </motion.div>
 
@@ -354,14 +368,14 @@ const DoctorConsultations: React.FC = () => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.5 }}
-              className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-2xl p-4 border border-gray-200/50"
+              className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-md xs:rounded-lg sm:rounded-xl lg:rounded-2xl p-1.5 xs:p-2 sm:p-3 lg:p-4 xl:p-5 border border-gray-200/50 w-full"
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Отменено</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.cancelled}</p>
+              <div className="flex items-start justify-between gap-1 xs:gap-1.5 sm:gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[8px] xs:text-[9px] sm:text-xs lg:text-sm xl:text-base font-medium text-gray-700 truncate leading-tight">Отменено</p>
+                  <p className="text-sm xs:text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-gray-900 mt-0.5">{stats.cancelled}</p>
                 </div>
-                <XCircle className="w-8 h-8 text-gray-600" />
+                <XCircle className="w-3.5 h-3.5 xs:w-4 xs:h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-8 lg:h-8 xl:w-10 xl:h-10 text-gray-600 flex-shrink-0" />
               </div>
             </motion.div>
 
@@ -369,14 +383,14 @@ const DoctorConsultations: React.FC = () => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.6 }}
-              className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-2xl p-4 border border-purple-200/50"
+              className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-md xs:rounded-lg sm:rounded-xl lg:rounded-2xl p-1.5 xs:p-2 sm:p-3 lg:p-4 xl:p-5 border border-purple-200/50 w-full"
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-purple-700">Запланировано</p>
-                  <p className="text-2xl font-bold text-purple-900">{stats.planned}</p>
+              <div className="flex items-start justify-between gap-1 xs:gap-1.5 sm:gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[8px] xs:text-[9px] sm:text-xs lg:text-sm xl:text-base font-medium text-purple-700 truncate leading-tight">Запланировано</p>
+                  <p className="text-sm xs:text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-purple-900 mt-0.5">{stats.planned}</p>
                 </div>
-                <Calendar className="w-8 h-8 text-purple-600" />
+                <Calendar className="w-3.5 h-3.5 xs:w-4 xs:h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-8 lg:h-8 xl:w-10 xl:h-10 text-purple-600 flex-shrink-0" />
               </div>
             </motion.div>
           </div>
@@ -387,50 +401,53 @@ const DoctorConsultations: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-white/95 backdrop-blur-sm rounded-2xl border border-white/50 shadow-lg p-6"
+          className="bg-white/95 backdrop-blur-sm rounded-lg xs:rounded-xl sm:rounded-2xl border border-white/50 shadow-lg p-2 xs:p-2.5 sm:p-3 md:p-4 lg:p-6 xl:p-7 w-full"
         >
-          <div className="flex flex-col lg:flex-row gap-4 lg:items-center justify-between">
-            {/* Tab Navigation */}
-            <div className="flex items-center gap-2 p-1 bg-gray-100 rounded-xl">
-              {[
-                { key: 'all', label: 'Все', count: stats.total },
-                { key: 'pending', label: 'Ожидают', count: stats.pending },
-                { key: 'ongoing', label: 'Активные', count: stats.ongoing },
-                { key: 'completed', label: 'Завершено', count: stats.completed },
-                { key: 'planned', label: 'Запланировано', count: stats.planned },
-              ].map((tab) => (
-                <motion.button
-                  key={tab.key}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setActiveTab(tab.key as any)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
-                    activeTab === tab.key
-                      ? 'bg-white text-blue-600 shadow-md'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  {tab.label}
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                    activeTab === tab.key
-                      ? 'bg-blue-100 text-blue-600'
-                      : 'bg-gray-200 text-gray-600'
-                  }`}>
-                    {tab.count}
-                  </span>
-                </motion.button>
-              ))}
+          <div className="flex flex-col gap-3 xs:gap-3.5 sm:gap-4">
+            {/* Tab Navigation - Scrollable on mobile */}
+            <div className="overflow-x-auto -mx-2 px-2 xs:-mx-3 xs:px-3 sm:mx-0 sm:px-0 scrollbar-hide">
+              <div className="inline-flex items-center gap-1.5 xs:gap-2 sm:gap-2 p-1 xs:p-1 bg-gray-100 rounded-lg xs:rounded-xl min-w-max w-full sm:w-auto">
+                {[
+                  { key: 'all', label: 'Все', count: stats.total },
+                  { key: 'pending', label: 'Ожидают', count: stats.pending },
+                  { key: 'ongoing', label: 'Активные', count: stats.ongoing },
+                  { key: 'completed', label: 'Завершено', count: stats.completed },
+                  { key: 'planned', label: 'Запланировано', count: stats.planned },
+                ].map((tab) => (
+                  <motion.button
+                    key={tab.key}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setActiveTab(tab.key as any)}
+                    className={`flex items-center gap-1 xs:gap-1.5 sm:gap-2 px-2 xs:px-2.5 sm:px-3 md:px-4 lg:px-5 py-1.5 xs:py-2 sm:py-2.5 rounded-md xs:rounded-lg font-medium text-[10px] xs:text-xs sm:text-sm md:text-base transition-all whitespace-nowrap ${
+                      activeTab === tab.key
+                        ? 'bg-white text-blue-600 shadow-md'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <span className="hidden xs:inline">{tab.label}</span>
+                    <span className="xs:hidden">{tab.label.split(' ')[0]}</span>
+                    <span className={`px-1 xs:px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] xs:text-xs font-bold ${
+                      activeTab === tab.key
+                        ? 'bg-blue-100 text-blue-600'
+                        : 'bg-gray-200 text-gray-600'
+                    }`}>
+                      {tab.count}
+                    </span>
+                  </motion.button>
+                ))}
+              </div>
             </div>
 
             {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-2 xs:left-3 top-1/2 transform -translate-y-1/2 w-3 h-3 xs:w-4 xs:h-4 sm:w-5 sm:h-5 text-gray-400" />
               <input
                 type="text"
                 placeholder="Поиск пациентов..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                className="w-full pl-8 xs:pl-10 sm:pl-12 pr-3 xs:pr-4 py-2 xs:py-2.5 sm:py-3 md:py-3.5 bg-gray-50 border border-gray-200 rounded-lg xs:rounded-xl text-xs xs:text-sm sm:text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
           </div>
@@ -451,15 +468,15 @@ const DoctorConsultations: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-white/95 backdrop-blur-sm rounded-2xl border border-white/50 shadow-lg overflow-hidden"
+          className="bg-white/95 backdrop-blur-sm rounded-lg xs:rounded-xl sm:rounded-2xl border border-white/50 shadow-lg overflow-hidden w-full"
         >
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900">
+          <div className="p-2 xs:p-2.5 sm:p-3 md:p-4 lg:p-6 xl:p-7 border-b border-gray-200 w-full">
+            <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2">
+              <h2 className="text-base xs:text-lg sm:text-xl md:text-2xl lg:text-3xl font-semibold text-gray-900">
                 Консультации
               </h2>
-              <p className="text-sm text-gray-500">
-                Найдено: {filteredConsultations.length} из {stats.total}
+              <p className="text-[10px] xs:text-xs sm:text-sm md:text-base text-gray-500">
+                Найдено: <span className="font-medium text-gray-900">{filteredConsultations.length}</span> из {stats.total}
               </p>
             </div>
           </div>
@@ -473,7 +490,8 @@ const DoctorConsultations: React.FC = () => {
           />
         </motion.div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 
