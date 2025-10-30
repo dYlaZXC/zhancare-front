@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/utils/api";
@@ -172,32 +172,116 @@ const DoctorVideoCallPage: React.FC = () => {
   // Loading or error states
   if (consultationLoading) {
     return (
-      <div className="flex items-center justify-center h-screen text-blue-700 text-lg font-semibold">
-        <Loader2 className="animate-spin w-8 h-8 mr-2" />
-        ⏳ Загрузка данных консультации...
+      <div className="relative flex items-center justify-center h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-hidden">
+        <div className="absolute inset-0">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-600/20 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-green-600/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        </div>
+        <div className="relative z-10 text-center max-w-md px-8">
+          <div className="mb-6 inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-emerald-600/30 border-2 border-emerald-400/50 backdrop-blur-sm shadow-xl shadow-emerald-500/20">
+            <Loader2 className="animate-spin w-12 h-12 text-emerald-300" strokeWidth={2.5} />
+          </div>
+          <h2 className="text-3xl font-bold text-white mb-4 drop-shadow-lg">Загрузка консультации</h2>
+          <p className="text-lg text-slate-200 mb-6">Получаем информацию о вашей встрече...</p>
+          <div className="flex items-center justify-center gap-3">
+            <div className="w-3 h-3 bg-emerald-500 rounded-full animate-bounce shadow-lg shadow-emerald-500/50"></div>
+            <div className="w-3 h-3 bg-green-500 rounded-full animate-bounce delay-75 shadow-lg shadow-green-500/50"></div>
+            <div className="w-3 h-3 bg-teal-500 rounded-full animate-bounce delay-150 shadow-lg shadow-teal-500/50"></div>
+          </div>
+        </div>
+        <div className="absolute inset-0 opacity-[0.02] pointer-events-none">
+          <div className="w-full h-full"
+               style={{
+                 backgroundImage: `
+                   linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+                   linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px)
+                 `,
+                 backgroundSize: '24px 24px'
+               }}>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (consultationError) {
     return (
-      <div className="flex items-center justify-center h-screen text-red-600 text-lg font-semibold">
-        ❌ {consultationError}
+      <div className="relative flex items-center justify-center h-screen bg-gradient-to-br from-slate-900 via-red-900/30 to-slate-900 overflow-hidden">
+        <div className="absolute inset-0">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-red-600/20 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-orange-600/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        </div>
+        <div className="relative z-10 text-center max-w-md px-8">
+          <div className="mb-6 inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-red-600/30 border-2 border-red-400/50 backdrop-blur-sm shadow-xl shadow-red-500/20">
+            <svg className="w-12 h-12 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="text-3xl font-bold text-white mb-4 drop-shadow-lg">Ошибка загрузки</h2>
+          <p className="text-lg text-red-200 mb-6">{consultationError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 text-white font-semibold hover:from-emerald-700 hover:to-green-700 transition-all duration-300 border-2 border-emerald-400/50 shadow-lg hover:shadow-emerald-500/50 hover:scale-105"
+          >
+            <RefreshCw className="w-5 h-5" />
+            Обновить страницу
+          </button>
+          <p className="text-sm text-slate-300 mt-6">
+            Если проблема повторяется, обратитесь в службу поддержки
+          </p>
+        </div>
+        <div className="absolute inset-0 opacity-[0.02] pointer-events-none">
+          <div className="w-full h-full"
+               style={{
+                 backgroundImage: `
+                   linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+                   linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px)
+                 `,
+                 backgroundSize: '24px 24px'
+               }}>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!meetingId || !consultation) {
     return (
-      <div className="flex items-center justify-center h-screen text-blue-700 text-lg font-semibold">
-        ⏳ Загрузка данных встречи...
+      <div className="relative flex items-center justify-center h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-hidden">
+        <div className="absolute inset-0">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-600/20 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-green-600/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        </div>
+        <div className="relative z-10 text-center max-w-md px-8">
+          <div className="mb-6 inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-emerald-600/30 border-2 border-emerald-400/50 backdrop-blur-sm shadow-xl shadow-emerald-500/20">
+            <Loader2 className="animate-spin w-12 h-12 text-emerald-300" strokeWidth={2.5} />
+          </div>
+          <h2 className="text-3xl font-bold text-white mb-4 drop-shadow-lg">Подготовка встречи</h2>
+          <p className="text-lg text-slate-200 mb-6">Загружаем данные встречи...</p>
+          <div className="flex items-center justify-center gap-3">
+            <div className="w-3 h-3 bg-emerald-500 rounded-full animate-bounce shadow-lg shadow-emerald-500/50"></div>
+            <div className="w-3 h-3 bg-green-500 rounded-full animate-bounce delay-75 shadow-lg shadow-green-500/50"></div>
+            <div className="w-3 h-3 bg-teal-500 rounded-full animate-bounce delay-150 shadow-lg shadow-teal-500/50"></div>
+          </div>
+        </div>
+        <div className="absolute inset-0 opacity-[0.02] pointer-events-none">
+          <div className="w-full h-full"
+               style={{
+                 backgroundImage: `
+                   linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+                   linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px)
+                 `,
+                 backgroundSize: '24px 24px'
+               }}>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div
-      className="min-h-screen h-screen flex flex-col text-white relative overflow-hidden"
+      className="min-h-screen flex flex-col text-white relative"
       style={{
         background: `
           radial-gradient(circle at 20% 50%, rgba(16, 185, 129, 0.15) 0%, transparent 50%),
@@ -223,20 +307,22 @@ const DoctorVideoCallPage: React.FC = () => {
         consultationId={consultation.id}
       /> */}
 
-      <DoctorVideoHeader
-        meetingId={meetingId}
-        patientName={patientName}
-        consultation={consultation}
-        isRecording={isRecording}
-        onStartRecording={handleStartRecording}
-        onStopRecording={handleStopRecording}
-      />
+      <div className="sticky top-0 z-20">
+        <DoctorVideoHeader
+          meetingId={meetingId}
+          patientName={patientName}
+          consultation={consultation}
+          isRecording={isRecording}
+          onStartRecording={handleStartRecording}
+          onStopRecording={handleStopRecording}
+        />
+      </div>
 
       {callActive ? (
         <>
-          <main className="flex-1 flex flex-col lg:flex-row gap-2 sm:gap-3 lg:gap-4 xl:gap-6 p-2 sm:p-3 lg:p-4 xl:p-6 relative z-10 min-h-0 overflow-hidden">
+          <main className="flex-1 flex flex-col lg:flex-row gap-2 sm:gap-3 lg:gap-4 xl:gap-6 p-2 sm:p-3 lg:p-4 xl:p-6 relative z-10">
             {/* Video Section - Takes more space on desktop */}
-            <div className="relative group min-w-0 h-[35vh] sm:h-[40vh] md:h-[45vh] lg:h-full lg:flex-[2] xl:flex-[3] overflow-hidden">
+            <div className="relative group min-w-0 lg:flex-[2] xl:flex-[3]" style={{ height: 'calc(100vh - 280px)', minHeight: '500px' }}>
               <DoctorVideoFrame
                 meetingId={meetingId}
                 safeUserName={safeUserName}
@@ -249,7 +335,7 @@ const DoctorVideoCallPage: React.FC = () => {
             </div>
 
             {/* Medical AI Chat Section - Constrained width on desktop */}
-            <div className="relative group flex-1 lg:flex-[1] xl:flex-[1] lg:h-full lg:max-w-[400px] xl:max-w-[450px] min-h-0 min-w-0 overflow-hidden">
+            {/* <div className="relative group flex-1 lg:flex-[1] xl:flex-[1] lg:h-full lg:max-w-[400px] xl:max-w-[450px] min-h-0 min-w-0 overflow-hidden">
               <div className="h-full max-h-full flex flex-col overflow-hidden rounded-xl sm:rounded-2xl lg:rounded-3xl backdrop-blur-md border border-white/20 shadow-2xl transition-all duration-500 group-hover:shadow-emerald-500/20"
                    style={{
                      background: `
@@ -259,10 +345,10 @@ const DoctorVideoCallPage: React.FC = () => {
                          rgba(16, 185, 129, 0.08) 100%
                        )
                      `
-                   }}>
+                   }}> */}
 
                 {/* Medical Chat Header */}
-                <div className="relative px-3 py-3 sm:px-4 sm:py-3 lg:px-4 lg:py-3 border-b border-white/10 backdrop-blur-sm flex-shrink-0"
+                {/* <div className="relative px-3 py-3 sm:px-4 sm:py-3 lg:px-4 lg:py-3 border-b border-white/10 backdrop-blur-sm flex-shrink-0"
                      style={{
                        background: `
                          linear-gradient(135deg,
@@ -282,10 +368,10 @@ const DoctorVideoCallPage: React.FC = () => {
                       <p className="text-white/70 text-xs truncate">Профессиональная поддержка врача</p>
                     </div>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Chat content container with proper flex */}
-                <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                {/* <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                   <DoctorChatBox
                     messages={messages}
                     loading={loading}
@@ -306,9 +392,9 @@ const DoctorVideoCallPage: React.FC = () => {
                       setPrescriptionMode={setPrescriptionMode}
                     />
                   </div>
-                </div>
-              </div>
-            </div>
+                </div> */}
+              {/* </div>
+            </div> */}
           </main>
 
           <DoctorCallFooter

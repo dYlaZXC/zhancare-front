@@ -75,92 +75,90 @@ const DoctorCallFooter: React.FC<DoctorCallFooterProps> = ({
   };
 
   return (
-    <footer className="relative bg-gradient-to-r from-emerald-900/60 to-teal-900/60 backdrop-blur-md border-t border-emerald-400/20 px-6 py-4">
+    <footer className="relative bg-gradient-to-r from-emerald-900/60 to-teal-900/60 backdrop-blur-md border-t border-emerald-400/20 px-3 sm:px-6 py-3 sm:py-4">
       {/* Glass effect overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-white/5 via-transparent to-white/5 pointer-events-none"></div>
 
       <div className="relative z-10">
         {/* Main Control Bar */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col gap-3 mb-4">
 
-          {/* Left Section - Documentation Tools */}
-          <div className="flex items-center gap-3">
+          {/* First Row - Documentation Tools (Mobile: wrap, Desktop: row) */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 justify-center sm:justify-start">
             <button
               onClick={() => setShowNotes(!showNotes)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 border-2 ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium transition-all duration-300 border-2 ${
                 showNotes
                   ? 'bg-emerald-600 text-white border-emerald-400'
                   : 'bg-emerald-600/20 text-emerald-300 border-emerald-400/30 hover:bg-emerald-600/30'
               }`}
             >
-              <FontAwesomeIcon icon={faNotesMedical} />
-              Заметки
+              <FontAwesomeIcon icon={faNotesMedical} className="text-sm sm:text-base" />
+              <span className="hidden xs:inline">Заметки</span>
             </button>
 
             <button
               onClick={() => setShowPrescription(!showPrescription)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 border-2 ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium transition-all duration-300 border-2 ${
                 showPrescription
                   ? 'bg-blue-600 text-white border-blue-400'
                   : 'bg-blue-600/20 text-blue-300 border-blue-400/30 hover:bg-blue-600/30'
               }`}
             >
-              <FontAwesomeIcon icon={faPrescriptionBottle} />
-              Рецепт
+              <FontAwesomeIcon icon={faPrescriptionBottle} className="text-sm sm:text-base" />
+              <span className="hidden xs:inline">Рецепт</span>
             </button>
 
             <button
               onClick={() => setShowRecommendations(!showRecommendations)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 border-2 ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium transition-all duration-300 border-2 ${
                 showRecommendations
                   ? 'bg-purple-600 text-white border-purple-400'
                   : 'bg-purple-600/20 text-purple-300 border-purple-400/30 hover:bg-purple-600/30'
               }`}
             >
-              <FontAwesomeIcon icon={faClipboardList} />
-              Рекомендации
+              <FontAwesomeIcon icon={faClipboardList} className="text-sm sm:text-base" />
+              <span className="hidden xs:inline">Рекомендации</span>
             </button>
-          </div>
 
-          {/* Center Section - Recording */}
-          <div className="flex items-center gap-3">
+            {/* Recording Button - Inline on mobile */}
             <button
               onClick={isRecording ? onStopRecording : onStartRecording}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all duration-300 border-2 ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium transition-all duration-300 border-2 ${
                 isRecording
                   ? 'bg-red-600 text-white border-red-400 animate-pulse'
                   : 'bg-gray-600 text-white border-gray-500 hover:bg-gray-700'
               }`}
             >
-              <FontAwesomeIcon icon={isRecording ? faStop : faRecordVinyl} />
-              {isRecording ? 'Остановить запись' : 'Начать запись'}
+              <FontAwesomeIcon icon={isRecording ? faStop : faRecordVinyl} className="text-sm sm:text-base" />
+              <span className="hidden sm:inline">{isRecording ? 'Остановить' : 'Запись'}</span>
             </button>
           </div>
 
-          {/* Right Section - Actions */}
-          <div className="flex items-center gap-3">
+          {/* Second Row - Action Buttons */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 justify-center">
             <button
               onClick={saveConsultationData}
-              className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition-all duration-300 border-2 border-green-400"
+              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg sm:rounded-xl text-sm sm:text-base font-medium transition-all duration-300 border-2 border-green-400"
             >
-              <FontAwesomeIcon icon={faSave} />
-              Сохранить
+              <FontAwesomeIcon icon={faSave} className="text-sm sm:text-base" />
+              <span className="hidden sm:inline">Сохранить</span>
             </button>
 
             <button
               onClick={generateReport}
-              className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-all duration-300 border-2 border-indigo-400"
+              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg sm:rounded-xl text-sm sm:text-base font-medium transition-all duration-300 border-2 border-indigo-400"
             >
-              <FontAwesomeIcon icon={faDownload} />
-              Отчет
+              <FontAwesomeIcon icon={faDownload} className="text-sm sm:text-base" />
+              <span className="hidden sm:inline">Отчет</span>
             </button>
 
             <button
               onClick={handleEndCall}
-              className="flex items-center gap-2 px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-all duration-300 border-2 border-red-400 shadow-lg"
+              className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg sm:rounded-xl text-sm sm:text-base font-bold transition-all duration-300 border-2 border-red-400 shadow-lg"
             >
-              <FontAwesomeIcon icon={faStethoscope} />
-              Завершить консультацию
+              <FontAwesomeIcon icon={faStethoscope} className="text-sm sm:text-base" />
+              <span>Завершить</span>
             </button>
           </div>
         </div>

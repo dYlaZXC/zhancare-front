@@ -61,85 +61,83 @@ const PatientCallFooter: React.FC<PatientCallFooterProps> = ({
   };
 
   return (
-    <footer className="relative bg-gradient-to-r from-blue-900/60 to-indigo-900/60 backdrop-blur-md border-t border-blue-400/20 px-6 py-4">
+    <footer className="relative bg-gradient-to-r from-blue-900/60 to-indigo-900/60 backdrop-blur-md border-t border-blue-400/20 px-3 sm:px-6 py-3 sm:py-4">
       {/* Glass effect overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-white/5 via-transparent to-white/5 pointer-events-none"></div>
 
       <div className="relative z-10">
         {/* Main Control Bar */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col gap-3 mb-4">
 
-          {/* Left Section - Patient Tools */}
-          <div className="flex items-center gap-3">
+          {/* First Row - Patient Tools (Mobile: wrap, Desktop: row) */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 justify-center sm:justify-start">
             <button
               onClick={() => setShowSymptoms(!showSymptoms)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 border-2 ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium transition-all duration-300 border-2 ${
                 showSymptoms
                   ? 'bg-orange-600 text-white border-orange-400'
                   : 'bg-orange-600/20 text-orange-300 border-orange-400/30 hover:bg-orange-600/30'
               }`}
             >
-              <FontAwesomeIcon icon={faThermometerHalf} />
-              Симптомы
+              <FontAwesomeIcon icon={faThermometerHalf} className="text-sm sm:text-base" />
+              <span className="hidden xs:inline">Симптомы</span>
             </button>
 
             <button
               onClick={() => setShowQuestions(!showQuestions)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 border-2 ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium transition-all duration-300 border-2 ${
                 showQuestions
                   ? 'bg-purple-600 text-white border-purple-400'
                   : 'bg-purple-600/20 text-purple-300 border-purple-400/30 hover:bg-purple-600/30'
               }`}
             >
-              <FontAwesomeIcon icon={faQuestionCircle} />
-              Вопросы
+              <FontAwesomeIcon icon={faQuestionCircle} className="text-sm sm:text-base" />
+              <span className="hidden xs:inline">Вопросы</span>
             </button>
 
             <button
               onClick={() => setShowNotes(!showNotes)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 border-2 ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium transition-all duration-300 border-2 ${
                 showNotes
                   ? 'bg-blue-600 text-white border-blue-400'
                   : 'bg-blue-600/20 text-blue-300 border-blue-400/30 hover:bg-blue-600/30'
               }`}
             >
-              <FontAwesomeIcon icon={faNotesMedical} />
-              Заметки
+              <FontAwesomeIcon icon={faNotesMedical} className="text-sm sm:text-base" />
+              <span className="hidden xs:inline">Заметки</span>
             </button>
           </div>
 
-          {/* Center Section - Patient Support */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-4 py-2 bg-blue-600/20 rounded-xl border border-blue-400/30">
-              <FontAwesomeIcon icon={faHeart} className="text-blue-300 animate-pulse" />
-              <span className="text-white text-sm font-medium">Ваше здоровье важно</span>
+          {/* Second Row - Action Buttons (Mobile: column, Desktop: row) */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 justify-center">
+            {/* Patient Support Badge - Hidden on mobile */}
+            <div className="hidden md:flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-600/20 rounded-xl border border-blue-400/30">
+              <FontAwesomeIcon icon={faHeart} className="text-blue-300 animate-pulse text-sm" />
+              <span className="text-white text-xs sm:text-sm font-medium">Ваше здоровье важно</span>
             </div>
-          </div>
 
-          {/* Right Section - Actions */}
-          <div className="flex items-center gap-3">
             <button
               onClick={savePatientData}
-              className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition-all duration-300 border-2 border-green-400"
+              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg sm:rounded-xl text-sm sm:text-base font-medium transition-all duration-300 border-2 border-green-400"
             >
-              <FontAwesomeIcon icon={faSave} />
-              Сохранить
+              <FontAwesomeIcon icon={faSave} className="text-sm sm:text-base" />
+              <span className="hidden sm:inline">Сохранить</span>
             </button>
 
             <button
               onClick={requestSummary}
-              className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-all duration-300 border-2 border-indigo-400"
+              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg sm:rounded-xl text-sm sm:text-base font-medium transition-all duration-300 border-2 border-indigo-400"
             >
-              <FontAwesomeIcon icon={faBookMedical} />
-              Получить резюме
+              <FontAwesomeIcon icon={faBookMedical} className="text-sm sm:text-base" />
+              <span className="hidden sm:inline">Резюме</span>
             </button>
 
             <button
               onClick={handleEndCall}
-              className="flex items-center gap-2 px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-all duration-300 border-2 border-red-400 shadow-lg"
+              className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg sm:rounded-xl text-sm sm:text-base font-bold transition-all duration-300 border-2 border-red-400 shadow-lg"
             >
-              <FontAwesomeIcon icon={faPhone} />
-              Завершить
+              <FontAwesomeIcon icon={faPhone} className="text-sm sm:text-base" />
+              <span>Завершить</span>
             </button>
           </div>
         </div>
@@ -215,31 +213,31 @@ const PatientCallFooter: React.FC<PatientCallFooterProps> = ({
         </div>
 
         {/* Patient Info Bar */}
-        <div className="mt-4 flex items-center justify-between text-sm">
-          <div className="flex items-center gap-4 text-white/70">
-            <div className="flex items-center gap-2">
-              <FontAwesomeIcon icon={faUser} className="text-blue-300" />
-              <span>Пациент: {consultation.patient_name}</span>
+        <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs sm:text-sm">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-white/70">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <FontAwesomeIcon icon={faUser} className="text-blue-300 text-xs" />
+              <span className="truncate max-w-[150px] sm:max-w-none">Пациент: {consultation.patient_name}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <FontAwesomeIcon icon={faCalendar} className="text-blue-300" />
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <FontAwesomeIcon icon={faCalendar} className="text-blue-300 text-xs" />
               <span>{new Date().toLocaleDateString('ru-RU')}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <FontAwesomeIcon icon={faHeartbeat} className="text-blue-300" />
-              <span>ID: {consultation.meeting_id}</span>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <FontAwesomeIcon icon={faHeartbeat} className="text-blue-300 text-xs" />
+              <span className="truncate max-w-[120px] sm:max-w-none">ID: {consultation.meeting_id}</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 justify-center sm:justify-end">
             <button
-              className="flex items-center gap-2 px-3 py-1.5 bg-gray-600/20 hover:bg-gray-600/30 text-gray-300 rounded-lg transition-all duration-300"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-gray-600/20 hover:bg-gray-600/30 text-gray-300 rounded-lg transition-all duration-300"
               title="Распечатать"
             >
               <FontAwesomeIcon icon={faPrint} className="text-xs" />
             </button>
             <button
-              className="flex items-center gap-2 px-3 py-1.5 bg-gray-600/20 hover:bg-gray-600/30 text-gray-300 rounded-lg transition-all duration-300"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-gray-600/20 hover:bg-gray-600/30 text-gray-300 rounded-lg transition-all duration-300"
               title="Поделиться"
             >
               <FontAwesomeIcon icon={faShare} className="text-xs" />
@@ -248,7 +246,7 @@ const PatientCallFooter: React.FC<PatientCallFooterProps> = ({
         </div>
 
         {/* Patient Support Message */}
-        <div className="mt-4 p-4 bg-gradient-to-r from-blue-600/10 to-indigo-600/10 rounded-xl border border-blue-400/20">
+        {/* <div className="mt-4 p-4 bg-gradient-to-r from-blue-600/10 to-indigo-600/10 rounded-xl border border-blue-400/20">
           <div className="flex items-center gap-3">
             <FontAwesomeIcon icon={faHandHoldingMedical} className="text-blue-300 text-lg" />
             <div>
@@ -258,7 +256,7 @@ const PatientCallFooter: React.FC<PatientCallFooterProps> = ({
               </p>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
     </footer>
   );

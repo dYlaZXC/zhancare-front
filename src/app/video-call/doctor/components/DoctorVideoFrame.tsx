@@ -33,18 +33,76 @@ const MedicalPlaceholder: React.FC<{
   sub: React.ReactNode;
   isRecording: boolean;
   meetingId: string;
-}> = ({ icon, headline, sub, isRecording, meetingId }) => (
-  <div className="relative w-full h-full min-h-[600px] rounded-2xl overflow-hidden">
-    <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/20 to-teal-900/20 flex items-center justify-center">
-      <div className="text-center max-w-md p-8">
-        {icon}
-        <h2 className="text-xl font-semibold text-white mb-3">{headline}</h2>
-        <div className="text-emerald-300 text-sm">{sub}</div>
-        <div className="mt-4 text-xs text-white/70">Meeting ID: {meetingId}</div>
+  type?: 'loading' | 'error';
+}> = ({ icon, headline, sub, isRecording, meetingId, type = 'loading' }) => (
+  <div className="relative w-full h-full min-h-[400px] sm:min-h-[500px] md:min-h-[600px] rounded-2xl overflow-hidden">
+    {/* Animated gradient background */}
+    <div className={`absolute inset-0 ${
+      type === 'error'
+        ? 'bg-gradient-to-br from-red-900/30 via-gray-900/40 to-orange-900/30'
+        : 'bg-gradient-to-br from-emerald-900/30 via-teal-900/40 to-green-900/30'
+    } flex items-center justify-center`}>
+
+      {/* Animated circles background */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className={`absolute top-1/4 left-1/4 w-96 h-96 ${
+          type === 'error' ? 'bg-red-500/10' : 'bg-emerald-500/10'
+        } rounded-full blur-3xl animate-pulse`}></div>
+        <div className={`absolute bottom-1/4 right-1/4 w-96 h-96 ${
+          type === 'error' ? 'bg-orange-500/10' : 'bg-teal-500/10'
+        } rounded-full blur-3xl animate-pulse delay-1000`}></div>
+      </div>
+
+      {/* Content card */}
+      <div className="relative z-10 text-center max-w-md mx-auto p-8">
+        <div className={`mb-6 inline-flex items-center justify-center w-20 h-20 rounded-2xl ${
+          type === 'error'
+            ? 'bg-red-600/20 border-2 border-red-400/30'
+            : 'bg-emerald-600/20 border-2 border-emerald-400/30'
+        } backdrop-blur-sm`}>
+          {icon}
+        </div>
+
+        <h2 className="text-2xl font-bold text-white mb-4 leading-tight">{headline}</h2>
+
+        <div className="text-base text-emerald-200 mb-6 leading-relaxed">{sub}</div>
+
+        {/* Meeting ID Badge */}
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
+          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+          <span className="text-sm text-white/90 font-medium">ID: {meetingId}</span>
+        </div>
+
+        {/* Decorative line */}
+        <div className="mt-8 flex items-center justify-center gap-2">
+          <div className={`h-1 w-12 rounded-full ${
+            type === 'error' ? 'bg-red-400/30' : 'bg-emerald-400/30'
+          }`}></div>
+          <div className={`h-1 w-1 rounded-full ${
+            type === 'error' ? 'bg-red-400/50' : 'bg-emerald-400/50'
+          }`}></div>
+          <div className={`h-1 w-12 rounded-full ${
+            type === 'error' ? 'bg-red-400/30' : 'bg-emerald-400/30'
+          }`}></div>
+        </div>
       </div>
     </div>
+
+    {/* Grid overlay */}
+    <div className="absolute inset-0 opacity-5 pointer-events-none">
+      <div className="w-full h-full"
+           style={{
+             backgroundImage: `
+               linear-gradient(rgba(16, 185, 129, 0.1) 1px, transparent 1px),
+               linear-gradient(90deg, rgba(16, 185, 129, 0.1) 1px, transparent 1px)
+             `,
+             backgroundSize: '24px 24px'
+           }}>
+      </div>
+    </div>
+
     {isRecording && (
-      <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-2 bg-red-600/90 backdrop-blur-sm rounded-lg border border-red-400">
+      <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-2 bg-red-600/90 backdrop-blur-sm rounded-lg border border-red-400 z-30">
         <FontAwesomeIcon icon={faRecordVinyl} className="text-white animate-pulse" />
         <span className="text-white text-sm font-medium">REC</span>
       </div>
@@ -109,10 +167,9 @@ const DoctorVideoFrame: React.FC<DoctorVideoFrameProps> = ({
 
   // Consistent identity generation for LiveKit (prevents multiple device connections)
   const identity = useMemo(() => {
-    const clean = safeUserName.toLowerCase().replace(/[^a-z0-9]/g, "") || "doctor";
     const emailHash = userEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, "");
-    return `${meetingId}-doctor-${clean}-${emailHash}`;
-  }, [meetingId, safeUserName, userEmail]);
+    return emailHash;
+  }, [userEmail]);
 
 
   // Token fetching logic
@@ -307,6 +364,11 @@ const DoctorVideoFrame: React.FC<DoctorVideoFrameProps> = ({
                 position: relative !important;
               }
 
+              /* Fix video object-fit to prevent different zooming on different screens */
+              .lk-video-conference video {
+                object-fit: contain !important;
+              }
+
               /* Hide leave button from LiveKit interface */
               .lk-video-conference .lk-button.lk-disconnect-button,
               .lk-video-conference button[data-lk-unpin-button],
@@ -330,10 +392,10 @@ const DoctorVideoFrame: React.FC<DoctorVideoFrameProps> = ({
         )}
 
         {/* Connection Quality Indicator */}
-        <div className="absolute top-4 right-4 flex items-center gap-2 px-3 py-2 bg-emerald-600/90 backdrop-blur-sm rounded-lg border border-emerald-400 z-30">
+        {/* <div className="absolute top-4 right-4 flex items-center gap-2 px-3 py-2 bg-emerald-600/90 backdrop-blur-sm rounded-lg border border-emerald-400 z-30">
           <FontAwesomeIcon icon={faSignal} className="text-white" />
           <span className="text-white text-sm font-medium">HD</span>
-        </div>
+        </div> */}
 
         {/* Audio Debug Overlay */}
         {/* <div className="absolute bottom-4 right-4 bg-black/80 backdrop-blur-sm rounded-lg p-3 border border-emerald-400/30 z-30 max-w-sm">

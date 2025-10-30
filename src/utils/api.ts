@@ -9,15 +9,22 @@ export const baseURLImg = process.env.NEXT_PUBLIC_API_IMG_URL || "http://localho
 
 // ✅ WebSocket URL configuration
 export const getWebSocketURL = () => {
-  if (typeof window === 'undefined') return 'ws://localhost:8000/ws';
+  const wsEnv = process.env.NEXT_PUBLIC_WS_URL;
+  const wssEnv = process.env.NEXT_PUBLIC_WSS_URL;
+
+  if (typeof window === 'undefined') {
+    return wssEnv || wsEnv || 'ws://localhost:8000/ws';
+  }
 
   const isSecure = window.location.protocol === 'https:';
-  const defaultWsUrl = `${isSecure ? 'wss' : 'ws'}://${window.location.host}/ws`;
-  const baseWsUrl = process.env.NEXT_PUBLIC_WS_URL || defaultWsUrl;
+  const envUrl = isSecure ? (wssEnv || wsEnv) : (wsEnv || wssEnv);
+  const defaultProtocol = isSecure ? 'wss' : 'ws';
+  const defaultWsUrl = `${defaultProtocol}://${window.location.host}/ws`;
+  const baseWsUrl = envUrl || defaultWsUrl;
 
-  // Auto-detect protocol based on current page protocol
+  // Auto-adjust protocol if env var is http-only and page is secure
   if (isSecure && baseWsUrl.startsWith('ws://')) {
-    return baseWsUrl.replace('ws://', 'wss://');
+    return baseWsUrl.replace(/^ws:\/\//, 'wss://');
   }
 
   return baseWsUrl;

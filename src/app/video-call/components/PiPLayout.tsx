@@ -91,7 +91,7 @@ const PiPLayout: React.FC = () => {
           <ParticipantTile
             key={primaryTrack.publication?.trackSid ?? primaryTrack.participant.sid}
             trackRef={primaryTrack}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
             disableSpeakingIndicator
           />
         </div>
@@ -123,7 +123,7 @@ const PiPLayout: React.FC = () => {
           <ParticipantTile
             key={secondaryTrack.publication?.trackSid ?? secondaryTrack.participant.sid}
             trackRef={secondaryTrack}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
             disableSpeakingIndicator
           />
 
@@ -144,7 +144,7 @@ const PiPLayout: React.FC = () => {
                  className="bg-gray-800 rounded-lg overflow-hidden">
               <ParticipantTile
                 trackRef={track}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
                 disableSpeakingIndicator
               />
               <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
