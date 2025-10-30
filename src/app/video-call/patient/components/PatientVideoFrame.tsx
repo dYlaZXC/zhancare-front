@@ -198,7 +198,8 @@ const PatientVideoFrame: React.FC<PatientVideoFrameProps> = ({
 
   // Consistent identity generation for LiveKit (prevents multiple device connections)
   const identity = useMemo(() => {
-    const emailHash = userEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+    // const emailHash = userEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+    const emailHash = "Пациент";
     return emailHash;
   }, [userEmail]);
 
@@ -352,13 +353,13 @@ const PatientVideoFrame: React.FC<PatientVideoFrameProps> = ({
               /* Mobile and small screens */
               @media (max-width: 640px) {
                 .lk-video-conference .lk-participant-tile[data-lk-local-participant="true"] {
-                  top: 0.5rem !important;
+                  top: 6rem !important;
                   right: 0.5rem !important;
-                  width: 5rem !important;
-                  height: 4rem !important;
-                  border-radius: 0.375rem !important;
-                  max-width: 30vw !important;
-                  max-height: 25vh !important;
+                  width: 8rem !important;
+                  height: 6rem !important;
+                  border-radius: 0.5rem !important;
+                  max-width: 40vw !important;
+                  max-height: 30vh !important;
                 }
 
                 /* Ensure main video doesn't overflow */
@@ -377,8 +378,8 @@ const PatientVideoFrame: React.FC<PatientVideoFrameProps> = ({
                 .lk-video-conference .lk-participant-tile[data-lk-local-participant="true"] {
                   top: 0.75rem !important;
                   right: 0.75rem !important;
-                  width: 8rem !important;
-                  height: 6rem !important;
+                  width: 12rem !important;
+                  height: 9rem !important;
                   border-radius: 0.5rem !important;
                 }
               }
@@ -388,9 +389,9 @@ const PatientVideoFrame: React.FC<PatientVideoFrameProps> = ({
                 .lk-video-conference .lk-participant-tile[data-lk-local-participant="true"] {
                   top: 1rem !important;
                   right: 1rem !important;
-                  width: 12rem !important;
-                  height: 9rem !important;
-                  border-radius: 0.5rem !important;
+                  width: 16rem !important;
+                  height: 12rem !important;
+                  border-radius: 0.75rem !important;
                 }
               }
 

@@ -320,9 +320,9 @@ const DoctorVideoCallPage: React.FC = () => {
 
       {callActive ? (
         <>
-          <main className="flex-1 flex flex-col lg:flex-row gap-2 sm:gap-3 lg:gap-4 xl:gap-6 p-2 sm:p-3 lg:p-4 xl:p-6 relative z-10">
+          <main className="flex-1 flex flex-col lg:flex-row gap-2 sm:gap-3 lg:gap-4 xl:gap-6 p-2 sm:p-3 lg:p-4 xl:p-6 pb-0 relative z-10">
             {/* Video Section - Takes more space on desktop */}
-            <div className="relative group min-w-0 lg:flex-[2] xl:flex-[3]" style={{ height: 'calc(100vh - 280px)', minHeight: '500px' }}>
+            <div className="relative group min-w-0 lg:flex-[2] xl:flex-[3]" style={{ minHeight: '400px' }}>
               <DoctorVideoFrame
                 meetingId={meetingId}
                 safeUserName={safeUserName}
@@ -397,15 +397,17 @@ const DoctorVideoCallPage: React.FC = () => {
             </div> */}
           </main>
 
-          <DoctorCallFooter
-            handleEndCall={handleEndCall}
-            sessionNotes={sessionNotes}
-            setSessionNotes={setSessionNotes}
-            consultation={consultation}
-            isRecording={isRecording}
-            onStartRecording={handleStartRecording}
-            onStopRecording={handleStopRecording}
-          />
+          <div className="relative z-20 mt-auto">
+            <DoctorCallFooter
+              handleEndCall={handleEndCall}
+              sessionNotes={sessionNotes}
+              setSessionNotes={setSessionNotes}
+              consultation={consultation}
+              isRecording={isRecording}
+              onStartRecording={handleStartRecording}
+              onStopRecording={handleStopRecording}
+            />
+          </div>
         </>
       ) : (
         <div className="flex-1 flex items-center justify-center relative z-10">

@@ -167,7 +167,8 @@ const DoctorVideoFrame: React.FC<DoctorVideoFrameProps> = ({
 
   // Consistent identity generation for LiveKit (prevents multiple device connections)
   const identity = useMemo(() => {
-    const emailHash = userEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+    // const emailHash = userEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+    const emailHash = "Доктор";
     return emailHash;
   }, [userEmail]);
 
@@ -332,9 +333,9 @@ const DoctorVideoFrame: React.FC<DoctorVideoFrameProps> = ({
                 .lk-video-conference .lk-participant-tile[data-lk-local-participant="true"] {
                   top: 0.5rem !important;
                   right: 0.5rem !important;
-                  width: 6rem !important;
-                  height: 4.5rem !important;
-                  border-radius: 0.375rem !important;
+                  width: 8rem !important;
+                  height: 6rem !important;
+                  border-radius: 0.5rem !important;
                 }
               }
 
@@ -343,8 +344,8 @@ const DoctorVideoFrame: React.FC<DoctorVideoFrameProps> = ({
                 .lk-video-conference .lk-participant-tile[data-lk-local-participant="true"] {
                   top: 0.75rem !important;
                   right: 0.75rem !important;
-                  width: 8rem !important;
-                  height: 6rem !important;
+                  width: 12rem !important;
+                  height: 9rem !important;
                   border-radius: 0.5rem !important;
                 }
               }
@@ -354,9 +355,9 @@ const DoctorVideoFrame: React.FC<DoctorVideoFrameProps> = ({
                 .lk-video-conference .lk-participant-tile[data-lk-local-participant="true"] {
                   top: 1rem !important;
                   right: 1rem !important;
-                  width: 12rem !important;
-                  height: 9rem !important;
-                  border-radius: 0.5rem !important;
+                  width: 16rem !important;
+                  height: 12rem !important;
+                  border-radius: 0.75rem !important;
                 }
               }
 
