@@ -103,100 +103,159 @@ const HomeAppointments: React.FC = () => {
   };
 
   return (
-    <div className="w-full px-4 sm:px-6 py-6">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <motion.div
-          ref={containerRef}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="lg:col-span-8 w-full bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl ring-1 ring-blue-100 p-6 sm:p-8"
-        >
-          <div className="flex items-center gap-3 mb-6">
-            <MapPin className="w-8 h-8 text-[#001E80]" />
-            <h1 className="text-3xl font-extrabold text-[#001E80]">Вызов врача на дом</h1>
-          </div>
-          <p className="text-gray-600 mb-4">Заполните шаги ниже, чтобы оформить вызов.</p>
-
-          <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${
-                step === 1
-                  ? "w-1/3 bg-blue-600"
-                  : step === 2
-                  ? "w-2/3 bg-blue-600"
-                  : "w-full bg-blue-600"
-              }`}
-            />
-          </div>
-
-          {error && (
-            <p className="text-red-500 bg-red-50 border border-red-200 rounded-md p-3 flex items-center gap-2 mb-4">
-              <AlertCircle className="w-5 h-5" />
-              {error}
-            </p>
-          )}
-
-          {!success && (
-            <AnimatePresence mode="wait">
-              {step === 1 && (
-                <Step1
-                  address={address}
-                  symptoms={symptoms}
-                  onChangeAddress={setAddress}
-                  onChangeSymptoms={setSymptoms}
-                  onNext={() => setStep(2)}
-                  loading={loading}
-                />
-              )}
-              {step === 2 && (
-                <Step2
-                  doctors={doctors}
-                  selectedDoctorId={selectedDoctor}
-                  onSelectDoctor={setSelectedDoctor}
-                  appointmentTime={appointmentTime}
-                  onChangeTime={setAppointmentTime}
-                  onBack={() => setStep(1)}
-                  onNext={() => setStep(3)}
-                  loading={loading}
-                  fetchingDoctors={fetchingDoctors}
-                />
-              )}
-              {step === 3 && (
-                <Step3
-                  doctors={doctors}
-                  selectedDoctorId={selectedDoctor}
-                  appointmentTime={appointmentTime}
-                  address={address}
-                  symptoms={symptoms}
-                  notes={notes}
-                  onBack={() => setStep(2)}
-                  onSubmit={handleFinalCheck}
-                  loading={loading}
-                />
-              )}
-            </AnimatePresence>
-          )}
-
-          {success && (
+    <div className="min-h-screen">
+      <div className="w-full">
+        <div className="flex flex-col lg:flex-row gap-0 lg:gap-6 min-h-screen">
+          {/* Main content area - full width on mobile */}
+          <div ref={containerRef} className="flex-1 min-w-0 p-3 sm:p-4 lg:p-6">
+            {/* Premium header section */}
             <motion.div
-              key="success"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4 }}
-              className="text-center text-green-700 bg-green-50 border border-green-200 p-6 rounded-xl"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="mb-6 space-y-4"
             >
-              ✅ Вызов успешно создан! Мы свяжемся с вами в ближайшее время.
-            </motion.div>
-          )}
-        </motion.div>
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-[#3772ff] to-[#2956bf] shadow-lg shadow-[#3772ff]/20">
+                  <MapPin className="w-6 h-6 md:w-7 md:h-7 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-xl md:text-2xl lg:text-3xl font-extrabold text-[#001E80]">
+                    Вызов врача на дом
+                  </h1>
+                  <p className="text-sm md:text-base text-gray-600 mt-1">
+                    Заполните шаги ниже, чтобы оформить вызов
+                  </p>
+                </div>
+              </div>
 
-        <div className="lg:col-span-4">
-          <TipsPanel step={step} />
+              {/* Modern step progress */}
+              <div className="relative pt-4">
+                <div className="flex justify-between items-center mb-2 px-1">
+                  {[1, 2, 3].map((stepNum) => (
+                    <div
+                      key={stepNum}
+                      className={`flex items-center gap-2 transition-all duration-300 ${
+                        step >= stepNum ? "opacity-100" : "opacity-40"
+                      }`}
+                    >
+                      <div
+                        className={`flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm transition-all duration-300 ${
+                          step > stepNum
+                            ? "bg-gradient-to-br from-green-400 to-green-500 text-white shadow-lg shadow-green-500/30"
+                            : step === stepNum
+                            ? "bg-gradient-to-br from-[#3772ff] to-[#2956bf] text-white shadow-lg shadow-[#3772ff]/30 ring-4 ring-[#3772ff]/20"
+                            : "bg-gray-200 text-gray-500"
+                        }`}
+                      >
+                        {step > stepNum ? "✓" : stepNum}
+                      </div>
+                      <span className={`text-xs md:text-sm font-medium ${
+                        step >= stepNum ? "text-[#001E80]" : "text-gray-400"
+                      }`}>
+                        {stepNum === 1 ? "Адрес" : stepNum === 2 ? "Врач" : "Проверка"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Progress bar */}
+                <div className="relative w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-[#3772ff] to-[#2956bf] rounded-full shadow-lg"
+                    initial={{ width: "33.33%" }}
+                    animate={{
+                      width: step === 1 ? "33.33%" : step === 2 ? "66.66%" : "100%"
+                    }}
+                    transition={{ duration: 0.5, ease: "easeInOut" }}
+                  />
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Error message */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-4 p-4 rounded-xl bg-red-50 border border-red-200 flex items-center gap-3 shadow-sm"
+              >
+                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                <p className="text-red-700 text-sm md:text-base">{error}</p>
+              </motion.div>
+            )}
+
+            {/* Steps content */}
+            {!success && (
+              <AnimatePresence mode="wait">
+                {step === 1 && (
+                  <Step1
+                    address={address}
+                    symptoms={symptoms}
+                    onChangeAddress={setAddress}
+                    onChangeSymptoms={setSymptoms}
+                    onNext={() => setStep(2)}
+                    loading={loading}
+                  />
+                )}
+                {step === 2 && (
+                  <Step2
+                    doctors={doctors}
+                    selectedDoctorId={selectedDoctor}
+                    onSelectDoctor={setSelectedDoctor}
+                    appointmentTime={appointmentTime}
+                    onChangeTime={setAppointmentTime}
+                    onBack={() => setStep(1)}
+                    onNext={() => setStep(3)}
+                    loading={loading}
+                    fetchingDoctors={fetchingDoctors}
+                  />
+                )}
+                {step === 3 && (
+                  <Step3
+                    doctors={doctors}
+                    selectedDoctorId={selectedDoctor}
+                    appointmentTime={appointmentTime}
+                    address={address}
+                    symptoms={symptoms}
+                    notes={notes}
+                    onBack={() => setStep(2)}
+                    onSubmit={handleFinalCheck}
+                    loading={loading}
+                  />
+                )}
+              </AnimatePresence>
+            )}
+
+            {/* Success message */}
+            {success && (
+              <motion.div
+                key="success"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.4 }}
+                className="p-8 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 shadow-lg text-center"
+              >
+                <div className="text-6xl mb-4">✅</div>
+                <h3 className="text-xl md:text-2xl font-bold text-green-800 mb-2">
+                  Вызов успешно создан!
+                </h3>
+                <p className="text-green-700">
+                  Мы свяжемся с вами в ближайшее время.
+                </p>
+              </motion.div>
+            )}
+          </div>
+
+          {/* Sidebar - Tips Panel */}
+          <div className="w-full lg:w-80 xl:w-96 bg-gray-50 lg:bg-transparent p-3 sm:p-4 lg:p-6 border-t lg:border-t-0 lg:border-l border-gray-200">
+            <TipsPanel step={step} />
+          </div>
         </div>
       </div>
 
+      {/* Confirmation Modal */}
       <Confirmation
         isOpen={confirmModal}
         onCancel={() => setConfirmModal(false)}

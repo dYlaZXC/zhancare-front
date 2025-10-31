@@ -36,7 +36,7 @@ export const Breadcrumb = ({
     },
     appointments: {
       key: "appointments",
-      title: "Запись на прием", 
+      title: "Вызов врача на дом", 
       icon: <Calendar className="w-4 h-4" />,
     },
     history: {
