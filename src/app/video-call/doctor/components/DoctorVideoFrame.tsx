@@ -123,23 +123,35 @@ const DoctorVideoFrame: React.FC<DoctorVideoFrameProps> = ({
   const [retryCount, setRetryCount] = useState(0);
 
 
-  // LiveKit room options with explicit audio configuration
+  // LiveKit room options with HIGH QUALITY video configuration
   const roomOptions = useMemo<RoomOptions>(() => ({
-    adaptiveStream: true,
-    dynacast: true,
+    adaptiveStream: true, // Automatically adjusts quality based on network
+    dynacast: true, // Dynamic broadcasting for better performance
     publishDefaults: {
       audioPreset: {
-        maxBitrate: 20_000,
+        maxBitrate: 64_000, // Increased from 20_000 for better audio quality
       },
-      videoPreset: VideoPresets.h720,
+      videoPreset: VideoPresets.h1080, // Upgraded to 1080p (Full HD)
+      // Alternative options:
+      // VideoPresets.h720 - 720p HD (current)
+      // VideoPresets.h1080 - 1080p Full HD (recommended)
+      // VideoPresets.h1440 - 1440p 2K (very high quality, requires good network)
+      // VideoPresets.h2160 - 2160p 4K (ultra quality, requires excellent network)
+      videoEncoding: {
+        maxBitrate: 3_000_000, // 3 Mbps for crisp 1080p video
+        maxFramerate: 30, // Smooth 30 fps
+      },
     },
     videoCaptureDefaults: {
-      resolution: VideoPresets.h720.resolution,
+      resolution: VideoPresets.h1080.resolution, // Match video preset
+      deviceId: undefined, // Use default camera
     },
     audioCaptureDefaults: {
       autoGainControl: true,
       echoCancellation: true,
       noiseSuppression: true,
+      sampleRate: 48000, // High quality audio sampling
+      channelCount: 1, // Mono for voice calls
     },
   }), []);
 

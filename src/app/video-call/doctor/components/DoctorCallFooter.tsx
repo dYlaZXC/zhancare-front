@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { Consultation } from "@/types/consultation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faFileAlt,
   faNotesMedical,
   faPrescriptionBottle,
   faDownload,
@@ -17,8 +16,7 @@ import {
   faHeartbeat,
   faClipboardList,
   faPrint,
-  faUserMd,
-  faFlask
+  faUserMd
 } from "@fortawesome/free-solid-svg-icons";
 
 // Using shared Consultation type from @/types/consultation
@@ -75,114 +73,114 @@ const DoctorCallFooter: React.FC<DoctorCallFooterProps> = ({
   };
 
   return (
-    <footer className="relative bg-gradient-to-r from-emerald-900/60 to-teal-900/60 backdrop-blur-md border-t border-emerald-400/20 px-3 sm:px-6 py-3 sm:py-4">
-      {/* Glass effect overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-white/5 via-transparent to-white/5 pointer-events-none"></div>
+    <footer className="relative bg-slate-900/90 backdrop-blur-lg border-t border-white/10 px-4 sm:px-6 py-4">
+      {/* Simple subtle overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent pointer-events-none"></div>
 
-      <div className="relative z-10">
-        {/* Main Control Bar */}
-        <div className="flex flex-col gap-3 mb-4">
+      <div className="relative">
+        {/* Main Controls */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
 
-          {/* First Row - Documentation Tools (Mobile: wrap, Desktop: row) */}
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3 justify-center sm:justify-start">
+          {/* Left Side - Documentation Tools */}
+          <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
             <button
               onClick={() => setShowNotes(!showNotes)}
-              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium transition-all duration-300 border-2 ${
+              className={`flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
                 showNotes
-                  ? 'bg-emerald-600 text-white border-emerald-400'
-                  : 'bg-emerald-600/20 text-emerald-300 border-emerald-400/30 hover:bg-emerald-600/30'
+                  ? 'bg-emerald-600 text-white shadow-md'
+                  : 'bg-white/10 text-white/80 hover:bg-white/15'
               }`}
             >
-              <FontAwesomeIcon icon={faNotesMedical} className="text-sm sm:text-base" />
+              <FontAwesomeIcon icon={faNotesMedical} className="text-sm" />
               <span className="hidden xs:inline">Заметки</span>
             </button>
 
             <button
               onClick={() => setShowPrescription(!showPrescription)}
-              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium transition-all duration-300 border-2 ${
+              className={`flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
                 showPrescription
-                  ? 'bg-blue-600 text-white border-blue-400'
-                  : 'bg-blue-600/20 text-blue-300 border-blue-400/30 hover:bg-blue-600/30'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'bg-white/10 text-white/80 hover:bg-white/15'
               }`}
             >
-              <FontAwesomeIcon icon={faPrescriptionBottle} className="text-sm sm:text-base" />
+              <FontAwesomeIcon icon={faPrescriptionBottle} className="text-sm" />
               <span className="hidden xs:inline">Рецепт</span>
             </button>
 
             <button
               onClick={() => setShowRecommendations(!showRecommendations)}
-              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium transition-all duration-300 border-2 ${
+              className={`flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
                 showRecommendations
-                  ? 'bg-purple-600 text-white border-purple-400'
-                  : 'bg-purple-600/20 text-purple-300 border-purple-400/30 hover:bg-purple-600/30'
+                  ? 'bg-purple-600 text-white shadow-md'
+                  : 'bg-white/10 text-white/80 hover:bg-white/15'
               }`}
             >
-              <FontAwesomeIcon icon={faClipboardList} className="text-sm sm:text-base" />
+              <FontAwesomeIcon icon={faClipboardList} className="text-sm" />
               <span className="hidden xs:inline">Рекомендации</span>
             </button>
 
-            {/* Recording Button - Inline on mobile */}
+            {/* Recording Button */}
             <button
               onClick={isRecording ? onStopRecording : onStartRecording}
-              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium transition-all duration-300 border-2 ${
+              className={`flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
                 isRecording
-                  ? 'bg-red-600 text-white border-red-400 animate-pulse'
-                  : 'bg-gray-600 text-white border-gray-500 hover:bg-gray-700'
+                  ? 'bg-red-600 text-white shadow-lg animate-pulse'
+                  : 'bg-gray-700 text-white hover:bg-gray-600 shadow-md'
               }`}
             >
-              <FontAwesomeIcon icon={isRecording ? faStop : faRecordVinyl} className="text-sm sm:text-base" />
-              <span className="hidden sm:inline">{isRecording ? 'Остановить' : 'Запись'}</span>
+              <FontAwesomeIcon icon={isRecording ? faStop : faRecordVinyl} className="text-sm" />
+              <span className="hidden xs:inline">{isRecording ? 'Стоп' : 'Запись'}</span>
             </button>
           </div>
 
-          {/* Second Row - Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3 justify-center">
+          {/* Right Side - Action Buttons */}
+          <div className="flex items-center justify-center sm:justify-end gap-2 flex-wrap">
             <button
               onClick={saveConsultationData}
-              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg sm:rounded-xl text-sm sm:text-base font-medium transition-all duration-300 border-2 border-green-400"
+              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 shadow-md"
             >
-              <FontAwesomeIcon icon={faSave} className="text-sm sm:text-base" />
-              <span className="hidden sm:inline">Сохранить</span>
+              <FontAwesomeIcon icon={faSave} className="text-sm" />
+              <span className="hidden xs:inline">Сохранить</span>
             </button>
 
             <button
               onClick={generateReport}
-              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg sm:rounded-xl text-sm sm:text-base font-medium transition-all duration-300 border-2 border-indigo-400"
+              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 shadow-md"
             >
-              <FontAwesomeIcon icon={faDownload} className="text-sm sm:text-base" />
-              <span className="hidden sm:inline">Отчет</span>
+              <FontAwesomeIcon icon={faDownload} className="text-sm" />
+              <span className="hidden xs:inline">Отчет</span>
             </button>
 
             <button
               onClick={handleEndCall}
-              className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg sm:rounded-xl text-sm sm:text-base font-bold transition-all duration-300 border-2 border-red-400 shadow-lg"
+              className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 shadow-lg"
             >
-              <FontAwesomeIcon icon={faStethoscope} className="text-sm sm:text-base" />
+              <FontAwesomeIcon icon={faStethoscope} className="text-sm" />
               <span>Завершить</span>
             </button>
           </div>
         </div>
 
         {/* Expandable Sections */}
-        <div className="space-y-4">
+        <div className="space-y-3">
 
           {/* Session Notes */}
           {showNotes && (
-            <div className="bg-emerald-900/30 backdrop-blur-sm rounded-2xl p-6 border border-emerald-400/30">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-emerald-600/20 flex items-center justify-center">
-                  <FontAwesomeIcon icon={faNotesMedical} className="text-emerald-300" />
+            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-emerald-600/20 flex items-center justify-center">
+                  <FontAwesomeIcon icon={faNotesMedical} className="text-emerald-400 text-sm" />
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold text-lg">Заметки консультации</h3>
-                  <p className="text-emerald-300 text-sm">Записи о ходе консультации</p>
+                  <h3 className="text-white font-semibold text-sm">Заметки консультации</h3>
+                  <p className="text-white/60 text-xs">Записи о ходе консультации</p>
                 </div>
               </div>
               <textarea
                 value={sessionNotes}
                 onChange={(e) => setSessionNotes(e.target.value)}
-                placeholder="Записывайте важные моменты консультации, симптомы пациента, предварительный диагноз..."
-                className="w-full bg-black/30 border border-emerald-400/30 rounded-xl px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/30 transition-all duration-300 resize-none"
+                placeholder="Записывайте важные моменты консультации, симптомы пациента..."
+                className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white text-sm placeholder-white/40 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all resize-none"
                 rows={4}
               />
             </div>
@@ -190,21 +188,21 @@ const DoctorCallFooter: React.FC<DoctorCallFooterProps> = ({
 
           {/* Prescription */}
           {showPrescription && (
-            <div className="bg-blue-900/30 backdrop-blur-sm rounded-2xl p-6 border border-blue-400/30">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-blue-600/20 flex items-center justify-center">
-                  <FontAwesomeIcon icon={faPrescriptionBottle} className="text-blue-300" />
+            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-600/20 flex items-center justify-center">
+                  <FontAwesomeIcon icon={faPrescriptionBottle} className="text-blue-400 text-sm" />
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold text-lg">Рецепт</h3>
-                  <p className="text-blue-300 text-sm">Назначенные препараты и дозировки</p>
+                  <h3 className="text-white font-semibold text-sm">Рецепт</h3>
+                  <p className="text-white/60 text-xs">Назначенные препараты и дозировки</p>
                 </div>
               </div>
               <textarea
                 value={prescription}
                 onChange={(e) => setPrescription(e.target.value)}
-                placeholder="Например: Парацетамол 500мг - по 1 таблетке 3 раза в день после еды, курс 5 дней..."
-                className="w-full bg-black/30 border border-blue-400/30 rounded-xl px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/30 transition-all duration-300 resize-none"
+                placeholder="Например: Парацетамол 500мг - по 1 таблетке 3 раза в день..."
+                className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white text-sm placeholder-white/40 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all resize-none"
                 rows={4}
               />
             </div>
@@ -212,21 +210,21 @@ const DoctorCallFooter: React.FC<DoctorCallFooterProps> = ({
 
           {/* Recommendations */}
           {showRecommendations && (
-            <div className="bg-purple-900/30 backdrop-blur-sm rounded-2xl p-6 border border-purple-400/30">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-purple-600/20 flex items-center justify-center">
-                  <FontAwesomeIcon icon={faClipboardList} className="text-purple-300" />
+            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-purple-600/20 flex items-center justify-center">
+                  <FontAwesomeIcon icon={faClipboardList} className="text-purple-400 text-sm" />
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold text-lg">Рекомендации</h3>
-                  <p className="text-purple-300 text-sm">Общие рекомендации и назначения</p>
+                  <h3 className="text-white font-semibold text-sm">Рекомендации</h3>
+                  <p className="text-white/60 text-xs">Общие рекомендации и назначения</p>
                 </div>
               </div>
               <textarea
                 value={recommendations}
                 onChange={(e) => setRecommendations(e.target.value)}
-                placeholder="Рекомендации по режиму, диете, дополнительным обследованиям, контрольным визитам..."
-                className="w-full bg-black/30 border border-purple-400/30 rounded-xl px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/30 transition-all duration-300 resize-none"
+                placeholder="Рекомендации по режиму, диете, дополнительным обследованиям..."
+                className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white text-sm placeholder-white/40 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all resize-none"
                 rows={4}
               />
             </div>
@@ -234,34 +232,36 @@ const DoctorCallFooter: React.FC<DoctorCallFooterProps> = ({
         </div>
 
         {/* Patient Info Bar */}
-        <div className="mt-4 flex items-center justify-between text-sm">
-          <div className="flex items-center gap-4 text-white/70">
-            <div className="flex items-center gap-2">
-              <FontAwesomeIcon icon={faUserMd} className="text-emerald-300" />
+        <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t border-white/10">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-white/70">
+            <div className="flex items-center gap-1.5">
+              <FontAwesomeIcon icon={faUserMd} className="text-emerald-400" />
               <span>Пациент: {consultation.patient_name}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <FontAwesomeIcon icon={faCalendar} className="text-emerald-300" />
+            <div className="flex items-center gap-1.5">
+              <FontAwesomeIcon icon={faCalendar} className="text-blue-400" />
               <span>{new Date().toLocaleDateString('ru-RU')}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <FontAwesomeIcon icon={faHeartbeat} className="text-emerald-300" />
+            <div className="flex items-center gap-1.5">
+              <FontAwesomeIcon icon={faHeartbeat} className="text-rose-400" />
               <span>ID: {consultation.meeting_id}</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
-              className="flex items-center gap-2 px-3 py-1.5 bg-gray-600/20 hover:bg-gray-600/30 text-gray-300 rounded-lg transition-all duration-300"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-all text-xs"
               title="Распечатать"
             >
               <FontAwesomeIcon icon={faPrint} className="text-xs" />
+              <span className="hidden sm:inline">Печать</span>
             </button>
             <button
-              className="flex items-center gap-2 px-3 py-1.5 bg-gray-600/20 hover:bg-gray-600/30 text-gray-300 rounded-lg transition-all duration-300"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-all text-xs"
               title="Поделиться"
             >
               <FontAwesomeIcon icon={faShare} className="text-xs" />
+              <span className="hidden sm:inline">Поделиться</span>
             </button>
           </div>
         </div>
