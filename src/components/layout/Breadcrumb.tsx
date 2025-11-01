@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Home, ChevronRight, User, Video, Calendar, FileText, MessageCircle, FolderOpen, Activity } from "lucide-react";
+import { Home, ChevronRight, User, Video, Calendar, FileText, Plane, FolderOpen, Activity } from "lucide-react";
 
 interface BreadcrumbItem {
   key: string;
@@ -46,8 +46,8 @@ export const Breadcrumb = ({
     },
     chat: {
       key: "chat",
-      title: "Чат с врачами",
-      icon: <MessageCircle className="w-4 h-4" />,
+      title: "Мед Туризм",
+      icon: <Plane className="w-4 h-4" />,
     },
     documents: {
       key: "documents", 

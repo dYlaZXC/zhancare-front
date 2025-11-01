@@ -8,7 +8,7 @@ import {
   faVideo,
   faCalendar,
   faNotesMedical,
-  faComment,
+  faPlane,
   faFileMedical,
   faHistory,
   faSignOutAlt,
@@ -47,7 +47,7 @@ export const Sidebar = ({
     { id: "video", icon: faVideo, title: "Видео консультация", color: "#3267e6" },
     { id: "appointments", icon: faCalendar, title: "Вызов на дом", color: "#295bbf" },
     { id: "history", icon: faNotesMedical, title: "Медицинская история", color: "#1e4099" },
-    { id: "chat", icon: faComment, title: "Чат с врачами", color: "#173373" },
+    { id: "chat", icon: faPlane, title: "Мед Туризм", color: "#173373" },
     { id: "documents", icon: faFileMedical, title: "Документы", color: "#12263a" },
     { id: "activity", icon: faHistory, title: "Активность", color: "#29358f" },
   ];

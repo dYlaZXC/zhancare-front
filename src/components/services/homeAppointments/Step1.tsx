@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Navigation, Search, CheckCircle, X } from "lucide-react";
+import { MapPin, Navigation, Search, CheckCircle, X, Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
 
 // Dynamically import YandexMap to avoid SSR issues
@@ -27,6 +27,23 @@ interface Step1Props {
   loading?: boolean;
 }
 
+interface YandexSuggestion {
+  displayName: string;
+  value: string;
+  subtitle?: {
+    text: string;
+  };
+  coords?: [number, number];
+}
+
+// Yandex API Keys
+const YANDEX_GEOSUGGEST_KEY = "c5dd4ece-8085-4dd1-8040-119aa0a6e64a"; // Geosuggest API
+const YANDEX_GEOCODER_KEY = "1f1bdb59-89d5-4568-b73d-b705aba93104"; // JavaScript API and Geocoder HTTP API
+const YANDEX_JSAPI_KEY = "1f1bdb59-89d5-4568-b73d-b705aba93104"; // JavaScript API
+
+// Default location (Almaty)
+const DEFAULT_CENTER: [number, number] = [43.238293, 76.889709];
+
 const Step1: React.FC<Step1Props> = ({
   address,
   symptoms,
@@ -38,13 +55,135 @@ const Step1: React.FC<Step1Props> = ({
   const [showMap, setShowMap] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationPermission, setLocationPermission] = useState<"prompt" | "granted" | "denied">("prompt");
-  const [mapCenter, setMapCenter] = useState<[number, number]>([43.238293, 76.889709]); // Almaty default
+  const [mapCenter, setMapCenter] = useState<[number, number]>(DEFAULT_CENTER);
 
-  // Request user's current location
-  const requestLocation = () => {
+  // Address autocomplete states
+  const [suggestions, setSuggestions] = useState<YandexSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [focusedSuggestionIndex, setFocusedSuggestionIndex] = useState(-1);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch address suggestions using Yandex Geosuggest API
+  const fetchAddressSuggestions = async (query: string) => {
+    if (query.length < 3) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    setLoadingSuggestions(true);
+    try {
+      const [lat, lon] = userLocation
+        ? [userLocation.lat, userLocation.lng]
+        : mapCenter;
+
+      const url = `https://suggest-maps.yandex.ru/v1/suggest?apikey=${YANDEX_GEOSUGGEST_KEY}&text=${encodeURIComponent(query)}&ll=${lon},${lat}&types=house,street&results=8&lang=ru_RU`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      const formattedSuggestions: YandexSuggestion[] = await Promise.all(
+        (data.results || []).map(async (result: any) => {
+          // Geocode each suggestion to get coordinates
+          const geocodeUrl = `https://geocode-maps.yandex.ru/1.x/?apikey=${YANDEX_GEOCODER_KEY}&geocode=${encodeURIComponent(result.value)}&format=json&lang=ru_RU`;
+
+          try {
+            const geocodeResponse = await fetch(geocodeUrl);
+            const geocodeData = await geocodeResponse.json();
+
+            const geoObject = geocodeData.response?.GeoObjectCollection?.featureMember?.[0]?.GeoObject;
+            if (geoObject) {
+              const pos = geoObject.Point.pos.split(" ");
+              const coords: [number, number] = [parseFloat(pos[1]), parseFloat(pos[0])];
+
+              return {
+                displayName: result.displayName,
+                value: result.value,
+                subtitle: result.subtitle,
+                coords: coords
+              };
+            }
+          } catch (err) {
+            console.error("Geocode error:", err);
+          }
+
+          return {
+            displayName: result.displayName,
+            value: result.value,
+            subtitle: result.subtitle
+          };
+        })
+      );
+
+      setSuggestions(formattedSuggestions);
+      setShowSuggestions(formattedSuggestions.length > 0);
+    } catch (error) {
+      console.error("Error fetching address suggestions:", error);
+      setSuggestions([]);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
+  // Debounce address input - ONLY re-fetch when address changes, NOT when map moves
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (address) {
+        fetchAddressSuggestions(address);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [address]); // Remove userLocation and mapCenter from dependencies to prevent re-fetching
+
+  // Handle suggestion selection
+  const handleSelectSuggestion = (suggestion: YandexSuggestion) => {
+    onChangeAddress(suggestion.value);
+    setShowSuggestions(false);
+    setSuggestions([]);
+
+    // Use coordinates from suggestion (already fetched)
+    if (suggestion.coords) {
+      setMapCenter(suggestion.coords);
+      setUserLocation({ lat: suggestion.coords[0], lng: suggestion.coords[1] });
+      setShowMap(true); // Auto-show map when address is selected
+    }
+  };
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!showSuggestions || suggestions.length === 0) return;
+
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setFocusedSuggestionIndex((prev) =>
+          prev < suggestions.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setFocusedSuggestionIndex((prev) => (prev > 0 ? prev - 1 : -1));
+        break;
+      case "Enter":
+        e.preventDefault();
+        if (focusedSuggestionIndex >= 0 && focusedSuggestionIndex < suggestions.length) {
+          handleSelectSuggestion(suggestions[focusedSuggestionIndex]);
+        }
+        break;
+      case "Escape":
+        setShowSuggestions(false);
+        break;
+    }
+  };
+
+  // Request user's current location and reverse geocode
+  const requestLocation = async () => {
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
           const coords = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
@@ -52,6 +191,22 @@ const Step1: React.FC<Step1Props> = ({
           setUserLocation(coords);
           setMapCenter([coords.lat, coords.lng]);
           setLocationPermission("granted");
+
+          // Reverse geocode to get address using Yandex Geocoder API
+          try {
+            const geocodeUrl = `https://geocode-maps.yandex.ru/1.x/?apikey=${YANDEX_GEOCODER_KEY}&geocode=${coords.lng},${coords.lat}&format=json&lang=ru_RU&kind=house&results=1`;
+
+            const response = await fetch(geocodeUrl);
+            const data = await response.json();
+
+            const geoObject = data.response?.GeoObjectCollection?.featureMember?.[0]?.GeoObject;
+            if (geoObject) {
+              const detectedAddress = geoObject.metaDataProperty.GeocoderMetaData.text;
+              onChangeAddress(detectedAddress);
+            }
+          } catch (error) {
+            console.error("Error reverse geocoding:", error);
+          }
 
           // Automatically show map when location is granted
           setShowMap(true);
@@ -69,6 +224,23 @@ const Step1: React.FC<Step1Props> = ({
     onChangeAddress(selectedAddress);
   };
 
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(event.target as Node) &&
+        inputRef.current &&
+        !inputRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
     <motion.div
       key="step1"
@@ -85,17 +257,94 @@ const Step1: React.FC<Step1Props> = ({
           Адрес приёма <span className="text-red-500">*</span>
         </label>
 
+        {/* Address Input with Autocomplete */}
         <div className="relative">
           <input
+            ref={inputRef}
             type="text"
-            placeholder="Введите адрес, где вас нужно принять"
+            placeholder="Начните вводить адрес (улица, дом)..."
             value={address}
             onChange={(e) => onChangeAddress(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
             required
-            className="w-full px-4 py-3 pl-10 border-2 border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-4 focus:ring-[#3772ff]/20 focus:border-[#3772ff] transition-all duration-200"
+            className="w-full px-4 py-3 pl-10 pr-10 border-2 border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-4 focus:ring-[#3772ff]/20 focus:border-[#3772ff] transition-all duration-200"
           />
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+
+          {/* Loading Indicator */}
+          {loadingSuggestions && (
+            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#3772ff] animate-spin" />
+          )}
+
+          {/* Clear Button */}
+          {address && !loadingSuggestions && (
+            <button
+              type="button"
+              onClick={() => {
+                onChangeAddress("");
+                setSuggestions([]);
+                setShowSuggestions(false);
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
+
+          {/* Suggestions Dropdown */}
+          <AnimatePresence>
+            {showSuggestions && suggestions.length > 0 && (
+              <motion.div
+                ref={suggestionsRef}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="absolute z-50 w-full mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-2xl max-h-80 overflow-y-auto"
+              >
+                <div className="p-2">
+                  {suggestions.map((suggestion, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => handleSelectSuggestion(suggestion)}
+                      className={`w-full text-left px-4 py-3 rounded-lg transition-all duration-150 ${
+                        focusedSuggestionIndex === index
+                          ? "bg-[#3772ff] text-white"
+                          : "hover:bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <MapPin className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
+                          focusedSuggestionIndex === index ? "text-white" : "text-[#3772ff]"
+                        }`} />
+                        <div className="flex-1">
+                          <div className={`text-sm font-medium ${
+                            focusedSuggestionIndex === index ? "text-white" : "text-gray-900"
+                          }`}>
+                            {suggestion.displayName || suggestion.value}
+                          </div>
+                          {suggestion.subtitle?.text && (
+                            <div className={`text-xs mt-0.5 ${
+                              focusedSuggestionIndex === index ? "text-white/80" : "text-gray-500"
+                            }`}>
+                              {suggestion.subtitle.text}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
+
+        <p className="mt-2 text-xs text-gray-500">
+          Начните вводить адрес для получения подсказок
+        </p>
 
         {/* Location Helper Buttons */}
         <div className="mt-4 flex flex-wrap gap-2">

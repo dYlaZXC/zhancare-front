@@ -120,7 +120,7 @@ const YandexMap: React.FC<YandexMapProps> = ({
   return (
     <>
       <Script
-        src="https://api-maps.yandex.ru/2.1/?apikey=YOUR_API_KEY&lang=ru_RU"
+        src="https://api-maps.yandex.ru/2.1/?apikey=1f1bdb59-89d5-4568-b73d-b705aba93104&lang=ru_RU"
         strategy="afterInteractive"
         onLoad={() => setScriptLoaded(true)}
       />
@@ -142,11 +142,11 @@ const YandexMap: React.FC<YandexMapProps> = ({
         />
 
         {/* Map instructions overlay */}
-        <div className="absolute bottom-4 left-4 right-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg p-3 text-xs md:text-sm">
+        {/* <div className="absolute bottom-4 left-4 right-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg p-3 text-xs md:text-sm">
           <p className="text-gray-700 font-medium">
             💡 <strong>Совет:</strong> Кликните на карту или перетащите метку для выбора адреса
           </p>
-        </div>
+        </div> */}
       </div>
     </>
   );

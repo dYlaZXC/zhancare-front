@@ -2,13 +2,13 @@
 
 import AuthRedirect from "@/components/AuthRedirect";
 import TabLayout from "@/components/layout/TabLayout";
-import ChatDoctors from "@/components/services/ChatDoctors";
+import MedicalTourism from "@/components/services/MedicalTourism";
 
 export default function ChatPage() {
   return (
     <AuthRedirect>
       <TabLayout>
-        <ChatDoctors />
+        <MedicalTourism />
       </TabLayout>
     </AuthRedirect>
   );
