@@ -28,10 +28,14 @@ interface Step1Props {
 }
 
 interface YandexSuggestion {
-  displayName: string;
-  value: string;
+  title: {
+    text: string;
+  };
   subtitle?: {
     text: string;
+  };
+  address?: {
+    formatted_address: string;
   };
   coords?: [number, number];
 }
@@ -64,6 +68,7 @@ const Step1: React.FC<Step1Props> = ({
   const [focusedSuggestionIndex, setFocusedSuggestionIndex] = useState(-1);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const isSelectingRef = useRef(false); // Track if user is selecting from suggestions
 
   // Fetch address suggestions using Yandex Geosuggest API
   const fetchAddressSuggestions = async (query: string) => {
@@ -79,15 +84,20 @@ const Step1: React.FC<Step1Props> = ({
         ? [userLocation.lat, userLocation.lng]
         : mapCenter;
 
-      const url = `https://suggest-maps.yandex.ru/v1/suggest?apikey=${YANDEX_GEOSUGGEST_KEY}&text=${encodeURIComponent(query)}&ll=${lon},${lat}&types=house,street&results=8&lang=ru_RU`;
+      const url = `https://suggest-maps.yandex.ru/v1/suggest?apikey=${YANDEX_GEOSUGGEST_KEY}&text=${encodeURIComponent(query)}&ll=${lon},${lat}&types=house,street,locality&results=10&lang=ru_RU&print_address=1`;
 
       const response = await fetch(url);
       const data = await response.json();
 
+      console.log("Yandex Geosuggest Response:", data); // Debug log
+
       const formattedSuggestions: YandexSuggestion[] = await Promise.all(
         (data.results || []).map(async (result: any) => {
-          // Geocode each suggestion to get coordinates
-          const geocodeUrl = `https://geocode-maps.yandex.ru/1.x/?apikey=${YANDEX_GEOCODER_KEY}&geocode=${encodeURIComponent(result.value)}&format=json&lang=ru_RU`;
+          // Get the full address text
+          const addressText = result.title?.text || result.subtitle?.text || "";
+
+          // Geocode to get coordinates
+          const geocodeUrl = `https://geocode-maps.yandex.ru/1.x/?apikey=${YANDEX_GEOCODER_KEY}&geocode=${encodeURIComponent(addressText)}&format=json&lang=ru_RU`;
 
           try {
             const geocodeResponse = await fetch(geocodeUrl);
@@ -99,9 +109,9 @@ const Step1: React.FC<Step1Props> = ({
               const coords: [number, number] = [parseFloat(pos[1]), parseFloat(pos[0])];
 
               return {
-                displayName: result.displayName,
-                value: result.value,
+                title: result.title || { text: addressText },
                 subtitle: result.subtitle,
+                address: result.address,
                 coords: coords
               };
             }
@@ -110,9 +120,9 @@ const Step1: React.FC<Step1Props> = ({
           }
 
           return {
-            displayName: result.displayName,
-            value: result.value,
-            subtitle: result.subtitle
+            title: result.title || { text: addressText },
+            subtitle: result.subtitle,
+            address: result.address
           };
         })
       );
@@ -129,9 +139,19 @@ const Step1: React.FC<Step1Props> = ({
 
   // Debounce address input - ONLY re-fetch when address changes, NOT when map moves
   useEffect(() => {
+    // Skip if user just selected from suggestions
+    if (isSelectingRef.current) {
+      isSelectingRef.current = false;
+      return;
+    }
+
     const timer = setTimeout(() => {
       if (address) {
         fetchAddressSuggestions(address);
+      } else {
+        // Clear suggestions if address is empty
+        setSuggestions([]);
+        setShowSuggestions(false);
       }
     }, 300);
 
@@ -140,9 +160,14 @@ const Step1: React.FC<Step1Props> = ({
 
   // Handle suggestion selection
   const handleSelectSuggestion = (suggestion: YandexSuggestion) => {
-    onChangeAddress(suggestion.value);
+    // Mark that we're selecting to prevent re-fetching
+    isSelectingRef.current = true;
+
+    const selectedAddress = suggestion.address?.formatted_address || suggestion.title.text;
+    onChangeAddress(selectedAddress);
     setShowSuggestions(false);
     setSuggestions([]);
+    setFocusedSuggestionIndex(-1);
 
     // Use coordinates from suggestion (already fetched)
     if (suggestion.coords) {
@@ -201,6 +226,9 @@ const Step1: React.FC<Step1Props> = ({
 
             const geoObject = data.response?.GeoObjectCollection?.featureMember?.[0]?.GeoObject;
             if (geoObject) {
+              // Mark that we're setting address programmatically
+              isSelectingRef.current = true;
+
               const detectedAddress = geoObject.metaDataProperty.GeocoderMetaData.text;
               onChangeAddress(detectedAddress);
             }
@@ -221,6 +249,8 @@ const Step1: React.FC<Step1Props> = ({
 
   // Handle address selection from map
   const handleMapAddressSelect = (selectedAddress: string, coords: [number, number]) => {
+    // Mark that we're setting address programmatically
+    isSelectingRef.current = true;
     onChangeAddress(selectedAddress);
   };
 
@@ -323,7 +353,7 @@ const Step1: React.FC<Step1Props> = ({
                           <div className={`text-sm font-medium ${
                             focusedSuggestionIndex === index ? "text-white" : "text-gray-900"
                           }`}>
-                            {suggestion.displayName || suggestion.value}
+                            {suggestion.title.text}
                           </div>
                           {suggestion.subtitle?.text && (
                             <div className={`text-xs mt-0.5 ${
