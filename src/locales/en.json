@@ -36,6 +36,21 @@
       "resendAvailableIn": "Resend available in:",
       "resendCooldownMessage": "Please wait {minutes} minutes before requesting a new code"
     },
+    "telegramAuth": {
+      "initializing": "Initializing...",
+      "welcome": "Welcome",
+      "loginSuccess": "Successfully logged in!",
+      "loginError": "Authentication failed",
+      "invalidPhone": "Please enter a valid phone number",
+      "registrationSuccess": "Registration completed successfully!",
+      "registrationError": "Registration failed",
+      "phoneLabel": "Phone Number",
+      "phoneDescription": "We need your phone number to complete registration",
+      "completeRegistration": "Complete Registration",
+      "authenticating": "Authenticating...",
+      "checkingAccount": "Checking your account...",
+      "secureAuth": "Secure authentication via Telegram"
+    },
     "hero": {
       "navigation": {
         "hero": "Home",

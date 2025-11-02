@@ -37,6 +37,21 @@
       "resendAvailableIn": "Қайта жіберу қолжетімді:",
       "resendCooldownMessage": "Жаңа код сұрау алдында {minutes} минут күтіңіз"
     },
+    "telegramAuth": {
+      "initializing": "Telegram WebApp іске қосылуда...",
+      "welcome": "Қош келдіңіз",
+      "loginSuccess": "Сәтті кірдіңіз!",
+      "loginError": "Аутентификация қатесі",
+      "invalidPhone": "Дұрыс телефон нөмірін енгізіңіз",
+      "registrationSuccess": "Тіркеу сәтті аяқталды!",
+      "registrationError": "Тіркеу қатесі",
+      "phoneLabel": "Телефон нөмірі",
+      "phoneDescription": "Тіркеуді аяқтау үшін телефон нөміріңіз қажет",
+      "completeRegistration": "Тіркеуді аяқтау",
+      "authenticating": "Аутентификация...",
+      "checkingAccount": "Аккаунтыңыз тексерілуде...",
+      "secureAuth": "Telegram арқылы қауіпсіз аутентификация"
+    },
     "hero": {
       "navigation": {
         "hero": "Басты бет",

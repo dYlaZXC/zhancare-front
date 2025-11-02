@@ -36,6 +36,21 @@
       "resendAvailableIn": "Повторная отправка доступна через:",
       "resendCooldownMessage": "Пожалуйста, подождите {minutes} минут перед запросом нового кода"
     },
+    "telegramAuth": {
+      "initializing": "Инициализация...",
+      "welcome": "Добро пожаловать",
+      "loginSuccess": "Успешный вход!",
+      "loginError": "Ошибка аутентификации",
+      "invalidPhone": "Пожалуйста, введите корректный номер телефона",
+      "registrationSuccess": "Регистрация успешно завершена!",
+      "registrationError": "Ошибка регистрации",
+      "phoneLabel": "Номер телефона",
+      "phoneDescription": "Нам нужен ваш номер телефона для завершения регистрации",
+      "completeRegistration": "Завершить регистрацию",
+      "authenticating": "Аутентификация...",
+      "checkingAccount": "Проверка вашего аккаунта...",
+      "secureAuth": "Безопасная аутентификация через Telegram"
+    },
     "hero": {
       "navigation": {
         "hero": "Главная",
