@@ -738,10 +738,10 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
               <table className="w-full">
                 <thead className="bg-gradient-to-r from-slate-50 to-blue-50/50 border-b border-gray-200">
                   <tr>
-                    <th className="text-left p-6 font-semibold text-gray-800 text-sm uppercase tracking-wider">Дата/Время</th>
-                    <th className="text-left p-6 font-semibold text-gray-800 text-sm uppercase tracking-wider">Пациент</th>
-                    <th className="text-left p-6 font-semibold text-gray-800 text-sm uppercase tracking-wider">Статус</th>
-                    <th className="text-center p-6 font-semibold text-gray-800 text-sm uppercase tracking-wider">Действия</th>
+                    <th className="text-left p-3 font-semibold text-gray-800 text-sm uppercase tracking-wider">Дата/Время</th>
+                    <th className="text-left p-3 font-semibold text-gray-800 text-sm uppercase tracking-wider">Пациент</th>
+                    <th className="text-left p-3 font-semibold text-gray-800 text-sm uppercase tracking-wider">Статус</th>
+                    <th className="text-center p-3 font-semibold text-gray-800 text-sm uppercase tracking-wider">Действия</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -751,11 +751,11 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
                       className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/30 transition-all duration-300 group"
                     >
                       {/* Date/Time */}
-                      <td className="p-6">
-                        <div className="space-y-2">
+                      <td className="p-3">
+                        <div className="space-y-1">
                           <div className="flex items-center gap-2">
-                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                              <Calendar className="w-5 h-5 text-white" />
+                            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                              <Calendar className="w-4 h-4 text-white" />
                             </div>
                             <div>
                               <div className="text-sm font-semibold text-gray-900">
@@ -777,9 +777,9 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
                       </td>
 
                       {/* Patient */}
-                      <td className="p-6">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full flex items-center justify-center">
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full flex items-center justify-center">
                             <span className="text-white font-bold text-sm">
                               {(consultation.patient_name || consultation.patient_first_name || "П").charAt(0).toUpperCase()}
                             </span>
@@ -796,12 +796,12 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
                       </td>
 
                       {/* Status */}
-                      <td className="p-6">
+                      <td className="p-3">
                         {renderStatusDropdown(consultation)}
                       </td>
 
                       {/* Actions */}
-                      <td className="p-6">
+                      <td className="p-3">
                         {renderActionButtons(consultation)}
                       </td>
                     </tr>
