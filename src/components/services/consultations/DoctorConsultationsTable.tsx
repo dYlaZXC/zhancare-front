@@ -740,8 +740,6 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
                   <tr>
                     <th className="text-left p-6 font-semibold text-gray-800 text-sm uppercase tracking-wider">Дата/Время</th>
                     <th className="text-left p-6 font-semibold text-gray-800 text-sm uppercase tracking-wider">Пациент</th>
-                    <th className="text-left p-6 font-semibold text-gray-800 text-sm uppercase tracking-wider">Симптомы/Детали</th>
-                    <th className="text-left p-6 font-semibold text-gray-800 text-sm uppercase tracking-wider">Тип</th>
                     <th className="text-left p-6 font-semibold text-gray-800 text-sm uppercase tracking-wider">Статус</th>
                     <th className="text-center p-6 font-semibold text-gray-800 text-sm uppercase tracking-wider">Действия</th>
                   </tr>
@@ -794,41 +792,6 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
                               {consultation.patient_email || "Email не указан"}
                             </div>
                           </div>
-                        </div>
-                      </td>
-
-                      {/* Symptoms/Details */}
-                      <td className="p-6">
-                        <div className="space-y-2">
-                          {consultation.symptoms ? (
-                            <div className="text-sm text-gray-900 max-w-xs">
-                              {consultation.symptoms.length > 100
-                                ? `${consultation.symptoms.substring(0, 100)}...`
-                                : consultation.symptoms}
-                            </div>
-                          ) : (
-                            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-200">
-                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                              <span className="text-xs font-mono text-gray-700">
-                                {consultation.meeting_id}
-                              </span>
-                            </div>
-                          )}
-                          <div className="text-xs text-gray-500">
-                            {consultation.symptoms ? "Симптомы" : "ID встречи"}
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Type */}
-                      <td className="p-6">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border bg-blue-50 border-blue-200">
-                          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-500">
-                            {getTypeIcon(consultation.type || "video")}
-                          </div>
-                          <span className="text-sm font-semibold text-blue-700">
-                            {getTypeText(consultation.type || "video")}
-                          </span>
                         </div>
                       </td>
 

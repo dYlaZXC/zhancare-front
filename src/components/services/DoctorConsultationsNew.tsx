@@ -228,38 +228,38 @@ const DoctorConsultationsNew: React.FC = () => {
           <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-indigo-400/20 to-blue-400/20 rounded-full blur-3xl" />
         </div>
 
-        {/* Responsive Container - Constrained on small, full on large */}
-        <div className="w-full max-w-[100vw] mx-auto px-3 sm:px-4 md:px-6 lg:px-8 2xl:px-12 py-3 sm:py-4 md:py-6 space-y-3 sm:space-y-4 md:space-y-6">
+        {/* Responsive Container - Optimized for 100% zoom */}
+        <div className="w-full max-w-[100vw] mx-auto px-3 sm:px-4 md:px-5 lg:px-6 py-3 sm:py-4 md:py-5 space-y-3 sm:space-y-4">
 
           {/* Header Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white/95 backdrop-blur-sm rounded-xl sm:rounded-2xl lg:rounded-3xl border border-white/50 shadow-xl p-4 sm:p-6 lg:p-8 overflow-hidden"
+            className="bg-white/95 backdrop-blur-sm rounded-xl sm:rounded-2xl border border-white/50 shadow-xl p-3 sm:p-4 md:p-5 lg:p-6 overflow-hidden"
           >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6">
-              <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
-                <div className="p-3 sm:p-4 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl sm:rounded-2xl shadow-lg flex-shrink-0">
-                  <Stethoscope className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-white" />
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="p-2.5 sm:p-3 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl shadow-lg flex-shrink-0">
+                  <Stethoscope className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-white" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900 truncate">
+                  <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 truncate">
                     Панель врача
                   </h1>
-                  <p className="text-sm sm:text-base lg:text-lg text-gray-600 mt-1 truncate">
+                  <p className="text-sm sm:text-base text-gray-600 mt-0.5 truncate">
                     Добро пожаловать, {user?.first_name} {user?.last_name}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 sm:gap-3 self-end sm:self-auto flex-shrink-0">
+              <div className="flex items-center gap-2 self-end sm:self-auto flex-shrink-0">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => fetchConsultations()}
-                  className="flex items-center gap-2 px-3 sm:px-4 lg:px-5 py-2 sm:py-2.5 lg:py-3 bg-blue-600 text-white rounded-lg sm:rounded-xl text-sm sm:text-base font-medium shadow-lg hover:bg-blue-700 transition-colors"
+                  className="flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-600 text-white rounded-lg sm:rounded-xl text-sm font-medium shadow-lg hover:bg-blue-700 transition-colors"
                 >
-                  <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <RefreshCw className="w-4 h-4" />
                   <span className="hidden sm:inline">Обновить</span>
                 </motion.button>
 
@@ -267,15 +267,15 @@ const DoctorConsultationsNew: React.FC = () => {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setShowSettings(!showSettings)}
-                  className="p-2 sm:p-2.5 lg:p-3 text-gray-600 hover:bg-gray-100 rounded-lg sm:rounded-xl transition-colors"
+                  className="p-2 sm:p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg sm:rounded-xl transition-colors"
                 >
-                  <Settings className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <Settings className="w-5 h-5" />
                 </motion.button>
               </div>
             </div>
 
             {/* Statistics Cards */}
-            <div className="mt-6 sm:mt-8">
+            <div className="mt-4 sm:mt-5">
               <StatsCards stats={stats} />
             </div>
           </motion.div>
@@ -285,12 +285,12 @@ const DoctorConsultationsNew: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-white/95 backdrop-blur-sm rounded-xl sm:rounded-2xl border border-white/50 shadow-lg p-4 sm:p-5 lg:p-6 overflow-hidden"
+            className="bg-white/95 backdrop-blur-sm rounded-xl sm:rounded-2xl border border-white/50 shadow-lg p-3 sm:p-4 md:p-5 overflow-hidden"
           >
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3 sm:gap-4">
               {/* Tab Navigation - Scrollable on mobile */}
-              <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
-                <div className="inline-flex items-center gap-2 p-1 bg-gray-100 rounded-xl min-w-max w-full sm:w-auto">
+              <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0 scrollbar-hide">
+                <div className="inline-flex items-center gap-1.5 sm:gap-2 p-1 bg-gray-100 rounded-xl min-w-max w-full sm:w-auto">
                   {[
                     { key: 'all', label: 'Все', count: stats.total },
                     { key: 'pending', label: 'Ожидают', count: stats.pending },
@@ -303,14 +303,14 @@ const DoctorConsultationsNew: React.FC = () => {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => setActiveTab(tab.key as any)}
-                      className={`flex items-center gap-2 px-3 sm:px-4 lg:px-5 py-2 sm:py-2.5 rounded-lg font-medium text-xs sm:text-sm lg:text-base transition-all whitespace-nowrap ${
+                      className={`flex items-center gap-1.5 px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
                         activeTab === tab.key
                           ? 'bg-white text-blue-600 shadow-md'
                           : 'text-gray-600 hover:text-gray-900'
                       }`}
                     >
                       <span>{tab.label}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                      <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold ${
                         activeTab === tab.key
                           ? 'bg-blue-100 text-blue-600'
                           : 'bg-gray-200 text-gray-600'
@@ -324,13 +324,13 @@ const DoctorConsultationsNew: React.FC = () => {
 
               {/* Search */}
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Поиск пациентов..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm sm:text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
@@ -353,12 +353,12 @@ const DoctorConsultationsNew: React.FC = () => {
             transition={{ delay: 0.3 }}
             className="bg-white/95 backdrop-blur-sm rounded-xl sm:rounded-2xl border border-white/50 shadow-lg overflow-hidden"
           >
-            <div className="p-4 sm:p-5 lg:p-6 border-b border-gray-200">
+            <div className="p-3 sm:p-4 md:p-5 border-b border-gray-200">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900">
+                <h2 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900">
                   Консультации
                 </h2>
-                <p className="text-xs sm:text-sm lg:text-base text-gray-500">
+                <p className="text-xs sm:text-sm text-gray-500">
                   Найдено: <span className="font-medium text-gray-900">{filteredConsultations.length}</span> из {stats.total}
                 </p>
               </div>

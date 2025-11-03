@@ -253,36 +253,36 @@ const DoctorConsultations: React.FC = () => {
           <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-indigo-400/20 to-blue-400/20 rounded-full blur-3xl" />
         </div>
 
-      <div className="relative z-10 w-full px-1.5 xs:px-2 sm:px-4 md:px-6 lg:px-8 xl:px-10 2xl:px-12 py-2 xs:py-3 sm:py-4 md:py-6 space-y-2.5 xs:space-y-3 sm:space-y-4 md:space-y-6 max-w-[2560px] mx-auto overflow-x-hidden">
+      <div className="relative z-10 w-full px-1.5 xs:px-2 sm:px-4 md:px-5 lg:px-6 xl:px-7 py-2 xs:py-3 sm:py-4 md:py-5 space-y-2.5 xs:space-y-3 sm:space-y-4 max-w-[2560px] mx-auto overflow-x-hidden">
         {/* Header Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white/95 backdrop-blur-sm rounded-lg xs:rounded-xl sm:rounded-2xl md:rounded-3xl border border-white/50 shadow-xl p-2.5 xs:p-3 sm:p-4 md:p-6 lg:p-8 xl:p-10 w-full"
+          className="bg-white/95 backdrop-blur-sm rounded-lg xs:rounded-xl sm:rounded-2xl border border-white/50 shadow-xl p-2.5 xs:p-3 sm:p-4 md:p-5 lg:p-6 w-full"
         >
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 xs:gap-4 sm:gap-6">
-            <div className="flex items-center gap-2 xs:gap-3 sm:gap-4 min-w-0 flex-1">
-              <div className="p-2 xs:p-2.5 sm:p-3 lg:p-4 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-lg xs:rounded-xl sm:rounded-2xl shadow-lg flex-shrink-0">
-                <Stethoscope className="w-5 h-5 xs:w-6 xs:h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 xl:w-9 xl:h-9 text-white" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 xs:gap-4">
+            <div className="flex items-center gap-2 xs:gap-3 min-w-0 flex-1">
+              <div className="p-2 xs:p-2.5 sm:p-3 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-lg xs:rounded-xl sm:rounded-2xl shadow-lg flex-shrink-0">
+                <Stethoscope className="w-5 h-5 xs:w-6 xs:h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-white" />
               </div>
               <div className="min-w-0 flex-1">
-                <h1 className="text-base xs:text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900 truncate leading-tight">
+                <h1 className="text-base xs:text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 truncate leading-tight">
                   Панель врача
                 </h1>
-                <p className="text-xs xs:text-sm sm:text-base md:text-lg text-gray-600 mt-0.5 xs:mt-1 truncate">
+                <p className="text-xs xs:text-sm sm:text-base text-gray-600 mt-0.5 truncate">
                   Добро пожаловать, {user?.first_name} {user?.last_name}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 xs:gap-2.5 sm:gap-3 self-end sm:self-auto flex-shrink-0">
+            <div className="flex items-center gap-2 xs:gap-2.5 self-end sm:self-auto flex-shrink-0">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => fetchConsultations()}
-                className="flex items-center gap-1.5 xs:gap-2 px-2.5 xs:px-3 sm:px-4 lg:px-5 py-1.5 xs:py-2 sm:py-2.5 lg:py-3 bg-blue-600 text-white rounded-lg xs:rounded-xl text-xs xs:text-sm sm:text-base font-medium shadow-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                className="flex items-center gap-1.5 px-2.5 xs:px-3 sm:px-4 py-1.5 xs:py-2 sm:py-2.5 bg-blue-600 text-white rounded-lg xs:rounded-xl text-xs xs:text-sm font-medium shadow-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
               >
-                <RefreshCw className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
+                <RefreshCw className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4" />
                 <span className="hidden xs:inline">Обновить</span>
               </motion.button>
 
@@ -290,15 +290,15 @@ const DoctorConsultations: React.FC = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setShowSettings(!showSettings)}
-                className="p-1.5 xs:p-2 sm:p-2.5 lg:p-3 text-gray-600 hover:bg-gray-100 rounded-lg xs:rounded-xl transition-colors flex-shrink-0"
+                className="p-1.5 xs:p-2 sm:p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg xs:rounded-xl transition-colors flex-shrink-0"
               >
-                <Settings className="w-4 h-4 xs:w-4.5 xs:h-4.5 sm:w-5 sm:h-5 lg:w-6 lg:h-6" />
+                <Settings className="w-4 h-4 xs:w-4.5 xs:h-4.5 sm:w-5 sm:h-5" />
               </motion.button>
             </div>
           </div>
 
           {/* Statistics Cards - NEW CLEAN VERSION */}
-          <div className="mt-2.5 xs:mt-3 sm:mt-4 md:mt-6 lg:mt-8">
+          <div className="mt-2.5 xs:mt-3 sm:mt-4 md:mt-5">
             <StatsCards stats={stats} />
           </div>
 

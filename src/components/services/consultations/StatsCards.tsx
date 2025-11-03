@@ -38,14 +38,14 @@ const StatCard = ({ title, value, icon, gradient, borderColor, iconColor, textCo
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay, duration: 0.3 }}
-      className={`${gradient} rounded-lg sm:rounded-xl lg:rounded-2xl p-3 sm:p-4 lg:p-5 border ${borderColor} shadow-sm hover:shadow-md transition-shadow w-full min-w-0`}
+      className={`${gradient} rounded-xl lg:rounded-2xl p-2.5 md:p-3 lg:p-3.5 border ${borderColor} shadow-sm hover:shadow-md transition-all w-full min-w-0`}
     >
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-1.5 md:gap-2">
         <div className="flex-1 min-w-0">
-          <p className={`text-xs sm:text-sm lg:text-base font-medium ${textColor} mb-1 truncate`}>
+          <p className={`text-[10px] sm:text-xs md:text-sm font-medium ${textColor} mb-0.5 md:mb-1 truncate leading-tight`}>
             {title}
           </p>
-          <p className={`text-2xl sm:text-3xl lg:text-4xl font-bold ${textColor.replace('700', '900')} tabular-nums`}>
+          <p className={`text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold ${textColor.replace('700', '900')} tabular-nums leading-none`}>
             {value}
           </p>
         </div>
@@ -62,7 +62,7 @@ export const StatsCards = ({ stats }: StatsCardsProps) => {
     {
       title: "Всего",
       value: stats.total,
-      icon: <BarChart3 className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12" />,
+      icon: <BarChart3 className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8" />,
       gradient: "bg-gradient-to-br from-blue-50 to-indigo-50",
       borderColor: "border-blue-200/50",
       iconColor: "text-blue-600",
@@ -71,7 +71,7 @@ export const StatsCards = ({ stats }: StatsCardsProps) => {
     {
       title: "Ожидают",
       value: stats.pending,
-      icon: <Clock className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12" />,
+      icon: <Clock className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8" />,
       gradient: "bg-gradient-to-br from-orange-50 to-yellow-50",
       borderColor: "border-orange-200/50",
       iconColor: "text-orange-600",
@@ -80,7 +80,7 @@ export const StatsCards = ({ stats }: StatsCardsProps) => {
     {
       title: "Активные",
       value: stats.ongoing,
-      icon: <Activity className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12" />,
+      icon: <Activity className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8" />,
       gradient: "bg-gradient-to-br from-green-50 to-emerald-50",
       borderColor: "border-green-200/50",
       iconColor: "text-green-600",
@@ -89,7 +89,7 @@ export const StatsCards = ({ stats }: StatsCardsProps) => {
     {
       title: "Завершено",
       value: stats.completed,
-      icon: <CheckCircle2 className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12" />,
+      icon: <CheckCircle2 className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8" />,
       gradient: "bg-gradient-to-br from-emerald-50 to-teal-50",
       borderColor: "border-emerald-200/50",
       iconColor: "text-emerald-600",
@@ -98,7 +98,7 @@ export const StatsCards = ({ stats }: StatsCardsProps) => {
     {
       title: "Отменено",
       value: stats.cancelled,
-      icon: <XCircle className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12" />,
+      icon: <XCircle className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8" />,
       gradient: "bg-gradient-to-br from-gray-50 to-slate-50",
       borderColor: "border-gray-200/50",
       iconColor: "text-gray-600",
@@ -107,7 +107,7 @@ export const StatsCards = ({ stats }: StatsCardsProps) => {
     {
       title: "Запланировано",
       value: stats.planned,
-      icon: <Calendar className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12" />,
+      icon: <Calendar className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8" />,
       gradient: "bg-gradient-to-br from-purple-50 to-violet-50",
       borderColor: "border-purple-200/50",
       iconColor: "text-purple-600",
@@ -118,28 +118,28 @@ export const StatsCards = ({ stats }: StatsCardsProps) => {
   return (
     <div className="w-full overflow-hidden">
       {/* Mobile: Stack vertically */}
-      <div className="grid grid-cols-1 gap-3 sm:hidden w-full">
+      <div className="grid grid-cols-1 gap-2.5 sm:hidden w-full">
         {cards.map((card, index) => (
           <StatCard key={card.title} {...card} delay={index * 0.05} />
         ))}
       </div>
 
       {/* Tablet: 2 columns */}
-      <div className="hidden sm:grid md:hidden grid-cols-2 gap-3 w-full">
+      <div className="hidden sm:grid md:hidden grid-cols-2 gap-2.5 w-full">
         {cards.map((card, index) => (
           <StatCard key={card.title} {...card} delay={index * 0.05} />
         ))}
       </div>
 
-      {/* Desktop small: 3 columns */}
-      <div className="hidden md:grid lg:hidden grid-cols-3 gap-4 w-full">
+      {/* Desktop small (768-1023px): 3 columns */}
+      <div className="hidden md:grid lg:hidden grid-cols-3 gap-2.5 w-full">
         {cards.map((card, index) => (
           <StatCard key={card.title} {...card} delay={index * 0.05} />
         ))}
       </div>
 
-      {/* Desktop large: 6 columns */}
-      <div className="hidden lg:grid grid-cols-6 gap-4 xl:gap-5 w-full">
+      {/* Desktop medium/large (1024px+): 6 columns with tighter gap */}
+      <div className="hidden lg:grid grid-cols-6 gap-2.5 xl:gap-3 w-full">
         {cards.map((card, index) => (
           <StatCard key={card.title} {...card} delay={index * 0.05} />
         ))}
