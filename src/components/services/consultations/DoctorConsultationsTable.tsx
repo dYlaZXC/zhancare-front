@@ -347,7 +347,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
 
         {consultation.status === 'ongoing' && (
           <button
-            onClick={() => window.open(`/video-call/doctor?meetingId=${consultation.meeting_id}`)}
+            onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id}`}
             className="p-3 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all duration-200 border border-blue-200 hover:border-blue-300 shadow-sm group-hover:shadow-md"
             title="Присоединиться к звонку"
           >
@@ -358,7 +358,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
         {(consultation.status === 'scheduled' || consultation.status === 'planned') && consultation.scheduled_at && (
           joinInfo.canJoin ? (
             <button
-              onClick={() => window.open(`/video-call/doctor?meetingId=${consultation.meeting_id}`)}
+              onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id}`}
               className={`p-3 text-white rounded-xl transition-all duration-200 shadow-sm group-hover:shadow-md ${
                 joinInfo.isReady
                   ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 border border-green-500'
@@ -421,7 +421,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
 
         {consultation.status === 'ongoing' && (
           <button
-            onClick={() => window.open(`/video-call/doctor?meetingId=${consultation.meeting_id}`)}
+            onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id}`}
             className="p-2.5 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all duration-200 border border-blue-200 hover:border-blue-300 shadow-sm"
             title="Присоединиться к звонку"
           >
@@ -432,7 +432,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
         {(consultation.status === 'scheduled' || consultation.status === 'planned') && consultation.scheduled_at && (
           joinInfo.canJoin ? (
             <button
-              onClick={() => window.open(`/video-call/doctor?meetingId=${consultation.meeting_id}`)}
+              onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id}`}
               className={`p-2.5 text-white rounded-lg transition-all duration-200 shadow-sm ${
                 joinInfo.isReady
                   ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 border border-green-500'
@@ -495,7 +495,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
 
         {consultation.status === 'ongoing' && (
           <button
-            onClick={() => window.open(`/video-call/doctor?meetingId=${consultation.meeting_id}`)}
+            onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id}`}
             className="flex-1 flex items-center justify-center gap-1 xs:gap-1.5 sm:gap-2 p-1.5 xs:p-2 sm:p-2.5 text-blue-600 bg-blue-50 rounded-md xs:rounded-lg transition-colors border border-blue-200"
           >
             <PhoneCall className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4" />
@@ -506,7 +506,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
         {(consultation.status === 'scheduled' || consultation.status === 'planned') && consultation.scheduled_at && (
           joinInfo.canJoin ? (
             <button
-              onClick={() => window.open(`/video-call/doctor?meetingId=${consultation.meeting_id}`)}
+              onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id}`}
               className={`flex-1 flex items-center justify-center gap-1 xs:gap-1.5 sm:gap-2 p-1.5 xs:p-2 sm:p-2.5 text-white rounded-md xs:rounded-lg transition-colors ${
                 joinInfo.isReady
                   ? 'bg-gradient-to-r from-green-600 to-emerald-600 border border-green-500'
