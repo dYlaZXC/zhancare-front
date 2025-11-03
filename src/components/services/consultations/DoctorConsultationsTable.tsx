@@ -735,11 +735,12 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
         {filteredConsultations.length > 0 && (
           <div className="hidden xl:block bg-white/95 backdrop-blur-sm rounded-2xl border border-gray-200/80 shadow-xl overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-max">
                 <thead className="bg-gradient-to-r from-slate-50 to-blue-50/50 border-b border-gray-200">
                   <tr>
                     <th className="text-left p-3 font-semibold text-gray-800 text-sm uppercase tracking-wider">Дата/Время</th>
                     <th className="text-left p-3 font-semibold text-gray-800 text-sm uppercase tracking-wider">Пациент</th>
+                    <th className="text-left p-3 font-semibold text-gray-800 text-sm uppercase tracking-wider">ID Встречи</th>
                     <th className="text-left p-3 font-semibold text-gray-800 text-sm uppercase tracking-wider">Статус</th>
                     <th className="text-center p-3 font-semibold text-gray-800 text-sm uppercase tracking-wider">Действия</th>
                   </tr>
@@ -792,6 +793,16 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
                               {consultation.patient_email || "Email не указан"}
                             </div>
                           </div>
+                        </div>
+                      </td>
+
+                      {/* Meeting ID */}
+                      <td className="p-3">
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <span className="text-xs font-mono text-gray-700">
+                            {consultation.meeting_id}
+                          </span>
                         </div>
                       </td>
 
