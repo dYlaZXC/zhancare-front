@@ -75,6 +75,36 @@ const TelegramAuthPage = () => {
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  // Check if user is already authenticated
+  useEffect(() => {
+    const checkAuthentication = () => {
+      try {
+        const accessToken = localStorage.getItem("access_token");
+        const userStr = localStorage.getItem("user");
+
+        if (accessToken && userStr) {
+          const user = JSON.parse(userStr);
+          console.log("✅ User already authenticated:", user);
+
+          // Redirect based on role
+          const redirectUrl = user.role === "doctor" ? "/doctor-profile" : "/profile";
+          console.log(`🔄 Redirecting to ${redirectUrl}...`);
+
+          window.location.href = redirectUrl;
+          return true;
+        }
+      } catch (error) {
+        console.error("❌ Error checking authentication:", error);
+      }
+
+      setCheckingAuth(false);
+      return false;
+    };
+
+    checkAuthentication();
+  }, []);
 
   // Load Telegram SDK
   useEffect(() => {
