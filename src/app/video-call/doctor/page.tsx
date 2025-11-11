@@ -16,6 +16,7 @@ import DoctorVideoFrame from "./components/DoctorVideoFrame";
 import DoctorChatBox from "./components/DoctorChatBox";
 import DoctorChatInput from "./components/DoctorChatInput";
 import DoctorCallFooter from "./components/DoctorCallFooter";
+import FloatingConsultationButton from "./components/FloatingConsultationButton";
 // import DoctorFloatingBadge from "./components/DoctorFloatingBadge";
 
 const API_KEY = "QqkMxELY0YVGkCx17Vya04Sq9nGvCahu";
@@ -53,8 +54,6 @@ const DoctorVideoCallPage: React.FC = () => {
 
   // Doctor-specific states
   const [isRecording, setIsRecording] = useState(false);
-  const [sessionNotes, setSessionNotes] = useState("");
-  const [prescriptionMode, setPrescriptionMode] = useState(false);
 
   const chatBoxRef = useRef<HTMLDivElement>(null);
   const { language } = useLanguage();
@@ -286,6 +285,16 @@ const DoctorVideoCallPage: React.FC = () => {
     );
   }
 
+  const handleSaveConsultation = (data: any) => {
+    console.log("Saving consultation data:", data);
+    // TODO: Implement API call to save consultation data
+  };
+
+  const handleGenerateReport = (data: any) => {
+    console.log("Generating report with data:", data);
+    // TODO: Implement report generation
+  };
+
   return (
     <div className="w-full min-h-screen bg-gray-900 flex flex-col">
       <div className="sticky top-0 z-20">
@@ -312,12 +321,17 @@ const DoctorVideoCallPage: React.FC = () => {
 
       <DoctorCallFooter
         handleEndCall={handleEndCall}
-        sessionNotes={sessionNotes}
-        setSessionNotes={setSessionNotes}
         consultation={consultation}
         isRecording={isRecording}
         onStartRecording={handleStartRecording}
         onStopRecording={handleStopRecording}
+      />
+
+      {/* Floating Consultation Button */}
+      <FloatingConsultationButton
+        consultation={consultation}
+        onSave={handleSaveConsultation}
+        onGenerateReport={handleGenerateReport}
       />
     </div>
   );
