@@ -74,23 +74,32 @@ const ConsultationForm: React.FC<ConsultationFormProps> = ({
   ];
 
   return (
-    <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 overflow-hidden">
+    <div className="backdrop-blur-sm rounded-xl border overflow-hidden" style={{ backgroundColor: '#202942', borderColor: '#283353' }}>
       {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-600/20 to-blue-600/20 px-4 py-3 border-b border-white/10">
+      <div className="px-4 py-3 border-b" style={{ backgroundColor: '#283353', borderColor: '#2956bf' }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-600/30 flex items-center justify-center">
-              <FontAwesomeIcon icon={faDiagnoses} className="text-emerald-300 text-lg" />
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#2956bf' }}>
+              <FontAwesomeIcon icon={faDiagnoses} className="text-lg" style={{ color: '#ebf1ff' }} />
             </div>
             <div>
-              <h3 className="text-white font-bold text-base">Консультационный лист</h3>
-              <p className="text-white/60 text-xs">Заполните данные о консультации</p>
+              <h3 className="font-bold text-base" style={{ color: '#ebf1ff' }}>Консультационный лист</h3>
+              <p className="text-xs" style={{ color: '#bcc0ca' }}>Заполните данные о консультации</p>
             </div>
           </div>
           {onClose && (
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-all flex items-center justify-center"
+              className="w-8 h-8 rounded-lg transition-all flex items-center justify-center"
+              style={{ backgroundColor: '#202942', color: '#bcc0ca' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#242e4b';
+                e.currentTarget.style.color = '#ebf1ff';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#202942';
+                e.currentTarget.style.color = '#bcc0ca';
+              }}
               title="Свернуть"
             >
               <FontAwesomeIcon icon={faXmark} className="text-sm" />
@@ -104,13 +113,14 @@ const ConsultationForm: React.FC<ConsultationFormProps> = ({
         {formFields.map((field) => (
           <div key={field.key} className="space-y-2">
             <div className="flex items-center gap-2">
-              <div className={`w-7 h-7 rounded-lg bg-${field.color}-600/20 flex items-center justify-center`}>
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2956bf' }}>
                 <FontAwesomeIcon
                   icon={field.icon}
-                  className={`text-${field.color}-400 text-xs`}
+                  className="text-xs"
+                  style={{ color: '#ebf1ff' }}
                 />
               </div>
-              <label className="text-white font-semibold text-sm">
+              <label className="font-semibold text-sm" style={{ color: '#ebf1ff' }}>
                 {field.label}
               </label>
             </div>
@@ -118,7 +128,21 @@ const ConsultationForm: React.FC<ConsultationFormProps> = ({
               value={formData[field.key]}
               onChange={(e) => onUpdate(field.key, e.target.value)}
               placeholder={field.placeholder}
-              className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white text-sm placeholder-white/40 focus:outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/30 transition-all resize-none"
+              className="w-full border rounded-lg px-4 py-3 text-sm transition-all resize-none focus:outline-none focus:ring-2"
+              style={{
+                backgroundColor: '#1e263e',
+                borderColor: '#283353',
+                color: '#ebf1ff',
+                caretColor: '#3772ff'
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = '#3772ff';
+                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(55, 114, 255, 0.2)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = '#283353';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
               rows={field.rows}
             />
           </div>
@@ -126,8 +150,8 @@ const ConsultationForm: React.FC<ConsultationFormProps> = ({
       </div>
 
       {/* Footer with info */}
-      <div className="px-4 py-3 bg-white/5 border-t border-white/10">
-        <div className="flex items-center gap-2 text-xs text-white/60">
+      <div className="px-4 py-3 border-t" style={{ backgroundColor: '#181732', borderColor: '#283353' }}>
+        <div className="flex items-center gap-2 text-xs" style={{ color: '#bcc0ca' }}>
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
           </svg>
