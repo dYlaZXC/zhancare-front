@@ -28,11 +28,9 @@ const PatientVideoCallPage: React.FC = () => {
   const [consultation, setConsultation] = useState<Consultation | null>(null);
   const [consultationLoading, setConsultationLoading] = useState(true);
   const [consultationError, setConsultationError] = useState<string | null>(null);
-  const [patientNotes, setPatientNotes] = useState("");
-  const [symptomsDescription, setSymptomsDescription] = useState("");
 
   const safeUserName = user?.first_name || user?.email?.split("@")[0] || "patient";
-  const userEmail = user?.email || `${safeUserName.toLowerCase().replace(/\\s+/g, "")}@example.com`;
+  const userEmail = user?.email || `${safeUserName.toLowerCase().replace(/\s+/g, "")}@example.com`;
 
   // Get doctor name for patient interface
   const doctorName = consultation
@@ -227,10 +225,6 @@ const PatientVideoCallPage: React.FC = () => {
 
       <PatientCallFooter
         handleEndCall={handleEndCall}
-        patientNotes={patientNotes}
-        setPatientNotes={setPatientNotes}
-        symptomsDescription={symptomsDescription}
-        setSymptomsDescription={setSymptomsDescription}
         consultation={consultation}
       />
     </div>
