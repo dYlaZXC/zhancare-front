@@ -994,3 +994,4 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
 };
 
 export default PatientConsultationsTable;
+
