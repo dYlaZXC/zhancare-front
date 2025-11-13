@@ -132,6 +132,40 @@ ${consultationFormData.diagnosis ? `Диагноз: ${consultationFormData.diagn
     }
   };
 
+  // Auto-resize textarea
+  const aiInputRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleAIInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const textarea = e.target;
+    setAiInput(textarea.value);
+
+    // First, set height to 'auto' to shrink and get accurate scrollHeight
+    textarea.style.height = 'auto';
+
+    // Calculate new height based on content
+    const scrollHeight = textarea.scrollHeight;
+    const newHeight = Math.min(Math.max(scrollHeight, 44), 200);
+
+    // Set the new height
+    textarea.style.height = `${newHeight}px`;
+  };
+
+  // Set initial height and reset when input is cleared
+  useEffect(() => {
+    if (aiInputRef.current) {
+      if (aiInput === '') {
+        aiInputRef.current.style.height = '44px';
+      }
+    }
+  }, [aiInput]);
+
+  // Set initial height on mount
+  useEffect(() => {
+    if (aiInputRef.current) {
+      aiInputRef.current.style.height = '44px';
+    }
+  }, []);
+
   // Auto-scroll to latest message
   useEffect(() => {
     if (aiChatRef.current) {
@@ -265,35 +299,51 @@ ${consultationFormData.diagnosis ? `Диагноз: ${consultationFormData.diagn
               )}
 
               <div className="flex items-center gap-2">
-                {/* Minimize/Maximize button */}
-                <button
-                  onClick={() => setIsMinimized(!isMinimized)}
-                  className="w-9 h-9 rounded-lg transition-all flex items-center justify-center"
-                  style={{ backgroundColor: '#202942', color: '#ebf1ff' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#242e4b'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#202942'}
-                  title={isMinimized ? "Развернуть" : "Свернуть"}
-                >
-                  <FontAwesomeIcon icon={isMinimized ? faChevronLeft : faChevronRight} className="text-sm" />
-                </button>
+                {isMinimized ? (
+                  /* Only Uncollapse button when minimized */
+                  <button
+                    onClick={() => setIsMinimized(false)}
+                    className="w-9 h-9 rounded-lg transition-all flex items-center justify-center"
+                    style={{ backgroundColor: '#202942', color: '#ebf1ff' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#242e4b'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#202942'}
+                    title="Развернуть"
+                  >
+                    <FontAwesomeIcon icon={faChevronLeft} className="text-sm" />
+                  </button>
+                ) : (
+                  <>
+                    {/* Minimize button */}
+                    <button
+                      onClick={() => setIsMinimized(true)}
+                      className="w-9 h-9 rounded-lg transition-all flex items-center justify-center"
+                      style={{ backgroundColor: '#202942', color: '#ebf1ff' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#242e4b'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#202942'}
+                      title="Свернуть"
+                    >
+                      <FontAwesomeIcon icon={faChevronRight} className="text-sm" />
+                    </button>
 
-                {/* Close button */}
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="w-9 h-9 rounded-lg transition-all flex items-center justify-center"
-                  style={{ backgroundColor: '#2c5bcc', color: '#ebf1ff' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3267e6'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2c5bcc'}
-                  title="Закрыть"
-                >
-                  <FontAwesomeIcon icon={faXmark} className="text-sm" />
-                </button>
+                    {/* Close button */}
+                    <button
+                      onClick={() => setIsOpen(false)}
+                      className="w-9 h-9 rounded-lg transition-all flex items-center justify-center"
+                      style={{ backgroundColor: '#2c5bcc', color: '#ebf1ff' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3267e6'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2c5bcc'}
+                      title="Закрыть"
+                    >
+                      <FontAwesomeIcon icon={faXmark} className="text-sm" />
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
             {/* Content */}
             {!isMinimized && (
-              <div className="flex flex-col h-[calc(100%-140px)] overflow-hidden">
+              <div className="flex flex-col h-[calc(100%-160px)] overflow-hidden">
                 {/* Tabs Navigation Grid 2x2 + AI Chat Button */}
                 <div className="px-4 pt-4 pb-3 border-b space-y-2" style={{ borderColor: '#283353' }}>
                   {/* 4 Main Tabs in 2x2 Grid */}
@@ -561,18 +611,21 @@ ${consultationFormData.diagnosis ? `Диагноз: ${consultationFormData.diagn
                       </div>
 
                       {/* Chat Input */}
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 items-end">
                         <textarea
+                          ref={aiInputRef}
                           value={aiInput}
-                          onChange={(e) => setAiInput(e.target.value)}
+                          onChange={handleAIInputChange}
                           onKeyPress={handleAIKeyPress}
                           placeholder="Спросите ИИ ассистента..."
-                          className="flex-1 border rounded-lg px-3 py-2 text-sm transition-all resize-none focus:outline-none focus:ring-2"
+                          className="flex-1 border rounded-lg px-3 py-2 text-sm transition-all resize-none focus:outline-none focus:ring-2 overflow-hidden"
                           style={{
                             backgroundColor: '#1e263e',
                             borderColor: '#283353',
                             color: '#ebf1ff',
-                            caretColor: '#3772ff'
+                            caretColor: '#3772ff',
+                            minHeight: '44px',
+                            maxHeight: '200px'
                           }}
                           onFocus={(e) => {
                             e.currentTarget.style.borderColor = '#3772ff';
@@ -582,7 +635,6 @@ ${consultationFormData.diagnosis ? `Диагноз: ${consultationFormData.diagn
                             e.currentTarget.style.borderColor = '#283353';
                             e.currentTarget.style.boxShadow = 'none';
                           }}
-                          rows={2}
                           disabled={aiLoading}
                         />
                         <button
@@ -612,41 +664,35 @@ ${consultationFormData.diagnosis ? `Диагноз: ${consultationFormData.diagn
                     </div>
                   )}
                 </div>
+              </div>
+            )}
 
-                {/* Footer Actions */}
-                <div className="px-4 py-4 border-t space-y-3" style={{ backgroundColor: '#181732', borderColor: '#283353' }}>
-                  {/* Action buttons */}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleSave}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:scale-105"
-                      style={{ backgroundColor: '#3772ff', color: '#ebf1ff' }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3267e6'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3772ff'}
-                    >
-                      <FontAwesomeIcon icon={faSave} className="text-sm" />
-                      <span>Сохранить</span>
-                    </button>
+            {/* Footer Actions - Fixed at Bottom */}
+            {!isMinimized && (
+              <div className="absolute bottom-0 left-0 right-0 px-4 py-3 border-t" style={{ backgroundColor: '#181732', borderColor: '#283353' }}>
+                {/* Action buttons */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSave}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:scale-105"
+                    style={{ backgroundColor: '#3772ff', color: '#ebf1ff' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3267e6'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3772ff'}
+                  >
+                    <FontAwesomeIcon icon={faSave} className="text-sm" />
+                    <span>Сохранить</span>
+                  </button>
 
-                    <button
-                      onClick={handleGenerateReport}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:scale-105"
-                      style={{ backgroundColor: '#2956bf', color: '#ebf1ff' }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#214499'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2956bf'}
-                    >
-                      <FontAwesomeIcon icon={faDownload} className="text-sm" />
-                      <span>Отчет</span>
-                    </button>
-                  </div>
-
-                  {/* Info text */}
-                  <div className="flex items-center gap-2 text-xs" style={{ color: '#bcc0ca' }}>
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                    </svg>
-                    <span>Данные сохраняются в базу данных</span>
-                  </div>
+                  <button
+                    onClick={handleGenerateReport}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:scale-105"
+                    style={{ backgroundColor: '#2956bf', color: '#ebf1ff' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#214499'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2956bf'}
+                  >
+                    <FontAwesomeIcon icon={faDownload} className="text-sm" />
+                    <span>Отчет</span>
+                  </button>
                 </div>
               </div>
             )}
