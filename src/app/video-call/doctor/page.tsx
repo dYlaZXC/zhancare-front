@@ -67,6 +67,7 @@ const DoctorVideoCallPage: React.FC = () => {
   } = useDeepgram();
 
   const chatBoxRef = useRef<HTMLDivElement>(null);
+  const consultationSheetRef = useRef<{ openSheet: () => void }>(null);
   const { language } = useLanguage();
   const t = language === "ru" ? ru.chat : kz.chat;
 
@@ -315,6 +316,10 @@ const DoctorVideoCallPage: React.FC = () => {
     // TODO: Implement report generation
   };
 
+  const handleOpenConsultationSheet = () => {
+    consultationSheetRef.current?.openSheet();
+  };
+
   return (
     <div className="w-full min-h-screen bg-gray-900 flex flex-col">
       <div className="sticky top-0 z-20">
@@ -339,10 +344,13 @@ const DoctorVideoCallPage: React.FC = () => {
       <DoctorCallFooter
         handleEndCall={handleEndCall}
         consultation={consultation}
+        onOpenConsultationSheet={handleOpenConsultationSheet}
+        hasConsultationData={false}
       />
 
-      {/* Floating Consultation Button */}
+      {/* Consultation Sheet - No floating button, opened from footer */}
       <FloatingConsultationButton
+        ref={consultationSheetRef}
         consultation={consultation}
         onSave={handleSaveConsultation}
         onGenerateReport={handleGenerateReport}

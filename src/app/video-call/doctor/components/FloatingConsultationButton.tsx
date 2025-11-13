@@ -35,20 +35,32 @@ interface FloatingConsultationButtonProps {
   isTranscribing?: boolean;
   onStartRecording?: () => void;
   onStopRecording?: () => void;
+  onOpenSheet?: () => void;
+  hasData?: boolean;
 }
 
-const FloatingConsultationButton: React.FC<FloatingConsultationButtonProps> = ({
+const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, FloatingConsultationButtonProps>(({
   consultation,
   onSave,
   onGenerateReport,
   transcript = '',
   isTranscribing = false,
   onStartRecording,
-  onStopRecording
-}) => {
+  onStopRecording,
+  onOpenSheet,
+  hasData
+}, ref) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [activeTab, setActiveTab] = useState<'consultation' | 'notes' | 'prescription' | 'recommendations' | 'ai-chat' | 'transcription'>('consultation');
+
+  // Expose openSheet method via ref
+  React.useImperativeHandle(ref, () => ({
+    openSheet: () => {
+      setIsOpen(true);
+      setIsMinimized(false);
+    }
+  }));
 
   const [consultationFormData, setConsultationFormData] = useState<ConsultationFormData>({
     complaints: '',
@@ -257,36 +269,7 @@ ${consultationFormData.diagnosis ? `Диагноз: ${consultationFormData.diagn
 
   return (
     <>
-      {/* Floating Button - только когда форма закрыта */}
-      {!isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          className="fixed right-6 bottom-24 z-50 group"
-          title="Открыть консультационный лист"
-        >
-          <div className="relative">
-            {/* Animated ring */}
-            <div className="absolute inset-0 rounded-2xl blur-xl opacity-60 group-hover:opacity-100 transition-opacity animate-pulse" style={{ backgroundColor: '#3772ff' }}></div>
-
-            {/* Button */}
-            <div className="relative flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl transition-all duration-300 hover:scale-105" style={{ backgroundColor: '#3772ff' }}>
-              <FontAwesomeIcon icon={faFileWaveform} className="text-xl" style={{ color: '#ebf1ff' }} />
-              <span className="font-bold text-sm" style={{ color: '#ebf1ff' }}>Консультационный лист</span>
-            </div>
-
-            {/* Badge if has content */}
-            {hasContent && (
-              <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center border-2 shadow-lg" style={{ backgroundColor: '#2956bf', borderColor: '#1e263e' }}>
-                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#ebf1ff' }}>
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              </div>
-            )}
-          </div>
-        </button>
-      )}
-
-      {/* Sidebar Panel */}
+      {/* Sidebar Panel - no floating button, opened from footer */}
       {isOpen && (
         <>
           {/* Sidebar - No backdrop so doctor can see patient video */}
@@ -851,6 +834,8 @@ ${consultationFormData.diagnosis ? `Диагноз: ${consultationFormData.diagn
       )}
     </>
   );
-};
+});
+
+FloatingConsultationButton.displayName = 'FloatingConsultationButton';
 
 export default FloatingConsultationButton;
