@@ -5,6 +5,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import Image from "next/image";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import en from "@/locales/en.json";
@@ -13,6 +14,7 @@ import ChatMessages from "./Chat/ChatMessages";
 import ChatInput from "./Chat/ChatInput";
 import { Message } from "./Chat/types";
 import { useChat } from "./Chat/hooks/useChat";
+import ZhanBotLogo from "@/assets/ZhanBotAi.png";
 
 export const ChatSection = () => {
   const { user, setIsAuthOpen } = useAuth();
@@ -96,15 +98,22 @@ export const ChatSection = () => {
       >
         {/* Header */}
         <div className="text-center mb-12">
-          <motion.h2 
-            className="text-5xl font-bold text-white leading-tight mb-4"
+          <motion.div
+            className="flex justify-center mb-6"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            {translations.title}
-          </motion.h2>
-          <motion.p 
+            <Image
+              src={ZhanBotLogo}
+              alt="ZhanBot.AI"
+              width={400}
+              height={120}
+              className="h-24 w-auto"
+              priority
+            />
+          </motion.div>
+          <motion.p
             className="text-xl text-white/80 max-w-2xl mx-auto"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
