@@ -66,3 +66,4 @@ Darker: #090909 (rgb 9, 9, 9)
 
 
 452f4d34c9093c28d1cfcf7010ac0ac9f2f489f7 DEEPGRAM API KEY
+
