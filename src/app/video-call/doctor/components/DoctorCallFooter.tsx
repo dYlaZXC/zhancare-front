@@ -5,8 +5,6 @@ import { Consultation } from "@/types/consultation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faStethoscope,
-  faRecordVinyl,
-  faStop,
   faCalendar,
   faHeartbeat,
   faUserMd
@@ -17,17 +15,11 @@ import {
 interface DoctorCallFooterProps {
   handleEndCall: () => void;
   consultation: Consultation;
-  isRecording: boolean;
-  onStartRecording: () => void;
-  onStopRecording: () => void;
 }
 
 const DoctorCallFooter: React.FC<DoctorCallFooterProps> = ({
   handleEndCall,
-  consultation,
-  isRecording,
-  onStartRecording,
-  onStopRecording
+  consultation
 }) => {
 
   return (
@@ -55,21 +47,8 @@ const DoctorCallFooter: React.FC<DoctorCallFooterProps> = ({
             </div>
           </div>
 
-          {/* Right Side - Recording and End Call */}
+          {/* Right Side - End Call */}
           <div className="flex items-center justify-center sm:justify-end gap-2 flex-wrap">
-            {/* Recording Button */}
-            <button
-              onClick={isRecording ? onStopRecording : onStartRecording}
-              className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                isRecording
-                  ? 'bg-red-600 text-white shadow-lg animate-pulse'
-                  : 'bg-gray-700 text-white hover:bg-gray-600 shadow-md'
-              }`}
-            >
-              <FontAwesomeIcon icon={isRecording ? faStop : faRecordVinyl} className="text-sm" />
-              <span>{isRecording ? 'Остановить запись' : 'Начать запись'}</span>
-            </button>
-
             {/* End Call Button */}
             <button
               onClick={handleEndCall}

@@ -34,9 +34,6 @@ interface DoctorVideoHeaderProps {
   meetingId: string;
   patientName: string;
   consultation: Consultation;
-  isRecording: boolean;
-  onStartRecording: () => void;
-  onStopRecording: () => void;
   onToggleVideo?: () => void;
   onToggleAudio?: () => void;
   onOpenChart?: () => void;
@@ -47,9 +44,6 @@ const DoctorVideoHeader: React.FC<DoctorVideoHeaderProps> = ({
   meetingId,
   patientName,
   consultation,
-  isRecording,
-  onStartRecording,
-  onStopRecording,
   onToggleVideo,
   onToggleAudio,
   onOpenChart,
@@ -205,8 +199,8 @@ const DoctorVideoHeader: React.FC<DoctorVideoHeaderProps> = ({
 
   return (
     <header
-      className={`relative backdrop-blur-xl border-b border-white/10 p-3 sm:p-4 lg:p-6 z-10 transition-all duration-700 ease-out ${
-        isExpanded ? 'pb-6 sm:pb-8' : ''
+      className={`relative backdrop-blur-xl border-b border-white/10 px-3 sm:px-4 py-2 sm:py-2.5 z-10 transition-all duration-700 ease-out ${
+        isExpanded ? 'pb-4' : ''
       }`}
       style={{
         background: `
@@ -236,81 +230,52 @@ const DoctorVideoHeader: React.FC<DoctorVideoHeaderProps> = ({
       </div>
 
       {/* Main Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-3 sm:mb-4 relative">
-        {/* Left Section - Doctor Info */}
-        <div className="flex items-center gap-3 sm:gap-4 group order-1 sm:order-1">
+      <div className="flex items-center justify-between gap-2 relative">
+        {/* Left Section - Icon + Patient Name */}
+        <div className="flex items-center gap-2 group flex-1 min-w-0">
           <div
-            className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center backdrop-blur-sm border border-white/30 shadow-xl transition-all duration-300 group-hover:scale-110 group-hover:shadow-2xl bg-white/20`}
+            className={`w-8 h-8 rounded-lg flex items-center justify-center backdrop-blur-sm border border-white/30 shadow-lg transition-all duration-300 group-hover:scale-110 bg-white/20 flex-shrink-0`}
           >
             <FontAwesomeIcon
               icon={theme.icon}
-              className="text-white text-base sm:text-lg transition-transform duration-300 group-hover:scale-110"
+              className="text-white text-sm transition-transform duration-300 group-hover:scale-110"
             />
           </div>
 
           <div className="text-left flex-1 min-w-0">
-            <h1 className="text-base sm:text-lg lg:text-xl font-bold text-white mb-1 flex items-center gap-2 transition-all duration-300 hover:text-emerald-200">
-              <FontAwesomeIcon icon={faUserMd} className="text-emerald-200 transition-colors duration-300 text-sm sm:text-base" />
-              <span className="truncate">Консультация с пациентом</span>
+            {/* Patient Name */}
+            <h1 className="text-sm sm:text-base font-bold text-white mb-0 flex items-center gap-1.5 transition-all duration-300 hover:text-emerald-200">
+              <FontAwesomeIcon icon={faUserMd} className="text-emerald-200 transition-colors duration-300 text-xs" />
+              <span className="truncate">{patientName}</span>
             </h1>
 
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-white/80 text-xs sm:text-sm">
-              <div className="flex items-center gap-2 group/id cursor-pointer" onClick={() => navigator.clipboard.writeText(meetingId)}>
-                <FontAwesomeIcon icon={faIdCard} className="text-xs transition-colors duration-200 group-hover/id:text-emerald-300" />
-                <span className="transition-colors duration-200 group-hover/id:text-white">ID: </span>
-                <code className="px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md sm:rounded-lg backdrop-blur-sm border border-white/30 text-white font-mono text-xs transition-all duration-200 group-hover/id:border-emerald-300 group-hover/id:bg-white/30 truncate max-w-[100px] sm:max-w-none"
-                      style={{ background: 'rgba(255, 255, 255, 0.2)' }}>
-                  {meetingId}
-                </code>
+            {/* Status + Timer Row */}
+            <div className="flex items-center gap-2 text-white/80">
+              <div className="text-emerald-200 text-[10px]">
+                Online
               </div>
-
-              <div className="flex items-center gap-2">
-                <FontAwesomeIcon icon={faClock} className="text-xs animate-pulse" />
-                <span className="font-mono tabular-nums">{formatDuration(callDuration)}</span>
+              <div className="flex items-center gap-1">
+                <FontAwesomeIcon icon={faClock} className="text-[9px] animate-pulse" />
+                <span className="font-mono tabular-nums text-[10px]">{formatDuration(callDuration)}</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Center Section - Patient Info */}
-        <div className="text-center order-3 sm:order-2">
-          <div className="text-white font-bold text-lg sm:text-xl lg:text-2xl transition-colors duration-300 truncate">
-            {patientName}
-          </div>
-          <div className="text-emerald-200 text-xs sm:text-sm transition-all duration-300">
-            Пациент • Online
-          </div>
-        </div>
-
-        {/* Right Section - Connection Quality & Recording */}
-        <div className="flex items-center justify-center sm:justify-end gap-3 sm:gap-4 lg:gap-6 order-2 sm:order-3">
-          {/* Connection Quality */}
-          <div className="flex flex-col items-center gap-1 cursor-pointer group" title={`${connectionQuality} (${networkLatency}ms)`}>
-            <div className="flex items-end gap-0.5 h-4 sm:h-5 transition-transform duration-300 group-hover:scale-110">
+        {/* Right Section - Connection Quality */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Connection Quality Bars */}
+          <div className="flex flex-col items-center gap-0.5 cursor-pointer group" title={`${connectionQuality} (${networkLatency}ms)`}>
+            <div className="flex items-end gap-0.5 h-3 transition-transform duration-300 group-hover:scale-110">
               {connectionBars}
             </div>
-            <span className={`text-xs font-medium transition-colors duration-300 ${getConnectionColor()} hidden sm:block`}>
-              {connectionQuality === 'excellent' ? 'Отлично' :
-               connectionQuality === 'good' ? 'Хорошо' : 'Слабо'}
-            </span>
           </div>
 
-          {/* Network Info */}
-          <div className="flex flex-col items-center gap-1">
-            <div className="flex items-center gap-1 sm:gap-2 text-white/80">
-              <FontAwesomeIcon icon={faWifi} className={`${getConnectionColor()} text-sm`} />
-              <span className="text-xs sm:text-sm font-medium">{networkLatency}ms</span>
-            </div>
-            <span className="text-xs text-white/60 hidden sm:block">Задержка</span>
+          {/* Network Latency */}
+          <div className="flex flex-col items-center gap-0.5">
+            <FontAwesomeIcon icon={faWifi} className={`${getConnectionColor()} text-xs`} />
+            <span className="text-[9px] font-medium text-white/80">{networkLatency}ms</span>
           </div>
-
-          {/* Recording Status */}
-          {isRecording && (
-            <div className="flex flex-col items-center gap-1">
-              <div className="w-3 h-3 bg-red-400 rounded-full animate-pulse shadow-lg"></div>
-              <span className="text-red-300 text-xs font-medium">REC</span>
-            </div>
-          )}
         </div>
       </div>
 

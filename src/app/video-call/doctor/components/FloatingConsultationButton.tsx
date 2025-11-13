@@ -12,7 +12,9 @@ import {
   faNotesMedical,
   faPrescriptionBottle,
   faClipboardList,
-  faRobot
+  faRobot,
+  faMicrophone,
+  faCircle
 } from "@fortawesome/free-solid-svg-icons";
 import ConsultationForm, { ConsultationFormData } from "./ConsultationForm";
 import { Consultation } from "@/types/consultation";
@@ -29,16 +31,24 @@ interface FloatingConsultationButtonProps {
     prescription: string;
     recommendations: string;
   }) => void;
+  transcript?: string;
+  isTranscribing?: boolean;
+  onStartRecording?: () => void;
+  onStopRecording?: () => void;
 }
 
 const FloatingConsultationButton: React.FC<FloatingConsultationButtonProps> = ({
   consultation,
   onSave,
-  onGenerateReport
+  onGenerateReport,
+  transcript = '',
+  isTranscribing = false,
+  onStartRecording,
+  onStopRecording
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [activeTab, setActiveTab] = useState<'consultation' | 'notes' | 'prescription' | 'recommendations' | 'ai-chat'>('consultation');
+  const [activeTab, setActiveTab] = useState<'consultation' | 'notes' | 'prescription' | 'recommendations' | 'ai-chat' | 'transcription'>('consultation');
 
   const [consultationFormData, setConsultationFormData] = useState<ConsultationFormData>({
     complaints: '',
@@ -405,6 +415,35 @@ ${consultationFormData.diagnosis ? `Диагноз: ${consultationFormData.diagn
                     <FontAwesomeIcon icon={faRobot} className="text-base" />
                     <span>Чат с ИИ</span>
                   </button>
+
+                  {/* Transcription Button - Full Width */}
+                  <button
+                    onClick={() => setActiveTab('transcription')}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-medium transition-all duration-200 relative"
+                    style={
+                      activeTab === 'transcription'
+                        ? { backgroundColor: '#16a34a', color: '#ebf1ff' }
+                        : { backgroundColor: '#202942', color: '#bcc0ca' }
+                    }
+                    onMouseEnter={(e) => {
+                      if (activeTab !== 'transcription') {
+                        e.currentTarget.style.backgroundColor = '#242e4b';
+                        e.currentTarget.style.color = '#ebf1ff';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (activeTab !== 'transcription') {
+                        e.currentTarget.style.backgroundColor = '#202942';
+                        e.currentTarget.style.color = '#bcc0ca';
+                      }
+                    }}
+                  >
+                    <FontAwesomeIcon icon={faMicrophone} className="text-base" />
+                    <span>Транскрипция</span>
+                    {isTranscribing && (
+                      <FontAwesomeIcon icon={faCircle} className="text-[6px] text-red-500 animate-pulse absolute top-2 right-2" />
+                    )}
+                  </button>
                 </div>
 
                 {/* Tab Content */}
@@ -660,6 +699,80 @@ ${consultationFormData.diagnosis ? `Диагноз: ${consultationFormData.diagn
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                           </svg>
                         </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Transcription Tab */}
+                  {activeTab === 'transcription' && (
+                    <div className="backdrop-blur-sm rounded-xl p-4 border h-full flex flex-col" style={{ backgroundColor: '#202942', borderColor: '#283353' }}>
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#16a34a' }}>
+                            <FontAwesomeIcon icon={faMicrophone} className="text-sm" style={{ color: '#ebf1ff' }} />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-sm" style={{ color: '#ebf1ff' }}>Транскрипция консультации</h3>
+                            <p className="text-xs" style={{ color: '#bcc0ca' }}>
+                              {isTranscribing ? 'Запись активна...' : 'Начните запись для транскрипции'}
+                            </p>
+                          </div>
+                        </div>
+                        {isTranscribing && (
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{ backgroundColor: '#1e263e' }}>
+                            <FontAwesomeIcon icon={faCircle} className="text-[6px] text-red-500 animate-pulse" />
+                            <span className="text-xs font-medium" style={{ color: '#ef4444' }}>REC</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Recording Control Button */}
+                      <div className="mb-3">
+                        <button
+                          onClick={isTranscribing ? onStopRecording : onStartRecording}
+                          className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg ${
+                            isTranscribing
+                              ? 'bg-red-600 hover:bg-red-700 animate-pulse'
+                              : 'bg-emerald-600 hover:bg-emerald-700'
+                          }`}
+                          style={{ color: '#ebf1ff' }}
+                        >
+                          <FontAwesomeIcon icon={isTranscribing ? faCircle : faMicrophone} className="text-base" />
+                          <span>{isTranscribing ? 'Остановить запись' : 'Начать запись'}</span>
+                        </button>
+                      </div>
+
+                      {/* Transcription Content */}
+                      <div className="flex-1 overflow-y-auto rounded-lg border p-4 custom-scrollbar" style={{ backgroundColor: '#1e263e', borderColor: '#283353' }}>
+                        {transcript ? (
+                          <div className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: '#ebf1ff' }}>
+                            {transcript}
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center h-full text-center">
+                            <div className="space-y-3">
+                              <FontAwesomeIcon icon={faMicrophone} className="text-4xl mb-4" style={{ color: isTranscribing ? '#16a34a' : '#2956bf' }} />
+                              <p className="text-sm" style={{ color: '#bcc0ca' }}>
+                                {isTranscribing
+                                  ? 'Слушаем... Говорите в микрофон'
+                                  : 'Транскрипция появится здесь после начала записи'}
+                              </p>
+                              {isTranscribing && (
+                                <p className="text-xs" style={{ color: '#bcc0ca' }}>
+                                  Речь распознается автоматически
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Info Footer */}
+                      <div className="mt-3 p-2 rounded-lg flex items-start gap-2 text-xs" style={{ backgroundColor: '#1e263e', color: '#bcc0ca' }}>
+                        <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
+                        <span>Транскрипция работает на базе Deepgram AI. Определяет голоса врача и пациента.</span>
                       </div>
                     </div>
                   )}

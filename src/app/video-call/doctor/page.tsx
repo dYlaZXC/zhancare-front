@@ -9,6 +9,7 @@ import { api } from "@/utils/api";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import { Consultation } from "@/types/consultation";
+import { useDeepgram } from "@/hooks/useDeepgram";
 
 // Doctor-specific components
 import DoctorVideoHeader from "./components/DoctorVideoHeader";
@@ -55,6 +56,16 @@ const DoctorVideoCallPage: React.FC = () => {
   // Doctor-specific states
   const [isRecording, setIsRecording] = useState(false);
 
+  // Deepgram transcription
+  const {
+    transcript,
+    isConnected: isTranscribing,
+    error: transcriptionError,
+    startTranscription,
+    stopTranscription,
+    clearTranscript,
+  } = useDeepgram();
+
   const chatBoxRef = useRef<HTMLDivElement>(null);
   const { language } = useLanguage();
   const t = language === "ru" ? ru.chat : kz.chat;
@@ -100,14 +111,23 @@ const DoctorVideoCallPage: React.FC = () => {
     router.push("/doctor-profile");
   };
 
-  const handleStartRecording = () => {
+  const handleStartRecording = async () => {
     setIsRecording(true);
-    // Implement recording logic
+    // Start Deepgram transcription
+    try {
+      await startTranscription();
+      console.log('Transcription started');
+    } catch (err) {
+      console.error('Error starting transcription:', err);
+      setIsRecording(false);
+    }
   };
 
   const handleStopRecording = () => {
     setIsRecording(false);
-    // Implement stop recording logic
+    // Stop Deepgram transcription
+    stopTranscription();
+    console.log('Transcription stopped');
   };
 
   const sendMessage = async () => {
@@ -302,9 +322,6 @@ const DoctorVideoCallPage: React.FC = () => {
           meetingId={meetingId}
           patientName={patientName}
           consultation={consultation}
-          isRecording={isRecording}
-          onStartRecording={handleStartRecording}
-          onStopRecording={handleStopRecording}
         />
       </div>
 
@@ -322,9 +339,6 @@ const DoctorVideoCallPage: React.FC = () => {
       <DoctorCallFooter
         handleEndCall={handleEndCall}
         consultation={consultation}
-        isRecording={isRecording}
-        onStartRecording={handleStartRecording}
-        onStopRecording={handleStopRecording}
       />
 
       {/* Floating Consultation Button */}
@@ -332,6 +346,10 @@ const DoctorVideoCallPage: React.FC = () => {
         consultation={consultation}
         onSave={handleSaveConsultation}
         onGenerateReport={handleGenerateReport}
+        transcript={transcript}
+        isTranscribing={isTranscribing}
+        onStartRecording={handleStartRecording}
+        onStopRecording={handleStopRecording}
       />
     </div>
   );
