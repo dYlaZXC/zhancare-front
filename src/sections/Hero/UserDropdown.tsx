@@ -44,11 +44,14 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
           online: "В сети",
           doctor: "Врач",
           patient: "Пациент",
+          nurse: "Медсестра",
           doctorProfileDesc: "Личная информация",
           personalInfoDesc: "Личная информация",
+          nurseProfileDesc: "Личная информация",
           statisticsDesc: "Статистика и аналитика",
           doctorScheduleDesc: "Мои записи к врачам",
           patientAppointmentsDesc: "Мои записи к врачам",
+          nurseScheduleDesc: "Мои вызовы на дом",
           accountSettingsDesc: "Настройки аккаунта",
           endSessionDesc: "Завершить сеанс"
         };
@@ -62,11 +65,14 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
           online: "Желіде",
           doctor: "Дәрігер",
           patient: "Пациент",
+          nurse: "Медбике",
           doctorProfileDesc: "Жеке ақпарат",
           personalInfoDesc: "Жеке ақпарат",
+          nurseProfileDesc: "Жеке ақпарат",
           statisticsDesc: "Статистика және аналитика",
           doctorScheduleDesc: "Дәрігерге жазылуларым",
           patientAppointmentsDesc: "Дәрігерге жазылуларым",
+          nurseScheduleDesc: "Үйге шақырулар",
           accountSettingsDesc: "Аккаунт баптаулары",
           endSessionDesc: "Сеансты аяқтау"
         };
@@ -80,11 +86,14 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
           online: "Online",
           doctor: "Doctor",
           patient: "Patient",
+          nurse: "Nurse",
           doctorProfileDesc: "Personal information",
           personalInfoDesc: "Personal information",
+          nurseProfileDesc: "Personal information",
           statisticsDesc: "Statistics and analytics",
           doctorScheduleDesc: "My doctor appointments",
           patientAppointmentsDesc: "My doctor appointments",
+          nurseScheduleDesc: "My home visits",
           accountSettingsDesc: "Account settings",
           endSessionDesc: "End session"
         };
@@ -98,11 +107,14 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
           online: "Online",
           doctor: "Doctor",
           patient: "Patient",
+          nurse: "Nurse",
           doctorProfileDesc: "Personal information",
           personalInfoDesc: "Personal information",
+          nurseProfileDesc: "Personal information",
           statisticsDesc: "Statistics and analytics",
           doctorScheduleDesc: "My doctor appointments",
           patientAppointmentsDesc: "My doctor appointments",
+          nurseScheduleDesc: "My home visits",
           accountSettingsDesc: "Account settings",
           endSessionDesc: "End session"
         };
@@ -147,30 +159,53 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
 
   // Get profile path based on role
   const getProfilePath = () => {
-    return user.role === "doctor" ? "/doctor-profile" : "/profile";
+    if (user.role === "doctor") return "/doctor-profile";
+    if (user.role === "nurse") return "/nurse-profile";
+    return "/profile"; // default for patients
   };
 
   // Menu items configuration with dynamic translations
-  const getMenuItems = () => [
-    {
-      icon: faUser,
-      label: t.profile,
-      href: getProfilePath(),
-      description: user.role === "doctor" ? t.doctorProfileDesc : t.personalInfoDesc
-    },
-    {
-      icon: faCalendarAlt,
-      label: t.appointments,
-      href: user.role === "doctor" ? "/doctor-appointments" : "/video",
-      description: user.role === "doctor" ? t.doctorScheduleDesc : t.patientAppointmentsDesc
-    },
-    {
-      icon: faCog,
-      label: t.settings,
-      href: "/settings",
-      description: t.accountSettingsDesc
-    }
-  ];
+  const getMenuItems = () => {
+    // Get description based on role
+    const getProfileDescription = () => {
+      if (user.role === "doctor") return t.doctorProfileDesc;
+      if (user.role === "nurse") return t.nurseProfileDesc;
+      return t.personalInfoDesc;
+    };
+
+    const getAppointmentsHref = () => {
+      if (user.role === "doctor") return "/doctor-appointments";
+      if (user.role === "nurse") return "/nurse-profile"; // nurse home visits are in their profile
+      return "/video";
+    };
+
+    const getAppointmentsDescription = () => {
+      if (user.role === "doctor") return t.doctorScheduleDesc;
+      if (user.role === "nurse") return t.nurseScheduleDesc;
+      return t.patientAppointmentsDesc;
+    };
+
+    return [
+      {
+        icon: faUser,
+        label: t.profile,
+        href: getProfilePath(),
+        description: getProfileDescription()
+      },
+      {
+        icon: faCalendarAlt,
+        label: t.appointments,
+        href: getAppointmentsHref(),
+        description: getAppointmentsDescription()
+      },
+      {
+        icon: faCog,
+        label: t.settings,
+        href: "/settings",
+        description: t.accountSettingsDesc
+      }
+    ];
+  };
 
   const menuItems = getMenuItems();
 
@@ -234,7 +269,7 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
             {user.first_name}
           </span>
           <span className="text-[10px] sm:text-xs text-white/80 truncate">
-            {user.role === "doctor" ? t.doctor : t.patient}
+            {user.role === "doctor" ? t.doctor : user.role === "nurse" ? t.nurse : t.patient}
           </span>
         </div>
 

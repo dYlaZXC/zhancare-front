@@ -96,7 +96,12 @@ const AuthPopup = () => {
       toast.success(errorMessages.loginSuccess);
 
       // Redirect based on role
-      const redirectUrl = responseData.user.role === "doctor" ? "/doctor-profile" : "/profile";
+      let redirectUrl = "/profile"; // default for patients
+      if (responseData.user.role === "doctor") {
+        redirectUrl = "/doctor-profile";
+      } else if (responseData.user.role === "nurse") {
+        redirectUrl = "/nurse-profile";
+      }
       window.location.href = redirectUrl;
 
       setIsAuthOpen(false);
