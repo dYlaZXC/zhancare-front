@@ -207,7 +207,8 @@ ${consultationFormData.diagnosis ? `Диагноз: ${consultationFormData.diagn
       ...consultationFormData,
       sessionNotes,
       prescription,
-      recommendations
+      recommendations,
+      transcription: transcript || ""
     };
     if (onSave) {
       onSave(allData);

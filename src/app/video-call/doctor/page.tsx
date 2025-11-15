@@ -6,6 +6,7 @@ import { Loader2, RefreshCw } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/utils/api";
+import { toast } from "react-toastify";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import { Consultation } from "@/types/consultation";
@@ -306,9 +307,48 @@ const DoctorVideoCallPage: React.FC = () => {
     );
   }
 
-  const handleSaveConsultation = (data: any) => {
+  const handleSaveConsultation = async (data: any) => {
     console.log("Saving consultation data:", data);
-    // TODO: Implement API call to save consultation data
+
+    if (!meetingId) {
+      console.error("Meeting ID not available");
+      toast.error("Ошибка: Meeting ID не найден");
+      return;
+    }
+
+    try {
+      const response = await api.patch(
+        `/consultations/${meetingId}/save-consultation-form/`,
+        {
+          complaints: data.complaints,
+          anamnesis: data.anamnesis,
+          diagnostics: data.diagnostics,
+          treatment: data.treatment,
+          diagnosis: data.diagnosis,
+          session_notes: data.sessionNotes,
+          prescription: data.prescription,
+          recommendations: data.recommendations,
+          transcription: data.transcription,
+        }
+      );
+
+      console.log("Consultation form saved successfully:", response.data);
+
+      // Update the consultation state with the saved data
+      if (response.data.consultation) {
+        setConsultation(response.data.consultation);
+      }
+
+      // Show success toast
+      toast.success("✅ Данные успешно сохранены!");
+    } catch (error: any) {
+      console.error("Failed to save consultation form:", error);
+      console.error("Error response:", error?.response?.data);
+
+      // Show error toast with specific error message if available
+      const errorMessage = error?.response?.data?.error || "Ошибка при сохранении данных";
+      toast.error(`❌ ${errorMessage}`);
+    }
   };
 
   const handleGenerateReport = (data: any) => {
