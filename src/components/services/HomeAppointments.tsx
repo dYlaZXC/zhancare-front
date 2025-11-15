@@ -49,14 +49,20 @@ const HomeAppointments: React.FC = () => {
     setLoading(true);
 
     try {
-      const res = await api.post("/appointments/", {
+      const payload: any = {
         appointment_time: appointmentTime,
         address: address.trim(),
         symptoms: symptoms.trim() || null,
         notes: notes.trim() || null,
-        latitude: latitude,
-        longitude: longitude,
-      });
+      };
+
+      // Only include coordinates if they're set
+      if (latitude !== null && longitude !== null) {
+        payload.latitude = latitude;
+        payload.longitude = longitude;
+      }
+
+      const res = await api.post("/appointments/", payload);
 
       if (res.status === 201 || res.status === 200) {
         toast.success("✅ Вызов успешно создан!");
@@ -73,7 +79,8 @@ const HomeAppointments: React.FC = () => {
       }
     } catch (err: any) {
       console.error("Ошибка при создании:", err);
-      toast.error(err?.response?.data?.error || "Ошибка сервера.");
+      console.error("Response data:", err?.response?.data);
+      toast.error(err?.response?.data?.error || err?.response?.data?.detail || "Ошибка сервера.");
     }
 
     setLoading(false);
