@@ -21,8 +21,11 @@ const YandexMap = dynamic(() => import("@/components/maps/YandexMap"), {
 interface Step1Props {
   address: string;
   symptoms: string;
+  appointmentTime: string;
   onChangeAddress: (val: string) => void;
   onChangeSymptoms: (val: string) => void;
+  onChangeTime: (val: string) => void;
+  onChangeCoordinates: (lat: number | null, lng: number | null) => void;
   onNext: () => void;
   loading?: boolean;
 }
@@ -51,8 +54,11 @@ const DEFAULT_CENTER: [number, number] = [43.238293, 76.889709];
 const Step1: React.FC<Step1Props> = ({
   address,
   symptoms,
+  appointmentTime,
   onChangeAddress,
   onChangeSymptoms,
+  onChangeTime,
+  onChangeCoordinates,
   onNext,
   loading = false,
 }) => {
@@ -173,7 +179,10 @@ const Step1: React.FC<Step1Props> = ({
     if (suggestion.coords) {
       setMapCenter(suggestion.coords);
       setUserLocation({ lat: suggestion.coords[0], lng: suggestion.coords[1] });
+      onChangeCoordinates(suggestion.coords[0], suggestion.coords[1]);
       setShowMap(true); // Auto-show map when address is selected
+    } else {
+      onChangeCoordinates(null, null);
     }
   };
 
@@ -216,6 +225,7 @@ const Step1: React.FC<Step1Props> = ({
           setUserLocation(coords);
           setMapCenter([coords.lat, coords.lng]);
           setLocationPermission("granted");
+          onChangeCoordinates(coords.lat, coords.lng);
 
           // Reverse geocode to get address using Yandex Geocoder API
           try {
@@ -252,6 +262,7 @@ const Step1: React.FC<Step1Props> = ({
     // Mark that we're setting address programmatically
     isSelectingRef.current = true;
     onChangeAddress(selectedAddress);
+    onChangeCoordinates(coords[0], coords[1]);
   };
 
   // Close suggestions when clicking outside
@@ -436,20 +447,41 @@ const Step1: React.FC<Step1Props> = ({
         </AnimatePresence>
       </div>
 
+      {/* Date and Time Section */}
+      <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 shadow-sm hover:border-[#3772ff] transition-colors duration-200">
+        <label className="block text-base font-semibold text-gray-800 mb-3 flex items-center gap-2">
+          <svg className="w-5 h-5 text-[#3772ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          Дата и время визита <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="datetime-local"
+          value={appointmentTime}
+          onChange={(e) => onChangeTime(e.target.value)}
+          min={new Date(Date.now() + 30 * 60000).toISOString().slice(0, 16)}
+          required
+          className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-4 focus:ring-[#3772ff]/20 focus:border-[#3772ff] transition-all duration-200"
+        />
+        <p className="mt-2 text-xs text-gray-500">
+          Медсестра прибудет в указанное время (±15 минут)
+        </p>
+      </div>
+
       {/* Symptoms Section */}
       <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 shadow-sm hover:border-[#3772ff] transition-colors duration-200">
         <label className="block text-base font-semibold text-gray-800 mb-3">
           Симптомы <span className="text-gray-400 text-sm font-normal">(необязательно)</span>
         </label>
         <textarea
-          placeholder="Опишите ваши симптомы для более точного подбора специалиста"
+          placeholder="Опишите ваши симптомы для медсестры"
           rows={4}
           value={symptoms}
           onChange={(e) => onChangeSymptoms(e.target.value)}
           className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl shadow-sm resize-none focus:outline-none focus:ring-4 focus:ring-[#3772ff]/20 focus:border-[#3772ff] transition-all duration-200"
         />
         <p className="mt-2 text-xs text-gray-500">
-          Это поможет врачу подготовиться к визиту
+          Это поможет медсестре подготовиться к визиту
         </p>
       </div>
 
@@ -457,9 +489,9 @@ const Step1: React.FC<Step1Props> = ({
       <div className="pt-2">
         <button
           onClick={onNext}
-          disabled={!address.trim() || loading}
+          disabled={!address.trim() || !appointmentTime || loading}
           className={`w-full px-6 py-4 rounded-xl font-bold text-white text-lg transition-all duration-200 shadow-lg ${
-            loading || !address.trim()
+            loading || !address.trim() || !appointmentTime
               ? "bg-gray-300 cursor-not-allowed"
               : "bg-gradient-to-r from-[#3772ff] to-[#2956bf] hover:shadow-xl hover:shadow-[#3772ff]/30 hover:-translate-y-0.5 active:translate-y-0"
           }`}

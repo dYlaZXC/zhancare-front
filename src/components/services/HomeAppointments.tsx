@@ -9,54 +9,29 @@ import { api } from "@/utils/api";
 
 // Шаги
 import Step1 from "./homeAppointments/Step1";
-import Step2 from "./homeAppointments/Step2";
 import Step3 from "./homeAppointments/Step3";
 import TipsPanel from "./homeAppointments/TipsPanel";
 import Confirmation from "./homeAppointments/Confirmation";
-
-interface Doctor {
-  id: number;
-  name: string;
-  email: string;
-}
 
 const HomeAppointments: React.FC = () => {
   const { user } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [selectedDoctor, setSelectedDoctor] = useState<number | null>(null);
+  const [step, setStep] = useState<1 | 2>(1);
   const [appointmentTime, setAppointmentTime] = useState<string>("");
   const [address, setAddress] = useState<string>("");
   const [symptoms, setSymptoms] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
 
   const [loading, setLoading] = useState(false);
-  const [fetchingDoctors, setFetchingDoctors] = useState(false);
   const [confirmModal, setConfirmModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  useEffect(() => {
-    fetchDoctors();
-  }, []);
-
-  const fetchDoctors = async () => {
-    setFetchingDoctors(true);
-    try {
-      const res = await api.get("/appointments/available-doctors-sestrinskoe-delo/");
-      setDoctors(res.data?.doctors || []);
-    } catch (err) {
-      console.error("Ошибка загрузки врачей:", err);
-      setError("⚠️ Не удалось загрузить список врачей.");
-    } finally {
-      setFetchingDoctors(false);
-    }
-  };
-
   const handleFinalCheck = () => {
-    if (!selectedDoctor || !appointmentTime || !address.trim()) {
+    if (!appointmentTime || !address.trim()) {
       toast.error("Пожалуйста, заполните все обязательные поля.");
       return;
     }
@@ -75,22 +50,24 @@ const HomeAppointments: React.FC = () => {
 
     try {
       const res = await api.post("/appointments/", {
-        doctor: selectedDoctor,
         appointment_time: appointmentTime,
         address: address.trim(),
         symptoms: symptoms.trim() || null,
         notes: notes.trim() || null,
+        latitude: latitude,
+        longitude: longitude,
       });
 
       if (res.status === 201 || res.status === 200) {
         toast.success("✅ Вызов успешно создан!");
         setSuccess(true);
         setStep(1);
-        setSelectedDoctor(null);
         setAppointmentTime("");
         setAddress("");
         setSymptoms("");
         setNotes("");
+        setLatitude(null);
+        setLongitude(null);
       } else {
         toast.error("❌ Не удалось создать вызов.");
       }
@@ -121,10 +98,10 @@ const HomeAppointments: React.FC = () => {
                 </div>
                 <div>
                   <h1 className="text-xl md:text-2xl lg:text-3xl font-extrabold text-[#001E80]">
-                    Вызов врача на дом
+                    Вызов медсестры на дом
                   </h1>
                   <p className="text-sm md:text-base text-gray-600 mt-1">
-                    Заполните шаги ниже, чтобы оформить вызов
+                    Заполните данные ниже, чтобы оформить вызов
                   </p>
                 </div>
               </div>
@@ -132,7 +109,7 @@ const HomeAppointments: React.FC = () => {
               {/* Modern step progress */}
               <div className="relative pt-4">
                 <div className="flex justify-between items-center mb-2 px-1">
-                  {[1, 2, 3].map((stepNum) => (
+                  {[1, 2].map((stepNum) => (
                     <div
                       key={stepNum}
                       className={`flex items-center gap-2 transition-all duration-300 ${
@@ -153,7 +130,7 @@ const HomeAppointments: React.FC = () => {
                       <span className={`text-xs md:text-sm font-medium ${
                         step >= stepNum ? "text-[#001E80]" : "text-gray-400"
                       }`}>
-                        {stepNum === 1 ? "Адрес" : stepNum === 2 ? "Врач" : "Проверка"}
+                        {stepNum === 1 ? "Данные вызова" : "Подтверждение"}
                       </span>
                     </div>
                   ))}
@@ -163,9 +140,9 @@ const HomeAppointments: React.FC = () => {
                 <div className="relative w-full h-2 bg-gray-200 rounded-full overflow-hidden">
                   <motion.div
                     className="h-full bg-gradient-to-r from-[#3772ff] to-[#2956bf] rounded-full shadow-lg"
-                    initial={{ width: "33.33%" }}
+                    initial={{ width: "50%" }}
                     animate={{
-                      width: step === 1 ? "33.33%" : step === 2 ? "66.66%" : "100%"
+                      width: step === 1 ? "50%" : "100%"
                     }}
                     transition={{ duration: 0.5, ease: "easeInOut" }}
                   />
@@ -192,34 +169,25 @@ const HomeAppointments: React.FC = () => {
                   <Step1
                     address={address}
                     symptoms={symptoms}
+                    appointmentTime={appointmentTime}
                     onChangeAddress={setAddress}
                     onChangeSymptoms={setSymptoms}
+                    onChangeTime={setAppointmentTime}
+                    onChangeCoordinates={(lat, lng) => {
+                      setLatitude(lat);
+                      setLongitude(lng);
+                    }}
                     onNext={() => setStep(2)}
                     loading={loading}
                   />
                 )}
                 {step === 2 && (
-                  <Step2
-                    doctors={doctors}
-                    selectedDoctorId={selectedDoctor}
-                    onSelectDoctor={setSelectedDoctor}
-                    appointmentTime={appointmentTime}
-                    onChangeTime={setAppointmentTime}
-                    onBack={() => setStep(1)}
-                    onNext={() => setStep(3)}
-                    loading={loading}
-                    fetchingDoctors={fetchingDoctors}
-                  />
-                )}
-                {step === 3 && (
                   <Step3
-                    doctors={doctors}
-                    selectedDoctorId={selectedDoctor}
                     appointmentTime={appointmentTime}
                     address={address}
                     symptoms={symptoms}
                     notes={notes}
-                    onBack={() => setStep(2)}
+                    onBack={() => setStep(1)}
                     onSubmit={handleFinalCheck}
                     loading={loading}
                   />

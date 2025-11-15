@@ -2,17 +2,9 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Loader2 } from "lucide-react";
-
-interface Doctor {
-  id: number;
-  name: string;
-  email: string;
-}
+import { Loader2, MapPin, Calendar, FileText } from "lucide-react";
 
 interface Step3Props {
-  doctors: Doctor[];
-  selectedDoctorId: number | null;
   appointmentTime: string;
   address: string;
   symptoms: string;
@@ -23,8 +15,6 @@ interface Step3Props {
 }
 
 const Step3: React.FC<Step3Props> = ({
-  doctors,
-  selectedDoctorId,
   appointmentTime,
   address,
   symptoms,
@@ -33,8 +23,6 @@ const Step3: React.FC<Step3Props> = ({
   onSubmit,
   loading = false,
 }) => {
-  const doctor = doctors.find((doc) => doc.id === selectedDoctorId);
-
   return (
     <motion.div
       key="step3"
@@ -44,38 +32,89 @@ const Step3: React.FC<Step3Props> = ({
       transition={{ duration: 0.4 }}
       className="space-y-6"
     >
-      <h3 className="text-xl font-semibold text-gray-800">Подтвердите данные</h3>
-
-      <div className="space-y-2 text-sm text-gray-700 bg-gray-50 rounded-xl p-4 ring-1 ring-gray-200">
-        <p><strong>Врач:</strong> {doctor?.name || "Не выбран"}</p>
-        <p><strong>Email:</strong> {doctor?.email || "—"}</p>
-        <p><strong>Адрес:</strong> {address}</p>
-        <p><strong>Дата и время:</strong> {new Date(appointmentTime).toLocaleString()}</p>
-        {symptoms && <p><strong>Симптомы:</strong> {symptoms}</p>}
-        {notes && <p><strong>Доп. заметки:</strong> {notes}</p>}
+      {/* Header */}
+      <div className="text-center">
+        <h3 className="text-2xl font-bold text-gray-900 mb-2">Подтвердите данные</h3>
+        <p className="text-gray-600 text-sm">Проверьте информацию перед отправкой вызова</p>
       </div>
 
-      <div className="flex justify-between pt-4">
+      {/* Confirmation Details */}
+      <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border-2 border-gray-200 p-6 shadow-sm space-y-4">
+        {/* Address */}
+        <div className="flex items-start gap-3 p-3 bg-white rounded-xl border border-gray-200">
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[#3772ff]/10 flex-shrink-0">
+            <MapPin className="w-5 h-5 text-[#3772ff]" />
+          </div>
+          <div className="flex-1">
+            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Адрес приёма</p>
+            <p className="text-sm font-medium text-gray-900">{address}</p>
+          </div>
+        </div>
+
+        {/* Date and Time */}
+        <div className="flex items-start gap-3 p-3 bg-white rounded-xl border border-gray-200">
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[#3772ff]/10 flex-shrink-0">
+            <Calendar className="w-5 h-5 text-[#3772ff]" />
+          </div>
+          <div className="flex-1">
+            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Дата и время визита</p>
+            <p className="text-sm font-medium text-gray-900">
+              {new Date(appointmentTime).toLocaleString('ru-RU', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </p>
+          </div>
+        </div>
+
+        {/* Symptoms */}
+        {symptoms && (
+          <div className="flex items-start gap-3 p-3 bg-white rounded-xl border border-gray-200">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[#3772ff]/10 flex-shrink-0">
+              <FileText className="w-5 h-5 text-[#3772ff]" />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Симптомы</p>
+              <p className="text-sm font-medium text-gray-900">{symptoms}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Info Banner */}
+        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+          <p className="text-sm text-blue-800">
+            <span className="font-semibold">ℹ️ Обратите внимание:</span> После создания вызова, медсестра примет его и свяжется с вами для уточнения деталей.
+          </p>
+        </div>
+      </div>
+
+      {/* Navigation Buttons */}
+      <div className="flex flex-col sm:flex-row gap-3 pt-2">
         <button
           type="button"
           onClick={onBack}
-          className="px-4 py-2 border border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-100"
+          disabled={loading}
+          className="flex-1 px-6 py-3 border-2 border-gray-300 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Назад
+          ← Назад
         </button>
 
         <button
           onClick={onSubmit}
-          disabled={loading || !selectedDoctorId || !appointmentTime || !address}
-          className={`px-4 py-2 rounded-lg font-semibold text-white transition flex items-center justify-center ${
-            loading || !selectedDoctorId || !appointmentTime || !address
-              ? "bg-blue-300 cursor-not-allowed"
-              : "bg-blue-600 hover:bg-blue-700"
+          disabled={loading || !appointmentTime || !address}
+          className={`flex-1 px-6 py-4 rounded-xl font-bold text-white text-lg transition-all duration-200 shadow-lg flex items-center justify-center gap-2 ${
+            loading || !appointmentTime || !address
+              ? "bg-gray-300 cursor-not-allowed"
+              : "bg-gradient-to-r from-[#3772ff] to-[#2956bf] hover:shadow-xl hover:shadow-[#3772ff]/30 hover:-translate-y-0.5 active:translate-y-0"
           }`}
         >
           {loading ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              <Loader2 className="w-5 h-5 animate-spin" />
               Отправка...
             </>
           ) : (
