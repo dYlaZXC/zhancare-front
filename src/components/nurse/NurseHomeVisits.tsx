@@ -2,12 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faHome, faMapMarkerAlt, faClock, faUser, faPhone, faCheck, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import {
+  faHome, faMapMarkerAlt, faClock, faUser, faPhone, faCheck, faSpinner,
+  faFileLines, faXmark, faCommentMedical, faHistory, faFlask, faPrescription,
+  faDiagnoses, faNotesMedical, faClipboardList
+} from "@fortawesome/free-solid-svg-icons";
 import { api } from "@/utils/api";
 import { toast } from "react-toastify";
 
 interface HomeVisit {
   id: number;
+  patient: number;
   patient_first_name: string;
   patient_last_name: string;
   patient_phone: string | null;
@@ -19,12 +24,38 @@ interface HomeVisit {
   nurse: number | null;
 }
 
+interface ConsultationData {
+  id: number;
+  complaints: string | null;
+  anamnesis: string | null;
+  diagnostics: string | null;
+  treatment: string | null;
+  diagnosis: string | null;
+  session_notes: string | null;
+  prescription: string | null;
+  recommendations: string | null;
+  transcription: string | null;
+  scheduled_at: string | null;
+  ended_at: string | null;
+  created_at: string;
+  doctor_first_name: string;
+  doctor_last_name: string;
+  patient_first_name: string;
+  patient_last_name: string;
+}
+
 export default function NurseHomeVisits() {
   const [availableVisits, setAvailableVisits] = useState<HomeVisit[]>([]);
   const [myVisits, setMyVisits] = useState<HomeVisit[]>([]);
   const [loading, setLoading] = useState(true);
   const [acceptingId, setAcceptingId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<"available" | "my">("available");
+
+  // Consultation history modal state
+  const [showConsultationModal, setShowConsultationModal] = useState(false);
+  const [consultationData, setConsultationData] = useState<ConsultationData | null>(null);
+  const [loadingConsultation, setLoadingConsultation] = useState(false);
+  const [consultationTabActive, setConsultationTabActive] = useState<"form" | "notes" | "prescription" | "recommendations" | "transcription">("form");
 
   useEffect(() => {
     fetchAppointments();
@@ -73,6 +104,27 @@ export default function NurseHomeVisits() {
     }
   };
 
+  const fetchPatientConsultationHistory = async (patientId: number) => {
+    setLoadingConsultation(true);
+    setShowConsultationModal(true);
+    setConsultationData(null);
+
+    try {
+      const response = await api.get(`/consultations/patient-latest/?patient_id=${patientId}`);
+      setConsultationData(response.data);
+    } catch (error: any) {
+      console.error("Error fetching consultation history:", error);
+      if (error?.response?.status === 404) {
+        toast.info("У пациента пока нет истории консультаций");
+      } else {
+        toast.error("Ошибка при загрузке истории консультаций");
+      }
+      setShowConsultationModal(false);
+    } finally {
+      setLoadingConsultation(false);
+    }
+  };
+
   const formatDateTime = (dateTimeString: string) => {
     const date = new Date(dateTimeString);
     const dateStr = date.toLocaleDateString("ru-RU");
@@ -112,6 +164,271 @@ export default function NurseHomeVisits() {
       default:
         return "Неизвестно";
     }
+  };
+
+  const renderConsultationModal = () => {
+    if (!showConsultationModal) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+          {/* Modal Header */}
+          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between"
+               style={{ background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)' }}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
+                <FontAwesomeIcon icon={faFileLines} className="text-white text-lg" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">
+                  История консультаций: {consultationData ? `${consultationData.patient_first_name} ${consultationData.patient_last_name}` : '...'}
+                </h2>
+                <p className="text-sm text-white/80">Агрегированные данные из всех консультаций</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowConsultationModal(false)}
+              className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+            >
+              <FontAwesomeIcon icon={faXmark} className="text-white text-xl" />
+            </button>
+          </div>
+
+          {/* Modal Content */}
+          <div className="flex-1 overflow-y-auto">
+            {loadingConsultation ? (
+              <div className="flex flex-col items-center justify-center p-12">
+                <FontAwesomeIcon icon={faSpinner} className="text-6xl text-blue-600 mb-4 animate-spin" />
+                <p className="text-gray-500 text-lg">Загрузка истории консультаций...</p>
+              </div>
+            ) : consultationData ? (
+              <div>
+                {/* Consultation Info */}
+                <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600">Пациент</p>
+                      <p className="font-semibold text-gray-900">
+                        {consultationData.patient_first_name} {consultationData.patient_last_name}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Врач</p>
+                      <p className="font-semibold text-gray-900">
+                        {consultationData.doctor_first_name} {consultationData.doctor_last_name}
+                      </p>
+                    </div>
+                    <div className="text-left md:text-right">
+                      <p className="text-sm text-gray-600">Дата консультации</p>
+                      <p className="font-semibold text-gray-900">
+                        {(() => {
+                          const dateToShow = consultationData.ended_at || consultationData.scheduled_at || consultationData.created_at;
+                          return dateToShow
+                            ? new Date(dateToShow).toLocaleDateString("ru-RU", {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit"
+                              })
+                            : "Не указано";
+                        })()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tabs */}
+                <div className="flex border-b border-gray-200 overflow-x-auto">
+                  <button
+                    onClick={() => setConsultationTabActive("form")}
+                    className={`px-6 py-3 font-semibold text-sm whitespace-nowrap transition-all border-b-2 ${
+                      consultationTabActive === "form"
+                        ? "border-blue-600 text-blue-600"
+                        : "border-transparent text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    <FontAwesomeIcon icon={faClipboardList} className="mr-2" />
+                    Консультационный лист
+                  </button>
+                  <button
+                    onClick={() => setConsultationTabActive("notes")}
+                    className={`px-6 py-3 font-semibold text-sm whitespace-nowrap transition-all border-b-2 ${
+                      consultationTabActive === "notes"
+                        ? "border-blue-600 text-blue-600"
+                        : "border-transparent text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    <FontAwesomeIcon icon={faNotesMedical} className="mr-2" />
+                    Заметки
+                  </button>
+                  <button
+                    onClick={() => setConsultationTabActive("prescription")}
+                    className={`px-6 py-3 font-semibold text-sm whitespace-nowrap transition-all border-b-2 ${
+                      consultationTabActive === "prescription"
+                        ? "border-blue-600 text-blue-600"
+                        : "border-transparent text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    <FontAwesomeIcon icon={faPrescription} className="mr-2" />
+                    Рецепт
+                  </button>
+                  <button
+                    onClick={() => setConsultationTabActive("recommendations")}
+                    className={`px-6 py-3 font-semibold text-sm whitespace-nowrap transition-all border-b-2 ${
+                      consultationTabActive === "recommendations"
+                        ? "border-blue-600 text-blue-600"
+                        : "border-transparent text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    <FontAwesomeIcon icon={faFileLines} className="mr-2" />
+                    Рекомендации
+                  </button>
+                  {consultationData.transcription && (
+                    <button
+                      onClick={() => setConsultationTabActive("transcription")}
+                      className={`px-6 py-3 font-semibold text-sm whitespace-nowrap transition-all border-b-2 ${
+                        consultationTabActive === "transcription"
+                          ? "border-blue-600 text-blue-600"
+                          : "border-transparent text-gray-500 hover:text-gray-700"
+                      }`}
+                    >
+                      <FontAwesomeIcon icon={faFileLines} className="mr-2" />
+                      Транскрипция
+                    </button>
+                  )}
+                </div>
+
+                {/* Tab Content */}
+                <div className="p-6">
+                  {consultationTabActive === "form" && (
+                    <div className="space-y-6">
+                      {/* Complaints */}
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <FontAwesomeIcon icon={faCommentMedical} className="text-rose-600" />
+                          <h3 className="font-semibold text-gray-900">Жалобы пациента</h3>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <p className="text-gray-700 whitespace-pre-wrap">
+                            {consultationData.complaints && consultationData.complaints !== '<null>' ? consultationData.complaints : "Не указано"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Anamnesis */}
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <FontAwesomeIcon icon={faHistory} className="text-amber-600" />
+                          <h3 className="font-semibold text-gray-900">Анамнез</h3>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <p className="text-gray-700 whitespace-pre-wrap">
+                            {consultationData.anamnesis && consultationData.anamnesis !== '<null>' ? consultationData.anamnesis : "Не указано"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Diagnostics */}
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <FontAwesomeIcon icon={faFlask} className="text-cyan-600" />
+                          <h3 className="font-semibold text-gray-900">Диагностика</h3>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <p className="text-gray-700 whitespace-pre-wrap">
+                            {consultationData.diagnostics && consultationData.diagnostics !== '<null>' ? consultationData.diagnostics : "Не указано"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Treatment */}
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <FontAwesomeIcon icon={faPrescription} className="text-blue-600" />
+                          <h3 className="font-semibold text-gray-900">Лечение и рекомендации</h3>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <p className="text-gray-700 whitespace-pre-wrap">
+                            {consultationData.treatment && consultationData.treatment !== '<null>' ? consultationData.treatment : "Не указано"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Diagnosis */}
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <FontAwesomeIcon icon={faDiagnoses} className="text-emerald-600" />
+                          <h3 className="font-semibold text-gray-900">Диагноз</h3>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <p className="text-gray-700 whitespace-pre-wrap">
+                            {consultationData.diagnosis && consultationData.diagnosis !== '<null>' ? consultationData.diagnosis : "Не указано"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {consultationTabActive === "notes" && (
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-700 whitespace-pre-wrap">
+                        {consultationData.session_notes && consultationData.session_notes !== '<null>' ? consultationData.session_notes : "Заметки отсутствуют"}
+                      </p>
+                    </div>
+                  )}
+
+                  {consultationTabActive === "prescription" && (
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-700 whitespace-pre-wrap">
+                        {consultationData.prescription && consultationData.prescription !== '<null>' ? consultationData.prescription : "Рецепт не выписан"}
+                      </p>
+                    </div>
+                  )}
+
+                  {consultationTabActive === "recommendations" && (
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-700 whitespace-pre-wrap">
+                        {consultationData.recommendations && consultationData.recommendations !== '<null>' ? consultationData.recommendations : "Рекомендации отсутствуют"}
+                      </p>
+                    </div>
+                  )}
+
+                  {consultationTabActive === "transcription" && (
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-700 whitespace-pre-wrap">
+                        {consultationData.transcription && consultationData.transcription !== '<null>' ? consultationData.transcription : "Транскрипция отсутствует"}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-12">
+                <FontAwesomeIcon icon={faFileLines} className="text-6xl text-gray-300 mb-4" />
+                <p className="text-gray-500 text-lg">Нет доступных данных</p>
+              </div>
+            )}
+          </div>
+
+          {/* Modal Footer */}
+          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <span>
+                <FontAwesomeIcon icon={faFileLines} className="mr-1" />
+                Только для просмотра
+              </span>
+              <button
+                onClick={() => setShowConsultationModal(false)}
+                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors"
+              >
+                Закрыть
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const renderVisitCard = (visit: HomeVisit, showAcceptButton: boolean = false) => {
@@ -170,6 +487,21 @@ export default function NurseHomeVisits() {
                 <p className="text-sm text-gray-600"><strong>Симптомы:</strong> {visit.symptoms}</p>
               </div>
             )}
+
+            {/* View Patient History Button */}
+            <div className="pl-13 mt-3">
+              <button
+                onClick={() => fetchPatientConsultationHistory(visit.patient)}
+                className="px-4 py-2 rounded-lg text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-300"
+                style={{
+                  background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
+                  color: 'white'
+                }}
+              >
+                <FontAwesomeIcon icon={faFileLines} className="mr-2" />
+                История консультаций
+              </button>
+            </div>
           </div>
 
           {/* Right side - Status & Actions */}
@@ -218,18 +550,22 @@ export default function NurseHomeVisits() {
   };
 
   return (
-    <div className="p-4 sm:p-6">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg"
-               style={{ background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)' }}>
-            <FontAwesomeIcon icon={faHome} className="text-lg" />
-          </div>
-          Мои вызовы на дом
-        </h1>
-        <p className="text-gray-600">Список вызовов на дом</p>
-      </div>
+    <>
+      {/* Consultation History Modal */}
+      {renderConsultationModal()}
+
+      <div className="p-4 sm:p-6">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg"
+                 style={{ background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)' }}>
+              <FontAwesomeIcon icon={faHome} className="text-lg" />
+            </div>
+            Мои вызовы на дом
+          </h1>
+          <p className="text-gray-600">Список вызовов на дом</p>
+        </div>
 
       {/* Tabs */}
       <div className="mb-6 flex gap-4 border-b border-gray-200">
@@ -287,6 +623,7 @@ export default function NurseHomeVisits() {
           </div>
         </>
       )}
-    </div>
+      </div>
+    </>
   );
 }
