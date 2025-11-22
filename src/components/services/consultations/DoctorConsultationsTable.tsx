@@ -46,7 +46,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
   onStatusChange
 }) => {
   const { consultations: hookConsultations, fetchConsultations } = useConsultationManager();
-  const consultations = propConsultations || hookConsultations || [];
+  const consultations = useMemo(() => propConsultations || hookConsultations || [], [propConsultations, hookConsultations]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
   const [typeFilter, setTypeFilter] = useState<FilterType>("all");

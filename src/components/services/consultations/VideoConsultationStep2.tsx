@@ -90,6 +90,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
         fetchDoctorTimeslots(doctor.id);
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doctors, isUrgent]);
 
 
@@ -117,6 +118,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
         setIsPolling(false);
       };
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doctors, isUrgent, lastUpdateTime]);
 
   const generateDynamicTimeslots = (doctorId: number, bookedSlots: string[] = []) => {

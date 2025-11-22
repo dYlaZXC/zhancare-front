@@ -213,7 +213,7 @@ const PatientVideoFrame: React.FC<PatientVideoFrameProps> = ({
     // const emailHash = userEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, "");
     const emailHash = "Пациент";
     return emailHash;
-  }, [userEmail]);
+  }, []);
 
 
   // Token fetching logic

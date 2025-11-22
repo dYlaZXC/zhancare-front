@@ -97,11 +97,13 @@ const ClinicsSelection: React.FC<ClinicsSelectionProps> = ({ onSelectClinic, onS
   // Fetch clinics when filters change
   useEffect(() => {
     fetchClinics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, debouncedSearch, selectedCity, selectedCategory, userLocation, searchRadius]);
 
   useEffect(() => {
     fetchCities();
     fetchCategories();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchClinics = async () => {
@@ -777,7 +779,7 @@ const ClinicsSelection: React.FC<ClinicsSelectionProps> = ({ onSelectClinic, onS
                   Клиники не найдены в радиусе {searchRadius} км
                 </p>
                 <p className="text-gray-400 mb-4">
-                  Попробуйте увеличить радиус поиска или отключить фильтр "Рядом со мной"
+                  Попробуйте увеличить радиус поиска или отключить фильтр &ldquo;Рядом со мной&rdquo;
                 </p>
                 <div className="flex items-center justify-center gap-3">
                   <button

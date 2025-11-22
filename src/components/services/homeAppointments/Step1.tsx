@@ -162,6 +162,7 @@ const Step1: React.FC<Step1Props> = ({
     }, 300);
 
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address]); // Remove userLocation and mapCenter from dependencies to prevent re-fetching
 
   // Handle suggestion selection

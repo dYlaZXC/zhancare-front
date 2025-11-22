@@ -39,7 +39,7 @@ interface ConsultationsTableProps {
 type FilterStatus = "all" | "pending" | "ongoing" | "completed" | "cancelled" | "missed" | "planned" | "scheduled";
 type FilterType = "all" | "video" | "chat" | "phone";
 
-const ConsultationsTable: React.FC<ConsultationsTableProps> = ({ 
+const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
   consultations: propConsultations,
   showFilters = true,
   onAccept,
@@ -48,7 +48,7 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
 }) => {
   const { user } = useAuth();
   const { consultations: hookConsultations, fetchConsultations } = useConsultationManager();
-  const consultations = propConsultations || hookConsultations || [];
+  const consultations = useMemo(() => propConsultations || hookConsultations || [], [propConsultations, hookConsultations]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
   const [typeFilter, setTypeFilter] = useState<FilterType>("all");

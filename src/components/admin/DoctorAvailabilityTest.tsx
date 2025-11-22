@@ -67,6 +67,7 @@ const DoctorAvailabilityTest: React.FC = () => {
       websocketService.off('disconnect', handleWebSocketDisconnect);
       websocketService.offDoctorAvailabilityChanged(handleDoctorAvailabilityChange);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const addEvent = (message: string) => {

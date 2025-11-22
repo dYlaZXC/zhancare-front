@@ -363,6 +363,7 @@ export function useConsultationWebSocket(config: WebSocketConfig) {
       consultationWebSocket.disconnect();
       setIsConnected(false);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {

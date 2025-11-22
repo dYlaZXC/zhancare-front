@@ -286,6 +286,7 @@ const VideoConsultation: React.FC = () => {
       websocketService.off('consultation_status_changed', handleConsultationStatusChange);
       websocketService.disconnect();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, fetchDoctors, selectedDoctorId]);
 
   useEffect(() => {
@@ -342,7 +343,9 @@ const VideoConsultation: React.FC = () => {
         clearInterval(pollingInterval);
       };
     }
-  }, [waiting, meetingId, cancelConsultation, websocketConnected, token, router]);
+    // Dependencies are intentionally limited to prevent re-triggering the polling loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [waiting, meetingId]);
 
   const handleAIRecommend = async () => {
     if (loadingAI || !token) return;

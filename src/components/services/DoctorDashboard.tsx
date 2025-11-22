@@ -111,6 +111,7 @@ const DoctorDashboard: React.FC = () => {
         websocketService.off('consultation_status_changed', handleStatusChanged);
       };
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, notificationSound]);
 
   const fetchConsultations = async () => {
