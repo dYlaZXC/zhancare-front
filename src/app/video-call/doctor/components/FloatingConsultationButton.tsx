@@ -14,7 +14,10 @@ import {
   faClipboardList,
   faRobot,
   faMicrophone,
-  faCircle
+  faCircle,
+  faPen,
+  faEraser,
+  faCheck
 } from "@fortawesome/free-solid-svg-icons";
 import ConsultationForm, { ConsultationFormData } from "./ConsultationForm";
 import { Consultation } from "@/types/consultation";
@@ -216,7 +219,100 @@ ${consultationFormData.diagnosis ? `Диагноз: ${consultationFormData.diagn
     console.log("Saving consultation data:", allData);
   };
 
-  const handleGenerateReport = () => {
+  // Signature state and refs
+  const [showSignatureModal, setShowSignatureModal] = useState(false);
+  const [signatureData, setSignatureData] = useState<string | null>(null);
+  const [pendingPdfGeneration, setPendingPdfGeneration] = useState(false);
+  const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
+  const isDrawingRef = useRef(false);
+
+  // Signature drawing functions
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+
+    isDrawingRef.current = true;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    let x, y;
+
+    if ('touches' in e) {
+      x = e.touches[0].clientX - rect.left;
+      y = e.touches[0].clientY - rect.top;
+    } else {
+      x = e.clientX - rect.left;
+      y = e.clientY - rect.top;
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  };
+
+  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (!isDrawingRef.current) return;
+
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    let x, y;
+
+    if ('touches' in e) {
+      e.preventDefault();
+      x = e.touches[0].clientX - rect.left;
+      y = e.touches[0].clientY - rect.top;
+    } else {
+      x = e.clientX - rect.left;
+      y = e.clientY - rect.top;
+    }
+
+    ctx.lineTo(x, y);
+    ctx.strokeStyle = '#1e3a5f';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+  };
+
+  const stopDrawing = () => {
+    isDrawingRef.current = false;
+  };
+
+  const clearSignature = () => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+
+  const saveSignature = async () => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+
+    const dataUrl = canvas.toDataURL('image/png');
+    setSignatureData(dataUrl);
+    setShowSignatureModal(false);
+
+    // If we were waiting to generate PDF, do it now
+    if (pendingPdfGeneration) {
+      setPendingPdfGeneration(false);
+      // Small delay to ensure state is updated
+      setTimeout(async () => {
+        await generatePdfWithSignature(dataUrl);
+      }, 100);
+    }
+  };
+
+  // Generate PDF with a specific signature (used when signature is just created)
+  const generatePdfWithSignature = async (signature: string) => {
     const allData = {
       ...consultationFormData,
       sessionNotes,
@@ -226,6 +322,347 @@ ${consultationFormData.diagnosis ? `Диагноз: ${consultationFormData.diagn
     if (onGenerateReport) {
       onGenerateReport(allData);
     }
+
+    // Dynamic import of html2pdf.js (client-side only)
+    const html2pdf = (await import('html2pdf.js')).default;
+
+    // Generate PDF report
+    const currentDate = new Date();
+    const formattedDate = currentDate.toLocaleDateString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+    const formattedTime = currentDate.toLocaleTimeString('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    // Doctor name
+    const doctorName = consultation.doctor_first_name
+      ? `${consultation.doctor_first_name} ${consultation.doctor_last_name || ''}`.trim()
+      : 'Врач';
+
+    // Create HTML content for PDF with Times New Roman font
+    const pdfContent = `
+      <div style="font-family: 'Times New Roman', Times, serif; padding: 30px 40px; max-width: 800px; margin: 0 auto; color: #000; font-size: 14px; line-height: 1.5;">
+        <!-- Header with logo -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #1e3a5f;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <img src="/logosaas.png" alt="ZhanCare Logo" style="height: 45px; width: auto;" />
+            <div>
+              <h1 style="margin: 0; font-size: 20px; color: #1e3a5f; font-weight: bold; font-family: 'Times New Roman', Times, serif;">ZhanCare</h1>
+              <p style="margin: 0; font-size: 11px; color: #555; font-family: 'Times New Roman', Times, serif;">Медицинская платформа</p>
+            </div>
+          </div>
+          <div style="text-align: right; font-size: 12px; color: #333;">
+            <p style="margin: 0;">Дата: <strong>${formattedDate}</strong></p>
+            <p style="margin: 3px 0 0;">Время: <strong>${formattedTime}</strong></p>
+          </div>
+        </div>
+
+        <!-- Title -->
+        <div style="text-align: center; margin-bottom: 25px;">
+          <h2 style="margin: 0; font-size: 18px; color: #000; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Консультационный лист</h2>
+          <p style="margin: 5px 0 0; font-size: 12px; color: #555;">Медицинское заключение</p>
+        </div>
+
+        <!-- Patient & Doctor Info -->
+        <table style="width: 100%; margin-bottom: 20px; border-collapse: collapse;">
+          <tr>
+            <td style="width: 50%; padding: 10px; border: 1px solid #ccc; background: #f8f9fa;">
+              <strong style="font-size: 12px; color: #1e3a5f;">ПАЦИЕНТ:</strong><br/>
+              <span style="font-size: 14px;">${consultation.patient_name}</span>
+            </td>
+            <td style="width: 50%; padding: 10px; border: 1px solid #ccc; background: #f8f9fa;">
+              <strong style="font-size: 12px; color: #1e3a5f;">ЛЕЧАЩИЙ ВРАЧ:</strong><br/>
+              <span style="font-size: 14px;">${doctorName}</span>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Consultation sections -->
+        ${consultationFormData.complaints ? `
+        <div style="margin-bottom: 15px; page-break-inside: avoid;">
+          <h3 style="margin: 0 0 8px; font-size: 13px; color: #1e3a5f; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #1e3a5f; padding-bottom: 3px;">Жалобы пациента</h3>
+          <p style="margin: 0; font-size: 14px; color: #000; text-align: justify; white-space: pre-wrap;">${consultationFormData.complaints}</p>
+        </div>
+        ` : ''}
+
+        ${consultationFormData.anamnesis ? `
+        <div style="margin-bottom: 15px; page-break-inside: avoid;">
+          <h3 style="margin: 0 0 8px; font-size: 13px; color: #1e3a5f; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #1e3a5f; padding-bottom: 3px;">Анамнез заболевания</h3>
+          <p style="margin: 0; font-size: 14px; color: #000; text-align: justify; white-space: pre-wrap;">${consultationFormData.anamnesis}</p>
+        </div>
+        ` : ''}
+
+        ${consultationFormData.diagnostics ? `
+        <div style="margin-bottom: 15px; page-break-inside: avoid;">
+          <h3 style="margin: 0 0 8px; font-size: 13px; color: #1e3a5f; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #1e3a5f; padding-bottom: 3px;">Обследование и диагностика</h3>
+          <p style="margin: 0; font-size: 14px; color: #000; text-align: justify; white-space: pre-wrap;">${consultationFormData.diagnostics}</p>
+        </div>
+        ` : ''}
+
+        ${consultationFormData.diagnosis ? `
+        <div style="margin-bottom: 15px; page-break-inside: avoid; background: #f0f7ff; padding: 12px; border-left: 3px solid #1e3a5f;">
+          <h3 style="margin: 0 0 8px; font-size: 13px; color: #1e3a5f; font-weight: bold; text-transform: uppercase;">Диагноз</h3>
+          <p style="margin: 0; font-size: 14px; color: #000; font-weight: bold; white-space: pre-wrap;">${consultationFormData.diagnosis}</p>
+        </div>
+        ` : ''}
+
+        ${consultationFormData.treatment ? `
+        <div style="margin-bottom: 15px; page-break-inside: avoid;">
+          <h3 style="margin: 0 0 8px; font-size: 13px; color: #1e3a5f; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #1e3a5f; padding-bottom: 3px;">Назначенное лечение</h3>
+          <p style="margin: 0; font-size: 14px; color: #000; text-align: justify; white-space: pre-wrap;">${consultationFormData.treatment}</p>
+        </div>
+        ` : ''}
+
+        ${prescription ? `
+        <div style="margin-bottom: 15px; page-break-inside: avoid; background: #fff8e6; padding: 12px; border: 1px dashed #d4a000;">
+          <h3 style="margin: 0 0 8px; font-size: 13px; color: #8b6914; font-weight: bold; text-transform: uppercase;">Рецепт</h3>
+          <p style="margin: 0; font-size: 14px; color: #000; white-space: pre-wrap;">${prescription}</p>
+        </div>
+        ` : ''}
+
+        ${recommendations ? `
+        <div style="margin-bottom: 15px; page-break-inside: avoid;">
+          <h3 style="margin: 0 0 8px; font-size: 13px; color: #1e3a5f; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #1e3a5f; padding-bottom: 3px;">Рекомендации</h3>
+          <p style="margin: 0; font-size: 14px; color: #000; text-align: justify; white-space: pre-wrap;">${recommendations}</p>
+        </div>
+        ` : ''}
+
+        ${sessionNotes ? `
+        <div style="margin-bottom: 15px; page-break-inside: avoid;">
+          <h3 style="margin: 0 0 8px; font-size: 13px; color: #666; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #ccc; padding-bottom: 3px;">Примечания</h3>
+          <p style="margin: 0; font-size: 13px; color: #555; font-style: italic; text-align: justify; white-space: pre-wrap;">${sessionNotes}</p>
+        </div>
+        ` : ''}
+
+        <!-- Footer with signature -->
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ccc;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="width: 50%; vertical-align: bottom; padding: 10px 0;">
+                <p style="margin: 0; font-size: 11px; color: #777;">Документ сформирован: ${formattedDate} ${formattedTime}</p>
+                <p style="margin: 3px 0 0; font-size: 11px; color: #777;">© ZhanCare ${currentDate.getFullYear()}</p>
+              </td>
+              <td style="width: 50%; text-align: right; vertical-align: bottom; padding: 10px 0;">
+                <div style="display: inline-block; text-align: left;">
+                  <p style="margin: 0 0 5px; font-size: 12px; color: #333;">Лечащий врач: <strong>${doctorName}</strong></p>
+                  <img src="${signature}" style="height: 50px; width: auto; margin: 5px 0;" alt="Подпись врача" />
+                  <p style="margin: 5px 0 0; font-size: 11px; color: #555;">Подпись / М.П.</p>
+                </div>
+              </td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    `;
+
+    // Create a temporary container
+    const container = document.createElement('div');
+    container.innerHTML = pdfContent;
+    document.body.appendChild(container);
+
+    // Generate PDF
+    const opt = {
+      margin: 10,
+      filename: `consultation_${consultation.patient_name.replace(/\s+/g, '_')}_${formattedDate.replace(/\./g, '-')}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
+    };
+
+    try {
+      await html2pdf().set(opt).from(container).save();
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    } finally {
+      // Clean up
+      document.body.removeChild(container);
+    }
+  };
+
+  const handleGenerateReport = async () => {
+    // If no signature yet, show signature modal first
+    if (!signatureData) {
+      setPendingPdfGeneration(true);
+      setShowSignatureModal(true);
+      return;
+    }
+
+    await generatePdf();
+  };
+
+  const generatePdf = async () => {
+    const allData = {
+      ...consultationFormData,
+      sessionNotes,
+      prescription,
+      recommendations
+    };
+    if (onGenerateReport) {
+      onGenerateReport(allData);
+    }
+
+    // Dynamic import of html2pdf.js (client-side only)
+    const html2pdf = (await import('html2pdf.js')).default;
+
+    // Generate PDF report
+    const currentDate = new Date();
+    const formattedDate = currentDate.toLocaleDateString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+    const formattedTime = currentDate.toLocaleTimeString('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    // Doctor name
+    const doctorName = consultation.doctor_first_name
+      ? `${consultation.doctor_first_name} ${consultation.doctor_last_name || ''}`.trim()
+      : 'Врач';
+
+    // Create HTML content for PDF with Times New Roman font
+    const pdfContent = `
+      <div style="font-family: 'Times New Roman', Times, serif; padding: 30px 40px; max-width: 800px; margin: 0 auto; color: #000; font-size: 14px; line-height: 1.5;">
+        <!-- Header with logo -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #1e3a5f;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <img src="/logosaas_new2.png" alt="ZhanCare Logo" style="height: 45px; width: auto;" />
+          </div>
+          <div style="text-align: right; font-size: 12px; color: #333;">
+            <p style="margin: 0;">Дата: <strong>${formattedDate}</strong></p>
+            <p style="margin: 3px 0 0;">Время: <strong>${formattedTime}</strong></p>
+          </div>
+        </div>
+
+        <!-- Title -->
+        <div style="text-align: center; margin-bottom: 25px;">
+          <h2 style="margin: 0; font-size: 18px; color: #000; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Консультационный лист</h2>
+          <p style="margin: 5px 0 0; font-size: 12px; color: #555;">Медицинское заключение</p>
+        </div>
+
+        <!-- Patient & Doctor Info -->
+        <table style="width: 100%; margin-bottom: 20px; border-collapse: collapse;">
+          <tr>
+            <td style="width: 50%; padding: 10px; border: 1px solid #ccc; background: #f8f9fa;">
+              <strong style="font-size: 12px; color: #1e3a5f;">ПАЦИЕНТ:</strong><br/>
+              <span style="font-size: 14px;">${consultation.patient_name}</span>
+            </td>
+            <td style="width: 50%; padding: 10px; border: 1px solid #ccc; background: #f8f9fa;">
+              <strong style="font-size: 12px; color: #1e3a5f;">ЛЕЧАЩИЙ ВРАЧ:</strong><br/>
+              <span style="font-size: 14px;">${doctorName}</span>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Consultation sections -->
+        ${consultationFormData.complaints ? `
+        <div style="margin-bottom: 15px; page-break-inside: avoid;">
+          <h3 style="margin: 0 0 8px; font-size: 13px; color: #1e3a5f; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #1e3a5f; padding-bottom: 3px;">Жалобы пациента</h3>
+          <p style="margin: 0; font-size: 14px; color: #000; text-align: justify; white-space: pre-wrap;">${consultationFormData.complaints}</p>
+        </div>
+        ` : ''}
+
+        ${consultationFormData.anamnesis ? `
+        <div style="margin-bottom: 15px; page-break-inside: avoid;">
+          <h3 style="margin: 0 0 8px; font-size: 13px; color: #1e3a5f; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #1e3a5f; padding-bottom: 3px;">Анамнез заболевания</h3>
+          <p style="margin: 0; font-size: 14px; color: #000; text-align: justify; white-space: pre-wrap;">${consultationFormData.anamnesis}</p>
+        </div>
+        ` : ''}
+
+        ${consultationFormData.diagnostics ? `
+        <div style="margin-bottom: 15px; page-break-inside: avoid;">
+          <h3 style="margin: 0 0 8px; font-size: 13px; color: #1e3a5f; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #1e3a5f; padding-bottom: 3px;">Обследование и диагностика</h3>
+          <p style="margin: 0; font-size: 14px; color: #000; text-align: justify; white-space: pre-wrap;">${consultationFormData.diagnostics}</p>
+        </div>
+        ` : ''}
+
+        ${consultationFormData.diagnosis ? `
+        <div style="margin-bottom: 15px; page-break-inside: avoid; background: #f0f7ff; padding: 12px; border-left: 3px solid #1e3a5f;">
+          <h3 style="margin: 0 0 8px; font-size: 13px; color: #1e3a5f; font-weight: bold; text-transform: uppercase;">Диагноз</h3>
+          <p style="margin: 0; font-size: 14px; color: #000; font-weight: bold; white-space: pre-wrap;">${consultationFormData.diagnosis}</p>
+        </div>
+        ` : ''}
+
+        ${consultationFormData.treatment ? `
+        <div style="margin-bottom: 15px; page-break-inside: avoid;">
+          <h3 style="margin: 0 0 8px; font-size: 13px; color: #1e3a5f; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #1e3a5f; padding-bottom: 3px;">Назначенное лечение</h3>
+          <p style="margin: 0; font-size: 14px; color: #000; text-align: justify; white-space: pre-wrap;">${consultationFormData.treatment}</p>
+        </div>
+        ` : ''}
+
+        ${prescription ? `
+        <div style="margin-bottom: 15px; page-break-inside: avoid; background: #fff8e6; padding: 12px; border: 1px dashed #d4a000;">
+          <h3 style="margin: 0 0 8px; font-size: 13px; color: #8b6914; font-weight: bold; text-transform: uppercase;">Рецепт</h3>
+          <p style="margin: 0; font-size: 14px; color: #000; white-space: pre-wrap;">${prescription}</p>
+        </div>
+        ` : ''}
+
+        ${recommendations ? `
+        <div style="margin-bottom: 15px; page-break-inside: avoid;">
+          <h3 style="margin: 0 0 8px; font-size: 13px; color: #1e3a5f; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #1e3a5f; padding-bottom: 3px;">Рекомендации</h3>
+          <p style="margin: 0; font-size: 14px; color: #000; text-align: justify; white-space: pre-wrap;">${recommendations}</p>
+        </div>
+        ` : ''}
+
+        ${sessionNotes ? `
+        <div style="margin-bottom: 15px; page-break-inside: avoid;">
+          <h3 style="margin: 0 0 8px; font-size: 13px; color: #666; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #ccc; padding-bottom: 3px;">Примечания</h3>
+          <p style="margin: 0; font-size: 13px; color: #555; font-style: italic; text-align: justify; white-space: pre-wrap;">${sessionNotes}</p>
+        </div>
+        ` : ''}
+
+        <!-- Footer with signature -->
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ccc;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="width: 50%; vertical-align: bottom; padding: 10px 0;">
+                <p style="margin: 0; font-size: 11px; color: #777;">Документ сформирован: ${formattedDate} ${formattedTime}</p>
+                <p style="margin: 3px 0 0; font-size: 11px; color: #777;">© ZhanCare ${currentDate.getFullYear()}</p>
+              </td>
+              <td style="width: 50%; text-align: right; vertical-align: bottom; padding: 10px 0;">
+                <div style="display: inline-block; text-align: left;">
+                  <p style="margin: 0 0 5px; font-size: 12px; color: #333;">Лечащий врач: <strong>${doctorName}</strong></p>
+                  ${signatureData
+                    ? `<img src="${signatureData}" style="height: 50px; width: auto; margin: 5px 0;" alt="Подпись врача" />`
+                    : `<div style="border-bottom: 1px solid #000; width: 150px; height: 30px; margin: 5px 0;"></div>`
+                  }
+                  <p style="margin: 5px 0 0; font-size: 11px; color: #555;">Подпись / М.П.</p>
+                </div>
+              </td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    `;
+
+    // Create a temporary container
+    const container = document.createElement('div');
+    container.innerHTML = pdfContent;
+    document.body.appendChild(container);
+
+    // Generate PDF
+    const opt = {
+      margin: 10,
+      filename: `consultation_${consultation.patient_name.replace(/\s+/g, '_')}_${formattedDate.replace(/\./g, '-')}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
+    };
+
+    try {
+      await html2pdf().set(opt).from(container).save();
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    } finally {
+      // Clean up
+      document.body.removeChild(container);
+    }
+
     console.log("Generating report with data:", allData);
   };
 
@@ -767,8 +1204,33 @@ ${consultationFormData.diagnosis ? `Диагноз: ${consultationFormData.diagn
             {/* Footer Actions - Fixed at Bottom */}
             {!isMinimized && (
               <div className="absolute bottom-0 left-0 right-0 px-4 py-3 border-t" style={{ backgroundColor: '#181732', borderColor: '#283353' }}>
+                {/* Signature indicator */}
+                {signatureData && (
+                  <div className="flex items-center gap-2 mb-2 px-2 py-1.5 rounded-lg" style={{ backgroundColor: '#1e3a5f20' }}>
+                    <FontAwesomeIcon icon={faCheck} className="text-xs text-green-400" />
+                    <span className="text-xs" style={{ color: '#bcc0ca' }}>Подпись добавлена</span>
+                    <button
+                      onClick={() => setSignatureData(null)}
+                      className="ml-auto text-xs px-2 py-0.5 rounded"
+                      style={{ color: '#ef4444' }}
+                    >
+                      Удалить
+                    </button>
+                  </div>
+                )}
                 {/* Action buttons */}
                 <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowSignatureModal(true)}
+                    className="w-12 flex items-center justify-center gap-2 px-3 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:scale-105"
+                    style={{ backgroundColor: signatureData ? '#16a34a' : '#374151', color: '#ebf1ff' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = signatureData ? '#15803d' : '#4b5563'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = signatureData ? '#16a34a' : '#374151'}
+                    title="Подпись врача"
+                  >
+                    <FontAwesomeIcon icon={faPen} className="text-sm" />
+                  </button>
+
                   <button
                     onClick={handleSave}
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:scale-105"
@@ -832,6 +1294,75 @@ ${consultationFormData.diagnosis ? `Диагноз: ${consultationFormData.diagn
             `}</style>
           </div>
         </>
+      )}
+
+      {/* Signature Modal */}
+      {showSignatureModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden" style={{ backgroundColor: '#1e263e' }}>
+            {/* Modal Header */}
+            <div className="px-5 py-4 border-b flex items-center justify-between" style={{ backgroundColor: '#283353', borderColor: '#2956bf' }}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#2956bf' }}>
+                  <FontAwesomeIcon icon={faPen} className="text-lg" style={{ color: '#ebf1ff' }} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg" style={{ color: '#ebf1ff' }}>Подпись врача</h3>
+                  <p className="text-xs" style={{ color: '#bcc0ca' }}>Нарисуйте вашу подпись</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowSignatureModal(false)}
+                className="w-9 h-9 rounded-lg transition-all flex items-center justify-center"
+                style={{ backgroundColor: '#202942', color: '#ebf1ff' }}
+              >
+                <FontAwesomeIcon icon={faXmark} className="text-sm" />
+              </button>
+            </div>
+
+            {/* Canvas Area */}
+            <div className="p-5">
+              <div className="rounded-xl overflow-hidden border-2 border-dashed" style={{ borderColor: '#3772ff', backgroundColor: '#fff' }}>
+                <canvas
+                  ref={signatureCanvasRef}
+                  width={350}
+                  height={150}
+                  className="w-full cursor-crosshair touch-none"
+                  onMouseDown={startDrawing}
+                  onMouseMove={draw}
+                  onMouseUp={stopDrawing}
+                  onMouseLeave={stopDrawing}
+                  onTouchStart={startDrawing}
+                  onTouchMove={draw}
+                  onTouchEnd={stopDrawing}
+                />
+              </div>
+              <p className="text-center text-xs mt-2" style={{ color: '#bcc0ca' }}>
+                Используйте мышь или палец для рисования подписи
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-5 py-4 border-t flex gap-3" style={{ borderColor: '#283353' }}>
+              <button
+                onClick={clearSignature}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold transition-all"
+                style={{ backgroundColor: '#374151', color: '#ebf1ff' }}
+              >
+                <FontAwesomeIcon icon={faEraser} className="text-sm" />
+                <span>Очистить</span>
+              </button>
+              <button
+                onClick={saveSignature}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold transition-all"
+                style={{ backgroundColor: '#16a34a', color: '#ebf1ff' }}
+              >
+                <FontAwesomeIcon icon={faCheck} className="text-sm" />
+                <span>Сохранить</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
