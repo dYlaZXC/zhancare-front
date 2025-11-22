@@ -10,7 +10,7 @@ import { Header } from "@/components/layout/Header";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { MainContent } from "@/components/layout/MainContent";
 
-import VideoConsultation from "@/components/services/VideoConsultation";
+import VideoConsultationFlow from "@/components/services/VideoConsultationFlow";
 import Appointments from "@/components/services/HomeAppointments";
 import MedicalHistory from "@/components/services/MedicalHistory";
 import ChatDoctors from "@/components/services/ChatDoctors";
@@ -70,7 +70,7 @@ const ProfilePage = () => {
       case "profile":
         return <ProfileDetails user={userProfile} onRefetch={refetch} />;
       case "video":
-        return <VideoConsultation />;
+        return <VideoConsultationFlow />;
       case "appointments":
         return <Appointments />;
       case "history":
