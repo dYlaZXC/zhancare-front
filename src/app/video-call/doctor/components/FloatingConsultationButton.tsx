@@ -349,11 +349,7 @@ ${consultationFormData.diagnosis ? `Диагноз: ${consultationFormData.diagn
         <!-- Header with logo -->
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #1e3a5f;">
           <div style="display: flex; align-items: center; gap: 12px;">
-            <img src="/logosaas.png" alt="ZhanCare Logo" style="height: 45px; width: auto;" />
-            <div>
-              <h1 style="margin: 0; font-size: 20px; color: #1e3a5f; font-weight: bold; font-family: 'Times New Roman', Times, serif;">ZhanCare</h1>
-              <p style="margin: 0; font-size: 11px; color: #555; font-family: 'Times New Roman', Times, serif;">Медицинская платформа</p>
-            </div>
+            <img src="/logosaas_new2.png" alt="ZhanCare Logo" style="height: 45px; width: auto;" />
           </div>
           <div style="text-align: right; font-size: 12px; color: #333;">
             <p style="margin: 0;">Дата: <strong>${formattedDate}</strong></p>
