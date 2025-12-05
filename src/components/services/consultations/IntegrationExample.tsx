@@ -73,7 +73,7 @@ const VideoConsultationStep2WithTimeslots: React.FC<EnhancedStep2Props> = ({
       const response = await fetch('/api/consultations/ai-process/', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Authorization': `Token ${localStorage.getItem('access_token')}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({

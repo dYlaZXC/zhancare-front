@@ -50,7 +50,7 @@ const VideoConsultationWithTimeslots: React.FC<VideoConsultationWithTimeslotsPro
         setLoading(true);
         const response = await fetch('/api/doctors/', {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+            'Authorization': `Token ${localStorage.getItem('access_token')}`,
             'Content-Type': 'application/json',
           },
         });

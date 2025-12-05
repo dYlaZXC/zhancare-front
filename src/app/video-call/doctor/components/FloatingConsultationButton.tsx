@@ -78,6 +78,62 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
   const [prescription, setPrescription] = useState("");
   const [recommendations, setRecommendations] = useState("");
 
+  // Loading state for data fetch
+  const [isLoadingData, setIsLoadingData] = useState(false);
+
+  // Load existing consultation data from API on mount
+  useEffect(() => {
+    const loadConsultationData = async () => {
+      if (!consultation.meeting_id) return;
+
+      setIsLoadingData(true);
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/consultations/?meeting_id=${consultation.meeting_id}`,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          // API returns array, get first result
+          const consultationData = Array.isArray(data) ? data[0] : data.results?.[0] || data;
+
+          if (consultationData) {
+            // Populate form fields from API data
+            setConsultationFormData({
+              complaints: consultationData.complaints || '',
+              anamnesis: consultationData.anamnesis || '',
+              diagnostics: consultationData.diagnostics || '',
+              treatment: consultationData.treatment || '',
+              diagnosis: consultationData.diagnosis || ''
+            });
+
+            // Populate additional fields
+            if (consultationData.session_notes) {
+              setSessionNotes(consultationData.session_notes);
+            }
+            if (consultationData.prescription) {
+              setPrescription(consultationData.prescription);
+            }
+            if (consultationData.recommendations) {
+              setRecommendations(consultationData.recommendations);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error loading consultation data:', error);
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+
+    loadConsultationData();
+  }, [consultation.meeting_id]);
+
   // AI Chat states
   const [aiMessages, setAiMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
   const [aiInput, setAiInput] = useState("");

@@ -93,7 +93,7 @@ const TimeslotBooking: React.FC<TimeslotBookingProps> = ({
           `/api/consultations/timeslots/available/?doctor_id=${doctorId}&start_date=${selectedDate}&end_date=${selectedDate}&limit=20`,
           {
             headers: {
-              'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+              'Authorization': `Token ${localStorage.getItem('access_token')}`,
               'Content-Type': 'application/json',
             },
           }
@@ -127,7 +127,7 @@ const TimeslotBooking: React.FC<TimeslotBookingProps> = ({
       const response = await fetch('/api/consultations/book-scheduled/', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Authorization': `Token ${localStorage.getItem('access_token')}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({

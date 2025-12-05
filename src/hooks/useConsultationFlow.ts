@@ -41,7 +41,7 @@ export const useConsultationFlow = (): UseConsultationFlowReturn => {
       const response = await fetch('/api/consultations/ai-process/', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Authorization': `Token ${localStorage.getItem('access_token')}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -96,7 +96,7 @@ export const useConsultationFlow = (): UseConsultationFlowReturn => {
       const response = await fetch('/api/consultations/book-scheduled/', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Authorization': `Token ${localStorage.getItem('access_token')}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
