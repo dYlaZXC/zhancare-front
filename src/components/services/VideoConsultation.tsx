@@ -113,8 +113,16 @@ const VideoConsultation: React.FC = () => {
       return;
     }
 
-    // Connect to WebSocket
-    websocketService.connect(token);
+    // Connect to WebSocket (optional - if backend WebSocket is available)
+    // Silently fail if WebSocket is not available (development mode)
+    const enableWebSocket = process.env.NEXT_PUBLIC_ENABLE_WEBSOCKET !== 'false';
+
+    if (enableWebSocket) {
+      websocketService.connect(token).catch(err => {
+        // Silently fail - WebSocket is optional
+        console.debug('WebSocket connection failed (optional feature):', err);
+      });
+    }
 
     // Setup WebSocket event handlers
     const handleWebSocketConnect = () => {

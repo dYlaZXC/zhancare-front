@@ -5,9 +5,7 @@ import ClinicsSelection from "./ClinicsSelection";
 import VideoConsultation from "./VideoConsultation";
 
 /**
- * VideoConsultationFlow - обёртка, которая показывает:
- * 1. Сначала страницу выбора клиники (ClinicsSelection)
- * 2. После выбора - страницу видео-консультации (VideoConsultation)
+ * VideoConsultationFlow - Shows clinic selection first, then video consultation
  */
 const VideoConsultationFlow: React.FC = () => {
   const [selectedClinicId, setSelectedClinicId] = useState<number | null>(null);
@@ -15,7 +13,6 @@ const VideoConsultationFlow: React.FC = () => {
 
   const handleSelectClinic = (clinicId: number) => {
     setSelectedClinicId(clinicId);
-    // Можно сохранить в localStorage для persistence
     localStorage.setItem("selectedClinicId", String(clinicId));
   };
 
@@ -30,7 +27,7 @@ const VideoConsultationFlow: React.FC = () => {
     localStorage.removeItem("selectedClinicId");
   };
 
-  // Если клиника не выбрана и пользователь не пропустил - показываем страницу выбора клиники
+  // Show clinic selection if no clinic selected and not skipped
   if (!selectedClinicId && !skippedClinicSelection) {
     return (
       <ClinicsSelection
@@ -40,7 +37,7 @@ const VideoConsultationFlow: React.FC = () => {
     );
   }
 
-  // Если клиника выбрана - показываем VideoConsultation
+  // Show video consultation with back button
   return (
     <div>
       {/* Back button to clinics */}

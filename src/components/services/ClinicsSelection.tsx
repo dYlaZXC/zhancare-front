@@ -65,6 +65,50 @@ const ClinicsSelection: React.FC<ClinicsSelectionProps> = ({ onSelectClinic, onS
   const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null);
   const [detailClinic, setDetailClinic] = useState<Clinic | null>(null);
 
+  // Helper function to parse and format working hours
+  const parseWorkingHours = (hours: string | null) => {
+    if (!hours) return null;
+
+    // Split by semicolon and filter empty entries
+    const entries = hours.split(';').map(entry => entry.trim()).filter(Boolean);
+
+    // Parse into day-time pairs
+    const parsed = entries.map(entry => {
+      const colonIndex = entry.indexOf(':');
+      if (colonIndex === -1) return { day: entry, time: '' };
+
+      const day = entry.substring(0, colonIndex).trim();
+      const time = entry.substring(colonIndex + 1).trim();
+      return { day, time };
+    });
+
+    return parsed;
+  };
+
+  // Helper function to group days with same hours
+  const groupWorkingHours = (hours: string | null) => {
+    const parsed = parseWorkingHours(hours);
+    if (!parsed) return null;
+
+    // Group days by time
+    const grouped: { days: string[]; time: string }[] = [];
+
+    parsed.forEach(({ day, time }) => {
+      const existing = grouped.find(g => g.time === time);
+      if (existing) {
+        existing.days.push(day);
+      } else {
+        grouped.push({ days: [day], time });
+      }
+    });
+
+    // Format the grouped entries
+    return grouped.map(({ days, time }) => ({
+      days: days.join(', '),
+      time
+    }));
+  };
+
   // Location state for "Near me" feature
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
@@ -698,9 +742,24 @@ const ClinicsSelection: React.FC<ClinicsSelectionProps> = ({ onSelectClinic, onS
 
                       {/* Working Hours */}
                       {clinic.working_hours && (
-                        <div className="flex items-center gap-2 text-sm text-[#1b1b1b] mb-3">
-                          <Clock className="w-4 h-4 text-[#3772ff]" />
-                          <span className="truncate">{clinic.working_hours}</span>
+                        <div className="mb-3">
+                          <div className="flex items-center gap-2 text-sm font-medium text-[#1b1b1b] mb-2">
+                            <Clock className="w-4 h-4 text-[#3772ff]" />
+                            <span>Часы работы:</span>
+                          </div>
+                          <div className="space-y-1 text-xs text-[#1b1b1b] ml-6">
+                            {groupWorkingHours(clinic.working_hours)?.slice(0, 2).map((entry, idx) => (
+                              <div key={idx} className="flex gap-2">
+                                <span className="font-medium min-w-[60px]">{entry.days}:</span>
+                                <span className="text-[#b8b8b8]">{entry.time}</span>
+                              </div>
+                            ))}
+                            {groupWorkingHours(clinic.working_hours) && groupWorkingHours(clinic.working_hours)!.length > 2 && (
+                              <div className="text-[#3772ff] font-medium">
+                                +еще {groupWorkingHours(clinic.working_hours)!.length - 2}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
 
@@ -876,9 +935,19 @@ const ClinicsSelection: React.FC<ClinicsSelectionProps> = ({ onSelectClinic, onS
 
                 {/* Working Hours */}
                 {detailClinic.working_hours && (
-                  <div className="flex items-center gap-3 mb-4">
-                    <Clock className="w-5 h-5 text-[#3772ff] flex-shrink-0" />
-                    <span className="text-[#1b1b1b]">{detailClinic.working_hours}</span>
+                  <div className="mb-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Clock className="w-5 h-5 text-[#3772ff] flex-shrink-0" />
+                      <h3 className="font-semibold text-[#1b1b1b]">Часы работы</h3>
+                    </div>
+                    <div className="space-y-2 ml-8">
+                      {groupWorkingHours(detailClinic.working_hours)?.map((entry, idx) => (
+                        <div key={idx} className="flex gap-3 text-sm">
+                          <span className="font-medium text-[#1b1b1b] min-w-[80px]">{entry.days}:</span>
+                          <span className="text-[#b8b8b8]">{entry.time}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 
@@ -943,46 +1012,146 @@ const ClinicsSelection: React.FC<ClinicsSelectionProps> = ({ onSelectClinic, onS
         )}
       </AnimatePresence>
 
-      {/* Fixed Bottom Action Bar */}
+      {/* Confirmation Modal */}
       <AnimatePresence>
         {selectedClinic && (
           <motion.div
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-2xl p-4 z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setSelectedClinic(null)}
           >
-            <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4 flex-1 min-w-0">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#3772ff] to-[#2956bf] rounded-xl flex items-center justify-center flex-shrink-0">
-                  <Building2 className="w-6 h-6 text-white" />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="bg-gradient-to-br from-[#ebf1ff] to-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-[#c1d3ff]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header with clinic info */}
+              <div className="bg-white px-6 py-5 border-b border-[#ebf1ff]">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#3772ff] to-[#2956bf] flex items-center justify-center flex-shrink-0 shadow-lg">
+                      <Building2 className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-[#b8b8b8] mb-1">Клиника</p>
+                      <h3 className="text-lg font-bold text-[#1b1b1b] leading-tight">
+                        {selectedClinic.name}
+                      </h3>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setSelectedClinic(null)}
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-[#b8b8b8] hover:bg-[#ebf1ff] hover:text-[#3772ff] transition-all"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
-                <div className="min-w-0">
-                  <p className="font-semibold text-gray-900 truncate">
-                    {selectedClinic.name}
-                  </p>
-                  <p className="text-sm text-gray-500 truncate">
-                    {selectedClinic.city_name}
-                    {selectedClinic.address && `, ${selectedClinic.address}`}
-                  </p>
+
+                {/* Location */}
+                <div className="flex items-start gap-2 text-sm text-[#1b1b1b]">
+                  <MapPin className="w-4 h-4 text-[#3772ff] flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-medium">
+                      {selectedClinic.city_name || "Город не указан"}
+                      {selectedClinic.district_name && `, ${selectedClinic.district_name}`}
+                    </span>
+                    {selectedClinic.address && (
+                      <p className="text-[#b8b8b8] text-xs mt-0.5">{selectedClinic.address}</p>
+                    )}
+                  </div>
                 </div>
+
+                {/* Rating */}
+                {selectedClinic.rating && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                    <span className="text-sm font-semibold text-[#1b1b1b]">
+                      {selectedClinic.rating.toFixed(1)}
+                    </span>
+                    {selectedClinic.review_count && (
+                      <span className="text-xs text-[#b8b8b8]">
+                        ({selectedClinic.review_count})
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-3 flex-shrink-0">
-                <button
-                  onClick={() => setSelectedClinic(null)}
-                  className="px-4 py-3 bg-[#e8e8e8] text-[#1b1b1b] rounded-xl font-medium hover:bg-[#dddddd] transition-colors"
-                >
-                  Отмена
-                </button>
-                <button
-                  onClick={handleConfirmSelection}
-                  className="px-6 py-3 bg-gradient-to-r from-[#3772ff] to-[#5B8DEF] text-white rounded-xl font-bold hover:shadow-lg hover:scale-105 transition-all duration-300 flex items-center gap-2"
-                >
-                  Продолжить
-                  <ArrowRight className="w-5 h-5" />
-                </button>
+
+              {/* Content - Question */}
+              <div className="px-6 py-6">
+                <h2 className="text-2xl font-bold text-[#1b1b1b] text-center mb-2">
+                  Как вы хотите получить помощь?
+                </h2>
+                <p className="text-sm text-[#b8b8b8] text-center mb-6">
+                  Мы подберём врача и всё организуем за вас
+                </p>
+
+                {/* Action Cards */}
+                <div className="grid grid-cols-3 gap-3 mb-6">
+                  {/* Online Consultation */}
+                  <button
+                    onClick={handleConfirmSelection}
+                    className="group bg-white hover:bg-[#ebf1ff] border-2 border-[#c1d3ff] hover:border-[#3772ff] rounded-2xl p-4 transition-all duration-300 hover:shadow-lg"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-[#ebf1ff] group-hover:bg-[#3772ff] flex items-center justify-center mx-auto mb-2 transition-colors">
+                      <svg className="w-6 h-6 text-[#3772ff] group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <p className="text-xs font-bold text-[#1b1b1b] mb-1">Онлайн-консультация</p>
+                    <p className="text-[10px] text-[#b8b8b8] leading-tight">Связь с врачом по видео</p>
+                  </button>
+
+                  {/* In Clinic */}
+                  <button
+                    onClick={() => setSelectedClinic(null)}
+                    className="group bg-white hover:bg-[#ebf1ff] border-2 border-[#e8e8e8] hover:border-[#c1d3ff] rounded-2xl p-4 transition-all duration-300"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-[#e8e8e8] group-hover:bg-[#ebf1ff] flex items-center justify-center mx-auto mb-2 transition-colors">
+                      <Building2 className="w-6 h-6 text-[#b8b8b8] group-hover:text-[#3772ff] transition-colors" />
+                    </div>
+                    <p className="text-xs font-bold text-[#1b1b1b] mb-1">Приём в клинике</p>
+                    <p className="text-[10px] text-[#b8b8b8] leading-tight">Очная запись к врачу</p>
+                  </button>
+
+                  {/* Tests and Examinations */}
+                  <button
+                    onClick={() => setSelectedClinic(null)}
+                    className="group bg-white hover:bg-[#ebf1ff] border-2 border-[#e8e8e8] hover:border-[#c1d3ff] rounded-2xl p-4 transition-all duration-300"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-[#e8e8e8] group-hover:bg-[#ebf1ff] flex items-center justify-center mx-auto mb-2 transition-colors">
+                      <svg className="w-6 h-6 text-[#b8b8b8] group-hover:text-[#3772ff] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                      </svg>
+                    </div>
+                    <p className="text-xs font-bold text-[#1b1b1b] mb-1">Анализы и обследования</p>
+                    <p className="text-[10px] text-[#b8b8b8] leading-tight">Подбор проф. и инструм. услуг</p>
+                  </button>
+                </div>
+
+                {/* Additional info */}
+                {selectedClinic.working_hours && (
+                  <div className="bg-[#ebf1ff]/50 rounded-xl p-3 border border-[#c1d3ff]/30">
+                    <div className="flex items-start gap-2">
+                      <Clock className="w-4 h-4 text-[#3772ff] flex-shrink-0 mt-0.5" />
+                      <div className="text-xs">
+                        <p className="font-semibold text-[#1b1b1b] mb-1">Часы работы:</p>
+                        {groupWorkingHours(selectedClinic.working_hours)?.slice(0, 2).map((entry, idx) => (
+                          <div key={idx} className="text-[#1b1b1b]">
+                            <span className="font-medium">{entry.days}:</span>{' '}
+                            <span className="text-[#b8b8b8]">{entry.time}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
