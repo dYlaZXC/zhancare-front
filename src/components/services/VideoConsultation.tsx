@@ -26,14 +26,18 @@ interface AIErrorData {
   raw: string;
 }
 
-const VideoConsultation: React.FC = () => {
+interface VideoConsultationProps {
+  skipAI?: boolean;
+}
+
+const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false }) => {
   const { token } = useAuth();
   const router = useRouter();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(skipAI ? 2 : 1);
   const [symptoms, setSymptoms] = useState("");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [selectedDoctorId, setSelectedDoctorId] = useState<number | null>(null);
@@ -483,47 +487,44 @@ const VideoConsultation: React.FC = () => {
     }
   };
 
-  const handleStartCall = async () => {
-    if (!selectedDoctorId || !token) {
-      toast.error("⚠️ Пожалуйста, выберите врача.");
-      containerRef.current?.scrollIntoView({ behavior: "smooth" });
-      return;
-    }
+  // COMMENTED OUT: Urgent consultations removed - all consultations now require time slot selection
+  // const handleStartCall = async () => {
+  //   if (!selectedDoctorId || !token) {
+  //     toast.error("⚠️ Пожалуйста, выберите врача.");
+  //     containerRef.current?.scrollIntoView({ behavior: "smooth" });
+  //     return;
+  //   }
 
-    setLoadingCall(true);
-    setWaiting(true);
+  //   setLoadingCall(true);
+  //   setWaiting(true);
 
-    try {
-      // console.log("🔄 Starting consultation...");
+  //   try {
+  //     const res = await api.post(
+  //       "/consultations/start/",
+  //       {
+  //         doctor_id: selectedDoctorId,
+  //         symptoms,
+  //         is_urgent: false  // Always false now - no urgent consultations
+  //       },
+  //       { headers: { Authorization: `Token ${token}` } }
+  //     );
 
-      // Create and start the consultation (all consultations created here in Step 3)
-      const isUrgentConsultation = recommendedDoctor?.urgency === 'urgent';
-      // console.log("🔥 Creating consultation with urgency:", isUrgentConsultation, "for doctor:", selectedDoctorId);
+  //     if (res.data?.meeting_id) {
+  //       setMeetingId(res.data.meeting_id);
+  //       toast.success("⏳ Ожидаем ответа врача...");
+  //     } else {
+  //       throw new Error("Invalid meeting ID response");
+  //     }
+  //   } catch (error) {
+  //     console.error("❌ Error starting consultation:", error);
+  //     toast.error("⚠️ Не удалось начать консультацию.");
+  //     setWaiting(false);
+  //   } finally {
+  //     setLoadingCall(false);
+  //   }
+  // };
 
-      const res = await api.post(
-        "/consultations/start/",
-        {
-          doctor_id: selectedDoctorId,
-          symptoms,
-          is_urgent: isUrgentConsultation
-        },
-        { headers: { Authorization: `Token ${token}` } }
-      );
-
-      if (res.data?.meeting_id) {
-        setMeetingId(res.data.meeting_id);
-        toast.success("⏳ Ожидаем ответа врача...");
-      } else {
-        throw new Error("Invalid meeting ID response");
-      }
-    } catch (error) {
-      console.error("❌ Error starting consultation:", error);
-      toast.error("⚠️ Не удалось начать консультацию.");
-      setWaiting(false);
-    } finally {
-      setLoadingCall(false);
-    }
-  };
+  const handleStartCall = handleScheduleConsultation;
 
   return (
     <div className="min-h-screen">

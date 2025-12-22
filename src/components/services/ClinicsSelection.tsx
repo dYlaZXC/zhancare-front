@@ -19,9 +19,11 @@ import {
   Navigation,
   Sparkles,
   Bot,
+  History,
 } from "lucide-react";
 import { api } from "@/utils/api";
 import { useAuth } from "@/context/AuthContext";
+import PatientConsultationsTable from "./consultations/PatientConsultationsTable";
 
 interface Clinic {
   id: number;
@@ -48,7 +50,7 @@ interface PaginatedResponse {
 }
 
 interface ClinicsSelectionProps {
-  onSelectClinic: (clinicId: number) => void;
+  onSelectClinic: (clinicId: number, skipAI?: boolean) => void;
   onSkip?: () => void;
 }
 
@@ -64,6 +66,8 @@ const ClinicsSelection: React.FC<ClinicsSelectionProps> = ({ onSelectClinic, onS
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null);
   const [detailClinic, setDetailClinic] = useState<Clinic | null>(null);
+  const [showConsultationMethodModal, setShowConsultationMethodModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'clinics' | 'history'>('clinics');
 
   // Helper function to parse and format working hours
   const parseWorkingHours = (hours: string | null) => {
@@ -216,9 +220,14 @@ const ClinicsSelection: React.FC<ClinicsSelectionProps> = ({ onSelectClinic, onS
     setSelectedClinic(clinic);
   };
 
-  const handleConfirmSelection = () => {
+  const handleShowConsultationMethodModal = () => {
+    setShowConsultationMethodModal(true);
+  };
+
+  const handleConfirmSelection = (skipAI: boolean = false) => {
     if (selectedClinic) {
-      onSelectClinic(selectedClinic.id);
+      onSelectClinic(selectedClinic.id, skipAI);
+      setShowConsultationMethodModal(false);
     }
   };
 
@@ -386,9 +395,9 @@ const ClinicsSelection: React.FC<ClinicsSelectionProps> = ({ onSelectClinic, onS
   };
 
   return (
-    <div className="min-h-screen bg-[#ebf1ff]">
+    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       {/* Header Section - Compact */}
-      <div className="relative bg-gradient-to-r from-[#3772ff] to-[#2956bf] text-white overflow-hidden">
+      <div className="relative bg-gradient-to-r from-[#3772ff] to-[#2956bf] text-white overflow-hidden rounded-3xl mx-4 md:mx-6 mt-4 md:mt-6">
         <div className="relative w-full px-4 md:px-6 py-4 md:py-6">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -408,7 +417,7 @@ const ClinicsSelection: React.FC<ClinicsSelectionProps> = ({ onSelectClinic, onS
                     Медицинские клиники
                   </h1>
                   <p className="text-xs md:text-sm text-white/80 truncate">
-                    Выберите клинику для видео-консультации
+                    Выберите клинику для предоставления медицинских услуг
                   </p>
                 </div>
               </div>
@@ -442,8 +451,41 @@ const ClinicsSelection: React.FC<ClinicsSelectionProps> = ({ onSelectClinic, onS
         </div>
       </div>
 
-      {/* Search and Filters */}
-      <div className="w-full px-4 md:px-6 py-4 md:py-6">
+      {/* Tab Navigation */}
+      <div className="w-full px-4 md:px-6 pt-4 md:pt-6">
+        <div className="bg-white rounded-2xl shadow-lg p-2">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setActiveTab('clinics')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all flex-1 ${
+                activeTab === 'clinics'
+                  ? "bg-[#3772ff] text-white shadow-md"
+                  : "bg-transparent text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              <Building2 className="w-4 h-4" />
+              <span>Клиники</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all flex-1 ${
+                activeTab === 'history'
+                  ? "bg-[#3772ff] text-white shadow-md"
+                  : "bg-transparent text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              <History className="w-4 h-4" />
+              <span>История консультаций</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'clinics' ? (
+        <>
+          {/* Search and Filters */}
+          <div className="w-full px-4 md:px-6 py-4 md:py-6">
         <div className="bg-white rounded-2xl shadow-lg p-4 mb-4">
           {/* Search Mode Toggle */}
           <div className="flex items-center gap-2 mb-4">
@@ -686,7 +728,7 @@ const ClinicsSelection: React.FC<ClinicsSelectionProps> = ({ onSelectClinic, onS
                     )}
 
                     {/* Header with gradient */}
-                    <div className="relative h-32 bg-gradient-to-br from-[#3772ff] to-[#2956bf] overflow-hidden">
+                    <div className="relative h-32 bg-gradient-to-br from-[#3772ff] to-[#2956bf] overflow-hidden rounded-t-2xl">
                       <div className="absolute inset-0 flex items-center justify-center">
                         <Building2 className="w-16 h-16 text-white/30" />
                       </div>
@@ -870,6 +912,13 @@ const ClinicsSelection: React.FC<ClinicsSelectionProps> = ({ onSelectClinic, onS
           </div>
         )}
       </div>
+        </>
+      ) : (
+        /* History Tab */
+        <div className="w-full px-4 md:px-6">
+          <PatientConsultationsTable />
+        </div>
+      )}
 
       {/* Detail Modal */}
       <AnimatePresence>
@@ -1094,7 +1143,7 @@ const ClinicsSelection: React.FC<ClinicsSelectionProps> = ({ onSelectClinic, onS
                 <div className="grid grid-cols-3 gap-3 mb-6">
                   {/* Online Consultation */}
                   <button
-                    onClick={handleConfirmSelection}
+                    onClick={handleShowConsultationMethodModal}
                     className="group bg-white hover:bg-[#ebf1ff] border-2 border-[#c1d3ff] hover:border-[#3772ff] rounded-2xl p-4 transition-all duration-300 hover:shadow-lg"
                   >
                     <div className="w-12 h-12 rounded-xl bg-[#ebf1ff] group-hover:bg-[#3772ff] flex items-center justify-center mx-auto mb-2 transition-colors">
@@ -1135,7 +1184,7 @@ const ClinicsSelection: React.FC<ClinicsSelectionProps> = ({ onSelectClinic, onS
 
                 {/* Additional info */}
                 {selectedClinic.working_hours && (
-                  <div className="bg-[#ebf1ff]/50 rounded-xl p-3 border border-[#c1d3ff]/30">
+                  <div className="bg-[#ebf1ff]/50 rounded-xl p-3 border border-[#c1d3ff]/30 mb-4">
                     <div className="flex items-start gap-2">
                       <Clock className="w-4 h-4 text-[#3772ff] flex-shrink-0 mt-0.5" />
                       <div className="text-xs">
@@ -1150,6 +1199,150 @@ const ClinicsSelection: React.FC<ClinicsSelectionProps> = ({ onSelectClinic, onS
                     </div>
                   </div>
                 )}
+
+                {/* Bottom Action Buttons */}
+                <div className="grid grid-cols-3 gap-2">
+                  {/* Call Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (selectedClinic.phones && selectedClinic.phones.length > 0) {
+                        window.location.href = `tel:${selectedClinic.phones[0]}`;
+                      }
+                    }}
+                    disabled={!selectedClinic.phones || selectedClinic.phones.length === 0}
+                    className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-white border border-[#e8e8e8] hover:border-[#3772ff] hover:bg-[#ebf1ff] text-[#1b1b1b] hover:text-[#3772ff] rounded-xl text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                    <span>Позвонить</span>
+                  </button>
+
+                  {/* Open on Map Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const url = selectedClinic.gis2_url ||
+                        (selectedClinic.latitude && selectedClinic.longitude
+                          ? `https://2gis.kz/geo/${selectedClinic.longitude},${selectedClinic.latitude}`
+                          : null);
+                      if (url) window.open(url, '_blank');
+                    }}
+                    disabled={!selectedClinic.gis2_url && !(selectedClinic.latitude && selectedClinic.longitude)}
+                    className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-white border border-[#e8e8e8] hover:border-[#3772ff] hover:bg-[#ebf1ff] text-[#1b1b1b] hover:text-[#3772ff] rounded-xl text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <MapPin className="w-4 h-4" />
+                    <span>Открыть на карте</span>
+                  </button>
+
+                  {/* About Clinic Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDetailClinic(selectedClinic);
+                      setSelectedClinic(null);
+                    }}
+                    className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-white border border-[#e8e8e8] hover:border-[#3772ff] hover:bg-[#ebf1ff] text-[#1b1b1b] hover:text-[#3772ff] rounded-xl text-xs font-medium transition-all"
+                  >
+                    <Info className="w-4 h-4" />
+                    <span>О клинике</span>
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Consultation Method Choice Modal */}
+      <AnimatePresence>
+        {showConsultationMethodModal && selectedClinic && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => setShowConsultationMethodModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setShowConsultationMethodModal(false)}
+                className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+
+              {/* Header */}
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#ebf1ff] to-[#c1d3ff] flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-[#3772ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-[#1b1b1b] mb-2">
+                  Онлайн-консультация
+                </h3>
+                <p className="text-sm text-[#b8b8b8]">
+                  Выберите способ подбора врача
+                </p>
+              </div>
+
+              {/* Choice Buttons */}
+              <div className="space-y-3">
+                {/* AI Recommendation */}
+                <button
+                  onClick={() => handleConfirmSelection(false)}
+                  className="w-full group bg-gradient-to-br from-[#ebf1ff] to-white hover:from-[#c1d3ff] hover:to-[#ebf1ff] border-2 border-[#c1d3ff] hover:border-[#3772ff] rounded-2xl p-5 transition-all duration-300 hover:shadow-lg text-left"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-[#3772ff] flex items-center justify-center flex-shrink-0">
+                      <Sparkles className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-[#1b1b1b] mb-1 flex items-center gap-2">
+                        Подобрать врача автоматически
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#3772ff] text-white">
+                          AI
+                        </span>
+                      </p>
+                      <p className="text-xs text-[#b8b8b8] leading-relaxed">
+                        Опишите симптомы, и наш ИИ подберёт подходящего врача
+                      </p>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-[#3772ff] group-hover:translate-x-1 transition-transform flex-shrink-0" />
+                  </div>
+                </button>
+
+                {/* Manual Selection */}
+                <button
+                  onClick={() => handleConfirmSelection(true)}
+                  className="w-full group bg-white hover:bg-[#ebf1ff] border-2 border-[#e8e8e8] hover:border-[#c1d3ff] rounded-2xl p-5 transition-all duration-300 hover:shadow-md text-left"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-[#e8e8e8] group-hover:bg-[#c1d3ff] flex items-center justify-center flex-shrink-0 transition-colors">
+                      <svg className="w-6 h-6 text-[#b8b8b8] group-hover:text-[#3772ff] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-[#1b1b1b] mb-1">
+                        Выбрать врача вручную
+                      </p>
+                      <p className="text-xs text-[#b8b8b8] leading-relaxed">
+                        Просмотрите всех доступных врачей и выберите самостоятельно
+                      </p>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-[#b8b8b8] group-hover:text-[#3772ff] group-hover:translate-x-1 transition-all flex-shrink-0" />
+                  </div>
+                </button>
               </div>
             </motion.div>
           </motion.div>

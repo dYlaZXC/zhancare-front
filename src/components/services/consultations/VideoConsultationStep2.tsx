@@ -80,23 +80,26 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
     recommendedDoctor,
   });
 
-  // Check if consultation is urgent
-  const isUrgent = recommendedDoctor?.urgency === 'urgent';
+  // REMOVED: Urgent consultation logic - all consultations now require time slot selection
+  // const isUrgent = recommendedDoctor?.urgency === 'urgent';
+  const isUrgent = false; // Always false now - all consultations use time slots
 
-  // Fetch timeslots for non-urgent consultations
+  // Fetch timeslots for all consultations
   useEffect(() => {
-    if (!isUrgent && doctors.length > 0) {
+    // Always fetch timeslots now (removed isUrgent check)
+    if (doctors.length > 0) {
       doctors.forEach(doctor => {
         fetchDoctorTimeslots(doctor.id);
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doctors, isUrgent]);
+  }, [doctors]);
 
 
   // Minimal fallback polling for timeslot updates (WebSocket handles real-time updates)
   useEffect(() => {
-    if (!isUrgent && doctors.length > 0) {
+    // Always poll for all consultations now (removed isUrgent check)
+    if (doctors.length > 0) {
       setIsPolling(true);
 
       // Minimal fallback polling - WebSocket should handle most real-time updates
@@ -119,7 +122,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
       };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doctors, isUrgent, lastUpdateTime]);
+  }, [doctors, lastUpdateTime]);
 
   const generateDynamicTimeslots = (doctorId: number, bookedSlots: string[] = []) => {
     const slots: TimeSlot[] = [];
@@ -278,16 +281,16 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
   const handleDoctorSelect = async (doctorId: number) => {
     onSelect(doctorId);
 
-    if (aiRecommendationId && recommendedDoctor) {
-      if (isUrgent) {
-        // For urgent consultations, just proceed to Step 3 (consultation will be created there)
-        onNext();
-      }
-      // For non-urgent, user needs to select timeslot first
-    } else {
-      // Regular flow without AI processing
-      onNext();
-    }
+    // REMOVED: Urgent consultation logic
+    // All consultations now require timeslot selection - do not proceed to next step automatically
+    // User must select a timeslot first
+
+    // if (aiRecommendationId && recommendedDoctor) {
+    //   // Always require timeslot selection now
+    // } else {
+    //   // Regular flow without AI processing
+    //   onNext();
+    // }
   };
 
 

@@ -10,9 +10,11 @@ import VideoConsultation from "./VideoConsultation";
 const VideoConsultationFlow: React.FC = () => {
   const [selectedClinicId, setSelectedClinicId] = useState<number | null>(null);
   const [skippedClinicSelection, setSkippedClinicSelection] = useState(false);
+  const [skipAIRecommendation, setSkipAIRecommendation] = useState(false);
 
-  const handleSelectClinic = (clinicId: number) => {
+  const handleSelectClinic = (clinicId: number, skipAI: boolean = false) => {
     setSelectedClinicId(clinicId);
+    setSkipAIRecommendation(skipAI);
     localStorage.setItem("selectedClinicId", String(clinicId));
   };
 
@@ -24,6 +26,7 @@ const VideoConsultationFlow: React.FC = () => {
   const handleBackToClinics = () => {
     setSelectedClinicId(null);
     setSkippedClinicSelection(false);
+    setSkipAIRecommendation(false);
     localStorage.removeItem("selectedClinicId");
   };
 
@@ -62,7 +65,7 @@ const VideoConsultationFlow: React.FC = () => {
           <span className="font-medium">Выбрать другую клинику</span>
         </button>
       </div>
-      <VideoConsultation />
+      <VideoConsultation skipAI={skipAIRecommendation} />
     </div>
   );
 };

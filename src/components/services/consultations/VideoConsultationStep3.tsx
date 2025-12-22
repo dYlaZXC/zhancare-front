@@ -414,7 +414,9 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const doctor = doctors.find((d) => d.id === selectedDoctorId);
-  const isUrgent = recommendedDoctor?.urgency === 'urgent';
+  // REMOVED: Urgent consultation logic - all consultations now require time slot selection
+  // const isUrgent = recommendedDoctor?.urgency === 'urgent';
+  const isUrgent = false; // Always false now
 
   // Check permissions on mount
   useEffect(() => {
@@ -691,24 +693,21 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
                           </div>
                           <div className="flex-1">
                             <h4 className="font-semibold text-gray-900 mb-2">
-                              {scheduledConsultation.booking_type === 'urgent' ? 'Экстренная консультация' : 'Запланированная консультация'}
+                              Запланированная консультация
                             </h4>
                             <div className="space-y-2 text-sm">
                               <div className="flex items-center gap-2">
                                 <Clock className="w-4 h-4 text-green-600" />
                                 <span className="text-gray-700">
-                                  {scheduledConsultation.booking_type === 'urgent'
-                                    ? 'Консультация начнется немедленно'
-                                    : `Запланировано на ${new Date(scheduledConsultation.scheduled_time).toLocaleDateString('ru-RU', {
-                                        weekday: 'long',
-                                        year: 'numeric',
-                                        month: 'long',
-                                        day: 'numeric'
-                                      })} в ${new Date(scheduledConsultation.scheduled_time).toLocaleTimeString('ru-RU', {
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                      })}`
-                                  }
+                                  Запланировано на {new Date(scheduledConsultation.scheduled_time).toLocaleDateString('ru-RU', {
+                                    weekday: 'long',
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                  })} в {new Date(scheduledConsultation.scheduled_time).toLocaleTimeString('ru-RU', {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
                                 </span>
                               </div>
                               <div className="flex items-center gap-2">
@@ -717,14 +716,12 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
                                   Врач: {scheduledConsultation.doctor_name} ({scheduledConsultation.doctor_type})
                                 </span>
                               </div>
-                              {scheduledConsultation.booking_type === 'scheduled' && (
-                                <div className="flex items-center gap-2 mt-3 p-2 bg-blue-50 rounded-lg">
-                                  <Info className="w-4 h-4 text-blue-600" />
-                                  <span className="text-blue-700 text-xs">
-                                    Вы можете начать консультацию в назначенное время. Врач получит уведомление.
-                                  </span>
-                                </div>
-                              )}
+                              <div className="flex items-center gap-2 mt-3 p-2 bg-blue-50 rounded-lg">
+                                <Info className="w-4 h-4 text-blue-600" />
+                                <span className="text-blue-700 text-xs">
+                                  Вы можете начать консультацию в назначенное время. Врач получит уведомление.
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -800,16 +797,12 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
 
         <motion.button
           onClick={() => {
-            if (isUrgent || (scheduledConsultation && scheduledConsultation.booking_type === 'urgent')) {
-              // Urgent consultations: start video call immediately
-              onCall();
+            // REMOVED: All urgent consultation logic
+            // All consultations now go through scheduling with time slot selection
+            if (onScheduleConsultation) {
+              onScheduleConsultation();
             } else {
-              // Non-urgent consultations: schedule and return to Step 1
-              if (onScheduleConsultation) {
-                onScheduleConsultation();
-              } else {
-                setShowConfirmDialog(true);
-              }
+              setShowConfirmDialog(true);
             }
           }}
           disabled={loading || !selectedDoctorId || waiting || connecting}
@@ -820,8 +813,6 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
               ? "bg-gray-300 text-gray-500 cursor-not-allowed"
               : connecting
               ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white cursor-not-allowed"
-              : isUrgent
-              ? "bg-gradient-to-r from-red-600 to-orange-600 text-white hover:shadow-2xl hover:shadow-red-500/25 hover:from-red-700 hover:to-orange-700"
               : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-2xl hover:shadow-blue-500/25 hover:from-blue-700 hover:to-indigo-700"
           }`}
         >
@@ -843,14 +834,7 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
           ) : (
             <>
               <Video className="w-5 h-5 sm:w-6 sm:h-6" />
-              <span>
-                {scheduledConsultation
-                  ? (scheduledConsultation.booking_type === 'urgent'
-                      ? 'Начать экстренную консультацию'
-                      : 'Назначить консультацию')
-                  : (isUrgent ? 'Начать консультацию' : 'Назначить консультацию')
-                }
-              </span>
+              <span>Назначить консультацию</span>
             </>
           )}
         </motion.button>
