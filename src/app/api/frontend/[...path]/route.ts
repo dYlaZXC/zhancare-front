@@ -52,6 +52,9 @@ async function forwardRequest(
   const cookie = req.headers.get("cookie");
   if (cookie) headers["Cookie"] = cookie;
 
+  const csrf = req.headers.get("x-csrftoken");
+  if (csrf) headers["X-CSRFToken"] = csrf;
+
   // Body for POST/PUT requests
   const body = ["POST", "PUT"].includes(method) ? await req.json() : undefined;
 
@@ -63,6 +66,7 @@ async function forwardRequest(
       headers,
       data: body,
       withCredentials: true, // Ensure cookies are sent
+      timeout: 25000, // 25 second timeout (Vercel has 30s limit)
     });
 
     // Prepare response headers for Set-Cookie
