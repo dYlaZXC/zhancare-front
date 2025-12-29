@@ -246,7 +246,7 @@ export const DoctorsCarousel = () => {
             {activeCategory === category.key && (
               <motion.div
                 layoutId="activeCategory"
-                className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600"
+                className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600"
                 transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
               />
             )}
@@ -311,9 +311,6 @@ export const DoctorsCarousel = () => {
               transition={{ duration: 0.6, delay: index * 0.1 }}
               className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl overflow-hidden w-[320px] mx-auto transition-all duration-500 hover:-translate-y-2 relative border border-gray-100"
             >
-              {/* Premium gradient border on hover */}
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10 blur-xl"></div>
-
               {/* Photo Section with overlay gradient */}
               <div className="relative w-full h-80 overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50">
                 <Image
