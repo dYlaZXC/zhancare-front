@@ -3,10 +3,10 @@ import axios from "axios";
 
 // 🟢 Backend URL resolution
 const BACKEND_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
+  process.env.BACKEND_API_URL ||
   (process.env.NODE_ENV === "production"
     ? (() => {
-        throw new Error("❌ NEXT_PUBLIC_API_URL is not set in production");
+        throw new Error("❌ BACKEND_API_URL is not set in production");
       })()
     : "http://127.0.0.1:8000/api/v1");
 
