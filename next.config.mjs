@@ -40,6 +40,7 @@ const nextConfig = {
     return config;
   },
   output: 'standalone',
+  skipTrailingSlashRedirect: true,
   images: {
     remotePatterns: [
       {
