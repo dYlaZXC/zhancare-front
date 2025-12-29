@@ -39,7 +39,7 @@ async function forwardRequest(
   path: string[]
 ): Promise<Response> {
   const url = buildBackendUrl(path, req);
-  // console.log("🔁 Proxying to:", url);
+  console.log("🔁 Proxying request:", { method, url, path });
 
   // Prepare headers to forward the request with cookies and authorization
   const headers: Record<string, string> = {
@@ -55,10 +55,16 @@ async function forwardRequest(
   const csrf = req.headers.get("x-csrftoken");
   if (csrf) headers["X-CSRFToken"] = csrf;
 
+  console.log("📤 Request headers:", { auth: !!auth, cookie: !!cookie, csrf: !!csrf });
+
   // Body for POST/PUT requests
   const body = ["POST", "PUT"].includes(method) ? await req.json() : undefined;
+  if (body) console.log("📦 Request body:", body);
 
   try {
+    console.log("⏳ Sending request to backend...");
+    const startTime = Date.now();
+
     // Send the request to the backend via axios
     const response = await axios({
       method,
@@ -68,6 +74,9 @@ async function forwardRequest(
       withCredentials: true, // Ensure cookies are sent
       timeout: 25000, // 25 second timeout (Vercel has 30s limit)
     });
+
+    const duration = Date.now() - startTime;
+    console.log("✅ Backend response received:", { status: response.status, duration: `${duration}ms` });
 
     // Prepare response headers for Set-Cookie
     const resHeaders = new Headers({
@@ -93,12 +102,20 @@ async function forwardRequest(
     });
   } catch (error: any) {
     // Handle errors and respond with the error message
-    console.error("Error while proxying request:", error);
+    console.error("❌ Proxy error:", {
+      message: error.message,
+      code: error.code,
+      status: error.response?.status,
+      data: error.response?.data,
+      url: url,
+    });
 
     return new Response(
       JSON.stringify({
         error: error.message,
+        code: error.code,
         details: error.response?.data || null,
+        url: url,
       }),
       {
         status: error.response?.status || 500,
