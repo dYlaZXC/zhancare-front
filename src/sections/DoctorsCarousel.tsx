@@ -32,17 +32,17 @@ import doctorImg18 from "@/assets/doctor-img/doctor-img18.jpeg";
 import doctorImg19 from "@/assets/doctor-img/doctor-img19.jpeg";
 import doctorImg20 from "@/assets/doctor-img/doctor-img20.jpeg";
 import doctorImg21 from "@/assets/doctor-img/doctor-img21.jpeg";
-import doctorImg22 from "@/assets/doctor-img/doctor-img22.jpg";
-import doctorImg23 from "@/assets/doctor-img/doctor-img23.jpg";
-import doctorImg24 from "@/assets/doctor-img/doctor-img24.jpg";
-import doctorImg25 from "@/assets/doctor-img/doctor-img25.jpg";
-import doctorImg26 from "@/assets/doctor-img/doctor-img26.jpg";
-import doctorImg27 from "@/assets/doctor-img/doctor-img27.jpg";
-import doctorImg28 from "@/assets/doctor-img/doctor-img28.jpg";
-import doctorImg29 from "@/assets/doctor-img/doctor-img29.jpg";
-import doctorImg30 from "@/assets/doctor-img/doctor-img30.jpg";
-import doctorImg31 from "@/assets/doctor-img/doctor-img31.jpg";
-import doctorImg32 from "@/assets/doctor-img/doctor-img32.jpg";
+import doctorImg22 from "@/assets/doctor-img/doctor-img22.jpeg";
+import doctorImg23 from "@/assets/doctor-img/doctor-img23.jpeg";
+import doctorImg24 from "@/assets/doctor-img/doctor-img24.jpeg";
+import doctorImg25 from "@/assets/doctor-img/doctor-img25.jpeg";
+import doctorImg26 from "@/assets/doctor-img/doctor-img26.jpeg";
+import doctorImg27 from "@/assets/doctor-img/doctor-img27.jpeg";
+import doctorImg28 from "@/assets/doctor-img/doctor-img28.jpeg";
+import doctorImg29 from "@/assets/doctor-img/doctor-img29.jpeg";
+import doctorImg30 from "@/assets/doctor-img/doctor-img30.jpeg";
+import doctorImg31 from "@/assets/doctor-img/doctor-img31.jpeg";
+import doctorImg32 from "@/assets/doctor-img/doctor-img32.jpeg";
 
 export const DoctorsCarousel = () => {
   const { language } = useLanguage();
@@ -157,6 +157,9 @@ export const DoctorsCarousel = () => {
   // Doctor data with multilingual names and specialties
   const getDoctors = () => {
     const baseData = [
+      { nameRu: "Наурызбаева Баглан Назымбеккызы", nameKz: "Наурызбаева Бағлан Назымбекқызы", nameEn: "Nauryzbayeva Baglan Nazymbek kyzy", specialty: { ru: "Неонатолог, интегративная и превентивная педиатрия, реабилитолог высшей категории", kz: "Жоғары санатты неонатолог, интегративті және превентивті педиатрия, реабилитолог", en: "Neonatologist, Integrative & Preventive Pediatrics, Rehabilitation, Highest Category" }, experience: "26", image: doctorImg19, category: "pediatrics" },
+      { nameRu: "Приходько Татьяна Михайловна", nameKz: "Приходько Татьяна Михайловна", nameEn: "Prikhodko Tatyana Mikhailovna", specialty: { ru: "Реабилитолог высшей категории", kz: "Жоғары санатты реабилитолог", en: "Rehabilitation Specialist, Highest Category" }, experience: "26", image: doctorImg20, category: "gp" },
+      { nameRu: "Главный внештатный уролог Акмолинской области", nameKz: "Ақмола облысының штаттан тыс бас урологі", nameEn: "Chief Freelance Urologist of Akmola Region", specialty: { ru: "Заведующий отделения урологии и андрологии МОБ2", kz: "МОБ2 урология және андрология бөлімінің меңгерушісі", en: "Head of Urology and Andrology Department MOB2" }, experience: "30", image: doctorImg21, category: "surgery" },
       { nameRu: "Жаканбетов Азат Кунанбаевич", nameKz: "Жақанбетов Азат Құнанбайұлы", nameEn: "Zhakanbetov Azat Kunanbayevich", specialty: { ru: "Отоларинголог (ЛОР), 1 категории", kz: "Отоларинголог (ЛОР), 1 санат", en: "Otolaryngologist (ENT), 1st category" }, experience: "10", image: doctorImg22, category: "gp" },
       { nameRu: "Изтлеуова Нургуль Кубашевна", nameKz: "Изтлеуова Нұргүл Құбашқызы", nameEn: "Iztleuova Nurgul Kubashevna", specialty: { ru: "Инфекционист высшей категории", kz: "Жоғары санатты инфекционист", en: "Infectious Disease Specialist, Highest Category" }, experience: "37", image: doctorImg23, category: "gp" },
       { nameRu: "Ниязбаев Талгат Толешевич", nameKz: "Ниязбаев Талғат Төлешұлы", nameEn: "Niyazbaev Talgat Toleshevich", specialty: { ru: "Уролог-Андролог высшей категории", kz: "Жоғары санатты уролог-андролог", en: "Urologist-Andrologist, Highest Category" }, experience: "25", image: doctorImg24, category: "surgery" },

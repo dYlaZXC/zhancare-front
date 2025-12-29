@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "NODE_OPTIONS=--no-deprecation next dev",
-    "build": "next build",
+    "dev": "NODE_OPTIONS=--no-deprecation next dev --webpack",
+    "build": "next build --webpack",
     "start": "NODE_ENV=production node server.js",
     "lint": "next lint"
   },
@@ -21,6 +21,8 @@
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-slot": "^1.2.3",
     "@sentry/nextjs": "^9.14.0",
+    "@tailwindcss/forms": "^0.5.11",
+    "@tailwindcss/typography": "^0.5.19",
     "autoprefixer": "^10.4.20",
     "axios": "^1.7.9",
     "class-variance-authority": "^0.7.1",
@@ -35,7 +37,7 @@
     "lucide-react": "^0.534.0",
     "maplibre-gl": "^5.5.0",
     "marked": "^16.1.2",
-    "next": "15.0.3",
+    "next": "^16.1.1",
     "react": "^18",
     "react-countup": "^6.5.3",
     "react-dom": "^18",
@@ -53,6 +55,7 @@
     "sharp": "^0.33.5",
     "sitemap": "^8.0.0",
     "swiper": "^11.2.6",
+    "tailwind-scrollbar": "^4.0.2",
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {

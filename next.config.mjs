@@ -1,6 +1,9 @@
 import {withSentryConfig} from "@sentry/nextjs";
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  turbopack: {
+    // Empty config to silence Turbopack warning, we use webpack for SVG handling
+  },
   webpack(config) {
     // Grab the existing rule that handles SVG imports
     const fileLoaderRule = config.module.rules.find((rule) =>

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { DM_Sans } from "next/font/google";
 import { twMerge } from "tailwind-merge";
@@ -27,12 +27,6 @@ export const metadata: Metadata = {
   ],
   creator: "Adilan Akhramovich",
   publisher: "ТОО iTry, Алматы",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 5,
-    userScalable: true,
-  },
   openGraph: {
     title: "ZhanCare.AI - Будущее телемедицины",
     description: "ZhanCare.AI предоставляет современные технологии...",
@@ -48,6 +42,13 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "ZhanCare.AI",
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
 };
 
 export default function RootLayout({
