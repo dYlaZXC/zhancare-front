@@ -16,6 +16,7 @@ import {
   faTimes,
   faBolt,
   faGem,
+  faBrain,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -44,7 +45,8 @@ export const Sidebar = ({
 
   const menuItems = [
     { id: "profile", icon: faUser, title: "Профиль", color: "#3772ff" },
-    { id: "video", icon: faVideo, title: "Медицинские услуги", color: "#3267e6" },
+    { id: "smart-consultation", icon: faBrain, title: "Умная консультация", color: "#8b5cf6" },
+    { id: "video", icon: faVideo, title: "Видео консультации", color: "#3267e6" },
     { id: "appointments", icon: faCalendar, title: "Вызов на дом", color: "#295bbf" },
     { id: "history", icon: faNotesMedical, title: "Медицинская история", color: "#1e4099" },
     { id: "chat", icon: faPlane, title: "Мед Туризм", color: "#173373" },

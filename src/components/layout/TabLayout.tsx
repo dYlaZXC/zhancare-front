@@ -27,6 +27,7 @@ const TabLayout = ({ children }: TabLayoutProps) => {
     const path = pathname.split('/').pop() || '';
     switch (path) {
       case 'profile': return 'profile';
+      case 'smart-consultation': return 'smart-consultation';
       case 'video': return 'video';
       case 'appointments': return 'appointments';
       case 'history': return 'history';

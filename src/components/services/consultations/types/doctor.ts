@@ -4,7 +4,10 @@ export interface Doctor {
   email: string;
   doctor_type: string;
   rating?: number;
+  reviews_count?: number;
   experience?: number;
+  years_of_experience?: number;
+  clinic_id?: number;
   availability?: string;
   availability_status?: 'available' | 'busy' | 'offline' | 'break';
   availability_note?: string;

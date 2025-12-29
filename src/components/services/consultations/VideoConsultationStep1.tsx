@@ -2,11 +2,11 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Sparkles, 
-  Info, 
-  ClipboardPaste, 
-  Mic, 
+import {
+  Sparkles,
+  Info,
+  ClipboardPaste,
+  Mic,
   MicOff,
   Thermometer,
   Heart,
@@ -17,7 +17,7 @@ import {
   CheckCircle2,
   ArrowRight
 } from "lucide-react";
-// PatientConsultationsTable moved to ClinicsSelection component
+import PatientConsultationsTable from "./PatientConsultationsTable";
 
 interface Step1Props {
   symptoms: string;
@@ -380,6 +380,9 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
           )}
         </AnimatePresence>
       </motion.div>
+
+      {/* Patient Consultations Table */}
+      <PatientConsultationsTable />
 
       {/* Extended Bottom Spacing */}
       <div className="pb-8 md:pb-12"></div>

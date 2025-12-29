@@ -32,6 +32,17 @@ import doctorImg18 from "@/assets/doctor-img/doctor-img18.jpeg";
 import doctorImg19 from "@/assets/doctor-img/doctor-img19.jpeg";
 import doctorImg20 from "@/assets/doctor-img/doctor-img20.jpeg";
 import doctorImg21 from "@/assets/doctor-img/doctor-img21.jpeg";
+import doctorImg22 from "@/assets/doctor-img/doctor-img22.jpg";
+import doctorImg23 from "@/assets/doctor-img/doctor-img23.jpg";
+import doctorImg24 from "@/assets/doctor-img/doctor-img24.jpg";
+import doctorImg25 from "@/assets/doctor-img/doctor-img25.jpg";
+import doctorImg26 from "@/assets/doctor-img/doctor-img26.jpg";
+import doctorImg27 from "@/assets/doctor-img/doctor-img27.jpg";
+import doctorImg28 from "@/assets/doctor-img/doctor-img28.jpg";
+import doctorImg29 from "@/assets/doctor-img/doctor-img29.jpg";
+import doctorImg30 from "@/assets/doctor-img/doctor-img30.jpg";
+import doctorImg31 from "@/assets/doctor-img/doctor-img31.jpg";
+import doctorImg32 from "@/assets/doctor-img/doctor-img32.jpg";
 
 export const DoctorsCarousel = () => {
   const { language } = useLanguage();
@@ -146,26 +157,17 @@ export const DoctorsCarousel = () => {
   // Doctor data with multilingual names and specialties
   const getDoctors = () => {
     const baseData = [
-      { nameRu: "Рахимов Есдаулет Толебайұлы", nameKz: "Рахимов Есдәулет Төлебайұлы", nameEn: "Rakhimov Yesdaulet Tolebayuly", specialty: { ru: "Врач ПМСП / ВОП / Участковый", kz: "ПМКК дәрігері / ЖДД / Учаскелік", en: "Primary Care Doctor / GP / District" }, experience: "10", image: doctorImg15, category: "gp" },
-      { nameRu: "Арыстанбаева Жансая Абзаловна", nameKz: "Арыстанбаева Жансая Абзалқызы", nameEn: "Arystanbayeva Zhansaya Abzalovna", specialty: { ru: "Фельдшер", kz: "Фельдшер", en: "Paramedic" }, experience: "10", image: doctorImg11, category: "nursing" },
-      { nameRu: "Саутова Алия Мейрамовна", nameKz: "Саутова Алия Мейрамқызы", nameEn: "Sautova Aliya Meiramovna", specialty: { ru: "Терапевт", kz: "Терапевт", en: "Therapist" }, experience: "10", image: doctorImg14, category: "gp" },
-      { nameRu: "Ауельбекова Ултуган Тулегеновна", nameKz: "Әуелбекова Ұлтуған Төлегенқызы", nameEn: "Auyelbekova Ultugan Tulegenovna", specialty: { ru: "Массажист", kz: "Массажист", en: "Massage Therapist" }, experience: "25", image: doctorImg7, category: "massage" },
-      { nameRu: "Умирбекова Айнур Едиловна", nameKz: "Үмірбекова Айнұр Еділқызы", nameEn: "Umirbekova Ainur Yedilovna", specialty: { ru: "Сестринское дело", kz: "Мейірбике ісі", en: "Nursing" }, experience: "26", image: doctorImg19, category: "nursing" },
-      { nameRu: "Ержанова Эльмира Токтарбаевна", nameKz: "Ержанова Эльмира Тоқтарбайқызы", nameEn: "Yerzhanova Elmira Toktarbayeva", specialty: { ru: "Врач", kz: "Дәрігер", en: "Doctor" }, experience: "15", image: doctorImg9, category: "gp" },
-      { nameRu: "Сейтенова Дурия Каратаевна", nameKz: "Сейтенова Дурия Қаратайқызы", nameEn: "Seitenova Duriya Karatayeva", specialty: { ru: "Педиатрия", kz: "Педиатрия", en: "Pediatrics" }, experience: "38", image: doctorImg17, category: "pediatrics" },
-      { nameRu: "Абдигаипова Зарина Елтаевна", nameKz: "Абдығаипова Зарина Елтайқызы", nameEn: "Abdigaipova Zarina Yeltayeva", specialty: { ru: "Медколледж", kz: "Медколледж", en: "Medical College" }, experience: "11", image: doctorImg6, category: "nursing" },
-      { nameRu: "Оспанова Масиха Султановна", nameKz: "Оспанова Масиха Сұлтанқызы", nameEn: "Ospanova Masiha Sultanova", specialty: { ru: "Педиатр", kz: "Педиатр", en: "Pediatrician" }, experience: "39", image: doctorImg20, category: "pediatrics" },
-      { nameRu: "Тынысбекова Гульшат Андешевна", nameKz: "Тынысбекова Гүлшат Андешқызы", nameEn: "Tynysbekova Gulshat Andeshevna", specialty: { ru: "Дерматокосметолог", kz: "Дерматокосметолог", en: "Dermatocosmetologist" }, experience: "25", image: doctorImg13, category: "dermatology" },
-      { nameRu: "Уразымбетова Венера Жиенбаевна", nameKz: "Уразымбетова Венера Жиенбайқызы", nameEn: "Urazymbekova Venera Zhiyenbayeva", specialty: { ru: "Сестринское дело", kz: "Мейірбике ісі", en: "Nursing" }, experience: "15", image: doctorImg10, category: "nursing" },
-      { nameRu: "Абилкадирова Гульнара Аскербековна", nameKz: "Әбілқадырова Гүлнара Аскербекқызы", nameEn: "Abilkadirova Gulnara Askerbekovna", specialty: { ru: "Медицинское училище", kz: "Медициналық училище", en: "Medical School" }, experience: "38", image: doctorImg5, category: "nursing" },
-      { nameRu: "Сеитова Гульнара Нуруллаевна", nameKz: "Сейітова Гүлнара Нұрұллақызы", nameEn: "Seitova Gulnara Nurullayeva", specialty: { ru: "Офтальмолог", kz: "Офтальмолог", en: "Ophthalmologist" }, experience: "15", image: doctorImg8, category: "ophthalmology" },
-      { nameRu: "Ержанова Алтын Омаркановна", nameKz: "Ержанова Алтын Омарқанқызы", nameEn: "Yerzhanova Altyn Omarkanova", specialty: { ru: "Дерматокосметолог/Хирург", kz: "Дерматокосметолог/Хирург", en: "Dermatocosmetologist/Surgeon" }, experience: "18", image: doctorImg12, category: "surgery" },
-      { nameRu: "Бегимова Алина Болатовна", nameKz: "Бегімова Алина Болатқызы", nameEn: "Begimova Alina Bolatovna", specialty: { ru: "Врач общей практики", kz: "Жалпы дәрігер", en: "General Practitioner" }, experience: "3", image: doctorImg21, category: "gp" },
-      { nameRu: "Койбакова Сәуле", nameKz: "Қойбақова Сәуле", nameEn: "Koibakova Saule", specialty: { ru: "Сестринское дело", kz: "Мейірбике ісі", en: "Nursing" }, experience: "16", image: doctorImg2, category: "nursing" },
-      { nameRu: "Бейсенбекова Асемгуль", nameKz: "Бейсенбекова Асемгүл", nameEn: "Beisenbekova Asemgul", specialty: { ru: "Фельдшер", kz: "Фельдшер", en: "Paramedic" }, experience: "3", image: doctorImg18, category: "nursing" },
-      { nameRu: "Амирханова Акбота Кайратовна", nameKz: "Әмірханова Ақбота Қайратқызы", nameEn: "Amirkhanova Akbota Kairatovna", specialty: { ru: "Врач-косметолог/дерматовенеролог", kz: "Косметолог дәрігер/дерматовенеролог", en: "Cosmetologist/Dermatovenereologist" }, experience: "3", image: doctorImg, category: "dermatology" },
-      { nameRu: "Мырзахметова Гульнара Асильевна", nameKz: "Мырзахметова Гүлнара Әсілқызы", nameEn: "Myrzakhmetova Gulnara Asilievna", specialty: { ru: "Дерматокосметолог/Гирудотерапевт", kz: "Дерматокосметолог/Гирудотерапевт", en: "Dermatocosmetologist/Hirudotherapist" }, experience: "1", image: doctorImg4, category: "dermatology" },
-      { nameRu: "Мекенбаева Нигина Бобуровна", nameKz: "Мекенбаева Нигина Бобұрқызы", nameEn: "Mekenbayeva Nigina Boburovna", specialty: { ru: "Радиолог", kz: "Радиолог", en: "Radiologist" }, experience: "1", image: doctorImg16, category: "radiology" },
+      { nameRu: "Жаканбетов Азат Кунанбаевич", nameKz: "Жақанбетов Азат Құнанбайұлы", nameEn: "Zhakanbetov Azat Kunanbayevich", specialty: { ru: "Отоларинголог (ЛОР), 1 категории", kz: "Отоларинголог (ЛОР), 1 санат", en: "Otolaryngologist (ENT), 1st category" }, experience: "10", image: doctorImg22, category: "gp" },
+      { nameRu: "Изтлеуова Нургуль Кубашевна", nameKz: "Изтлеуова Нұргүл Құбашқызы", nameEn: "Iztleuova Nurgul Kubashevna", specialty: { ru: "Инфекционист высшей категории", kz: "Жоғары санатты инфекционист", en: "Infectious Disease Specialist, Highest Category" }, experience: "37", image: doctorImg23, category: "gp" },
+      { nameRu: "Ниязбаев Талгат Толешевич", nameKz: "Ниязбаев Талғат Төлешұлы", nameEn: "Niyazbaev Talgat Toleshevich", specialty: { ru: "Уролог-Андролог высшей категории", kz: "Жоғары санатты уролог-андролог", en: "Urologist-Andrologist, Highest Category" }, experience: "25", image: doctorImg24, category: "surgery" },
+      { nameRu: "Смагулова Еркежан Есепбаевна", nameKz: "Смағұлова Еркежан Есепбайқызы", nameEn: "Smagulova Yerkezhan Yesepbayevna", specialty: { ru: "Кардиолог высшей категории", kz: "Жоғары санатты кардиолог", en: "Cardiologist, Highest Category" }, experience: "22", image: doctorImg25, category: "gp" },
+      { nameRu: "Рябчевская Тамара Георгиевна", nameKz: "Рябчевская Тамара Георгиевна", nameEn: "Ryabchevskaya Tamara Georgievna", specialty: { ru: "Педиатр высшей категории", kz: "Жоғары санатты педиатр", en: "Pediatrician, Highest Category" }, experience: "48", image: doctorImg26, category: "pediatrics" },
+      { nameRu: "Муканова Роза Шайдулловна", nameKz: "Мұқанова Роза Шайдуллақызы", nameEn: "Mukanova Roza Shaidullovna", specialty: { ru: "УЗИ, лучевая диагностика высшей категории", kz: "Жоғары санатты УДЗ, сәулелік диагностика", en: "Ultrasound, Radiology, Highest Category" }, experience: "23", image: doctorImg27, category: "radiology" },
+      { nameRu: "Султан Риза Алибековна", nameKz: "Сұлтан Риза Әлібекқызы", nameEn: "Sultan Riza Alibekovna", specialty: { ru: "Терапевт, педиатр, невропатолог высшей категории", kz: "Жоғары санатты терапевт, педиатр, невропатолог", en: "Therapist, Pediatrician, Neurologist, Highest Category" }, experience: "18", image: doctorImg28, category: "gp" },
+      { nameRu: "Чекменева Наталья Иосифовна", nameKz: "Чекменева Наталья Иосифовна", nameEn: "Chekmeneva Natalya Iosifovna", specialty: { ru: "Акушер-гинеколог", kz: "Акушер-гинеколог", en: "Obstetrician-Gynecologist" }, experience: "39", image: doctorImg29, category: "gp" },
+      { nameRu: "Сиразитдинов Рустам Раисович", nameKz: "Сиразитдинов Рұстам Раисұлы", nameEn: "Sirazitdinov Rustam Raisovich", specialty: { ru: "Хирург, травматолог, детский хирург высшей категории", kz: "Жоғары санатты хирург, травматолог, балалар хирургі", en: "Surgeon, Traumatologist, Pediatric Surgeon, Highest Category" }, experience: "25", image: doctorImg30, category: "surgery" },
+      { nameRu: "Джайнаров Нургиса Ершораевич", nameKz: "Джайнаров Нұрғиса Ершорайұлы", nameEn: "Dzhaynarov Nurgisa Yershorayevich", specialty: { ru: "Стоматолог высшей категории", kz: "Жоғары санатты стоматолог", en: "Dentist, Highest Category" }, experience: "10", image: doctorImg31, category: "gp" },
+      { nameRu: "Мусин Жанат Сартаевич", nameKz: "Мусин Жанат Сартайұлы", nameEn: "Musin Zhanat Sartayevich", specialty: { ru: "Хирург", kz: "Хирург", en: "Surgeon" }, experience: "36", image: doctorImg32, category: "surgery" },
     ];
 
     return baseData.map(doctor => ({
