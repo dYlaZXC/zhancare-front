@@ -67,6 +67,9 @@ const AuthPopup = () => {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Track mousedown position to detect real clicks vs text selection
+  const [mouseDownTarget, setMouseDownTarget] = useState<EventTarget | null>(null);
+
   // Close on Escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -174,6 +177,22 @@ const AuthPopup = () => {
 
   if (!isAuthOpen) return null;
 
+  // Handle overlay click - only close if it's a real click, not text selection
+  const handleOverlayMouseDown = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      setMouseDownTarget(e.target);
+    }
+  };
+
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    // Only close if mousedown and mouseup happened on the same overlay element
+    // This prevents closing when user is selecting text and drags outside
+    if (e.target === e.currentTarget && mouseDownTarget === e.target) {
+      setIsAuthOpen(false);
+    }
+    setMouseDownTarget(null);
+  };
+
   return (
     <>
       <AnimatePresence>
@@ -183,7 +202,8 @@ const AuthPopup = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          onClick={(e) => e.target === e.currentTarget && setIsAuthOpen(false)}
+          onMouseDown={handleOverlayMouseDown}
+          onClick={handleOverlayClick}
         >
           <motion.div
             className="relative bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-[95%] xs:max-w-[90%] sm:max-w-[480px] md:max-w-[520px] max-h-[95vh] overflow-y-auto"
