@@ -359,22 +359,19 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [waiting, meetingId]);
 
-  const handleAIRecommend = async () => {
-    if (loadingAI || !token) return;
-    if (!symptoms.trim()) {
-      toast.warn("⚠️ Пожалуйста, опишите симптомы.");
-      return;
-    }
+  const requestAIRecommendation = async (symptomsText: string) => {
+    if (loadingAI || !token || !symptomsText.trim()) return;
 
     setLoadingAI(true);
     setRecommendedDoctor(undefined);
     setAiErrorData(undefined);
     setFallbackUsed(false);
+    setSymptoms(symptomsText); // Update symptoms state
 
     try {
       const res = await api.post(
         "/consultations/ai-recommend/",
-        { symptoms, language: "ru" },
+        { symptoms: symptomsText, language: "ru" },
         { headers: { Authorization: `Token ${token}` } }
       );
 
@@ -440,6 +437,30 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
       setLoadingAI(false);
       setStep(2);
     }
+  };
+
+  // Wrapper for Step 1 - just navigates to Step 2 (no AI logic)
+  const handleAIRecommend = () => {
+    // Always clear all AI-related state when coming from Step 1
+    setSymptoms('');
+    setRecommendedDoctor(undefined);
+    setAiErrorData(undefined);
+    setFallbackUsed(false);
+    setAiRecommendationId(undefined);
+    setSelectedDoctorId(null);
+
+    // Just move to Step 2 - AI recommendation happens there if user wants it
+    setStep(2);
+  };
+
+  // Clear symptoms and allow user to enter new ones
+  const handleClearSymptoms = () => {
+    setSymptoms('');
+    setRecommendedDoctor(undefined);
+    setAiErrorData(undefined);
+    setFallbackUsed(false);
+    setAiRecommendationId(undefined);
+    setSelectedDoctorId(null);
   };
 
   const handleScheduleConsultation = async () => {
@@ -581,6 +602,9 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
                   aiRecommendationId={aiRecommendationId}
                   doctorsError={doctorsError}
                   websocketConnected={websocketConnected}
+                  onRequestAIRecommendation={requestAIRecommendation}
+                  loadingAI={loadingAI}
+                  onClearSymptoms={handleClearSymptoms}
                   onConsultationBooked={(consultationId, consultationData) => {
                     // console.log("🎉 Consultation booked:", consultationId, consultationData);
 

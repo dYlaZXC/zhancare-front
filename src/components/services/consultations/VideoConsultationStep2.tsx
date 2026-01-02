@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Clock, User } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Clock, User, Sparkles, Send, AlertCircle, X, RefreshCw } from "lucide-react";
 import { api } from "@/utils/api";
 
 // Import our new components
@@ -32,6 +32,12 @@ interface Step2Props {
   // Real-time updates props
   doctorsError?: string | null;
   websocketConnected?: boolean;
+  // AI recommendation callback
+  onRequestAIRecommendation?: (symptoms: string) => void;
+  // AI loading state
+  loadingAI?: boolean;
+  // Clear symptoms callback
+  onClearSymptoms?: () => void;
 }
 
 const VideoConsultationStep2: React.FC<Step2Props> = ({
@@ -49,11 +55,15 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
   onConsultationBooked,
   doctorsError,
   websocketConnected,
+  onRequestAIRecommendation,
+  loadingAI = false,
+  onClearSymptoms,
 }) => {
   // UI state
   const [searchTerm, setSearchTerm] = useState("");
   const [filterByType, setFilterByType] = useState<string>("all");
   const [language, setLanguage] = useState<Language>('ru');
+  const [localSymptoms, setLocalSymptoms] = useState("");
 
   // Timeslot states - will be moved to separate component later
   const [doctorTimeslots, setDoctorTimeslots] = useState<Record<number, TimeSlot[]>>({});
@@ -396,7 +406,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
     setSelectedDate(date);
   };
 
-  const renderDoctorCard = (doctor: Doctor, isRecommended: boolean, isSelected: boolean) => {
+  const renderDoctorCard = useCallback((doctor: Doctor, isRecommended: boolean, isSelected: boolean) => {
     const lastUpdate = lastUpdateTime[doctor.id];
     const lastUpdateDisplay = lastUpdate
       ? new Date(lastUpdate).toLocaleTimeString('ru-RU', {
@@ -431,7 +441,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
         onClick={() => handleDoctorSelect(doctor.id)}
       />
     );
-  };
+  }, [language, isUrgent, doctorTimeslots, selectedDate, showFullCalendar, doctorTimeslotsByDate, lastUpdateTime, handleTimeslotSelect]);
 
   return (
     <motion.div
@@ -483,23 +493,164 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
         transition={{ delay: 0.1 }}
         className="space-y-2"
       >
-        <h3 className="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
-            <User size={16} />
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <h3 className="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+                <User size={16} />
+              </div>
+              Выбор врача
+            </h3>
+            <p className="text-gray-600 text-sm leading-relaxed mt-2">
+              {symptoms ? 'ИИ проанализировал ваши симптомы и подобрал специалиста' : 'Опишите симптомы для рекомендаций ИИ или выберите врача самостоятельно'}
+            </p>
           </div>
-          Выбор врача
-        </h3>
-        <p className="text-gray-600 text-sm leading-relaxed">
-          ИИ проанализировал ваши симптомы и подобрал специалиста
-        </p>
+
+          {/* Clear symptoms button */}
+          {symptoms && onClearSymptoms && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={onClearSymptoms}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white transition-all text-sm font-bold shadow-md hover:shadow-lg"
+            >
+              <RefreshCw size={16} />
+              Сбросить симптомы
+            </motion.button>
+          )}
+        </div>
       </motion.div>
 
+      {/* Optional Symptom Input */}
+      {!symptoms && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-4 md:p-5"
+        >
+          <div className="flex items-start gap-3 mb-3">
+            <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex-shrink-0">
+              <Sparkles size={16} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="font-bold text-blue-900 mb-1">Получите рекомендации ИИ (опционально)</h4>
+              <p className="text-sm text-blue-800 mb-3">
+                Опишите ваши симптомы, и наш ИИ подберет наиболее подходящего специалиста
+              </p>
+              <textarea
+                value={localSymptoms}
+                onChange={(e) => setLocalSymptoms(e.target.value)}
+                className="w-full h-20 md:h-24 p-3 rounded-lg border-2 border-blue-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 bg-white resize-none transition-all text-sm text-gray-800 placeholder-gray-400"
+                placeholder="Например: Головная боль с утра, температура 38°C, общая слабость..."
+                maxLength={500}
+              />
+              <div className="flex items-center justify-between mt-2">
+                <div className="flex items-center gap-1 text-xs text-blue-700">
+                  <AlertCircle size={12} />
+                  <span>{localSymptoms.length}/500 символов</span>
+                </div>
+                <button
+                  onClick={() => {
+                    if (localSymptoms.trim().length > 0 && onRequestAIRecommendation && !loadingAI) {
+                      onRequestAIRecommendation(localSymptoms);
+                    }
+                  }}
+                  disabled={localSymptoms.trim().length === 0 || loadingAI}
+                  className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 ${
+                    localSymptoms.trim().length > 0 && !loadingAI
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-lg cursor-pointer'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  {loadingAI ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Анализируем...
+                    </>
+                  ) : (
+                    <>
+                      <Send size={14} />
+                      Получить рекомендации
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* AI Loading State */}
+      <AnimatePresence>
+        {loadingAI && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
+            className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-xl p-6 md:p-8"
+          >
+            <div className="flex flex-col items-center justify-center space-y-4">
+              {/* Animated AI Icon */}
+              <motion.div
+                animate={{
+                  scale: [1, 1.1, 1],
+                  rotate: [0, 5, -5, 0],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+                className="p-4 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white"
+              >
+                <Sparkles size={32} />
+              </motion.div>
+
+              {/* Loading Text */}
+              <div className="text-center space-y-2">
+                <h4 className="text-xl font-bold text-blue-900">
+                  Анализируем симптомы...
+                </h4>
+                <p className="text-sm text-blue-700">
+                  ИИ подбирает наиболее подходящего специалиста
+                </p>
+              </div>
+
+              {/* Animated Progress Dots */}
+              <div className="flex items-center gap-2">
+                {[0, 1, 2].map((i) => (
+                  <motion.div
+                    key={i}
+                    animate={{
+                      scale: [1, 1.5, 1],
+                      opacity: [0.5, 1, 0.5],
+                    }}
+                    transition={{
+                      duration: 1.5,
+                      repeat: Infinity,
+                      delay: i * 0.2,
+                    }}
+                    className="w-3 h-3 bg-blue-600 rounded-full"
+                  />
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* AI Recommendation Block */}
-      <AIRecommendationBlock
-        recommendedDoctor={recommendedDoctor}
-        aiErrorData={aiErrorData}
-        fallbackUsed={fallbackUsed}
-      />
+      {!loadingAI && (recommendedDoctor || aiErrorData) && (
+        <AIRecommendationBlock
+          recommendedDoctor={recommendedDoctor}
+          aiErrorData={aiErrorData}
+          fallbackUsed={fallbackUsed}
+        />
+      )}
 
       {/* Search and Filters */}
       <DoctorSearchAndFilters
