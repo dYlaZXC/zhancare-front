@@ -19,22 +19,19 @@ import {
 import { api } from "@/utils/api";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-toastify";
-import type { Doctor } from "./consultations/types/doctor";
+import type { Doctor, Clinic } from "./consultations/types/doctor";
 
-interface Clinic {
-  id: number;
-  name: string;
-  address: string | null;
-  city_name: string | null;
-  district_name: string | null;
-  rating: number | null;
-  latitude: number | null;
-  longitude: number | null;
+interface ClinicExtended extends Clinic {
+  city_name?: string | null;
+  district_name?: string | null;
+  rating?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 interface SmartRecommendation {
-  doctor: Doctor & { clinic?: Clinic | null };
-  clinic: Clinic | null;
+  doctor: Doctor & { clinic?: ClinicExtended | null };
+  clinic: ClinicExtended | null;
   score: number;
   reasons: string[];
   type: "best" | "premium" | "economy";
@@ -110,7 +107,7 @@ const SmartConsultationFlow: React.FC = () => {
       });
 
       const doctors: Doctor[] = doctorsRes.data?.doctors || [];
-      const clinics: Clinic[] = clinicsRes.data?.results || [];
+      const clinics: ClinicExtended[] = clinicsRes.data?.results || [];
 
       // Create a map of clinic_id to clinic data
       const clinicMap = new Map(clinics.map((c) => [c.id, c]));
@@ -173,7 +170,7 @@ const SmartConsultationFlow: React.FC = () => {
 
           return {
             doctor: { ...doctor, clinic },
-            clinic: clinic || ({} as Clinic),
+            clinic: clinic || null,
             score,
             reasons,
             type: "best" as const,
