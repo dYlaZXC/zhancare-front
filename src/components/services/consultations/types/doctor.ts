@@ -1,3 +1,11 @@
+export interface Clinic {
+  id: number;
+  name: string;
+  address?: string;
+  phone?: string;
+  city?: string;
+}
+
 export interface Doctor {
   id: number;
   name: string;
@@ -8,6 +16,7 @@ export interface Doctor {
   experience?: number;
   years_of_experience?: number;
   clinic_id?: number;
+  clinic?: Clinic | null;  // Main clinic information
   availability?: string;
   availability_status?: 'available' | 'busy' | 'offline' | 'break';
   availability_note?: string;

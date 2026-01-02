@@ -21,6 +21,7 @@ import {
   ChevronDown,
   ChevronUp,
   Stethoscope,
+  Building2,
 } from "lucide-react";
 
 import type { Doctor, TimeSlot, Language } from "../types/doctor";
@@ -160,6 +161,27 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
                 <span className="font-medium">Сертифицирован</span>
               </div>
             </div>
+
+            {/* Clinic information */}
+            {doctor.clinic ? (
+              <div className="flex items-center gap-2 text-xs text-gray-700 mb-2 bg-blue-50 px-2 py-1.5 rounded-lg border border-blue-100">
+                <Building2 className="text-blue-600 flex-shrink-0" size={12} />
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="font-semibold text-blue-800">{doctor.clinic.name}</span>
+                  {doctor.clinic.city && (
+                    <>
+                      <span className="text-gray-400">•</span>
+                      <span className="text-gray-600">{doctor.clinic.city}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-xs text-gray-500 mb-2 bg-gray-50 px-2 py-1.5 rounded-lg border border-gray-100">
+                <Building2 className="text-gray-400 flex-shrink-0" size={12} />
+                <span className="font-medium">Независимый врач</span>
+              </div>
+            )}
 
             {/* Tags */}
             <div className="flex flex-wrap items-center gap-1.5 md:gap-2 text-xs">
