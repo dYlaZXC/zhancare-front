@@ -20,7 +20,8 @@ interface DoctorAvailabilityChangeData {
   availability_status: string;
   availability_note: string;
   old_status: string;
-  doctor_info: {
+  data?: any; // Full doctor data from backend
+  doctor_info?: {
     id: number;
     name: string;
     email: string;

@@ -169,10 +169,10 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
           }
         });
 
-        toast.success(`✅ Dr. ${doctor_info.name} теперь доступен для консультации!`, {
-          autoClose: 5000,
-          position: 'top-right'
-        });
+        // toast.success(`✅ Dr. ${doctor_info.name} теперь доступен для консультации!`, {
+        //   autoClose: 5000,
+        //   position: 'top-right'
+        // });
       } else {
         // Doctor status changed to unavailable - update status in place or remove if offline
         console.log(`⚠️ Dr. ${doctor_info.name} status changed to ${availability_status}`);

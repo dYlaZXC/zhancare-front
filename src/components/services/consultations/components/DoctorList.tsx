@@ -17,17 +17,13 @@ interface DoctorListProps {
   websocketConnected?: boolean;
 }
 
-// Memoize the doctor list content separately to prevent re-renders
-// DON'T check renderDoctorCard equality - it will ALWAYS change!
-// Instead, just check the data that matters
-const DoctorListContent = React.memo<{
+// Simple list component - React's reconciliation with keys handles efficiency
+const DoctorListContent: React.FC<{
   filteredDoctors: Doctor[];
   selectedDoctorId: number | null;
   recommendedDoctor?: RecommendedDoctor;
   renderDoctorCard: (doctor: Doctor, isRecommended: boolean, isSelected: boolean) => React.ReactNode;
-}>(({ filteredDoctors, selectedDoctorId, recommendedDoctor, renderDoctorCard }) => {
-  
-
+}> = ({ filteredDoctors, selectedDoctorId, recommendedDoctor, renderDoctorCard }) => {
   return (
     <div className="space-y-3 w-full max-w-full">
       {filteredDoctors.map((doctor) => (
@@ -41,32 +37,7 @@ const DoctorListContent = React.memo<{
       ))}
     </div>
   );
-}, (prevProps, nextProps) => {
-  // CRITICAL FIX: Don't compare renderDoctorCard - it will always be different!
-  // Only compare the actual data that matters for rendering
-
-  // Check if doctor IDs are the same and in the same order
-  const doctorsIdsEqual =
-    prevProps.filteredDoctors.length === nextProps.filteredDoctors.length &&
-    prevProps.filteredDoctors.every((doc, idx) => doc.id === nextProps.filteredDoctors[idx]?.id);
-
-  // Check if any doctor's availability status changed (for WebSocket updates)
-  const doctorsStatusEqual = doctorsIdsEqual &&
-    prevProps.filteredDoctors.every((doc, idx) =>
-      doc.availability_status === nextProps.filteredDoctors[idx]?.availability_status
-    );
-
-  const propsEqual = (
-    doctorsIdsEqual &&
-    doctorsStatusEqual &&
-    prevProps.selectedDoctorId === nextProps.selectedDoctorId &&
-    prevProps.recommendedDoctor?.id === nextProps.recommendedDoctor?.id
-  );
-
-  return propsEqual;
-});
-
-DoctorListContent.displayName = 'DoctorListContent';
+};
 
 const DoctorList: React.FC<DoctorListProps> = ({
   doctors,

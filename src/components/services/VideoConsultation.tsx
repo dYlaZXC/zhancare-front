@@ -146,87 +146,98 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
 
     const handleDoctorAvailabilityChange = (eventData: { data: DoctorAvailabilityChangeData } | DoctorAvailabilityChangeData) => {
       // Extract the actual data from the event wrapper
-      const data = 'data' in eventData ? eventData.data : eventData;
+      const wsData = 'data' in eventData ? eventData.data : eventData;
       console.log('👩‍⚕️ Doctor availability changed - RAW EVENT:', eventData);
-      console.log('👩‍⚕️ Doctor availability changed - EXTRACTED DATA:', data);
+      console.log('👩‍⚕️ Doctor availability changed - EXTRACTED DATA:', wsData);
 
-      const { doctor_id, availability_status, doctor_info } = data;
-      console.log(`👩‍⚕️ Doctor ID: ${doctor_id}, Status: ${availability_status}, Name: ${doctor_info?.name}`);
+      const { doctor_id, availability_status, old_status, data: fullDoctorData } = wsData;
+      console.log(`👩‍⚕️ Doctor ID: ${doctor_id}, Status: ${old_status} → ${availability_status}`);
+      console.log('📦 Full doctor data from WebSocket:', fullDoctorData);
 
-      if (availability_status === 'available') {
-        // Doctor became available - update existing doctor or add new one
-        console.log(`✅ Dr. ${doctor_info.name} is now available`);
+      setDoctors(prevDoctors => {
+        const existingDoctorIndex = prevDoctors.findIndex(doctor => doctor.id === doctor_id);
 
-        setDoctors(prevDoctors => {
-          // Check if doctor is already in the list
-          const existingDoctorIndex = prevDoctors.findIndex(doctor => doctor.id === doctor_id);
-
-          if (existingDoctorIndex !== -1) {
-            // Update existing doctor's status
-            const updatedDoctors = [...prevDoctors];
-            updatedDoctors[existingDoctorIndex] = {
-              ...updatedDoctors[existingDoctorIndex],
-              availability_status: 'available' as const
-            };
-            return updatedDoctors;
-          } else {
-            // Doctor not in list - refresh the doctor list to get new doctors
-            fetchDoctors(false);
+        // Doctor is already in the list - update with full WebSocket data
+        if (existingDoctorIndex !== -1) {
+          // Check if status actually changed
+          if (prevDoctors[existingDoctorIndex].availability_status === availability_status) {
+            console.log(`⏭️ Doctor ${doctor_id} status unchanged, skipping update`);
             return prevDoctors;
           }
-        });
 
-        toast.success(`✅ Dr. ${doctor_info.name} теперь доступен для консультации!`, {
-          autoClose: 5000,
-          position: 'top-right'
-        });
-      } else {
-        // Doctor status changed to unavailable - update status in place or remove if offline
-        console.log(`⚠️ Dr. ${doctor_info.name} status changed to ${availability_status}`);
+          // Handle offline status - remove doctor from list
+          if (availability_status === 'offline') {
+            console.log(`🔴 Doctor ${doctor_id} went offline, removing from list`);
+            const updatedDoctors = prevDoctors.filter(doctor => doctor.id !== doctor_id);
 
-        setDoctors(prevDoctors => {
-          const existingDoctorIndex = prevDoctors.findIndex(doctor => doctor.id === doctor_id);
-
-          if (existingDoctorIndex !== -1) {
-            if (availability_status === 'offline') {
-              // Remove offline doctors completely
-              const updatedDoctors = prevDoctors.filter(doctor => doctor.id !== doctor_id);
-
-              // If the currently selected doctor became offline, reset selection
-              if (selectedDoctorId === doctor_id) {
-                setSelectedDoctorId(null);
-                toast.info(`⚠️ Выбранный врач ${doctor_info.name} завершил работу. Пожалуйста, выберите другого врача.`);
-              }
-
-              // If no doctors left, show error message
-              if (updatedDoctors.length === 0) {
-                setDoctorsError("В данный момент нет доступных врачей. Попробуйте позже или врачи появятся автоматически при изменении их статуса.");
-              }
-
-              return updatedDoctors;
-            } else {
-              // Update doctor's status (busy, break, etc.) but keep them visible
-              const updatedDoctors = [...prevDoctors];
-              updatedDoctors[existingDoctorIndex] = {
-                ...updatedDoctors[existingDoctorIndex],
-                availability_status: availability_status as 'available' | 'busy' | 'offline' | 'break'
-              };
-              return updatedDoctors;
+            // Reset selection if offline doctor was selected
+            if (selectedDoctorId === doctor_id) {
+              setSelectedDoctorId(null);
             }
+
+            // Show notification AFTER render
+            const doctorName = fullDoctorData?.name || wsData.doctor_info?.name || 'Врач';
+            setTimeout(() => {
+              toast.info(`⚠️ ${doctorName} завершил работу.`, {
+                autoClose: 5000,
+                position: 'top-right'
+              });
+            }, 0);
+
+            return updatedDoctors;
           }
 
+          // Update doctor with FULL data from WebSocket (available, busy, break)
+          console.log(`🔄 Updating doctor ${doctor_id} with full WebSocket data`);
+          const updatedDoctors = [...prevDoctors];
+
+          // Use full doctor data if available, otherwise merge with existing data
+          if (fullDoctorData) {
+            updatedDoctors[existingDoctorIndex] = fullDoctorData as any;
+          } else {
+            updatedDoctors[existingDoctorIndex] = {
+              ...updatedDoctors[existingDoctorIndex],
+              availability_status: availability_status as any
+            };
+          }
+
+          // Show notification AFTER render
+          const doctorName = fullDoctorData?.name || wsData.doctor_info?.name || 'Врач';
+          const statusText = availability_status === 'available' ? 'теперь доступен' :
+                            availability_status === 'busy' ? 'занят' :
+                            availability_status === 'break' ? 'на перерыве' : 'изменил статус';
+
+          setTimeout(() => {
+            toast.success(`✅ ${doctorName} ${statusText}!`, {
+              autoClose: 3000,
+              position: 'top-right'
+            });
+          }, 0);
+
+          return updatedDoctors;
+        }
+
+        // Doctor not in list - add them if they're becoming available
+        else {
+          if (availability_status === 'available' && fullDoctorData) {
+            console.log(`➕ Adding new available doctor ${doctor_id} from WebSocket`);
+
+            // Show notification AFTER render
+            setTimeout(() => {
+              toast.success(`✅ ${fullDoctorData.name} теперь доступен для консультации!`, {
+                autoClose: 5000,
+                position: 'top-right'
+              });
+            }, 0);
+
+            return [...prevDoctors, fullDoctorData as any];
+          }
+
+          // Don't add doctors with other statuses
+          console.log(`⏭️ Doctor ${doctor_id} not in list and status is ${availability_status}, ignoring`);
           return prevDoctors;
-        });
-
-        const statusText = availability_status === 'offline' ? 'завершил работу' :
-                          availability_status === 'busy' ? 'занят' :
-                          availability_status === 'break' ? 'на перерыве' : 'недоступен';
-
-        toast.info(`ℹ️ Dr. ${doctor_info.name} ${statusText}`, {
-          autoClose: 3000,
-          position: 'top-right'
-        });
-      }
+        }
+      });
     };
 
     const handleConsultationStatusChange = (data: any) => {
