@@ -9,9 +9,12 @@ interface DoctorSearchAndFiltersProps {
   onSearchChange: (value: string) => void;
   filterByType: string;
   onFilterChange: (value: string) => void;
+  filterByClinic: string;
+  onClinicFilterChange: (value: string) => void;
   language: Language;
   onLanguageChange: (value: Language) => void;
   doctorTypes: string[];
+  clinics: string[];
 }
 
 const DoctorSearchAndFilters: React.FC<DoctorSearchAndFiltersProps> = ({
@@ -19,9 +22,12 @@ const DoctorSearchAndFilters: React.FC<DoctorSearchAndFiltersProps> = ({
   onSearchChange,
   filterByType,
   onFilterChange,
+  filterByClinic,
+  onClinicFilterChange,
   language,
   onLanguageChange,
   doctorTypes,
+  clinics,
 }) => {
   return (
     <motion.div
@@ -48,15 +54,16 @@ const DoctorSearchAndFilters: React.FC<DoctorSearchAndFiltersProps> = ({
             <option key={type} value={type}>{type}</option>
           ))}
         </select>
-        {/* <select
-          value={language}
-          onChange={(e) => onLanguageChange(e.target.value as Language)}
+        <select
+          value={filterByClinic}
+          onChange={(e) => onClinicFilterChange(e.target.value)}
           className="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100 transition-all bg-white text-sm"
         >
-          <option value="ru">🇷🇺 Русский</option>
-          <option value="kz">🇰🇿 Қазақша</option>
-          <option value="en">🇺🇸 English</option>
-        </select> */}
+          <option value="all">Все клиники</option>
+          {clinics.map(clinic => (
+            <option key={clinic} value={clinic}>{clinic}</option>
+          ))}
+        </select>
       </div>
     </motion.div>
   );

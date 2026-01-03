@@ -61,6 +61,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
   // UI state
   const [searchTerm, setSearchTerm] = useState("");
   const [filterByType, setFilterByType] = useState<string>("all");
+  const [filterByClinic, setFilterByClinic] = useState<string>("all");
   const [language, setLanguage] = useState<Language>('ru');
   const [localSymptoms, setLocalSymptoms] = useState("");
 
@@ -81,10 +82,11 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
   const [selectedDoctorForBooking, setSelectedDoctorForBooking] = useState<Doctor | null>(null);
 
   // Use our custom hook for filtering
-  const { filteredDoctors, doctorTypes } = useDoctorFiltering({
+  const { filteredDoctors, doctorTypes, clinics } = useDoctorFiltering({
     doctors,
     searchTerm,
     filterByType,
+    filterByClinic,
     language,
     recommendedDoctor,
   });
@@ -330,9 +332,9 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
     //   selectedTimeslot
     // });
 
+    // ✅ Allow booking without AI recommendation - users can skip AI and book directly
     if (!aiRecommendationId) {
-      console.warn('⚠️ No AI recommendation ID available');
-      return;
+      console.log('ℹ️ Booking timeslot without AI recommendation (user skipped AI or selected doctor directly)');
     }
 
     // Find which doctor this timeslot belongs to by searching through doctorTimeslots
@@ -368,7 +370,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
   };
 
   const confirmTimeslotBooking = async () => {
-    if (!selectedTimeslot || !selectedDoctorForBooking || !aiRecommendationId) {
+    if (!selectedTimeslot || !selectedDoctorForBooking) {
       return;
     }
 
@@ -387,12 +389,16 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
       }));
 
       // Create consultation data for Step 3
-      const consultationData = {
+      // ✅ ai_recommendation_id is optional - only include if available
+      const consultationData: any = {
         scheduled_at: selectedTimeslot.start_time,
         scheduled_time: selectedTimeslot.start_time,
         doctor_id: bookingDoctorId,
-        ai_recommendation_id: aiRecommendationId
       };
+
+      if (aiRecommendationId) {
+        consultationData.ai_recommendation_id = aiRecommendationId;
+      }
 
       // console.log(`🎉 Timeslot confirmed successfully for doctor ${bookingDoctorId}`);
       setShowConfirmModal(false);
@@ -654,9 +660,12 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
         onSearchChange={setSearchTerm}
         filterByType={filterByType}
         onFilterChange={setFilterByType}
+        filterByClinic={filterByClinic}
+        onClinicFilterChange={setFilterByClinic}
         language={language}
         onLanguageChange={setLanguage}
         doctorTypes={doctorTypes}
+        clinics={clinics}
       />
 
       {/* Doctor List */}

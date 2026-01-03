@@ -770,7 +770,8 @@ class WebSocketService {
     }
     this.eventCallbacks.get(event)?.push(callback);
 
-    // console.log(`📢 Subscribed to event: ${event}`);
+    const callbackCount = this.eventCallbacks.get(event)?.length || 0;
+    console.log(`📢 Subscribed to event: ${event} (Total callbacks: ${callbackCount})`);
   }
 
   /**
@@ -780,7 +781,7 @@ class WebSocketService {
     if (!callback) {
       // Remove all callbacks for this event
       this.eventCallbacks.delete(event);
-      // console.log(`📢 Unsubscribed from all callbacks for event: ${event}`);
+      console.log(`📢 Unsubscribed from all callbacks for event: ${event}`);
       return;
     }
 
@@ -789,7 +790,10 @@ class WebSocketService {
       const index = callbacks.indexOf(callback);
       if (index > -1) {
         callbacks.splice(index, 1);
-        // console.log(`📢 Unsubscribed from event: ${event}`);
+        const remainingCount = callbacks.length;
+        console.log(`📢 Unsubscribed from event: ${event} (Remaining callbacks: ${remainingCount})`);
+      } else {
+        console.warn(`⚠️ Tried to unsubscribe from ${event} but callback not found in list`);
       }
     }
   }
@@ -800,7 +804,10 @@ class WebSocketService {
   private triggerCallbacks(event: string, data: any) {
     const callbacks = this.eventCallbacks.get(event);
     if (callbacks) {
-      callbacks.forEach(callback => {
+      if (event === 'doctor_availability_changed') {
+        console.log(`🔔 Triggering ${callbacks.length} callback(s) for ${event}`);
+      }
+      callbacks.forEach((callback, index) => {
         try {
           callback(data);
         } catch (error) {

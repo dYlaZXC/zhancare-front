@@ -31,11 +31,15 @@ interface VideoConsultationProps {
 }
 
 const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false }) => {
+  // Generate unique ID for this component instance to track duplicates
+  const componentInstanceId = useRef(Math.random().toString(36).substring(7));
+  console.log(`🆔 VideoConsultation instance rendering: ${componentInstanceId.current}`);
   const { token } = useAuth();
   const router = useRouter();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const lastToastRef = useRef<{ doctorId: number; status: string; timestamp: number } | null>(null);
 
   const [step, setStep] = useState<1 | 2 | 3>(skipAI ? 2 : 1);
   const [symptoms, setSymptoms] = useState("");
@@ -145,6 +149,8 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
     };
 
     const handleDoctorAvailabilityChange = (eventData: { data: DoctorAvailabilityChangeData } | DoctorAvailabilityChangeData) => {
+      console.log(`🔥🔥🔥 HANDLER CALLED from instance ${componentInstanceId.current}`);
+      console.log('🔥 Call stack:', new Error().stack);
       // Extract the actual data from the event wrapper
       const wsData = 'data' in eventData ? eventData.data : eventData;
       console.log('👩‍⚕️ Doctor availability changed - RAW EVENT:', eventData);
@@ -153,6 +159,24 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
       const { doctor_id, availability_status, old_status, data: fullDoctorData } = wsData;
       console.log(`👩‍⚕️ Doctor ID: ${doctor_id}, Status: ${old_status} → ${availability_status}`);
       console.log('📦 Full doctor data from WebSocket:', fullDoctorData);
+
+      // Helper function to show toast only once per doctor status change
+      const showToastOnce = (toastFn: () => void) => {
+        const now = Date.now();
+        const lastToast = lastToastRef.current;
+
+        // Only show toast if we haven't shown one for this doctor+status in the last 1 second
+        if (!lastToast ||
+            lastToast.doctorId !== doctor_id ||
+            lastToast.status !== availability_status ||
+            now - lastToast.timestamp > 1000) {
+
+          lastToastRef.current = { doctorId: doctor_id, status: availability_status, timestamp: now };
+          setTimeout(toastFn, 0);
+        } else {
+          console.log(`⏭️ Skipping duplicate toast for doctor ${doctor_id} status ${availability_status}`);
+        }
+      };
 
       setDoctors(prevDoctors => {
         const existingDoctorIndex = prevDoctors.findIndex(doctor => doctor.id === doctor_id);
@@ -175,14 +199,14 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
               setSelectedDoctorId(null);
             }
 
-            // Show notification AFTER render
+            // Show notification AFTER render (with duplicate prevention)
             const doctorName = fullDoctorData?.name || wsData.doctor_info?.name || 'Врач';
-            setTimeout(() => {
+            showToastOnce(() => {
               toast.info(`⚠️ ${doctorName} завершил работу.`, {
                 autoClose: 5000,
                 position: 'top-right'
               });
-            }, 0);
+            });
 
             return updatedDoctors;
           }
@@ -201,18 +225,18 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
             };
           }
 
-          // Show notification AFTER render
+          // Show notification AFTER render (with duplicate prevention)
           const doctorName = fullDoctorData?.name || wsData.doctor_info?.name || 'Врач';
           const statusText = availability_status === 'available' ? 'теперь доступен' :
                             availability_status === 'busy' ? 'занят' :
                             availability_status === 'break' ? 'на перерыве' : 'изменил статус';
 
-          setTimeout(() => {
+          showToastOnce(() => {
             toast.success(`✅ ${doctorName} ${statusText}!`, {
               autoClose: 3000,
               position: 'top-right'
             });
-          }, 0);
+          });
 
           return updatedDoctors;
         }
@@ -222,13 +246,13 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
           if (availability_status === 'available' && fullDoctorData) {
             console.log(`➕ Adding new available doctor ${doctor_id} from WebSocket`);
 
-            // Show notification AFTER render
-            setTimeout(() => {
+            // Show notification AFTER render (with duplicate prevention)
+            showToastOnce(() => {
               toast.success(`✅ ${fullDoctorData.name} теперь доступен для консультации!`, {
                 autoClose: 5000,
                 position: 'top-right'
               });
-            }, 0);
+            });
 
             return [...prevDoctors, fullDoctorData as any];
           }
@@ -300,9 +324,11 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
     };
 
     // Subscribe to WebSocket events
+    console.log(`📝 [Instance ${componentInstanceId.current}] Registering WebSocket event handlers`);
     websocketService.on('connect', handleWebSocketConnect);
     websocketService.on('disconnect', handleWebSocketDisconnect);
     websocketService.onDoctorAvailabilityChanged(handleDoctorAvailabilityChange);
+    console.log(`📝 [Instance ${componentInstanceId.current}] Doctor availability handler registered`);
     websocketService.on('consultation_status_changed', handleConsultationStatusChange);
 
     // Initial doctor fetch
@@ -310,14 +336,16 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
 
     // Cleanup WebSocket on unmount
     return () => {
+      console.log(`🧹 [Instance ${componentInstanceId.current}] Cleaning up WebSocket event handlers`);
       websocketService.off('connect', handleWebSocketConnect);
       websocketService.off('disconnect', handleWebSocketDisconnect);
       websocketService.offDoctorAvailabilityChanged(handleDoctorAvailabilityChange);
+      console.log(`🧹 [Instance ${componentInstanceId.current}] Doctor availability handler unregistered`);
       websocketService.off('consultation_status_changed', handleConsultationStatusChange);
       websocketService.disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, fetchDoctors]); // Removed selectedDoctorId - no need to re-fetch doctors on selection!
+  }, [token]); // fetchDoctors removed to prevent duplicate WebSocket handler registration
 
   useEffect(() => {
     if (waiting && meetingId) {
