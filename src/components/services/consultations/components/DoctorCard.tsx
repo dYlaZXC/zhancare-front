@@ -297,12 +297,12 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
             </div>
 
             {/* Mini Calendar or Full Date Picker */}
-            <div className="flex-1 flex flex-col justify-center space-y-1.5 sm:space-y-2 md:space-y-2 lg:space-y-2.5">
+            <div className="flex-1 flex flex-col space-y-1.5 sm:space-y-2 md:space-y-2 lg:space-y-2.5">
               {showFullCalendar ? (
                 /* Full Date and Time Picker */
                 <div className="space-y-1.5 sm:space-y-2 md:space-y-2 lg:space-y-2.5">
                   <div className="text-[9px] sm:text-[10px] md:text-[10px] lg:text-xs font-bold text-indigo-700 text-center">Выберите дату</div>
-                  <div className="grid grid-cols-7 gap-0.5 sm:gap-1 md:gap-1 lg:gap-1.5 text-center">
+                  <div className="grid grid-cols-7 gap-1 sm:gap-1.5 md:gap-1.5 lg:gap-2 text-center">
                     {calendarDates.map((dateItem) => (
                       <div key={dateItem.date} className="text-[9px] sm:text-[10px] md:text-xs text-gray-500 font-semibold">
                         {dateItem.dayName}
@@ -320,7 +320,7 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
                             onDateSelect?.(dateItem.date);
                           }}
                           className={clsx(
-                            "w-5 h-5 sm:w-6 sm:h-6 md:w-6 md:h-6 lg:w-7 lg:h-7 xl:w-9 xl:h-9 flex items-center justify-center text-[9px] sm:text-[10px] md:text-[10px] lg:text-xs rounded-md sm:rounded-lg font-medium transition-all cursor-pointer",
+                            "w-6 h-6 sm:w-7 sm:h-7 md:w-7 md:h-7 lg:w-8 lg:h-8 xl:w-10 xl:h-10 flex items-center justify-center text-[10px] sm:text-xs md:text-xs lg:text-sm rounded-md sm:rounded-lg font-medium transition-all cursor-pointer",
                             dateItem.isToday
                               ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold shadow-lg ring-1 sm:ring-2 ring-blue-200"
                               : hasSlots
@@ -337,9 +337,9 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
 
                   {/* Time slots for selected date */}
                   {selectedDate && (
-                    <div className="space-y-1 sm:space-y-1.5 md:space-y-1.5 lg:space-y-2">
+                    <div className="space-y-1.5 sm:space-y-2 md:space-y-2 lg:space-y-2">
                       <div className="text-[9px] sm:text-[10px] md:text-[10px] lg:text-xs font-bold text-indigo-700 text-center">Доступное время</div>
-                      <div className="grid grid-cols-3 gap-0.5 sm:gap-1 md:gap-1 lg:gap-1.5 max-h-28 sm:max-h-32 md:max-h-32 lg:max-h-36 overflow-y-auto">
+                      <div className="grid grid-cols-3 gap-1 sm:gap-1.5 md:gap-1.5 lg:gap-2 max-h-32 sm:max-h-36 md:max-h-36 lg:max-h-40 overflow-y-auto">
                         {(() => {
                           // Filter slots properly using local date comparison
                           const slotsForDate = timeslots.filter(slot => {
@@ -400,7 +400,7 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
                                   }
                                 }}
                                 className={clsx(
-                                  "px-1.5 sm:px-2 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-colors",
+                                  "px-2 sm:px-2.5 md:px-2.5 lg:px-3 py-1.5 sm:py-2 md:py-2 lg:py-2 rounded-lg text-xs sm:text-sm md:text-sm font-medium transition-colors",
                                   timeslot.is_booked || timeslot.available_spots === 0
                                     ? "bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed"
                                     : "bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50 hover:border-indigo-300"
@@ -408,14 +408,14 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
                               >
                                 {formatTime(timeslot.start_time)}
                                 {(timeslot.is_booked || timeslot.available_spots === 0) && (
-                                  <div className="text-[8px] sm:text-[10px] mt-0.5 text-gray-400">Занято</div>
+                                  <div className="text-[9px] sm:text-[10px] mt-0.5 text-gray-400">Занято</div>
                                 )}
                               </button>
                             ))
                           ) : (
-                            <div className="col-span-3 bg-gray-100 text-gray-500 px-2 sm:px-3 py-2 sm:py-3 rounded-lg text-center">
-                              <div className="text-[10px] sm:text-xs">На эту дату нет свободных слотов</div>
-                              <div className="text-[10px] sm:text-xs mt-1 text-gray-400">Выберите другую дату</div>
+                            <div className="col-span-3 bg-gray-100 text-gray-500 px-3 sm:px-4 py-3 sm:py-4 rounded-lg text-center">
+                              <div className="text-xs sm:text-sm">На эту дату нет свободных слотов</div>
+                              <div className="text-xs sm:text-sm mt-1 text-gray-400">Выберите другую дату</div>
                             </div>
                           );
                         })()}
@@ -437,9 +437,9 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
                 </div>
               ) : (
                 /* Mini Calendar */
-                <div className="grid grid-cols-7 gap-0.5 sm:gap-1 md:gap-1 lg:gap-1.5 text-center">
+                <div className="grid grid-cols-7 gap-1 sm:gap-1.5 md:gap-1.5 lg:gap-2 text-center">
                   {calendarDates.map((dateItem) => (
-                    <div key={dateItem.date} className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs text-gray-500 font-semibold">
+                    <div key={dateItem.date} className="text-[9px] sm:text-[10px] md:text-[10px] lg:text-xs text-gray-500 font-semibold">
                       {dateItem.dayName}
                     </div>
                   ))}
@@ -455,7 +455,7 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
                           onDateSelect?.(dateItem.date);
                         }}
                         className={clsx(
-                          "w-5 h-5 sm:w-6 sm:h-6 md:w-6 md:h-6 lg:w-7 lg:h-7 xl:w-9 xl:h-9 flex items-center justify-center text-[9px] sm:text-[10px] md:text-[10px] lg:text-xs rounded-md sm:rounded-lg font-medium transition-all cursor-pointer",
+                          "w-6 h-6 sm:w-7 sm:h-7 md:w-7 md:h-7 lg:w-8 lg:h-8 xl:w-10 xl:h-10 flex items-center justify-center text-[10px] sm:text-xs md:text-xs lg:text-sm rounded-md sm:rounded-lg font-medium transition-all cursor-pointer",
                           dateItem.isToday
                             ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold shadow-lg ring-1 sm:ring-2 ring-blue-200"
                             : hasSlots
