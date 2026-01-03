@@ -130,21 +130,28 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
 
     // Setup WebSocket event handlers
     const handleWebSocketConnect = () => {
-      console.log('🔌 WebSocket connected in VideoConsultation');
+      console.log('✅✅✅ WebSocket CONNECTED in VideoConsultation ✅✅✅');
+      console.log('WebSocket service state:', {
+        connected: websocketService.connected,
+        authenticated: websocketService.authenticated,
+        status: websocketService.connectionStatus
+      });
       setWebsocketConnected(true);
     };
 
     const handleWebSocketDisconnect = () => {
-      console.log('🔌 WebSocket disconnected in VideoConsultation');
+      console.log('❌❌❌ WebSocket DISCONNECTED in VideoConsultation ❌❌❌');
       setWebsocketConnected(false);
     };
 
     const handleDoctorAvailabilityChange = (eventData: { data: DoctorAvailabilityChangeData } | DoctorAvailabilityChangeData) => {
       // Extract the actual data from the event wrapper
       const data = 'data' in eventData ? eventData.data : eventData;
-      console.log('👩‍⚕️ Doctor availability changed:', data);
+      console.log('👩‍⚕️ Doctor availability changed - RAW EVENT:', eventData);
+      console.log('👩‍⚕️ Doctor availability changed - EXTRACTED DATA:', data);
 
       const { doctor_id, availability_status, doctor_info } = data;
+      console.log(`👩‍⚕️ Doctor ID: ${doctor_id}, Status: ${availability_status}, Name: ${doctor_info?.name}`);
 
       if (availability_status === 'available') {
         // Doctor became available - update existing doctor or add new one
@@ -299,7 +306,7 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
       websocketService.disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, fetchDoctors, selectedDoctorId]);
+  }, [token, fetchDoctors]); // Removed selectedDoctorId - no need to re-fetch doctors on selection!
 
   useEffect(() => {
     if (waiting && meetingId) {

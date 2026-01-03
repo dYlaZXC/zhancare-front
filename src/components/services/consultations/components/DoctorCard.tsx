@@ -574,4 +574,4 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
   );
 };
 
-export default DoctorCard;
+export default React.memo(DoctorCard);

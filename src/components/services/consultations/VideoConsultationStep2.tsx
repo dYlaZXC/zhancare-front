@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Clock, User, Sparkles, Send, AlertCircle, X, RefreshCw } from "lucide-react";
 import { api } from "@/utils/api";
@@ -6,7 +6,6 @@ import { api } from "@/utils/api";
 // Import our new components
 import DoctorSearchAndFilters from "./components/DoctorSearchAndFilters";
 import NavigationButtons from "./components/NavigationButtons";
-import DoctorList from "./components/DoctorList";
 import AIRecommendationBlock from "./components/AIRecommendationBlock";
 import DoctorCard from "./components/DoctorCard";
 
@@ -94,16 +93,33 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
   // const isUrgent = recommendedDoctor?.urgency === 'urgent';
   const isUrgent = false; // Always false now - all consultations use time slots
 
-  // Fetch timeslots for all consultations
+  // Track which doctors we've already fetched timeslots for
+  const [fetchedDoctorIds, setFetchedDoctorIds] = useState<Set<number>>(new Set());
+
+  // Fetch timeslots for all consultations (ONLY ONCE per doctor!)
   useEffect(() => {
-    // Always fetch timeslots now (removed isUrgent check)
     if (doctors.length > 0) {
+      const newDoctorIds: number[] = [];
+
       doctors.forEach(doctor => {
-        fetchDoctorTimeslots(doctor.id);
+        // Only fetch if we haven't already fetched for this doctor
+        if (!fetchedDoctorIds.has(doctor.id)) {
+          fetchDoctorTimeslots(doctor.id);
+          newDoctorIds.push(doctor.id);
+        }
       });
+
+      // Batch update state once instead of multiple times
+      if (newDoctorIds.length > 0) {
+        setFetchedDoctorIds(prev => {
+          const next = new Set(prev);
+          newDoctorIds.forEach(id => next.add(id));
+          return next;
+        });
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doctors]);
+  }, [doctors.length]); // Only depend on length, not the entire array
 
 
   // Minimal fallback polling for timeslot updates (WebSocket handles real-time updates)
@@ -406,42 +422,22 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
     setSelectedDate(date);
   };
 
-  const renderDoctorCard = useCallback((doctor: Doctor, isRecommended: boolean, isSelected: boolean) => {
-    const lastUpdate = lastUpdateTime[doctor.id];
-    const lastUpdateDisplay = lastUpdate
-      ? new Date(lastUpdate).toLocaleTimeString('ru-RU', {
-          hour: '2-digit',
-          minute: '2-digit'
-        })
-      : null;
+  // Cache handlers per doctor ID to avoid creating new functions
+  // Use a ref to store handlers so they're stable across renders
+  const doctorHandlersRef = React.useRef<Record<number, {
+    onToggle: () => void;
+    onSelect: () => void;
+  }>>({});
 
-    // console.log(`🃏 Rendering DoctorCard for doctor ${doctor.id}:`, {
-    //   isSelected,
-    //   isUrgent,
-    //   timeslots: doctorTimeslots[doctor.id]?.length || 0,
-    //   selectedDate,
-    //   hasHandleTimeslotSelect: !!handleTimeslotSelect
-    // });
-
-    return (
-      <DoctorCard
-        doctor={doctor}
-        isRecommended={isRecommended}
-        isSelected={isSelected}
-        language={language}
-        isUrgent={isUrgent}
-        timeslots={doctorTimeslots[doctor.id] || []}
-        selectedDate={selectedDate}
-        showFullCalendar={showFullCalendar[doctor.id]}
-        doctorTimeslotsByDate={doctorTimeslotsByDate[doctor.id]}
-        lastUpdateTime={lastUpdateDisplay}
-        onDateSelect={handleDateSelect}
-        onTimeslotSelect={handleTimeslotSelect}
-        onToggleCalendar={() => toggleCalendarView(doctor.id)}
-        onClick={() => handleDoctorSelect(doctor.id)}
-      />
-    );
-  }, [language, isUrgent, doctorTimeslots, selectedDate, showFullCalendar, doctorTimeslotsByDate, lastUpdateTime, handleTimeslotSelect]);
+  // Create handlers only for doctors that don't have them yet
+  filteredDoctors.forEach(doctor => {
+    if (!doctorHandlersRef.current[doctor.id]) {
+      doctorHandlersRef.current[doctor.id] = {
+        onToggle: () => toggleCalendarView(doctor.id),
+        onSelect: () => handleDoctorSelect(doctor.id),
+      };
+    }
+  });
 
   return (
     <motion.div
@@ -664,17 +660,55 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
       />
 
       {/* Doctor List */}
-      <DoctorList
-        doctors={doctors}
-        filteredDoctors={filteredDoctors}
-        loading={loading}
-        selectedDoctorId={selectedDoctorId}
-        recommendedDoctor={recommendedDoctor}
-        onDoctorSelect={handleDoctorSelect}
-        renderDoctorCard={renderDoctorCard}
-        doctorsError={doctorsError}
-        websocketConnected={websocketConnected}
-      />
+      {/* Doctor List - SIMPLIFIED: Render directly without complex callbacks */}
+      <div className="w-full">
+        {loading ? (
+          <div className="flex justify-center items-center h-32">
+            <div className="text-center space-y-3">
+              <div className="w-8 h-8 border-3 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto"></div>
+              <p className="text-gray-600 text-sm">Загружаем врачей...</p>
+            </div>
+          </div>
+        ) : filteredDoctors.length === 0 ? (
+          <div className="text-center py-12 bg-gray-50 rounded-xl">
+            <p className="text-gray-600 text-sm">
+              {doctorsError || (doctors.length === 0 ? "Нет доступных врачей" : "Врачи не найдены")}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3 w-full">
+            {filteredDoctors.map((doctor) => {
+              const handlers = doctorHandlersRef.current[doctor.id];
+              if (!handlers) return null;
+
+              const lastUpdate = lastUpdateTime[doctor.id];
+              const lastUpdateDisplay = lastUpdate
+                ? new Date(lastUpdate).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+                : null;
+
+              return (
+                <DoctorCard
+                  key={doctor.id}
+                  doctor={doctor}
+                  isRecommended={recommendedDoctor?.id === doctor.id}
+                  isSelected={selectedDoctorId === doctor.id}
+                  language={language}
+                  isUrgent={isUrgent}
+                  timeslots={doctorTimeslots[doctor.id] || []}
+                  selectedDate={selectedDate}
+                  showFullCalendar={showFullCalendar[doctor.id] || false}
+                  doctorTimeslotsByDate={doctorTimeslotsByDate[doctor.id]}
+                  lastUpdateTime={lastUpdateDisplay}
+                  onDateSelect={handleDateSelect}
+                  onTimeslotSelect={handleTimeslotSelect}
+                  onToggleCalendar={handlers.onToggle}
+                  onClick={handlers.onSelect}
+                />
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Navigation */}
       <NavigationButtons
