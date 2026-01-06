@@ -47,7 +47,8 @@ const DoctorAvailabilityTest: React.FC = () => {
       // console.log('👩‍⚕️ Doctor availability changed:', data);
       const { doctor_id, availability_status, doctor_info, old_status } = data;
 
-      addEvent(`👩‍⚕️ Dr. ${doctor_info.name} status: ${old_status} → ${availability_status}`);
+      const doctorName = doctor_info?.name || `Doctor #${doctor_id}`;
+      addEvent(`👩‍⚕️ Dr. ${doctorName} status: ${old_status} → ${availability_status}`);
 
       // Update the doctors list if this is a test doctor
       fetchDoctors(false);
