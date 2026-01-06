@@ -51,6 +51,7 @@ export const DoctorSidebar = ({
   if (!user) return null;
 
   const doctorMenu = [
+    { id: "profile", icon: faUser, title: "Профиль", color: "#1e40af" },
     { id: "consultations", icon: faVideo, title: "Видео Консультация", color: "#295bbf" },
     { id: "appointments", icon: faCalendar, title: "Мои вызовы на дом", color: "#3772ff" },
     { id: "patients", icon: faNotesMedical, title: "История Пациентов", color: "#3267e6" },
