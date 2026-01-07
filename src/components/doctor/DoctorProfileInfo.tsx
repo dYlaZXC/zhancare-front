@@ -135,7 +135,8 @@ export default function DoctorProfileInfo() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-3xl shadow-2xl overflow-hidden mb-8"
+          className="relative rounded-3xl shadow-2xl overflow-hidden mb-8"
+          style={{ background: 'linear-gradient(135deg, #3772ff 0%, #2956bf 100%)' }}
         >
           {/* Decorative Pattern */}
           <div className="absolute inset-0 opacity-10">
@@ -154,14 +155,14 @@ export default function DoctorProfileInfo() {
                 transition={{ delay: 0.2 }}
                 className="relative group"
               >
-                <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-gradient-to-br from-white to-blue-100 flex items-center justify-center text-blue-600 text-5xl sm:text-6xl font-bold shadow-2xl ring-8 ring-white/50 relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-400/20 to-purple-400/20" />
+                <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full flex items-center justify-center text-5xl sm:text-6xl font-bold shadow-2xl ring-8 ring-white/50 relative overflow-hidden" style={{ background: 'linear-gradient(to bottom right, white, #ebf1ff)', color: '#3772ff' }}>
+                  <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom right, rgba(55, 114, 255, 0.1), rgba(50, 103, 230, 0.1))' }} />
                   <span className="relative z-10">
                     {profile.first_name.charAt(0)}{profile.last_name.charAt(0)}
                   </span>
                 </div>
                 {isEditing && (
-                  <button className="absolute bottom-2 right-2 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center text-blue-600 hover:bg-blue-50 transition-colors">
+                  <button className="absolute bottom-2 right-2 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-blue-50 transition-colors" style={{ color: '#3772ff' }}>
                     <FontAwesomeIcon icon={faCamera} />
                   </button>
                 )}
@@ -212,7 +213,8 @@ export default function DoctorProfileInfo() {
                 {!isEditing ? (
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="flex items-center gap-2 px-6 py-3 bg-white text-blue-600 rounded-xl hover:shadow-xl transition-all duration-300 hover:scale-105 font-semibold"
+                    className="flex items-center gap-2 px-6 py-3 bg-white rounded-xl hover:shadow-xl transition-all duration-300 hover:scale-105 font-semibold"
+                    style={{ color: '#3772ff' }}
                   >
                     <FontAwesomeIcon icon={faEdit} />
                     <span>Редактировать</span>
@@ -222,7 +224,10 @@ export default function DoctorProfileInfo() {
                     <button
                       onClick={handleSave}
                       disabled={isSaving}
-                      className="flex items-center gap-2 px-6 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 hover:shadow-xl transition-all duration-300 hover:scale-105 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center gap-2 px-6 py-3 text-white rounded-xl hover:shadow-xl transition-all duration-300 hover:scale-105 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ backgroundColor: '#3772ff' }}
+                      onMouseEnter={(e) => !isSaving && (e.currentTarget.style.backgroundColor = '#3267e6')}
+                      onMouseLeave={(e) => !isSaving && (e.currentTarget.style.backgroundColor = '#3772ff')}
                     >
                       <FontAwesomeIcon icon={faSave} className={isSaving ? "animate-pulse" : ""} />
                       <span>{isSaving ? "Сохранение..." : "Сохранить"}</span>
@@ -230,7 +235,10 @@ export default function DoctorProfileInfo() {
                     <button
                       onClick={handleCancel}
                       disabled={isSaving}
-                      className="flex items-center gap-2 px-6 py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 hover:shadow-xl transition-all duration-300 hover:scale-105 font-semibold disabled:opacity-50"
+                      className="flex items-center gap-2 px-6 py-3 text-white rounded-xl hover:shadow-xl transition-all duration-300 hover:scale-105 font-semibold disabled:opacity-50"
+                      style={{ backgroundColor: '#283353' }}
+                      onMouseEnter={(e) => !isSaving && (e.currentTarget.style.backgroundColor = '#1e263e')}
+                      onMouseLeave={(e) => !isSaving && (e.currentTarget.style.backgroundColor = '#283353')}
                     >
                       <FontAwesomeIcon icon={faTimes} />
                       <span>Отмена</span>

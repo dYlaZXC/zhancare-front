@@ -12,6 +12,7 @@ import {
   faBolt,
   faGem,
   faUser,
+  faChartLine,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useState, useEffect } from "react";
@@ -52,6 +53,7 @@ export const DoctorSidebar = ({
 
   const doctorMenu = [
     { id: "profile", icon: faUser, title: "Профиль", color: "#1e40af" },
+    { id: "analytics", icon: faChartLine, title: "Аналитика", color: "#8b5cf6" },
     { id: "consultations", icon: faVideo, title: "Видео Консультация", color: "#295bbf" },
     { id: "appointments", icon: faCalendar, title: "Мои вызовы на дом", color: "#3772ff" },
     { id: "patients", icon: faNotesMedical, title: "История Пациентов", color: "#3267e6" },

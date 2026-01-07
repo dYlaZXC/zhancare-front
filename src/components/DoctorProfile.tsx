@@ -13,6 +13,7 @@ import { DoctorMainContent } from "@/components/layout/DoctorMainContent";
 // import DoctorConsultations from "@/components/services/DoctorConsultations";
 import DoctorConsultationsNew from "@/components/services/DoctorConsultationsNew";
 import DoctorProfileInfo from "@/components/doctor/DoctorProfileInfo";
+import DoctorAnalytics from "@/components/doctor/DoctorAnalytics";
 
 export default function DoctorProfile() {
   const { user, logoutUser, loading } = useAuth();
@@ -66,6 +67,8 @@ export default function DoctorProfile() {
         );
       case "consultations":
         return <DoctorConsultationsNew />;
+      case "analytics":
+        return <DoctorAnalytics />;
       case "profile":
         return <DoctorProfileInfo />;
       default:
@@ -94,9 +97,9 @@ export default function DoctorProfile() {
         />
 
         {/* Main Content */}
-        <main className={`flex-1 bg-gray-50 ${activeTab === 'consultations' ? '' : 'p-4 sm:p-6'}`}>
-          {/* Breadcrumb - Hide for consultations and profile tabs */}
-          {activeTab !== 'consultations' && activeTab !== 'profile' && (
+        <main className={`flex-1 bg-gray-50 ${activeTab === 'consultations' || activeTab === 'analytics' ? '' : 'p-4 sm:p-6'}`}>
+          {/* Breadcrumb - Hide for consultations, analytics and profile tabs */}
+          {activeTab !== 'consultations' && activeTab !== 'profile' && activeTab !== 'analytics' && (
             <DoctorBreadcrumb
               activeTab={activeTab}
               onNavigate={setActiveTab}
