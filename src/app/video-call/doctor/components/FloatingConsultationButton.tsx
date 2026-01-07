@@ -17,9 +17,19 @@ import {
   faCircle,
   faPen,
   faEraser,
-  faCheck
+  faCheck,
+  faCommentMedical,
+  faHistory,
+  faFlask,
+  faPrescription,
+  faDiagnoses
 } from "@fortawesome/free-solid-svg-icons";
 import ConsultationForm, { ConsultationFormData } from "./ConsultationForm";
+import PatientComplaintsForm from "./forms/PatientComplaintsForm";
+import AnamnesisForm from "./forms/AnamnesisForm";
+import DiagnosticsForm from "./forms/DiagnosticsForm";
+import TreatmentRecommendationsForm from "./forms/TreatmentRecommendationsForm";
+import DiagnosisForm from "./forms/DiagnosisForm";
 import { Consultation } from "@/types/consultation";
 
 interface FloatingConsultationButtonProps {
@@ -54,14 +64,13 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
   hasData
 }, ref) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
-  const [activeTab, setActiveTab] = useState<'consultation' | 'notes' | 'prescription' | 'recommendations' | 'ai-chat' | 'transcription'>('consultation');
+  const [activeTab, setActiveTab] = useState<'complaints' | 'anamnesis' | 'diagnostics' | 'treatment' | 'diagnosis' | 'notes' | 'prescription' | 'recommendations' | 'ai-chat' | 'transcription' | null>(null);
 
   // Expose openSheet method via ref
   React.useImperativeHandle(ref, () => ({
     openSheet: () => {
       setIsOpen(true);
-      setIsMinimized(false);
+      setActiveTab('complaints'); // Open with complaints tab by default
     }
   }));
 
@@ -732,10 +741,34 @@ ${consultationFormData.diagnosis ? `Диагноз: ${consultationFormData.diagn
 
   const tabs = [
     {
-      id: 'consultation' as const,
-      label: 'Консультационный лист',
-      icon: faFileWaveform,
-      hasFilled: hasConsultationContent
+      id: 'complaints' as const,
+      label: 'Жалобы пациента',
+      icon: faCommentMedical,
+      hasFilled: !!consultationFormData.complaints
+    },
+    {
+      id: 'anamnesis' as const,
+      label: 'Анамнез',
+      icon: faHistory,
+      hasFilled: !!consultationFormData.anamnesis
+    },
+    {
+      id: 'diagnostics' as const,
+      label: 'Диагностика',
+      icon: faFlask,
+      hasFilled: !!consultationFormData.diagnostics
+    },
+    {
+      id: 'treatment' as const,
+      label: 'Лечение и рекомендации',
+      icon: faPrescription,
+      hasFilled: !!consultationFormData.treatment
+    },
+    {
+      id: 'diagnosis' as const,
+      label: 'Диагноз',
+      icon: faDiagnoses,
+      hasFilled: !!consultationFormData.diagnosis
     },
     {
       id: 'notes' as const,
@@ -759,298 +792,336 @@ ${consultationFormData.diagnosis ? `Диагноз: ${consultationFormData.diagn
 
   return (
     <>
-      {/* Sidebar Panel - no floating button, opened from footer */}
+      {/* Two-Panel Layout: Button Sidebar + Form Panel */}
       {isOpen && (
         <>
-          {/* Sidebar - No backdrop so doctor can see patient video */}
-          <div className={`fixed right-0 top-0 h-full backdrop-blur-xl border-l shadow-2xl z-50 transition-all duration-300 ${
-            isMinimized ? 'w-16' : 'w-full sm:w-[500px]'
-          }`} style={{ backgroundColor: '#1e263e', borderColor: '#283353' }}>
+          {/* Button Sidebar - Always visible, narrow */}
+          <div className="fixed right-0 top-0 h-full backdrop-blur-xl border-l shadow-2xl z-50 w-20 flex flex-col" style={{ backgroundColor: '#1e263e', borderColor: '#283353' }}>
 
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-4 border-b" style={{ backgroundColor: '#283353', borderColor: '#2956bf' }}>
-              {!isMinimized && (
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#2956bf' }}>
-                    <FontAwesomeIcon icon={faFileWaveform} className="text-lg" style={{ color: '#ebf1ff' }} />
-                  </div>
-                  <div>
-                    <h2 className="font-bold text-lg" style={{ color: '#ebf1ff' }}>Консультационный лист</h2>
-                    <p className="text-xs" style={{ color: '#bcc0ca' }}>{consultation.patient_name}</p>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center gap-2">
-                {isMinimized ? (
-                  /* Only Uncollapse button when minimized */
-                  <button
-                    onClick={() => setIsMinimized(false)}
-                    className="w-9 h-9 rounded-lg transition-all flex items-center justify-center"
-                    style={{ backgroundColor: '#202942', color: '#ebf1ff' }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#242e4b'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#202942'}
-                    title="Развернуть"
-                  >
-                    <FontAwesomeIcon icon={faChevronLeft} className="text-sm" />
-                  </button>
-                ) : (
-                  <>
-                    {/* Minimize button */}
-                    <button
-                      onClick={() => setIsMinimized(true)}
-                      className="w-9 h-9 rounded-lg transition-all flex items-center justify-center"
-                      style={{ backgroundColor: '#202942', color: '#ebf1ff' }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#242e4b'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#202942'}
-                      title="Свернуть"
-                    >
-                      <FontAwesomeIcon icon={faChevronRight} className="text-sm" />
-                    </button>
-
-                    {/* Close button */}
-                    <button
-                      onClick={() => setIsOpen(false)}
-                      className="w-9 h-9 rounded-lg transition-all flex items-center justify-center"
-                      style={{ backgroundColor: '#2c5bcc', color: '#ebf1ff' }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3267e6'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2c5bcc'}
-                      title="Закрыть"
-                    >
-                      <FontAwesomeIcon icon={faXmark} className="text-sm" />
-                    </button>
-                  </>
-                )}
+            {/* Header Icon */}
+            <div className="flex items-center justify-center border-b py-4" style={{ borderColor: '#283353' }}>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#3772ff' }}>
+                <FontAwesomeIcon icon={faFileWaveform} className="text-xl" style={{ color: '#ebf1ff' }} />
               </div>
             </div>
 
-            {/* Content */}
-            {!isMinimized && (
-              <div className="flex flex-col h-[calc(100%-160px)] overflow-hidden">
-                {/* Tabs Navigation Grid 2x2 + AI Chat Button */}
-                <div className="px-4 pt-4 pb-3 border-b space-y-2" style={{ borderColor: '#283353' }}>
-                  {/* 4 Main Tabs in 2x2 Grid */}
-                  <div className="grid grid-cols-2 gap-2">
-                    {tabs.map((tab) => (
-                      <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className="relative flex flex-col items-center justify-center gap-1.5 py-2.5 px-2 rounded-lg text-xs font-medium transition-all duration-200"
-                        style={
-                          activeTab === tab.id
-                            ? { backgroundColor: '#3772ff', color: '#ebf1ff' }
-                            : { backgroundColor: '#202942', color: '#bcc0ca' }
-                        }
-                        onMouseEnter={(e) => {
-                          if (activeTab !== tab.id) {
-                            e.currentTarget.style.backgroundColor = '#242e4b';
-                            e.currentTarget.style.color = '#ebf1ff';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (activeTab !== tab.id) {
-                            e.currentTarget.style.backgroundColor = '#202942';
-                            e.currentTarget.style.color = '#bcc0ca';
-                          }
-                        }}
-                      >
-                        <FontAwesomeIcon icon={tab.icon} className="text-base" />
-                        <span className="text-center leading-tight text-[11px]">{tab.label}</span>
-                        {tab.hasFilled && (
-                          <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full border-2" style={{ backgroundColor: '#3772ff', borderColor: '#1e263e' }}></div>
-                        )}
-                      </button>
-                    ))}
+            {/* Vertical Button List */}
+            <div className="flex-1 flex flex-col gap-3 py-4 px-2 overflow-y-auto custom-scrollbar">
+              {/* 4 Main Form Buttons */}
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(activeTab === tab.id ? null : tab.id)}
+                  className="relative flex flex-col items-center justify-center gap-1.5 py-3 rounded-lg transition-all duration-200"
+                  style={
+                    activeTab === tab.id
+                      ? { backgroundColor: '#3772ff', color: '#ebf1ff' }
+                      : { backgroundColor: '#202942', color: '#bcc0ca' }
+                  }
+                  onMouseEnter={(e) => {
+                    if (activeTab !== tab.id) {
+                      e.currentTarget.style.backgroundColor = '#242e4b';
+                      e.currentTarget.style.color = '#ebf1ff';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeTab !== tab.id) {
+                      e.currentTarget.style.backgroundColor = '#202942';
+                      e.currentTarget.style.color = '#bcc0ca';
+                    }
+                  }}
+                  title={tab.label}
+                >
+                  <FontAwesomeIcon icon={tab.icon} className="text-xl" />
+                  {tab.hasFilled && (
+                    <div className="absolute top-1 right-1 w-2 h-2 rounded-full" style={{ backgroundColor: '#10b981' }}></div>
+                  )}
+                </button>
+              ))}
+
+              {/* AI Chat Button */}
+              <button
+                onClick={() => setActiveTab(activeTab === 'ai-chat' ? null : 'ai-chat')}
+                className="relative flex flex-col items-center justify-center gap-1.5 py-3 rounded-lg transition-all duration-200"
+                style={
+                  activeTab === 'ai-chat'
+                    ? { backgroundColor: '#3772ff', color: '#ebf1ff' }
+                    : { backgroundColor: '#202942', color: '#bcc0ca' }
+                }
+                onMouseEnter={(e) => {
+                  if (activeTab !== 'ai-chat') {
+                    e.currentTarget.style.backgroundColor = '#242e4b';
+                    e.currentTarget.style.color = '#ebf1ff';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeTab !== 'ai-chat') {
+                    e.currentTarget.style.backgroundColor = '#202942';
+                    e.currentTarget.style.color = '#bcc0ca';
+                  }
+                }}
+                title="ИИ Ассистент"
+              >
+                <FontAwesomeIcon icon={faRobot} className="text-xl" />
+              </button>
+
+              {/* Transcription Button */}
+              <button
+                onClick={() => setActiveTab(activeTab === 'transcription' ? null : 'transcription')}
+                className="relative flex flex-col items-center justify-center gap-1.5 py-3 rounded-lg transition-all duration-200"
+                style={
+                  activeTab === 'transcription'
+                    ? { backgroundColor: '#3772ff', color: '#ebf1ff' }
+                    : { backgroundColor: '#202942', color: '#bcc0ca' }
+                }
+                onMouseEnter={(e) => {
+                  if (activeTab !== 'transcription') {
+                    e.currentTarget.style.backgroundColor = '#242e4b';
+                    e.currentTarget.style.color = '#ebf1ff';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeTab !== 'transcription') {
+                    e.currentTarget.style.backgroundColor = '#202942';
+                    e.currentTarget.style.color = '#bcc0ca';
+                  }
+                }}
+                title="Транскрипция"
+              >
+                <FontAwesomeIcon icon={faMicrophone} className="text-xl" />
+                {isTranscribing && (
+                  <FontAwesomeIcon icon={faCircle} className="text-[6px] text-red-500 animate-pulse absolute top-1 right-1" />
+                )}
+              </button>
+            </div>
+
+            {/* Close Button at Bottom */}
+            <div className="border-t py-4 px-2" style={{ borderColor: '#283353' }}>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="w-full flex items-center justify-center py-3 rounded-lg transition-all duration-200"
+                style={{ backgroundColor: '#dc2626', color: '#ebf1ff' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                title="Закрыть"
+              >
+                <FontAwesomeIcon icon={faXmark} className="text-xl" />
+              </button>
+            </div>
+          </div>
+
+          {/* Form Panel - Opens next to sidebar when button is clicked */}
+          {activeTab && (
+            <div
+              className="fixed right-20 top-0 h-full backdrop-blur-xl border-l shadow-2xl z-40 w-full sm:w-[800px] lg:w-[1000px] flex flex-col transition-all duration-300"
+              style={{ backgroundColor: '#1e263e', borderColor: '#283353' }}
+            >
+              {/* Form Panel Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b" style={{ backgroundColor: '#283353', borderColor: '#2956bf' }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#2956bf' }}>
+                    <FontAwesomeIcon
+                      icon={
+                        activeTab === 'complaints' ? faCommentMedical :
+                        activeTab === 'anamnesis' ? faHistory :
+                        activeTab === 'diagnostics' ? faFlask :
+                        activeTab === 'treatment' ? faPrescription :
+                        activeTab === 'diagnosis' ? faDiagnoses :
+                        activeTab === 'notes' ? faNotesMedical :
+                        activeTab === 'prescription' ? faPrescriptionBottle :
+                        activeTab === 'recommendations' ? faClipboardList :
+                        activeTab === 'ai-chat' ? faRobot :
+                        faMicrophone
+                      }
+                      className="text-lg"
+                      style={{ color: '#ebf1ff' }}
+                    />
                   </div>
-
-                  {/* AI Chat Button - Full Width */}
-                  <button
-                    onClick={() => setActiveTab('ai-chat')}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-medium transition-all duration-200"
-                    style={
-                      activeTab === 'ai-chat'
-                        ? { backgroundColor: '#2956bf', color: '#ebf1ff' }
-                        : { backgroundColor: '#202942', color: '#bcc0ca' }
-                    }
-                    onMouseEnter={(e) => {
-                      if (activeTab !== 'ai-chat') {
-                        e.currentTarget.style.backgroundColor = '#242e4b';
-                        e.currentTarget.style.color = '#ebf1ff';
+                  <div>
+                    <h2 className="font-bold text-lg" style={{ color: '#ebf1ff' }}>
+                      {
+                        activeTab === 'complaints' ? 'Жалобы пациента' :
+                        activeTab === 'anamnesis' ? 'Анамнез' :
+                        activeTab === 'diagnostics' ? 'Диагностика' :
+                        activeTab === 'treatment' ? 'Лечение и рекомендации' :
+                        activeTab === 'diagnosis' ? 'Диагноз' :
+                        activeTab === 'notes' ? 'Заметки' :
+                        activeTab === 'prescription' ? 'Рецепт' :
+                        activeTab === 'recommendations' ? 'Рекомендации' :
+                        activeTab === 'ai-chat' ? 'ИИ Ассистент' :
+                        'Транскрипция'
                       }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (activeTab !== 'ai-chat') {
-                        e.currentTarget.style.backgroundColor = '#202942';
-                        e.currentTarget.style.color = '#bcc0ca';
-                      }
-                    }}
-                  >
-                    <FontAwesomeIcon icon={faRobot} className="text-base" />
-                    <span>Чат с ИИ</span>
-                  </button>
-
-                  {/* Transcription Button - Full Width */}
-                  <button
-                    onClick={() => setActiveTab('transcription')}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-medium transition-all duration-200 relative"
-                    style={
-                      activeTab === 'transcription'
-                        ? { backgroundColor: '#16a34a', color: '#ebf1ff' }
-                        : { backgroundColor: '#202942', color: '#bcc0ca' }
-                    }
-                    onMouseEnter={(e) => {
-                      if (activeTab !== 'transcription') {
-                        e.currentTarget.style.backgroundColor = '#242e4b';
-                        e.currentTarget.style.color = '#ebf1ff';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (activeTab !== 'transcription') {
-                        e.currentTarget.style.backgroundColor = '#202942';
-                        e.currentTarget.style.color = '#bcc0ca';
-                      }
-                    }}
-                  >
-                    <FontAwesomeIcon icon={faMicrophone} className="text-base" />
-                    <span>Транскрипция</span>
-                    {isTranscribing && (
-                      <FontAwesomeIcon icon={faCircle} className="text-[6px] text-red-500 animate-pulse absolute top-2 right-2" />
-                    )}
-                  </button>
+                    </h2>
+                    <p className="text-xs" style={{ color: '#bcc0ca' }}>{consultation.patient_name}</p>
+                  </div>
                 </div>
+                <button
+                  onClick={() => setActiveTab(null)}
+                  className="w-9 h-9 rounded-lg transition-all flex items-center justify-center"
+                  style={{ backgroundColor: '#202942', color: '#ebf1ff' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#242e4b'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#202942'}
+                  title="Закрыть форму"
+                >
+                  <FontAwesomeIcon icon={faChevronRight} className="text-sm" />
+                </button>
+              </div>
 
-                {/* Tab Content */}
-                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                  {/* Consultation Form Tab */}
-                  {activeTab === 'consultation' && (
-                    <div className="h-full">
-                      <ConsultationForm
-                        formData={consultationFormData}
-                        onUpdate={handleFormUpdate}
-                      />
-                    </div>
-                  )}
+              {/* Form Panel Content */}
+              <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                {/* 5 Consultation Form Sections */}
+                {activeTab === 'complaints' && (
+                  <PatientComplaintsForm
+                    value={consultationFormData.complaints}
+                    onChange={(value) => handleFormUpdate('complaints', value)}
+                  />
+                )}
 
-                  {/* Session Notes Tab */}
-                  {activeTab === 'notes' && (
-                    <div className="backdrop-blur-sm rounded-xl p-4 border h-full flex flex-col" style={{ backgroundColor: '#202942', borderColor: '#283353' }}>
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2956bf' }}>
-                          <FontAwesomeIcon icon={faNotesMedical} className="text-sm" style={{ color: '#ebf1ff' }} />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-sm" style={{ color: '#ebf1ff' }}>Заметки консультации</h3>
-                          <p className="text-xs" style={{ color: '#bcc0ca' }}>Дополнительные записи о ходе консультации</p>
-                        </div>
+                {activeTab === 'anamnesis' && (
+                  <AnamnesisForm
+                    value={consultationFormData.anamnesis}
+                    onChange={(value) => handleFormUpdate('anamnesis', value)}
+                  />
+                )}
+
+                {activeTab === 'diagnostics' && (
+                  <DiagnosticsForm
+                    value={consultationFormData.diagnostics}
+                    onChange={(value) => handleFormUpdate('diagnostics', value)}
+                  />
+                )}
+
+                {activeTab === 'treatment' && (
+                  <TreatmentRecommendationsForm
+                    value={consultationFormData.treatment}
+                    onChange={(value) => handleFormUpdate('treatment', value)}
+                  />
+                )}
+
+                {activeTab === 'diagnosis' && (
+                  <DiagnosisForm
+                    value={consultationFormData.diagnosis}
+                    onChange={(value) => handleFormUpdate('diagnosis', value)}
+                  />
+                )}
+
+                {activeTab === 'notes' && (
+                  <div className="backdrop-blur-sm rounded-xl p-4 border h-full flex flex-col" style={{ backgroundColor: '#202942', borderColor: '#283353' }}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2956bf' }}>
+                        <FontAwesomeIcon icon={faNotesMedical} className="text-sm" style={{ color: '#ebf1ff' }} />
                       </div>
-                      <textarea
-                        value={sessionNotes}
-                        onChange={(e) => setSessionNotes(e.target.value)}
-                        placeholder="Записывайте важные моменты консультации, симптомы пациента..."
-                        className="flex-1 w-full border rounded-lg px-4 py-3 text-sm transition-all resize-none focus:outline-none focus:ring-2"
-                        style={{
-                          backgroundColor: '#1e263e',
-                          borderColor: '#283353',
-                          color: '#ebf1ff',
-                          caretColor: '#3772ff'
-                        }}
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor = '#3772ff';
-                          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(55, 114, 255, 0.2)';
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor = '#283353';
-                          e.currentTarget.style.boxShadow = 'none';
-                        }}
-                      />
-                    </div>
-                  )}
-
-                  {/* Prescription Tab */}
-                  {activeTab === 'prescription' && (
-                    <div className="backdrop-blur-sm rounded-xl p-4 border h-full flex flex-col" style={{ backgroundColor: '#202942', borderColor: '#283353' }}>
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2956bf' }}>
-                          <FontAwesomeIcon icon={faPrescriptionBottle} className="text-sm" style={{ color: '#ebf1ff' }} />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-sm" style={{ color: '#ebf1ff' }}>Рецепт</h3>
-                          <p className="text-xs" style={{ color: '#bcc0ca' }}>Назначенные препараты и дозировки</p>
-                        </div>
+                      <div>
+                        <h3 className="font-semibold text-sm" style={{ color: '#ebf1ff' }}>Заметки консультации</h3>
+                        <p className="text-xs" style={{ color: '#bcc0ca' }}>Дополнительные записи о ходе консультации</p>
                       </div>
-                      <textarea
-                        value={prescription}
-                        onChange={(e) => setPrescription(e.target.value)}
-                        placeholder="Например: Парацетамол 500мг - по 1 таблетке 3 раза в день..."
-                        className="flex-1 w-full border rounded-lg px-4 py-3 text-sm transition-all resize-none focus:outline-none focus:ring-2"
-                        style={{
-                          backgroundColor: '#1e263e',
-                          borderColor: '#283353',
-                          color: '#ebf1ff',
-                          caretColor: '#3772ff'
-                        }}
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor = '#3772ff';
-                          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(55, 114, 255, 0.2)';
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor = '#283353';
-                          e.currentTarget.style.boxShadow = 'none';
-                        }}
-                      />
                     </div>
-                  )}
+                    <textarea
+                      value={sessionNotes}
+                      onChange={(e) => setSessionNotes(e.target.value)}
+                      placeholder="Записывайте важные моменты консультации, симптомы пациента..."
+                      className="flex-1 w-full border rounded-lg px-4 py-3 text-sm transition-all resize-none focus:outline-none focus:ring-2"
+                      style={{
+                        backgroundColor: '#1e263e',
+                        borderColor: '#283353',
+                        color: '#ebf1ff',
+                        caretColor: '#3772ff'
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#3772ff';
+                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(55, 114, 255, 0.2)';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#283353';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                    />
+                  </div>
+                )}
 
-                  {/* Recommendations Tab */}
-                  {activeTab === 'recommendations' && (
-                    <div className="backdrop-blur-sm rounded-xl p-4 border h-full flex flex-col" style={{ backgroundColor: '#202942', borderColor: '#283353' }}>
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2956bf' }}>
-                          <FontAwesomeIcon icon={faClipboardList} className="text-sm" style={{ color: '#ebf1ff' }} />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-sm" style={{ color: '#ebf1ff' }}>Рекомендации</h3>
-                          <p className="text-xs" style={{ color: '#bcc0ca' }}>Общие рекомендации и назначения</p>
-                        </div>
+                {activeTab === 'prescription' && (
+                  <div className="backdrop-blur-sm rounded-xl p-4 border h-full flex flex-col" style={{ backgroundColor: '#202942', borderColor: '#283353' }}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2956bf' }}>
+                        <FontAwesomeIcon icon={faPrescriptionBottle} className="text-sm" style={{ color: '#ebf1ff' }} />
                       </div>
-                      <textarea
-                        value={recommendations}
-                        onChange={(e) => setRecommendations(e.target.value)}
-                        placeholder="Рекомендации по режиму, диете, дополнительным обследованиям..."
-                        className="flex-1 w-full border rounded-lg px-4 py-3 text-sm transition-all resize-none focus:outline-none focus:ring-2"
-                        style={{
-                          backgroundColor: '#1e263e',
-                          borderColor: '#283353',
-                          color: '#ebf1ff',
-                          caretColor: '#3772ff'
-                        }}
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor = '#3772ff';
-                          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(55, 114, 255, 0.2)';
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor = '#283353';
-                          e.currentTarget.style.boxShadow = 'none';
-                        }}
-                      />
+                      <div>
+                        <h3 className="font-semibold text-sm" style={{ color: '#ebf1ff' }}>Рецепт</h3>
+                        <p className="text-xs" style={{ color: '#bcc0ca' }}>Назначенные препараты и дозировки</p>
+                      </div>
                     </div>
-                  )}
+                    <textarea
+                      value={prescription}
+                      onChange={(e) => setPrescription(e.target.value)}
+                      placeholder="Например: Парацетамол 500мг - по 1 таблетке 3 раза в день..."
+                      className="flex-1 w-full border rounded-lg px-4 py-3 text-sm transition-all resize-none focus:outline-none focus:ring-2"
+                      style={{
+                        backgroundColor: '#1e263e',
+                        borderColor: '#283353',
+                        color: '#ebf1ff',
+                        caretColor: '#3772ff'
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#3772ff';
+                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(55, 114, 255, 0.2)';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#283353';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                    />
+                  </div>
+                )}
 
-                  {/* AI Chat Tab */}
-                  {activeTab === 'ai-chat' && (
-                    <div className="backdrop-blur-sm rounded-xl p-4 border h-full flex flex-col" style={{ backgroundColor: '#202942', borderColor: '#283353' }}>
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2956bf' }}>
-                          <FontAwesomeIcon icon={faRobot} className="text-sm" style={{ color: '#ebf1ff' }} />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-sm" style={{ color: '#ebf1ff' }}>ИИ Ассистент</h3>
-                          <p className="text-xs" style={{ color: '#bcc0ca' }}>Медицинский помощник на базе ИИ</p>
-                        </div>
+                {activeTab === 'recommendations' && (
+                  <div className="backdrop-blur-sm rounded-xl p-4 border h-full flex flex-col" style={{ backgroundColor: '#202942', borderColor: '#283353' }}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2956bf' }}>
+                        <FontAwesomeIcon icon={faClipboardList} className="text-sm" style={{ color: '#ebf1ff' }} />
                       </div>
+                      <div>
+                        <h3 className="font-semibold text-sm" style={{ color: '#ebf1ff' }}>Рекомендации</h3>
+                        <p className="text-xs" style={{ color: '#bcc0ca' }}>Общие рекомендации и назначения</p>
+                      </div>
+                    </div>
+                    <textarea
+                      value={recommendations}
+                      onChange={(e) => setRecommendations(e.target.value)}
+                      placeholder="Рекомендации по режиму, диете, дополнительным обследованиям..."
+                      className="flex-1 w-full border rounded-lg px-4 py-3 text-sm transition-all resize-none focus:outline-none focus:ring-2"
+                      style={{
+                        backgroundColor: '#1e263e',
+                        borderColor: '#283353',
+                        color: '#ebf1ff',
+                        caretColor: '#3772ff'
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#3772ff';
+                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(55, 114, 255, 0.2)';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#283353';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                    />
+                  </div>
+                )}
 
-                      {/* Chat Messages */}
-                      <div ref={aiChatRef} className="flex-1 overflow-y-auto space-y-3 mb-3 custom-scrollbar">
+                {/* AI Chat Tab */}
+                {activeTab === 'ai-chat' && (
+                  <div className="backdrop-blur-sm rounded-xl p-4 border h-full flex flex-col" style={{ backgroundColor: '#202942', borderColor: '#283353' }}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2956bf' }}>
+                        <FontAwesomeIcon icon={faRobot} className="text-sm" style={{ color: '#ebf1ff' }} />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-sm" style={{ color: '#ebf1ff' }}>ИИ Ассистент</h3>
+                        <p className="text-xs" style={{ color: '#bcc0ca' }}>Медицинский помощник на базе ИИ</p>
+                      </div>
+                    </div>
+
+                    {/* Chat Messages */}
+                    <div ref={aiChatRef} className="flex-1 overflow-y-auto space-y-3 mb-3 custom-scrollbar">
                         {aiMessages.length === 0 ? (
                           <div className="flex items-center justify-center h-full text-sm">
                             <div className="text-center space-y-2">
@@ -1250,12 +1321,9 @@ ${consultationFormData.diagnosis ? `Диагноз: ${consultationFormData.diagn
                     </div>
                   )}
                 </div>
-              </div>
-            )}
 
-            {/* Footer Actions - Fixed at Bottom */}
-            {!isMinimized && (
-              <div className="absolute bottom-0 left-0 right-0 px-4 py-3 border-t" style={{ backgroundColor: '#181732', borderColor: '#283353' }}>
+                {/* Footer Actions */}
+                <div className="px-6 py-4 border-t" style={{ backgroundColor: '#181732', borderColor: '#283353' }}>
                 {/* Signature indicator */}
                 {signatureData && (
                   <div className="flex items-center gap-2 mb-2 px-2 py-1.5 rounded-lg" style={{ backgroundColor: '#1e3a5f20' }}>
@@ -1306,45 +1374,8 @@ ${consultationFormData.diagnosis ? `Диагноз: ${consultationFormData.diagn
                   </button>
                 </div>
               </div>
-            )}
-
-            {/* Minimized state - show vertical text */}
-            {isMinimized && (
-              <div className="flex flex-col items-center justify-center h-full py-8">
-                <div className="transform -rotate-90 whitespace-nowrap">
-                  <span className="font-semibold text-sm" style={{ color: '#ebf1ff' }}>Консультационный лист</span>
-                </div>
-                {hasContent && (
-                  <div className="mt-8 w-3 h-3 rounded-full animate-pulse" style={{ backgroundColor: '#3772ff' }}></div>
-                )}
-              </div>
-            )}
-
-            {/* Custom Scrollbar */}
-            <style jsx>{`
-              .custom-scrollbar::-webkit-scrollbar {
-                width: 6px;
-              }
-              .custom-scrollbar::-webkit-scrollbar-track {
-                background: #1e263e;
-                border-radius: 3px;
-              }
-              .custom-scrollbar::-webkit-scrollbar-thumb {
-                background: #3772ff;
-                border-radius: 3px;
-              }
-              .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                background: #3267e6;
-              }
-              .scrollbar-hide {
-                -ms-overflow-style: none;
-                scrollbar-width: none;
-              }
-              .scrollbar-hide::-webkit-scrollbar {
-                display: none;
-              }
-            `}</style>
-          </div>
+            </div>
+          )}
         </>
       )}
 
@@ -1416,6 +1447,24 @@ ${consultationFormData.diagnosis ? `Диагноз: ${consultationFormData.diagn
           </div>
         </div>
       )}
+
+      {/* Custom Scrollbar Styles */}
+      <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: #1e263e;
+          border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #3772ff;
+          border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #3267e6;
+        }
+      `}</style>
     </>
   );
 });
