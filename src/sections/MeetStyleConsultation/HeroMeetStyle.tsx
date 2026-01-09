@@ -61,8 +61,9 @@ export default function HeroMeetStyle() {
       <Header />
 
       {/* Main Content */}
-      <div className="relative z-10 container mx-auto px-4 py-20">
-        <div className="max-w-5xl mx-auto text-center">
+      <div className="relative z-10 flex items-center justify-center min-h-screen pt-20">
+        <div className="container mx-auto px-4">
+          <div className="max-w-5xl mx-auto text-center">
           {/* Logo/Brand */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -115,27 +116,37 @@ export default function HeroMeetStyle() {
             <button
               onClick={handleStartConsultation}
               disabled={isStarting}
-              className="group relative w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-semibold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
+              className="group relative w-full sm:w-auto bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white px-8 py-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-shadow disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-700 to-indigo-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="relative flex items-center justify-center gap-3">
+              {/* Stable Glow Effect */}
+              <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-[#001E80] to-[#3A50FF] blur-md opacity-50 -z-10"></div>
+              <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-[#4A5DFF] to-[#6B7DFF] blur-lg opacity-30 -z-20"></div>
+
+              <span className="relative z-10 flex items-center justify-center gap-3">
                 <FontAwesomeIcon
                   icon={faVideo}
                   className={`text-xl ${isStarting ? 'animate-pulse' : ''}`}
                 />
                 <span>{isStarting ? 'Запуск...' : 'Начать консультацию'}</span>
-              </div>
+              </span>
+
+              {/* Hover overlay */}
+              <div className="absolute inset-0 bg-gradient-to-r from-[#0029A3] to-[#4A5DFF] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left rounded-xl" />
             </button>
 
             {/* Schedule Meeting Button */}
             <button
               onClick={handleScheduleMeeting}
-              className="group relative w-full sm:w-auto px-8 py-4 bg-white text-gray-900 rounded-2xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 border-2 border-gray-200 hover:border-blue-400"
+              className="group relative w-full sm:w-auto px-8 py-4 rounded-xl border border-white/20 text-white font-semibold text-lg hover:bg-white/5 transition-all duration-300"
             >
-              <div className="flex items-center justify-center gap-3">
-                <FontAwesomeIcon icon={faCalendarPlus} className="text-xl text-blue-600" />
+              {/* Stable Subtle Glow Effect */}
+              <div className="absolute inset-0 rounded-xl border border-white/30 blur-sm opacity-40 -z-10"></div>
+              <div className="absolute inset-0 rounded-xl bg-white/5 blur-md opacity-20 -z-20"></div>
+
+              <span className="relative z-10 flex items-center justify-center gap-3">
+                <FontAwesomeIcon icon={faCalendarPlus} className="text-xl" />
                 <span>Запланировать встречу</span>
-              </div>
+              </span>
             </button>
           </motion.div>
 
@@ -200,6 +211,7 @@ export default function HeroMeetStyle() {
               <span>Рейтинг 4.9/5</span>
             </div>
           </motion.div>
+        </div>
         </div>
       </div>
 

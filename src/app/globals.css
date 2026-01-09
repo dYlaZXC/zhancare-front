@@ -4,6 +4,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* FontAwesome - Prevent FOUC (Flash of Unstyled Content) */
+svg.svg-inline--fa {
+  display: inline-block;
+  height: 1em;
+  overflow: visible;
+  vertical-align: -0.125em;
+}
+
 body {
   font-family: "Inter", sans-serif;
   overflow-x: hidden;

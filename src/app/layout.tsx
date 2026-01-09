@@ -3,6 +3,7 @@ import Script from "next/script";
 import { DM_Sans } from "next/font/google";
 import { twMerge } from "tailwind-merge";
 import "./globals.css";
+import "@/lib/fontawesome"; // FontAwesome configuration
 import { LanguageProvider } from "@/context/LanguageContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { OptimizedConsultationProvider } from "@/context/OptimizedConsultationContext";
