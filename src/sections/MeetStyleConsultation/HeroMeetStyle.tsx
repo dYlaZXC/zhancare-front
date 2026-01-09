@@ -71,14 +71,14 @@ export default function HeroMeetStyle() {
             transition={{ duration: 0.6 }}
             className="mb-8"
           >
-            <div className="inline-flex items-center gap-3 px-6 py-3 bg-white rounded-full shadow-lg">
+            {/* <div className="inline-flex items-center gap-3 px-6 py-3 bg-white rounded-full shadow-lg">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
                 <FontAwesomeIcon icon={faUserMd} className="text-white text-lg" />
               </div>
               <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                 ZhanCare AI
               </span>
-            </div>
+            </div> */}
           </motion.div>
 
           {/* Main Heading */}
