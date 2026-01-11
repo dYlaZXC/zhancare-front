@@ -104,6 +104,8 @@ const AuthPopup = () => {
         redirectUrl = "/doctor-profile";
       } else if (responseData.user.role === "nurse") {
         redirectUrl = "/nurse-profile";
+      } else if (responseData.user.role === "admin") {
+        redirectUrl = "/admin-profile";
       }
       window.location.href = redirectUrl;
 

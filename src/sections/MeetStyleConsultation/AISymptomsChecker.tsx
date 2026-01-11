@@ -15,6 +15,7 @@ import {
   faUserMd,
   faImage,
   faTimes,
+  faClock,
 } from "@fortawesome/free-solid-svg-icons";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
@@ -877,8 +878,9 @@ export default function AISymptomsChecker() {
                           <div className="space-y-3">
                             {/* Primary CTA Button */}
                             <button
-                              onClick={() => router.push("/consultation/schedule")}
-                              className="w-full py-4 sm:py-5 font-bold rounded-xl sm:rounded-2xl transition-all relative overflow-hidden group"
+                              onClick={() => handleBookAppointment(message.doctor!.id, message.doctor!.name)}
+                              disabled={isLoading}
+                              className="w-full py-4 sm:py-5 font-bold rounded-xl sm:rounded-2xl transition-all relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
                               style={{
                                 background: "linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)",
                                 color: "#1e40af",
@@ -1024,8 +1026,9 @@ export default function AISymptomsChecker() {
 
                                 {/* Book Button */}
                                 <button
-                                  onClick={() => router.push("/consultation/schedule")}
-                                  className="w-full py-2.5 sm:py-3 font-bold rounded-lg sm:rounded-xl transition-all relative overflow-hidden group"
+                                  onClick={() => handleBookAppointment(doctor.id, doctor.name)}
+                                  disabled={isLoading}
+                                  className="w-full py-2.5 sm:py-3 font-bold rounded-lg sm:rounded-xl transition-all relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
                                   style={{
                                     background: "linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)",
                                     color: "#1e40af",
@@ -1042,6 +1045,128 @@ export default function AISymptomsChecker() {
                           );
                         })}
                       </div>
+                    </div>
+                  </div>
+                  );
+                })() : message.role === "time-slots" && message.timeSlots ? (() => {
+                  // Detect language for time slots
+                  const detectLang = () => {
+                    const lastAssistant = messages.filter(m => m.role === "assistant").pop();
+                    const text = lastAssistant?.content || "";
+                    const hasEnglish = /[a-zA-Z]/.test(text);
+                    const hasCyrillic = /[а-яА-ЯёЁ]/.test(text);
+                    const hasKazakh = /[әғқңөұүһіӘҒҚҢӨҰҮҺІ]/.test(text);
+                    if (hasEnglish && !hasCyrillic) return "en";
+                    if (hasKazakh) return "kz";
+                    return "ru";
+                  };
+                  const lang = detectLang();
+
+                  const labels = {
+                    selectTime: { en: "Select time", ru: "Выберите время", kz: "Уақытты таңдаңыз" },
+                    bookSlot: { en: "Book", ru: "Забронировать", kz: "Брондау" },
+                    noSlots: { en: "No available time slots", ru: "Нет доступного времени", kz: "Қолжетімді уақыт жоқ" }
+                  };
+
+                  const handleTimeSlotClick = (slot: TimeSlot) => {
+                    if (!slot.available) return;
+
+                    // TODO: Implement booking confirmation
+                    console.log("Selected slot:", slot);
+                    alert(`Selected: ${slot.date} at ${slot.time}`);
+                  };
+
+                  const formatDate = (dateString: string) => {
+                    const date = new Date(dateString);
+                    const months = {
+                      en: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+                      ru: ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"],
+                      kz: ["қаң", "ақп", "нау", "сәу", "мам", "мау", "шіл", "там", "қыр", "қаз", "қар", "жел"]
+                    };
+                    const monthNames = months[lang as keyof typeof months] || months.ru;
+                    return `${date.getDate()} ${monthNames[date.getMonth()]}`;
+                  };
+
+                  // Group slots by date
+                  const slotsByDate = message.timeSlots.reduce((acc, slot) => {
+                    if (!acc[slot.date]) {
+                      acc[slot.date] = [];
+                    }
+                    acc[slot.date].push(slot);
+                    return acc;
+                  }, {} as Record<string, TimeSlot[]>);
+
+                  return (
+                  <div className="max-w-[90%] sm:max-w-[85%] flex gap-2 sm:gap-3">
+                    <div
+                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 mt-1"
+                      style={{ background: "linear-gradient(135deg, #3772ff 0%, #2956bf 100%)" }}
+                    >
+                      <FontAwesomeIcon icon={faRobot} className="text-white text-xs sm:text-sm" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="px-2 py-1 rounded-lg mb-2 inline-block" style={{ background: "#ebf1ff" }}>
+                        <span className="text-xs font-semibold" style={{ color: "#2956bf" }}>{message.content}</span>
+                      </div>
+
+                      {Object.keys(slotsByDate).length > 0 ? (
+                        <div className="space-y-4">
+                          {Object.entries(slotsByDate).map(([date, slots]) => (
+                            <div key={date}>
+                              <div className="mb-2 px-3 py-1.5 rounded-lg inline-block" style={{ background: "#ebf1ff" }}>
+                                <span className="text-sm font-bold" style={{ color: "#2956bf" }}>{formatDate(date)}</span>
+                              </div>
+                              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                                {slots.map((slot) => (
+                                  <button
+                                    key={slot.id}
+                                    onClick={() => handleTimeSlotClick(slot)}
+                                    disabled={!slot.available}
+                                    className="px-3 py-2 rounded-xl font-semibold text-sm transition-all relative overflow-hidden group"
+                                    style={{
+                                      background: slot.available
+                                        ? "linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)"
+                                        : "rgba(203, 213, 225, 0.3)",
+                                      color: slot.available ? "#1e40af" : "#94a3b8",
+                                      border: slot.available ? "2px solid #3772ff" : "2px solid transparent",
+                                      cursor: slot.available ? "pointer" : "not-allowed",
+                                      boxShadow: slot.available ? "0 2px 8px rgba(37, 99, 235, 0.2)" : "none"
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      if (slot.available) {
+                                        e.currentTarget.style.transform = "scale(1.05)";
+                                        e.currentTarget.style.boxShadow = "0 4px 16px rgba(37, 99, 235, 0.4)";
+                                      }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      if (slot.available) {
+                                        e.currentTarget.style.transform = "scale(1)";
+                                        e.currentTarget.style.boxShadow = "0 2px 8px rgba(37, 99, 235, 0.2)";
+                                      }
+                                    }}
+                                  >
+                                    <FontAwesomeIcon
+                                      icon={faClock}
+                                      className="mr-1.5 text-xs"
+                                      style={{ color: slot.available ? "#3772ff" : "#94a3b8" }}
+                                    />
+                                    {slot.time}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div
+                          className="rounded-2xl px-4 py-3 text-center"
+                          style={{ background: "#ebf1ff" }}
+                        >
+                          <p className="text-sm font-semibold" style={{ color: "#2956bf" }}>
+                            {labels.noSlots[lang as keyof typeof labels.noSlots]}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                   );

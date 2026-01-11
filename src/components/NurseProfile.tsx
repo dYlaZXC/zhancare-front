@@ -18,7 +18,18 @@ export default function NurseProfile() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
-    if (!loading && user?.role !== "nurse") {
+    if (!loading && user && user.role !== "nurse") {
+      // Redirect to appropriate profile based on role
+      if (user.role === 'admin') {
+        router.replace('/admin-profile');
+      } else if (user.role === 'doctor') {
+        router.replace('/doctor-profile');
+      } else if (user.role === 'patient') {
+        router.replace('/profile');
+      } else {
+        router.replace("/");
+      }
+    } else if (!loading && !user) {
       router.replace("/");
     }
   }, [loading, user, router]);
@@ -31,7 +42,13 @@ export default function NurseProfile() {
     );
   }
 
-  if (!user) return null;
+  if (!user || user.role !== "nurse") {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg text-gray-600">Redirecting...</div>
+      </div>
+    );
+  }
 
   const handleLogout = () => {
     toast.success("Вы успешно вышли!", { position: "top-right", autoClose: 3000 });
