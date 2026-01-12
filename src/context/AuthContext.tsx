@@ -117,11 +117,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setToken(null);
     setAuthHeader(null);
 
+    // Only show toast if explicitly requested (for session timeout)
     if (showMessage) {
       toast.warning("⏳ Ваша сессия истекла. Пожалуйста, войдите снова.");
-    } else {
-      toast.info("🚪 Вы вышли из системы.");
     }
+    // Don't show any toast for manual logout (showMessage=false) - let the component handle it
   };
 
   return (

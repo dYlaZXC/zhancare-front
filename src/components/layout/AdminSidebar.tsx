@@ -65,8 +65,15 @@ export const AdminSidebar = ({
   const handleLogout = () => {
     toast.success("Вы успешно вышли!", { position: "top-right", autoClose: 1000 });
     setTimeout(() => {
-      logoutUser();
-      // Use window.location.href for reliable redirect to homepage
+      // Clear localStorage directly without triggering React state updates
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      localStorage.removeItem("user");
+
+      // Set flag to auto-open auth popup on homepage
+      localStorage.setItem("show_auth_after_logout", "true");
+
+      // Immediate hard redirect - state will be cleared on next page load
       window.location.href = "/";
     }, 1200);
   };

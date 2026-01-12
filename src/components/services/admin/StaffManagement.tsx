@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "react-toastify";
 import {
   Users,
   UserPlus,
@@ -19,7 +20,9 @@ import {
   Loader2,
   AlertCircle,
   Stethoscope,
-  Heart
+  Heart,
+  X,
+  Lock
 } from "lucide-react";
 
 interface StaffMember {
@@ -31,6 +34,7 @@ interface StaffMember {
   role: 'doctor' | 'nurse';
   specialization?: string;
   is_active: boolean;
+  availability_status?: 'available' | 'busy' | 'offline' | 'break';
   created_at: string;
   clinic?: {
     id: number;
@@ -45,14 +49,57 @@ interface StaffManagementProps {
 export default function StaffManagement({ user }: StaffManagementProps) {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterRole, setFilterRole] = useState<'all' | 'doctor' | 'nurse'>('all');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'available' | 'busy' | 'offline' | 'break'>('all');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addLoading, setAddLoading] = useState(false);
+  const [clinics, setClinics] = useState<Array<{id: number; name: string}>>([]);
+  const [isGlobalAdmin, setIsGlobalAdmin] = useState(false);
+  const [formData, setFormData] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    password: '',
+    role: 'doctor' as 'doctor' | 'nurse',
+    specialization: '',
+    clinic_id: '',
+  });
 
   useEffect(() => {
     fetchStaff();
+    checkAdminType();
   }, []);
+
+  const checkAdminType = async () => {
+    // Check if current admin is a global admin (no clinic_id and no clinic object)
+    const isGlobal = !user.clinic_id && !user.clinic?.id;
+    setIsGlobalAdmin(isGlobal);
+
+    // If global admin, fetch list of clinics
+    if (isGlobal) {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clinics/`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Token ${localStorage.getItem("access_token")}`,
+          },
+          credentials: "include",
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setClinics(data);
+        }
+      } catch (err) {
+        console.error("Error fetching clinics:", err);
+      }
+    }
+  };
 
   const fetchStaff = async () => {
     setLoading(true);
@@ -144,6 +191,87 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       setStaff(mockStaff);
     } finally {
       setLoading(false);
+      setInitialLoad(false);
+    }
+  };
+
+  const handleAddStaff = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddLoading(true);
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/staff/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Token ${localStorage.getItem("access_token")}`,
+        },
+        credentials: "include",
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Не удалось добавить сотрудника");
+      }
+
+      const newStaff = await response.json();
+
+      // Add new staff to the list
+      setStaff([newStaff, ...staff]);
+
+      toast.success(`${formData.role === 'doctor' ? 'Доктор' : 'Медсестра'} успешно добавлен(а)!`);
+
+      // Reset form and close modal
+      setFormData({
+        first_name: '',
+        last_name: '',
+        email: '',
+        phone: '',
+        password: '',
+        role: 'doctor',
+        specialization: '',
+        clinic_id: '',
+      });
+      setShowAddModal(false);
+    } catch (err: any) {
+      console.error("Error adding staff:", err);
+      toast.error(err.message || "Не удалось добавить сотрудника");
+    } finally {
+      setAddLoading(false);
+    }
+  };
+
+  const handleToggleStatus = async (memberId: number, currentStatus: string | undefined) => {
+    try {
+      // Toggle between 'available' and 'offline'
+      const newStatus = currentStatus === 'available' ? 'offline' : 'available';
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/staff/${memberId}/`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Token ${localStorage.getItem("access_token")}`,
+        },
+        credentials: "include",
+        body: JSON.stringify({ availability_status: newStatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Не удалось изменить статус сотрудника");
+      }
+
+      const updatedStaff = await response.json();
+
+      // Update staff in the list
+      setStaff(staff.map(member =>
+        member.id === memberId ? { ...member, availability_status: updatedStaff.availability_status } : member
+      ));
+
+      const statusText = updatedStaff.availability_status === 'available' ? 'Доступен' : 'Не работает';
+      toast.success(`Статус изменен на: ${statusText}!`);
+    } catch (err: any) {
+      console.error("Error toggling staff status:", err);
+      toast.error(err.message || "Не удалось изменить статус сотрудника");
     }
   };
 
@@ -157,8 +285,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     const matchesRole = filterRole === 'all' || member.role === filterRole;
     const matchesStatus =
       filterStatus === 'all' ||
-      (filterStatus === 'active' && member.is_active) ||
-      (filterStatus === 'inactive' && !member.is_active);
+      member.availability_status === filterStatus;
 
     return matchesSearch && matchesRole && matchesStatus;
   });
@@ -167,7 +294,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     total: staff.length,
     doctors: staff.filter(s => s.role === 'doctor').length,
     nurses: staff.filter(s => s.role === 'nurse').length,
-    active: staff.filter(s => s.is_active).length,
+    available: staff.filter(s => s.availability_status === 'available').length,
   };
 
   return (
@@ -186,6 +313,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            onClick={() => setShowAddModal(true)}
             className="flex items-center gap-2 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all"
             style={{ background: 'linear-gradient(135deg, #3772ff 0%, #2c5bcc 100%)' }}
           >
@@ -200,7 +328,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
             { label: "Всего", value: stats.total, icon: Users, color: "#3772ff", bg: "#ebf1ff" },
             { label: "Докторов", value: stats.doctors, icon: Stethoscope, color: "#3267e6", bg: "#e1eaff" },
             { label: "Медсестер", value: stats.nurses, icon: Heart, color: "#8b5cf6", bg: "#f3e8ff" },
-            { label: "Активных", value: stats.active, icon: CheckCircle, color: "#10b981", bg: "#d1fae5" },
+            { label: "Доступных", value: stats.available, icon: CheckCircle, color: "#10b981", bg: "#d1fae5" },
           ].map((stat, index) => (
             <motion.div
               key={stat.label}
@@ -255,8 +383,10 @@ export default function StaffManagement({ user }: StaffManagementProps) {
             className="px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
           >
             <option value="all">Все статусы</option>
-            <option value="active">Активные</option>
-            <option value="inactive">Неактивные</option>
+            <option value="available">Доступен</option>
+            <option value="busy">Занят</option>
+            <option value="break">На перерыве</option>
+            <option value="offline">Не работает</option>
           </select>
         </div>
       </div>
@@ -305,14 +435,15 @@ export default function StaffManagement({ user }: StaffManagementProps) {
               </p>
             </div>
           ) : (
-            <AnimatePresence>
+            <AnimatePresence mode="popLayout">
               {filteredStaff.map((member, index) => (
                 <motion.div
                   key={member.id}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={initialLoad ? { opacity: 0, y: 20 } : false}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ delay: index * 0.05 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={initialLoad ? { delay: index * 0.05 } : { duration: 0.2 }}
+                  layout
                   className="rounded-3xl p-6 border-2 border-gray-100 hover:border-blue-200 transition-all bg-white shadow-sm hover:shadow-md"
                 >
                   <div className="flex items-center justify-between">
@@ -344,15 +475,25 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                           >
                             {member.role === 'doctor' ? 'Доктор' : 'Медсестра'}
                           </span>
-                          {member.is_active ? (
+                          {member.availability_status === 'available' ? (
                             <span className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
                               <CheckCircle className="w-3 h-3" />
-                              Активен
+                              Доступен
+                            </span>
+                          ) : member.availability_status === 'busy' ? (
+                            <span className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700">
+                              <AlertCircle className="w-3 h-3" />
+                              Занят
+                            </span>
+                          ) : member.availability_status === 'break' ? (
+                            <span className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">
+                              <AlertCircle className="w-3 h-3" />
+                              На перерыве
                             </span>
                           ) : (
                             <span className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
                               <XCircle className="w-3 h-3" />
-                              Неактивен
+                              Не работает
                             </span>
                           )}
                         </div>
@@ -386,6 +527,23 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       <motion.button
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
+                        onClick={() => handleToggleStatus(member.id, member.availability_status)}
+                        className={`p-3 rounded-xl transition-colors ${
+                          member.availability_status === 'available'
+                            ? 'hover:bg-gray-50'
+                            : 'hover:bg-green-50'
+                        }`}
+                        title={member.availability_status === 'available' ? 'Перевести в офлайн' : 'Сделать доступным'}
+                      >
+                        {member.availability_status === 'available' ? (
+                          <XCircle className="w-5 h-5 text-gray-600" />
+                        ) : (
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                        )}
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
                         className="p-3 rounded-xl hover:bg-blue-50 transition-colors"
                         title="Редактировать"
                       >
@@ -399,13 +557,6 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       >
                         <Trash2 className="w-5 h-5 text-red-600" />
                       </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        className="p-3 rounded-xl hover:bg-gray-50 transition-colors"
-                      >
-                        <MoreVertical className="w-5 h-5 text-gray-600" />
-                      </motion.button>
                     </div>
                   </div>
                 </motion.div>
@@ -414,6 +565,268 @@ export default function StaffManagement({ user }: StaffManagementProps) {
           )}
         </div>
       )}
+
+      {/* Add Staff Modal */}
+      <AnimatePresence>
+        {showAddModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => setShowAddModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            >
+              {/* Modal Header */}
+              <div className="sticky top-0 bg-white border-b-2 border-gray-100 px-8 py-6 rounded-t-3xl flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold" style={{ color: '#1e263e' }}>
+                    Добавить Сотрудника
+                  </h2>
+                  <p className="text-gray-600 mt-1">Заполните форму для добавления нового доктора или медсестры</p>
+                </div>
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                >
+                  <X className="w-6 h-6 text-gray-600" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <form onSubmit={handleAddStaff} className="p-8">
+                <div className="space-y-6">
+                  {/* Role Selection */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      Роль <span className="text-red-500">*</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, role: 'doctor' })}
+                        className={`p-4 rounded-2xl border-2 transition-all ${
+                          formData.role === 'doctor'
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <Stethoscope
+                          className={`w-8 h-8 mx-auto mb-2 ${
+                            formData.role === 'doctor' ? 'text-blue-500' : 'text-gray-400'
+                          }`}
+                        />
+                        <p className="font-semibold text-gray-700">Доктор</p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, role: 'nurse' })}
+                        className={`p-4 rounded-2xl border-2 transition-all ${
+                          formData.role === 'nurse'
+                            ? 'border-purple-500 bg-purple-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <Heart
+                          className={`w-8 h-8 mx-auto mb-2 ${
+                            formData.role === 'nurse' ? 'text-purple-500' : 'text-gray-400'
+                          }`}
+                        />
+                        <p className="font-semibold text-gray-700">Медсестра</p>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Name Fields */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Имя <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.first_name}
+                        onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                        placeholder="Введите имя"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Фамилия <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.last_name}
+                        onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                        placeholder="Введите фамилию"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Email */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Email <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="email"
+                        required
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                        placeholder="example@clinic.kz"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Phone */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Телефон <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="tel"
+                        required
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                        placeholder="+7 (700) 123-45-67"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Password */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Пароль <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="password"
+                        required
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                        placeholder="Минимум 8 символов"
+                        minLength={8}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Specialization */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Специализация
+                    </label>
+                    <div className="relative">
+                      <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="text"
+                        value={formData.specialization}
+                        onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
+                        className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                        placeholder={formData.role === 'doctor' ? 'Например: Кардиолог' : 'Например: Процедурная медсестра'}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Clinic Selection/Display */}
+                  {isGlobalAdmin ? (
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Клиника {clinics.length > 0 && <span className="text-red-500">*</span>}
+                      </label>
+                      <select
+                        value={formData.clinic_id}
+                        onChange={(e) => setFormData({ ...formData, clinic_id: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                        required={clinics.length > 0}
+                      >
+                        <option value="">Выберите клинику (опционально)</option>
+                        {clinics.map((clinic) => (
+                          <option key={clinic.id} value={clinic.id}>
+                            {clinic.name}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-sm text-gray-500 mt-2">
+                        💡 Глобальные администраторы могут назначить сотрудника в любую клинику
+                      </p>
+                    </div>
+                  ) : (user.clinic?.name || user.clinic_id) && (
+                    <div className="rounded-2xl p-4 border-2 border-blue-100 bg-blue-50">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Клиника <span className="text-red-500">*</span>
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center">
+                          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-base font-bold text-gray-800">{user.clinic?.name || 'Ваша клиника'}</p>
+                          <p className="text-sm text-gray-600">Администратор клиники</p>
+                        </div>
+                      </div>
+                      <div className="mt-3 p-3 bg-blue-100 rounded-xl">
+                        <p className="text-sm text-blue-800 font-medium">
+                          ✓ Новый сотрудник будет автоматически назначен в вашу клинику
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Modal Footer */}
+                <div className="flex gap-4 mt-8 pt-6 border-t-2 border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    disabled={addLoading}
+                    className="flex-1 px-6 py-3 rounded-2xl border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    Отмена
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={addLoading}
+                    className="flex-1 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    style={{ background: 'linear-gradient(135deg, #3772ff 0%, #2c5bcc 100%)' }}
+                  >
+                    {addLoading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Добавление...
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-5 h-5" />
+                        Добавить
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
