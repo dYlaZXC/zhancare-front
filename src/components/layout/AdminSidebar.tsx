@@ -57,6 +57,7 @@ export const AdminSidebar = ({
   const adminMenu = [
     { id: "profile", icon: faUser, title: "Профиль", color: "#3772ff" },
     { id: "staff", icon: faUsers, title: "Персонал", color: "#8b5cf6" },
+    { id: "patients", icon: faUserMd, title: "Пациенты", color: "#10b981" },
     { id: "schedule", icon: faCalendarCheck, title: "Расписание", color: "#295bbf" },
     { id: "reports", icon: faChartLine, title: "Отчеты", color: "#3267e6" },
     { id: "activity", icon: faHistory, title: "Активность", color: "#29358f" },

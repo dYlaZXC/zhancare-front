@@ -47,6 +47,11 @@ export const AdminBreadcrumb = ({
       title: "Управление Персоналом",
       icon: <FontAwesomeIcon icon={faUsers} className="w-4 h-4" />,
     },
+    patients: {
+      key: "patients",
+      title: "Управление Пациентами",
+      icon: <FontAwesomeIcon icon={faUserMd} className="w-4 h-4" />,
+    },
     schedule: {
       key: "schedule",
       title: "Просмотр Расписания",

@@ -12,6 +12,7 @@ import { DoctorMainContent } from "@/components/layout/DoctorMainContent";
 
 import AdminProfileDashboard from "@/components/services/admin/AdminProfileDashboard";
 import StaffManagement from "@/components/services/admin/StaffManagement";
+import PatientManagement from "@/components/services/admin/PatientManagement";
 import ScheduleView from "@/components/services/admin/ScheduleView";
 import ReportsView from "@/components/services/admin/ReportsView";
 import ActivityView from "@/components/services/admin/ActivityView";
@@ -87,6 +88,8 @@ export default function AdminProfile() {
         return <AdminProfileDashboard user={user} />;
       case "staff":
         return <StaffManagement user={user} />;
+      case "patients":
+        return <PatientManagement user={user} />;
       case "schedule":
         return <ScheduleView user={user} />;
       case "reports":
