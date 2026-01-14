@@ -14,6 +14,7 @@ export interface Message {
 export interface ProtocolSource {
   protocol_id: number;
   protocol_name: string;
+  protocol_url?: string; // PDF URL for preview
   content_type: string;
   content_type_display: string;
   title: string;
@@ -40,6 +41,9 @@ export interface Protocol {
   medicine: string;
   mkb: string;
   mkb_codes: string[];
+  contents?: any[]; // Protocol content sections (only in detail view)
+  content_count?: number; // Number of content sections (in list view)
+  url?: string; // PDF file URL
 }
 
 export interface ChatRequest {
