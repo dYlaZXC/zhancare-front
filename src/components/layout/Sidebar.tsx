@@ -45,7 +45,7 @@ export const Sidebar = ({
 
   const menuItems = [
     { id: "profile", icon: faUser, title: "Профиль", color: "#3772ff" },
-    { id: "smart-consultation", icon: faBrain, title: "Умная консультация", color: "#8b5cf6" },
+    // { id: "smart-consultation", icon: faBrain, title: "Умная консультация", color: "#8b5cf6" },
     { id: "video", icon: faVideo, title: "Видео консультации", color: "#3267e6" },
     { id: "appointments", icon: faCalendar, title: "Вызов на дом", color: "#295bbf" },
     { id: "history", icon: faNotesMedical, title: "Медицинская история", color: "#1e4099" },

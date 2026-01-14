@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { CallToAction } from "@/sections/CallToAction";
 import { Footer } from "@/sections/Footer";
 import Hero  from "@/sections/MeetStyleConsultation/HeroMeetStyle";
@@ -13,6 +13,7 @@ import { ProductShowcase } from "@/sections/ProductShowcase";
 import { ChatButton } from "@/sections/ChatButton";
 import { ChatComponent } from "@/components/ChatComponent";
 import { useLanguage } from "@/context/LanguageContext";
+import { useAuth } from "@/context/AuthContext";
 import { DoctorsCarousel } from "@/sections/DoctorsCarousel";
 import { ChatSection } from "@/sections/ChatSection";
 import { MobileApp } from "@/sections/MobileApp";
@@ -22,6 +23,22 @@ import  Hero404  from "@/sections/Hero404";
 export default function Home() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const { language, setLanguage } = useLanguage();
+  const { setIsAuthOpen } = useAuth();
+
+  // Check if user just logged out and auto-open auth popup
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const shouldShowAuth = localStorage.getItem("show_auth_after_logout");
+      if (shouldShowAuth === "true") {
+        // Remove the flag
+        localStorage.removeItem("show_auth_after_logout");
+        // Open auth popup after a short delay to ensure page is loaded
+        setTimeout(() => {
+          setIsAuthOpen(true);
+        }, 500);
+      }
+    }
+  }, [setIsAuthOpen]);
 
   return (
     <div>

@@ -12,16 +12,24 @@ import { DoctorMainContent } from "@/components/layout/DoctorMainContent";
 
 import AdminProfileDashboard from "@/components/services/admin/AdminProfileDashboard";
 import StaffManagement from "@/components/services/admin/StaffManagement";
+import PatientManagement from "@/components/services/admin/PatientManagement";
+import ScheduleView from "@/components/services/admin/ScheduleView";
+import ReportsView from "@/components/services/admin/ReportsView";
+import ActivityView from "@/components/services/admin/ActivityView";
 
 export default function AdminProfile() {
-  const { user, logoutUser, loading } = useAuth();
+  const { user, logoutUser, loading, setIsAuthOpen } = useAuth();
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState("profile");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
+    // Don't redirect if we're in the process of logging out
+    if (isLoggingOut) return;
+
     if (!loading && user && user.role !== "admin") {
       // Redirect to appropriate profile based on role
       if (user.role === 'doctor') {
@@ -36,7 +44,7 @@ export default function AdminProfile() {
     } else if (!loading && !user) {
       router.replace("/");
     }
-  }, [loading, user, router]);
+  }, [loading, user, router, isLoggingOut]);
 
   if (loading) {
     return (
@@ -55,11 +63,19 @@ export default function AdminProfile() {
   }
 
   const handleLogout = () => {
-    toast.success("Вы успешно вышли!", { position: "top-right", autoClose: 3000 });
+    toast.success("Вы успешно вышли!", { position: "top-right", autoClose: 1000 });
     setTimeout(() => {
-      logoutUser();
-      router.replace("/");
-    }, 1000);
+      // Clear localStorage directly without triggering React state updates
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      localStorage.removeItem("user");
+
+      // Set flag to auto-open auth popup on homepage
+      localStorage.setItem("show_auth_after_logout", "true");
+
+      // Immediate hard redirect - state will be cleared on next page load
+      window.location.href = "/";
+    }, 1200);
   };
 
   const handleToggleSidebar = () => {
@@ -72,24 +88,14 @@ export default function AdminProfile() {
         return <AdminProfileDashboard user={user} />;
       case "staff":
         return <StaffManagement user={user} />;
+      case "patients":
+        return <PatientManagement user={user} />;
       case "schedule":
-        return (
-          <h1 className="text-2xl font-semibold text-[#001E80]">
-            Просмотр Расписания
-          </h1>
-        );
+        return <ScheduleView user={user} />;
       case "reports":
-        return (
-          <h1 className="text-2xl font-semibold text-[#001E80]">
-            Просмотр Отчетов
-          </h1>
-        );
+        return <ReportsView user={user} />;
       case "activity":
-        return (
-          <h1 className="text-2xl font-semibold text-[#001E80]">
-            Активность
-          </h1>
-        );
+        return <ActivityView user={user} />;
       default:
         return null;
     }

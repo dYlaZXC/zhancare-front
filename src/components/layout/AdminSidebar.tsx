@@ -57,6 +57,7 @@ export const AdminSidebar = ({
   const adminMenu = [
     { id: "profile", icon: faUser, title: "Профиль", color: "#3772ff" },
     { id: "staff", icon: faUsers, title: "Персонал", color: "#8b5cf6" },
+    { id: "patients", icon: faUserMd, title: "Пациенты", color: "#10b981" },
     { id: "schedule", icon: faCalendarCheck, title: "Расписание", color: "#295bbf" },
     { id: "reports", icon: faChartLine, title: "Отчеты", color: "#3267e6" },
     { id: "activity", icon: faHistory, title: "Активность", color: "#29358f" },
@@ -65,8 +66,15 @@ export const AdminSidebar = ({
   const handleLogout = () => {
     toast.success("Вы успешно вышли!", { position: "top-right", autoClose: 1000 });
     setTimeout(() => {
-      logoutUser();
-      // Use window.location.href for reliable redirect to homepage
+      // Clear localStorage directly without triggering React state updates
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      localStorage.removeItem("user");
+
+      // Set flag to auto-open auth popup on homepage
+      localStorage.setItem("show_auth_after_logout", "true");
+
+      // Immediate hard redirect - state will be cleared on next page load
       window.location.href = "/";
     }, 1200);
   };
