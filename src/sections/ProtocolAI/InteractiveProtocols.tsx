@@ -25,11 +25,11 @@ export function InteractiveProtocols({
   return (
     <div className="mt-4 space-y-4 p-6 bg-gradient-to-r from-yellow-100 to-blue-100 rounded-xl border-4 border-red-500 shadow-2xl">
       <div className="text-lg font-bold text-red-600 mb-3 bg-yellow-200 p-2 rounded">
-        Доступные протоколы ({protocols.length}):
+        Доступные и обработанные протоколы, для ИИ ({protocols.length}):
       </div>
 
       {/* Interactive Protocol Pills */}
-      <div className="flex flex-wrap gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {protocols.map((protocol, idx) => (
           <motion.button
             key={protocol.id}
@@ -40,16 +40,19 @@ export function InteractiveProtocols({
               console.log("🖱️ Protocol clicked:", protocol);
               onProtocolClick(protocol);
             }}
-            className="group relative px-6 py-3 rounded-2xl border-2 border-blue-500 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-base transition-all hover:scale-110 hover:shadow-2xl hover:from-blue-600 hover:to-blue-700 flex items-center gap-2 cursor-pointer"
-            style={{ minHeight: "48px" }}
+            className="group relative px-6 py-4 rounded-2xl border-2 border-blue-500 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-base transition-all hover:scale-105 hover:shadow-2xl hover:from-blue-600 hover:to-blue-700 cursor-pointer"
           >
-            <FileText className="w-4 h-4" />
-            <span>{protocol.name}</span>
-            {protocol.count && (
-              <span className="ml-1 px-2 py-0.5 bg-white/20 rounded-full text-xs">
-                {protocol.count}
-              </span>
-            )}
+            <div className="flex items-start gap-3">
+              <FileText className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 text-left">
+                <div className="leading-tight">{protocol.name}</div>
+                {protocol.count && (
+                  <div className="mt-1 inline-block px-2 py-0.5 bg-white/20 rounded-full text-xs">
+                    {protocol.count} секций
+                  </div>
+                )}
+              </div>
+            </div>
 
             {/* Hover sparkle effect */}
             <motion.div
@@ -65,20 +68,21 @@ export function InteractiveProtocols({
       </div>
 
       {/* Quick Action Buttons */}
-      <div className="pt-2 border-t border-gray-200">
-        <div className="text-xs text-gray-500 mb-2 font-medium">
-          💡 Быстрые действия:
+      <div className="pt-4 border-t border-gray-300">
+        <div className="text-sm text-gray-700 mb-3 font-semibold flex items-center gap-2">
+          <span>💡</span>
+          <span>Быстрые действия:</span>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <motion.button
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
             onClick={() => onQuickAction?.("diagnosis")}
-            className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-all text-xs font-medium flex items-center gap-1.5 shadow-sm"
+            className="px-4 py-2.5 bg-blue-50 text-blue-700 rounded-xl border-2 border-blue-200 hover:bg-blue-100 hover:border-blue-400 hover:shadow-md transition-all text-sm font-semibold flex items-center justify-center gap-2"
           >
-            <HelpCircle className="w-3 h-3" />
-            Диагностические критерии
+            <HelpCircle className="w-4 h-4" />
+            <span>Диагностические критерии</span>
           </motion.button>
 
           <motion.button
@@ -86,10 +90,10 @@ export function InteractiveProtocols({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.35 }}
             onClick={() => onQuickAction?.("treatment")}
-            className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg border border-green-200 hover:bg-green-100 hover:border-green-300 transition-all text-xs font-medium flex items-center gap-1.5 shadow-sm"
+            className="px-4 py-2.5 bg-green-50 text-green-700 rounded-xl border-2 border-green-200 hover:bg-green-100 hover:border-green-400 hover:shadow-md transition-all text-sm font-semibold flex items-center justify-center gap-2"
           >
-            <Sparkles className="w-3 h-3" />
-            Тактика лечения
+            <Sparkles className="w-4 h-4" />
+            <span>Тактика лечения</span>
           </motion.button>
 
           <motion.button
@@ -97,10 +101,10 @@ export function InteractiveProtocols({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
             onClick={() => onQuickAction?.("complications")}
-            className="px-3 py-1.5 bg-orange-50 text-orange-700 rounded-lg border border-orange-200 hover:bg-orange-100 hover:border-orange-300 transition-all text-xs font-medium flex items-center gap-1.5 shadow-sm"
+            className="px-4 py-2.5 bg-orange-50 text-orange-700 rounded-xl border-2 border-orange-200 hover:bg-orange-100 hover:border-orange-400 hover:shadow-md transition-all text-sm font-semibold flex items-center justify-center gap-2"
           >
-            <FileText className="w-3 h-3" />
-            Осложнения
+            <FileText className="w-4 h-4" />
+            <span>Осложнения</span>
           </motion.button>
         </div>
       </div>
