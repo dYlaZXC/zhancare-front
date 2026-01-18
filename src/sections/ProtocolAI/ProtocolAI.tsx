@@ -2,21 +2,19 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Loader2, Brain, FileText, AlertCircle } from "lucide-react";
+import { Send, Loader2, Brain, FileText, AlertCircle, Bot, Trash2 } from "lucide-react";
 import Image from "next/image";
 import Logo from "@/assets/logosaas.png";
 import { ChatMessage } from "./ChatMessage";
-import { Message, ChatRequest, ChatResponse, Protocol } from "./types";
+import { ChatBackground } from "./ChatBackground";
+import { Message, ChatRequest, ChatResponse, Protocol, InteractiveProtocol } from "./types";
 import { api } from "@/utils/api";
 
 export default function ProtocolAI() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [selectedProtocol, setSelectedProtocol] = useState<number | undefined>();
-  const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [allProtocols, setAllProtocols] = useState<Protocol[]>([]);
-  const [showAllProtocols, setShowAllProtocols] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom
@@ -35,37 +33,18 @@ export default function ProtocolAI() {
 
   const generateWelcomeMessage = (
     protocolsWithContent: Protocol[],
-    protocolsWithoutContent: Protocol[],
-    showAll: boolean
+    protocolsWithoutContent: Protocol[]
   ) => {
-    let welcomeContent = "Здравствуйте! Я ассистент по клиническим протоколам.\n\n";
+    const totalCount = protocolsWithContent.length + protocolsWithoutContent.length;
 
-    if (protocolsWithContent.length > 0) {
-      welcomeContent += "📚 Протоколы с полными данными:\n";
-      const displayProtocols = showAll ? protocolsWithContent : protocolsWithContent.slice(0, 10);
-      displayProtocols.forEach((p: Protocol) => {
-        const count = p.content_count || p.contents?.length || 0;
-        welcomeContent += `- ${p.name} (${count} секций)\n`;
-      });
+    let welcomeContent = "👋 Здравствуйте! Я AI-ассистент по клиническим протоколам.\n\n";
+    welcomeContent += `📚 У меня есть доступ к ${totalCount} ${totalCount === 1 ? 'протоколу' : 'протоколам'} (${protocolsWithContent.length} с полными данными).\n\n`;
+    welcomeContent += "💬 **Просто задайте вопрос!** Например:\n";
+    welcomeContent += "• \"Какие диагностические критерии HELLP-синдрома?\"\n";
+    welcomeContent += "• \"Расскажи о лечении преэклампсии\"\n";
+    welcomeContent += "• \"Какие осложнения при гестационном диабете?\"\n\n";
+    welcomeContent += "Я автоматически найду нужный протокол и дам ответ на основе актуальных медицинских данных.";
 
-      if (!showAll && protocolsWithContent.length > 10) {
-        welcomeContent += `\n... и еще ${protocolsWithContent.length - 10} протоколов`;
-      }
-    }
-
-    if (protocolsWithoutContent.length > 0) {
-      welcomeContent += "\n\n📋 Протоколы в базе (данные в процессе загрузки):\n";
-      const displayProtocols = showAll ? protocolsWithoutContent : protocolsWithoutContent.slice(0, 10);
-      displayProtocols.forEach((p: Protocol) => {
-        welcomeContent += `- ${p.name}\n`;
-      });
-
-      if (!showAll && protocolsWithoutContent.length > 10) {
-        welcomeContent += `\n... и еще ${protocolsWithoutContent.length - 10} протоколов`;
-      }
-    }
-
-    welcomeContent += "\n\nЗадайте мне любой вопрос о доступных протоколах!";
     return welcomeContent;
   };
 
@@ -90,14 +69,12 @@ export default function ProtocolAI() {
         }
       );
 
-      setProtocols(protocolsWithContent);
       setAllProtocols(fetchedProtocols);
 
       // Generate welcome message
       const welcomeContent = generateWelcomeMessage(
         protocolsWithContent,
-        protocolsWithoutContent,
-        showAllProtocols
+        protocolsWithoutContent
       );
 
       // Set welcome message
@@ -124,44 +101,6 @@ export default function ProtocolAI() {
     }
   };
 
-  // Update welcome message when showAllProtocols changes
-  useEffect(() => {
-    if (allProtocols.length > 0) {
-      const protocolsWithContent = allProtocols.filter(
-        (p: Protocol) => {
-          const count = p.content_count !== undefined ? p.content_count : (p.contents?.length || 0);
-          return count > 0;
-        }
-      );
-
-      const protocolsWithoutContent = allProtocols.filter(
-        (p: Protocol) => {
-          const count = p.content_count !== undefined ? p.content_count : (p.contents?.length || 0);
-          return count === 0;
-        }
-      );
-
-      const welcomeContent = generateWelcomeMessage(
-        protocolsWithContent,
-        protocolsWithoutContent,
-        showAllProtocols
-      );
-
-      // Update only the welcome message
-      setMessages((prev) => {
-        if (prev.length > 0 && prev[0].id === "welcome") {
-          return [
-            {
-              ...prev[0],
-              content: welcomeContent,
-            },
-            ...prev.slice(1),
-          ];
-        }
-        return prev;
-      });
-    }
-  }, [showAllProtocols, allProtocols]);
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
@@ -180,7 +119,6 @@ export default function ProtocolAI() {
     try {
       const request: ChatRequest = {
         question: userMessage.content,
-        protocol_id: selectedProtocol,
         language: "ru",
         include_sources: true,
       };
@@ -232,8 +170,41 @@ export default function ProtocolAI() {
     }
   };
 
+  const handleProtocolClick = (protocol: InteractiveProtocol) => {
+    // Auto-fill input with smart question about the protocol
+    setInput(`Расскажи о протоколе "${protocol.name}". Какие основные разделы?`);
+    // Optionally, you can auto-send the message
+    // sendMessage();
+  };
+
+  const handleProtocolSelectFromSearch = (protocol: Protocol) => {
+    console.log("📋 Protocol selected from search:", protocol);
+
+    // Auto-fill input with question about the protocol
+    setInput(`Расскажи о протоколе "${protocol.name}". Какие основные разделы?`);
+  };
+
+  const handleQuickAction = (action: string, protocol?: InteractiveProtocol) => {
+    let question = "";
+    switch (action) {
+      case "diagnosis":
+        question = "Какие диагностические критерии?";
+        break;
+      case "treatment":
+        question = "Какая тактика лечения?";
+        break;
+      case "complications":
+        question = "Какие возможны осложнения?";
+        break;
+    }
+    setInput(question);
+  };
+
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(135deg, #12263a 0%, #1e263e 50%, #0e121d 100%)' }}>
+    <div className="min-h-screen flex flex-col relative">
+        {/* Beautiful Background */}
+        <ChatBackground />
+
         {/* Header */}
         <div className="px-6 py-5 border-b border-white/10 relative overflow-hidden"
              style={{
@@ -276,34 +247,31 @@ export default function ProtocolAI() {
               </div>
             </div>
 
-            {/* Protocol Selector */}
-            <select
-              value={selectedProtocol || ""}
-              onChange={(e) =>
-                setSelectedProtocol(
-                  e.target.value ? Number(e.target.value) : undefined
-                )
-              }
-              className="bg-white/10 text-white text-sm px-4 py-2 rounded-xl border border-white/20 focus:outline-none focus:ring-2 transition-all backdrop-blur-sm"
-              style={{
-                '--tw-ring-color': '#ebf1ff',
-                '--tw-ring-opacity': '0.3',
-              } as any}
-            >
-              <option value="" style={{ background: '#1e263e', color: 'white' }}>Все протоколы</option>
-              {protocols.map((protocol) => (
-                <option key={protocol.id} value={protocol.id} style={{ background: '#1e263e', color: 'white' }}>
-                  {protocol.name}
-                </option>
-              ))}
-            </select>
+            {/* Clear Conversation Button */}
+            {messages.length > 1 && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                onClick={() => {
+                  if (confirm('Очистить всю историю разговора?')) {
+                    setMessages([]);
+                    loadProtocols(); // Reload welcome message
+                  }
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl border border-white/20 transition-all backdrop-blur-sm"
+                title="Очистить разговор"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span className="text-sm">Очистить</span>
+              </motion.button>
+            )}
           </div>
         </div>
 
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 relative">
           <AnimatePresence>
-            {messages.map((message, index) => (
+            {messages.map((message) => (
               <div key={message.id}>
                 <ChatMessage
                   message={message}
@@ -311,55 +279,55 @@ export default function ProtocolAI() {
                     console.log("Source clicked:", source);
                     // TODO: Open source modal
                   }}
+                  onProtocolClick={handleProtocolClick}
+                  onQuickAction={handleQuickAction}
+                  onProtocolSelectFromSearch={handleProtocolSelectFromSearch}
+                  onSuggestedQuestion={(question) => setInput(question)}
+                  allProtocols={allProtocols}
                 />
-
-                {/* Show "Load More" button after welcome message */}
-                {index === 0 && message.id === "welcome" && !showAllProtocols && (
-                  (allProtocols.filter(p => {
-                    const count = p.content_count !== undefined ? p.content_count : (p.contents?.length || 0);
-                    return count > 0;
-                  }).length > 10 ||
-                   allProtocols.filter(p => {
-                    const count = p.content_count !== undefined ? p.content_count : (p.contents?.length || 0);
-                    return count === 0;
-                  }).length > 10) && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="flex justify-center mt-4"
-                    >
-                      <button
-                        onClick={() => setShowAllProtocols(true)}
-                        className="text-white text-sm px-6 py-2 rounded-xl border border-white/20 transition-all backdrop-blur-sm"
-                        style={{
-                          background: 'linear-gradient(to right, rgba(55, 114, 255, 0.2), rgba(44, 91, 204, 0.2))',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = 'linear-gradient(to right, rgba(55, 114, 255, 0.3), rgba(44, 91, 204, 0.3))';
-                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'linear-gradient(to right, rgba(55, 114, 255, 0.2), rgba(44, 91, 204, 0.2))';
-                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-                        }}
-                      >
-                        Показать все протоколы
-                      </button>
-                    </motion.div>
-                  )
-                )}
               </div>
             ))}
           </AnimatePresence>
 
           {loading && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex items-center gap-3 text-white/60"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex gap-4 mb-6"
             >
-              <Loader2 className="w-5 h-5 animate-spin" />
-              <span className="text-sm">Генерирую ответ...</span>
+              {/* AI Avatar */}
+              <div
+                className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center"
+                style={{ background: 'linear-gradient(to bottom right, #3772ff, #2c5bcc)' }}
+              >
+                <Bot className="w-5 h-5 text-white" />
+              </div>
+
+              {/* Typing Indicator */}
+              <div className="flex-1 max-w-[80%]">
+                <div className="rounded-2xl px-6 py-5 shadow-lg bg-white border border-gray-200">
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-1">
+                      <motion.div
+                        className="w-2 h-2 bg-blue-500 rounded-full"
+                        animate={{ y: [0, -8, 0] }}
+                        transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
+                      />
+                      <motion.div
+                        className="w-2 h-2 bg-blue-500 rounded-full"
+                        animate={{ y: [0, -8, 0] }}
+                        transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }}
+                      />
+                      <motion.div
+                        className="w-2 h-2 bg-blue-500 rounded-full"
+                        animate={{ y: [0, -8, 0] }}
+                        transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }}
+                      />
+                    </div>
+                    <span className="text-sm text-gray-600">Анализирую протоколы и генерирую ответ...</span>
+                  </div>
+                </div>
+              </div>
             </motion.div>
           )}
 
@@ -367,17 +335,14 @@ export default function ProtocolAI() {
         </div>
 
         {/* Input Area */}
-        <div className="px-6 py-4 bg-white/5 border-t border-white/10">
+        <div className="px-6 py-4 bg-white/80 backdrop-blur-xl border-t border-gray-200 shadow-lg">
           <div className="flex gap-3">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Задайте вопрос о клиническом протоколе..."
-              className="flex-1 bg-white/10 text-white placeholder-white/40 px-4 py-3 rounded-xl border border-white/20 focus:outline-none focus:ring-2 resize-none backdrop-blur-sm transition-all"
-              style={{
-                '--tw-ring-color': '#3772ff',
-              } as any}
+              placeholder="Задайте вопрос о любом клиническом протоколе..."
+              className="flex-1 bg-white text-gray-800 placeholder-gray-400 px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none shadow-sm transition-all"
               rows={2}
               disabled={loading}
             />
@@ -413,7 +378,7 @@ export default function ProtocolAI() {
               onClick={() =>
                 setInput("Какие диагностические критерии HELLP-синдрома?")
               }
-              className="text-xs bg-white/5 text-white/60 px-3 py-1.5 rounded-full border border-white/10 hover:bg-white/10 hover:text-white transition-all backdrop-blur-sm"
+              className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-full border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-all shadow-sm"
               disabled={loading}
             >
               <FileText className="w-3 h-3 inline mr-1" />
@@ -421,7 +386,7 @@ export default function ProtocolAI() {
             </button>
             <button
               onClick={() => setInput("Какие осложнения могут возникнуть?")}
-              className="text-xs bg-white/5 text-white/60 px-3 py-1.5 rounded-full border border-white/10 hover:bg-white/10 hover:text-white transition-all backdrop-blur-sm"
+              className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-full border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-all shadow-sm"
               disabled={loading}
             >
               <AlertCircle className="w-3 h-3 inline mr-1" />
@@ -429,7 +394,7 @@ export default function ProtocolAI() {
             </button>
             <button
               onClick={() => setInput("Как проводится лечение?")}
-              className="text-xs bg-white/5 text-white/60 px-3 py-1.5 rounded-full border border-white/10 hover:bg-white/10 hover:text-white transition-all backdrop-blur-sm"
+              className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-full border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-all shadow-sm"
               disabled={loading}
             >
               <Brain className="w-3 h-3 inline mr-1" />

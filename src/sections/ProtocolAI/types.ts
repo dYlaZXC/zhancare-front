@@ -24,6 +24,12 @@ export interface ProtocolSource {
   confidence: number;
 }
 
+export interface InteractiveProtocol {
+  id: number;
+  name: string;
+  count?: number;
+}
+
 export interface MessageMetadata {
   model?: string;
   usage?: {
@@ -32,6 +38,11 @@ export interface MessageMetadata {
   };
   num_sources?: number;
   language?: string;
+  is_protocol_list?: boolean;
+  has_more?: boolean;
+  total_protocols?: number;
+  interactive_protocols?: InteractiveProtocol[];
+  show_protocol_search?: boolean;
 }
 
 export interface Protocol {
