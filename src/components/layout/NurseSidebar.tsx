@@ -17,23 +17,21 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-toastify";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export interface NurseSidebarProps {
-    activeTab: string;
-    setActiveTab: (tab: string) => void;
     isOpen: boolean;
     onClose: () => void;
     isCollapsed?: boolean;
   }
 
 export const NurseSidebar = ({
-  activeTab,
-  setActiveTab,
   isOpen,
   onClose,
   isCollapsed = false,
 }: NurseSidebarProps) => {
   const { user, logoutUser, setIsAuthOpen } = useAuth();
+  const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
@@ -50,8 +48,11 @@ export const NurseSidebar = ({
   if (!user) return null;
 
   const nurseMenu = [
-    { id: "home-visits", icon: faHome, title: "Мои вызовы на дом", color: "#295bbf" },
+    { id: "home-visits", icon: faHome, title: "Мои вызовы на дом", color: "#295bbf", href: "/nurse/home-visits" },
+    { id: "profile", icon: faUser, title: "Профиль", color: "#3772ff", href: "/nurse/profile" },
   ];
+
+  const activeTab = nurseMenu.find(item => pathname?.startsWith(item.href))?.id || "home-visits";
 
   const handleLogout = () => {
     toast.success("Вы успешно вышли!", { position: "top-right", autoClose: 1000 });
@@ -62,21 +63,9 @@ export const NurseSidebar = ({
     }, 1200);
   };
 
-  const handleTabChange = (tabId: string) => {
-    // Check if user is authenticated before allowing navigation
-    if (!user) {
-      // Show auth popup instead of navigating
-      setIsAuthOpen(true);
-      onClose();
-      setSidebarOpen(false);
-      return;
-    }
-
-    // User is authenticated, change active tab (no route navigation needed)
-    setActiveTab(tabId);
+  const handleTabChange = () => {
     onClose();
     setSidebarOpen(false);
-    // No router.push needed - NurseProfile handles tab switching internally
   };
 
   const getRoleIcon = (role: string) => {
@@ -338,11 +327,12 @@ export const NurseSidebar = ({
         <nav className={`mt-2 space-y-2 xs:space-y-3 ${isCollapsed ? 'px-2' : 'px-3 xs:px-4 sm:px-6'} flex-1 overflow-y-auto overflow-x-hidden relative z-10`}>
           {nurseMenu.map((item, index) => (
             <div key={item.id} className="relative">
-              <button
-                onClick={() => handleTabChange(item.id)}
+              <Link
+                href={item.href}
+                onClick={handleTabChange}
                 onMouseEnter={() => setHoveredItem(item.id)}
                 onMouseLeave={() => setHoveredItem(null)}
-                className={`w-full group relative transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] min-h-[48px] border-0 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform ${
+                className={`w-full group relative transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] min-h-[48px] border-0 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform block ${
                   activeTab === item.id
                     ? "transform scale-105"
                     : "hover:scale-102"
@@ -461,7 +451,7 @@ export const NurseSidebar = ({
                   {/* Hover shimmer effect */}
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
                 </div>
-              </button>
+              </Link>
 
               {/* Tooltip for collapsed state - only on XL screens and above */}
               {isCollapsed && (
@@ -704,7 +694,7 @@ export const NurseSidebar = ({
                   {/* Hover shimmer effect */}
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
                 </div>
-              </button>
+              </Link>
 
               {/* Tooltip for collapsed state */}
               {isCollapsed && (

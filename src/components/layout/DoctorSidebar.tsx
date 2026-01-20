@@ -17,25 +17,23 @@ import {
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { usePathname } from "next/navigation";
 import { toast } from "react-toastify";
 import Link from "next/link";
 
 export interface DoctorSidebarProps {
-    activeTab: string;
-    setActiveTab: (tab: string) => void;
     isOpen: boolean;
     onClose: () => void;
     isCollapsed?: boolean;
   }
 
 export const DoctorSidebar = ({
-  activeTab,
-  setActiveTab,
   isOpen,
   onClose,
   isCollapsed = false,
 }: DoctorSidebarProps) => {
   const { user, logoutUser, setIsAuthOpen } = useAuth();
+  const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
@@ -52,12 +50,15 @@ export const DoctorSidebar = ({
   if (!user) return null;
 
   const doctorMenu = [
-    { id: "profile", icon: faUser, title: "Профиль", color: "#1e40af" },
-    { id: "analytics", icon: faChartLine, title: "Аналитика", color: "#8b5cf6" },
-    { id: "consultations", icon: faVideo, title: "Видео Консультация", color: "#295bbf" },
-    { id: "appointments", icon: faCalendar, title: "Мои вызовы на дом", color: "#3772ff" },
-    { id: "patients", icon: faNotesMedical, title: "История Пациентов", color: "#3267e6" },
+    { id: "profile", icon: faUser, title: "Профиль", color: "#1e40af", href: "/doctor/profile" },
+    { id: "analytics", icon: faChartLine, title: "Аналитика", color: "#8b5cf6", href: "/doctor/analytics" },
+    { id: "consultations", icon: faVideo, title: "Видео Консультация", color: "#295bbf", href: "/doctor/consultations" },
+    { id: "appointments", icon: faCalendar, title: "Мои вызовы на дом", color: "#3772ff", href: "/doctor/appointments" },
+    { id: "patients", icon: faNotesMedical, title: "История Пациентов", color: "#3267e6", href: "/doctor/patients" },
   ];
+
+  // Determine active tab from current pathname
+  const activeTab = doctorMenu.find(item => pathname?.startsWith(item.href))?.id || "consultations";
 
   const handleLogout = () => {
     toast.success("Вы успешно вышли!", { position: "top-right", autoClose: 1000 });
@@ -68,21 +69,10 @@ export const DoctorSidebar = ({
     }, 1200);
   };
 
-  const handleTabChange = (tabId: string) => {
-    // Check if user is authenticated before allowing navigation
-    if (!user) {
-      // Show auth popup instead of navigating
-      setIsAuthOpen(true);
-      onClose();
-      setSidebarOpen(false);
-      return;
-    }
-    
-    // User is authenticated, change active tab (no route navigation needed)
-    setActiveTab(tabId);
+  const handleTabChange = () => {
+    // Close sidebar on navigation
     onClose();
     setSidebarOpen(false);
-    // No router.push needed - DoctorProfile handles tab switching internally
   };
 
   const getRoleIcon = (role: string) => {
@@ -342,11 +332,12 @@ export const DoctorSidebar = ({
         <nav className={`mt-2 space-y-2 xs:space-y-3 ${isCollapsed ? 'px-2' : 'px-3 xs:px-4 sm:px-6'} flex-1 overflow-y-auto overflow-x-hidden relative z-10`}>
           {doctorMenu.map((item, index) => (
             <div key={item.id} className="relative">
-              <button
-                onClick={() => handleTabChange(item.id)}
+              <Link
+                href={item.href}
+                onClick={handleTabChange}
                 onMouseEnter={() => setHoveredItem(item.id)}
                 onMouseLeave={() => setHoveredItem(null)}
-                className={`w-full group relative transition-all duration-300 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; min-h-[48px] border-0 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform ${
+                className={`w-full group relative transition-all duration-300 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; min-h-[48px] border-0 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform block ${
                   activeTab === item.id
                     ? "transform scale-105"
                     : "hover:scale-102"
@@ -465,7 +456,7 @@ export const DoctorSidebar = ({
                   {/* Hover shimmer effect */}
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
                 </div>
-              </button>
+              </Link>
 
               {/* Tooltip for collapsed state - only on XL screens and above */}
               {isCollapsed && (
@@ -605,11 +596,12 @@ export const DoctorSidebar = ({
         <nav className={`mt-2 space-y-3 ${isCollapsed ? 'px-2' : 'px-6'} flex-1 overflow-y-auto overflow-x-hidden relative z-10`}>
           {doctorMenu.map((item, index) => (
             <div key={`desktop-${item.id}`} className="relative">
-              <button
-                onClick={() => handleTabChange(item.id)}
+              <Link
+                href={item.href}
+                onClick={handleTabChange}
                 onMouseEnter={() => setHoveredItem(item.id)}
                 onMouseLeave={() => setHoveredItem(null)}
-                className={`w-full group relative transition-all duration-300 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; min-h-[48px] border-0 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform ${
+                className={`w-full group relative transition-all duration-300 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; min-h-[48px] border-0 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform block ${
                   activeTab === item.id
                     ? "transform scale-105"
                     : "hover:scale-102"
@@ -708,7 +700,7 @@ export const DoctorSidebar = ({
                   {/* Hover shimmer effect */}
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
                 </div>
-              </button>
+              </Link>
 
               {/* Tooltip for collapsed state */}
               {isCollapsed && (
