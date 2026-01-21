@@ -75,8 +75,6 @@ export default function NurseProfile() {
     <div className="flex min-h-screen bg-gray-100">
       {/* Sidebar */}
       <NurseSidebar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         isCollapsed={sidebarCollapsed}

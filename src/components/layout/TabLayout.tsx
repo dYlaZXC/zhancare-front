@@ -86,7 +86,7 @@ const TabLayout = ({ children }: TabLayoutProps) => {
         <div className="flex-1 overflow-y-auto">
           <main className="flex-1 p-4 sm:p-6 bg-gray-50">
             {/* Breadcrumbs */}
-            <Breadcrumb activeTab={activeTab} />
+            <Breadcrumb />
 
             {/* Animated Content */}
             <MainContent activeTab={activeTab}>{children}</MainContent>
