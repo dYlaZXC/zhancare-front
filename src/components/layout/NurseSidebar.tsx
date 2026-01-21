@@ -591,11 +591,12 @@ export const NurseSidebar = ({
         <nav className={`mt-2 space-y-3 ${isCollapsed ? 'px-2' : 'px-6'} flex-1 overflow-y-auto overflow-x-hidden relative z-10`}>
           {nurseMenu.map((item, index) => (
             <div key={`desktop-${item.id}`} className="relative">
-              <button
-                onClick={() => handleTabChange(item.id)}
+              <Link
+                href={item.href}
+                onClick={handleTabChange}
                 onMouseEnter={() => setHoveredItem(item.id)}
                 onMouseLeave={() => setHoveredItem(null)}
-                className={`w-full group relative transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] min-h-[48px] border-0 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform ${
+                className={`w-full group relative transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] min-h-[48px] border-0 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform block ${
                   activeTab === item.id
                     ? "transform scale-105"
                     : "hover:scale-102"
