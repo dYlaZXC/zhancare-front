@@ -66,8 +66,6 @@ const TabLayout = ({ children }: TabLayoutProps) => {
     <div className="flex min-h-screen bg-gray-100">
       {/* Sidebar with control */}
       <Sidebar
-        activeTab={activeTab}
-        setActiveTab={handleTabChange}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         isCollapsed={sidebarCollapsed}
