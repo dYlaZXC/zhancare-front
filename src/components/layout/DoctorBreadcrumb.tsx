@@ -1,72 +1,86 @@
 "use client";
 
 import React from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { 
-  faHome, 
-  faChevronRight, 
-  faUserMd, 
+import {
+  faHome,
+  faChevronRight,
+  faUserMd,
   faCalendar,
   faNotesMedical,
   faVideo,
   faStethoscope,
-  faClipboardList
+  faClipboardList,
+  faUser,
+  faChartLine
 } from "@fortawesome/free-solid-svg-icons";
 
 interface DoctorBreadcrumbItem {
   key: string;
   title: string;
   icon: React.ReactNode;
-  href?: string;
+  href: string;
 }
 
 interface DoctorBreadcrumbProps {
-  activeTab: string;
-  onNavigate?: (tab: string) => void;
   showHome?: boolean;
   customItems?: DoctorBreadcrumbItem[];
 }
 
-export const DoctorBreadcrumb = ({ 
-  activeTab, 
-  onNavigate, 
-  showHome = true, 
-  customItems 
+export const DoctorBreadcrumb = ({
+  showHome = true,
+  customItems
 }: DoctorBreadcrumbProps) => {
+  const pathname = usePathname();
+  const router = useRouter();
   const defaultItems: Record<string, DoctorBreadcrumbItem> = {
-    appointments: {
-      key: "appointments",
-      title: "Мои Записи",
-      icon: <FontAwesomeIcon icon={faCalendar} className="w-4 h-4" />,
+    profile: {
+      key: "profile",
+      title: "Профиль",
+      icon: <FontAwesomeIcon icon={faUser} className="w-4 h-4" />,
+      href: "/doctor/profile",
     },
-    patients: {
-      key: "patients", 
-      title: "История Пациентов",
-      icon: <FontAwesomeIcon icon={faNotesMedical} className="w-4 h-4" />,
+    analytics: {
+      key: "analytics",
+      title: "Аналитика",
+      icon: <FontAwesomeIcon icon={faChartLine} className="w-4 h-4" />,
+      href: "/doctor/analytics",
     },
     consultations: {
       key: "consultations",
-      title: "Видео Консультация", 
+      title: "Видео Консультация",
       icon: <FontAwesomeIcon icon={faVideo} className="w-4 h-4" />,
+      href: "/doctor/consultations",
+    },
+    appointments: {
+      key: "appointments",
+      title: "Мои вызовы на дом",
+      icon: <FontAwesomeIcon icon={faCalendar} className="w-4 h-4" />,
+      href: "/doctor/appointments",
+    },
+    patients: {
+      key: "patients",
+      title: "История Пациентов",
+      icon: <FontAwesomeIcon icon={faNotesMedical} className="w-4 h-4" />,
+      href: "/doctor/patients",
     },
   };
 
-  const items: Record<string, DoctorBreadcrumbItem> = customItems ? 
-    customItems.reduce((acc, item) => ({ ...acc, [item.key]: item }), {} as Record<string, DoctorBreadcrumbItem>) : 
+  const items: Record<string, DoctorBreadcrumbItem> = customItems ?
+    customItems.reduce((acc, item) => ({ ...acc, [item.key]: item }), {} as Record<string, DoctorBreadcrumbItem>) :
     defaultItems;
 
+  // Detect active tab from pathname
+  const activeTab = Object.values(items).find(item => pathname?.startsWith(item.href))?.key || "consultations";
   const currentItem = items[activeTab];
 
   const handleHomeClick = () => {
-    if (onNavigate) {
-      onNavigate('home');
-    }
+    router.push('/doctor/consultations');
   };
 
-  const handleItemClick = (itemKey: string) => {
-    if (onNavigate) {
-      onNavigate(itemKey);
-    }
+  const handleItemClick = (item: DoctorBreadcrumbItem) => {
+    router.push(item.href);
   };
 
   return (
@@ -108,28 +122,26 @@ export const DoctorBreadcrumb = ({
       )}
 
       {/* Quick Navigation Pills (Optional) */}
-      {onNavigate && (
-        <div className="hidden lg:flex items-center space-x-1 ml-4 pl-4 border-l border-gray-300">
-          {Object.values(items)
-            .filter(item => item.key !== activeTab)
-            .slice(0, 2)
-            .map((item) => (
-              <button
-                key={item.key}
-                onClick={() => handleItemClick(item.key)}
-                className="flex items-center space-x-1 px-2 py-1 text-xs text-gray-500 hover:text-blue-600 hover:bg-white/70 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
-                title={`Перейти к: ${item.title}`}
-              >
-                <div className="w-3 h-3">
-                  {item.icon}
-                </div>
-                <span className="max-w-[100px] truncate">
-                  {item.title}
-                </span>
-              </button>
-            ))}
-        </div>
-      )}
+      <div className="hidden lg:flex items-center space-x-1 ml-4 pl-4 border-l border-gray-300">
+        {Object.values(items)
+          .filter(item => item.key !== activeTab)
+          .slice(0, 2)
+          .map((item) => (
+            <button
+              key={item.key}
+              onClick={() => handleItemClick(item)}
+              className="flex items-center space-x-1 px-2 py-1 text-xs text-gray-500 hover:text-blue-600 hover:bg-white/70 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+              title={`Перейти к: ${item.title}`}
+            >
+              <div className="w-3 h-3">
+                {item.icon}
+              </div>
+              <span className="max-w-[100px] truncate">
+                {item.title}
+              </span>
+            </button>
+          ))}
+      </div>
 
       {/* Mobile Menu Indicator */}
       <div className="flex lg:hidden ml-auto">

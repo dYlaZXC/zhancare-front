@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faHome,
@@ -20,52 +21,56 @@ interface AdminBreadcrumbItem {
   key: string;
   title: string;
   icon: React.ReactNode;
-  href?: string;
+  href: string;
 }
 
 interface AdminBreadcrumbProps {
-  activeTab: string;
-  onNavigate?: (tab: string) => void;
   showHome?: boolean;
   customItems?: AdminBreadcrumbItem[];
 }
 
 export const AdminBreadcrumb = ({
-  activeTab,
-  onNavigate,
   showHome = true,
   customItems
 }: AdminBreadcrumbProps) => {
+  const pathname = usePathname();
+  const router = useRouter();
   const defaultItems: Record<string, AdminBreadcrumbItem> = {
     profile: {
       key: "profile",
       title: "Профиль",
       icon: <FontAwesomeIcon icon={faUser} className="w-4 h-4" />,
+      href: "/admin/profile",
     },
     staff: {
       key: "staff",
       title: "Управление Персоналом",
       icon: <FontAwesomeIcon icon={faUsers} className="w-4 h-4" />,
+      href: "/admin/staff",
     },
     patients: {
       key: "patients",
       title: "Управление Пациентами",
       icon: <FontAwesomeIcon icon={faUserMd} className="w-4 h-4" />,
+      href: "/admin/patients",
     },
     schedule: {
       key: "schedule",
       title: "Просмотр Расписания",
       icon: <FontAwesomeIcon icon={faCalendarCheck} className="w-4 h-4" />,
+      href: "/admin/schedule",
     },
     reports: {
       key: "reports",
       title: "Просмотр Отчетов",
       icon: <FontAwesomeIcon icon={faChartLine} className="w-4 h-4" />,
+      href: "/admin/reports",
     },
     activity: {
       key: "activity",
       title: "Активность",
       icon: <FontAwesomeIcon icon={faHistory} className="w-4 h-4" />,
+      href: "/admin/activity",
     },
   };
 
@@ -73,18 +78,16 @@ export const AdminBreadcrumb = ({
     customItems.reduce((acc, item) => ({ ...acc, [item.key]: item }), {} as Record<string, AdminBreadcrumbItem>) :
     defaultItems;
 
+  // Detect active tab from pathname
+  const activeTab = Object.values(items).find(item => pathname?.startsWith(item.href))?.key || "profile";
   const currentItem = items[activeTab];
 
   const handleHomeClick = () => {
-    if (onNavigate) {
-      onNavigate('profile');
-    }
+    router.push('/admin/profile');
   };
 
-  const handleItemClick = (itemKey: string) => {
-    if (onNavigate) {
-      onNavigate(itemKey);
-    }
+  const handleItemClick = (item: AdminBreadcrumbItem) => {
+    router.push(item.href);
   };
 
   return (
@@ -126,28 +129,26 @@ export const AdminBreadcrumb = ({
       )}
 
       {/* Quick Navigation Pills (Optional) */}
-      {onNavigate && (
-        <div className="hidden lg:flex items-center space-x-1 ml-4 pl-4 border-l border-gray-300">
-          {Object.values(items)
-            .filter(item => item.key !== activeTab)
-            .slice(0, 2)
-            .map((item) => (
-              <button
-                key={item.key}
-                onClick={() => handleItemClick(item.key)}
-                className="flex items-center space-x-1 px-2 py-1 text-xs text-gray-500 hover:text-blue-600 hover:bg-white/70 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
-                title={`Перейти к: ${item.title}`}
-              >
-                <div className="w-3 h-3">
-                  {item.icon}
-                </div>
-                <span className="max-w-[100px] truncate">
-                  {item.title}
-                </span>
-              </button>
-            ))}
-        </div>
-      )}
+      <div className="hidden lg:flex items-center space-x-1 ml-4 pl-4 border-l border-gray-300">
+        {Object.values(items)
+          .filter(item => item.key !== activeTab)
+          .slice(0, 2)
+          .map((item) => (
+            <button
+              key={item.key}
+              onClick={() => handleItemClick(item)}
+              className="flex items-center space-x-1 px-2 py-1 text-xs text-gray-500 hover:text-blue-600 hover:bg-white/70 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+              title={`Перейти к: ${item.title}`}
+            >
+              <div className="w-3 h-3">
+                {item.icon}
+              </div>
+              <span className="max-w-[100px] truncate">
+                {item.title}
+              </span>
+            </button>
+          ))}
+      </div>
 
       {/* Mobile Menu Indicator */}
       <div className="flex lg:hidden ml-auto">
