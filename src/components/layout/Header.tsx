@@ -52,47 +52,49 @@ export const Header = ({
         </button>
 
         {/* Desktop Sidebar Toggle - Only visible on XL screens and above */}
-        <button
-          onClick={onToggleSidebar}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-          className="hidden xl:flex items-center gap-2 group relative overflow-hidden px-4 py-2.5 rounded-xl shadow-md border transition-all duration-300 hover:scale-105 hover:shadow-lg"
-          style={{ 
-            background: sidebarCollapsed 
-              ? 'linear-gradient(135deg, rgba(55, 114, 255, 0.15) 0%, rgba(41, 53, 143, 0.15) 100%)'
-              : 'linear-gradient(135deg, rgba(55, 114, 255, 0.1) 0%, rgba(41, 53, 143, 0.1) 100%)',
-            borderColor: 'rgba(55, 114, 255, 0.2)'
-          }}
-        >
-          {/* Icon Container */}
-          <div className="relative flex items-center justify-center w-6 h-6 rounded-lg transition-all duration-300"
-               style={{ 
-                 background: sidebarCollapsed 
-                   ? 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)'
-                   : 'linear-gradient(135deg, rgba(55, 114, 255, 0.3) 0%, rgba(41, 53, 143, 0.3) 100%)'
-               }}>
-            <FontAwesomeIcon
-              icon={sidebarCollapsed ? faChevronRight : faChevronLeft}
-              className={`text-xs transition-all duration-300 ${
-                sidebarCollapsed ? 'text-white' : 'text-blue-700'
-              } group-hover:scale-110`}
-            />
-          </div>
+        {onToggleSidebar && (
+          <button
+            onClick={onToggleSidebar}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            className="hidden xl:flex items-center gap-2 group relative overflow-hidden px-4 py-2.5 rounded-xl shadow-md border transition-all duration-300 hover:scale-105 hover:shadow-lg"
+            style={{
+              background: sidebarCollapsed
+                ? 'linear-gradient(135deg, rgba(55, 114, 255, 0.15) 0%, rgba(41, 53, 143, 0.15) 100%)'
+                : 'linear-gradient(135deg, rgba(55, 114, 255, 0.1) 0%, rgba(41, 53, 143, 0.1) 100%)',
+              borderColor: 'rgba(55, 114, 255, 0.2)'
+            }}
+          >
+            {/* Icon Container */}
+            <div className="relative flex items-center justify-center w-6 h-6 rounded-lg transition-all duration-300"
+                 style={{
+                   background: sidebarCollapsed
+                     ? 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)'
+                     : 'linear-gradient(135deg, rgba(55, 114, 255, 0.3) 0%, rgba(41, 53, 143, 0.3) 100%)'
+                 }}>
+              <FontAwesomeIcon
+                icon={sidebarCollapsed ? faChevronRight : faChevronLeft}
+                className={`text-xs transition-all duration-300 ${
+                  sidebarCollapsed ? 'text-white' : 'text-blue-700'
+                } group-hover:scale-110`}
+              />
+            </div>
 
-          {/* Text Label */}
-          <span className={`text-sm font-semibold transition-all duration-300 ${
-            sidebarCollapsed ? 'text-blue-700' : 'text-gray-700'
-          } group-hover:text-blue-800`}>
-            {sidebarCollapsed ? 'Развернуть' : 'Свернуть'}
-          </span>
+            {/* Text Label */}
+            <span className={`text-sm font-semibold transition-all duration-300 ${
+              sidebarCollapsed ? 'text-blue-700' : 'text-gray-700'
+            } group-hover:text-blue-800`}>
+              {sidebarCollapsed ? 'Развернуть' : 'Свернуть'}
+            </span>
 
-          {/* Animated Background */}
-          <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-               style={{ background: 'linear-gradient(135deg, rgba(55, 114, 255, 0.15) 0%, rgba(41, 53, 143, 0.15) 100%)' }}></div>
+            {/* Animated Background */}
+            <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                 style={{ background: 'linear-gradient(135deg, rgba(55, 114, 255, 0.15) 0%, rgba(41, 53, 143, 0.15) 100%)' }}></div>
 
-          {/* Shimmer Effect */}
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
-        </button>
+            {/* Shimmer Effect */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
+          </button>
+        )}
 
         {/* Optional Logo/Title */}
         <div className="hidden lg:flex items-center gap-3">
