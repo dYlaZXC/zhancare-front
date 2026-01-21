@@ -11,7 +11,7 @@ import { Breadcrumb } from "@/components/layout/Breadcrumb";
 export default function PatientLayout({
   children,
 }: {
-  children: React.Node;
+  children: React.ReactNode;
 }) {
   const { user, loading, setIsAuthOpen } = useAuth();
   const { userProfile, loading: profileLoading, error: profileError } = useUserProfile();
