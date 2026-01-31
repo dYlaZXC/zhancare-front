@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-toastify";
+import { api } from "@/utils/api";
 import {
   Users,
   UserPlus,
@@ -90,19 +91,8 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     // If global admin, fetch list of clinics
     if (isGlobal) {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clinics/`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Token ${localStorage.getItem("access_token")}`,
-          },
-          credentials: "include",
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setClinics(data);
-        }
+        const response = await api.get("/clinics/");
+        setClinics(response.data);
       } catch (err) {
         console.error("Error fetching clinics:", err);
       }
@@ -114,21 +104,8 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     setError(null);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/staff/`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Token ${localStorage.getItem("access_token")}`,
-        },
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error("Не удалось загрузить список персонала");
-      }
-
-      const data = await response.json();
-      setStaff(data);
+      const response = await api.get("/staff/");
+      setStaff(response.data);
     } catch (err: any) {
       console.error("Error fetching staff:", err);
       setError(err.message || "Не удалось загрузить список персонала");
@@ -208,21 +185,8 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     setAddLoading(true);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/staff/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Token ${localStorage.getItem("access_token")}`,
-        },
-        credentials: "include",
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        throw new Error("Не удалось добавить сотрудника");
-      }
-
-      const newStaff = await response.json();
+      const response = await api.post("/staff/", formData);
+      const newStaff = response.data;
 
       // Add new staff to the list
       setStaff([newStaff, ...staff]);
@@ -254,21 +218,8 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       // Toggle between 'available' and 'offline'
       const newStatus = currentStatus === 'available' ? 'offline' : 'available';
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/staff/${memberId}/`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Token ${localStorage.getItem("access_token")}`,
-        },
-        credentials: "include",
-        body: JSON.stringify({ availability_status: newStatus }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Не удалось изменить статус сотрудника");
-      }
-
-      const updatedStaff = await response.json();
+      const response = await api.patch(`/staff/${memberId}/`, { availability_status: newStatus });
+      const updatedStaff = response.data;
 
       // Update staff in the list
       setStaff(staff.map(member =>
@@ -325,21 +276,8 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         updateData.clinic_id = formData.clinic_id;
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/staff/${editingMember.id}/`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Token ${localStorage.getItem("access_token")}`,
-        },
-        credentials: "include",
-        body: JSON.stringify(updateData),
-      });
-
-      if (!response.ok) {
-        throw new Error("Не удалось обновить данные сотрудника");
-      }
-
-      const updatedStaff = await response.json();
+      const response = await api.patch(`/staff/${editingMember.id}/`, updateData);
+      const updatedStaff = response.data;
 
       // Update staff in the list
       setStaff(staff.map(member =>
@@ -380,19 +318,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     setDeleteLoading(true);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/staff/${deletingMember.id}/`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Token ${localStorage.getItem("access_token")}`,
-        },
-        credentials: "include",
-        body: JSON.stringify({ is_deleted: true }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Не удалось удалить сотрудника");
-      }
+      await api.patch(`/staff/${deletingMember.id}/`, { is_deleted: true });
 
       // Remove deleted staff from the list
       setStaff(staff.filter(member => member.id !== deletingMember.id));

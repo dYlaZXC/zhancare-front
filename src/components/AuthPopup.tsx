@@ -82,13 +82,31 @@ const AuthPopup = () => {
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isAuthOpen, setIsAuthOpen]);
 
+  // Get device name for session tracking
+  const getDeviceName = (): string => {
+    if (typeof window === 'undefined') return 'Unknown Device';
+    const ua = navigator.userAgent;
+    const isMobile = /Mobile|Android|iPhone|iPad/i.test(ua);
+    const browser = ua.includes('Chrome') ? 'Chrome' :
+                   ua.includes('Firefox') ? 'Firefox' :
+                   ua.includes('Safari') ? 'Safari' :
+                   ua.includes('Edge') ? 'Edge' : 'Browser';
+    const os = ua.includes('Windows') ? 'Windows' :
+              ua.includes('Mac') ? 'MacOS' :
+              ua.includes('Linux') ? 'Linux' :
+              ua.includes('Android') ? 'Android' :
+              ua.includes('iPhone') || ua.includes('iPad') ? 'iOS' : 'Unknown';
+    return `${browser} on ${os}${isMobile ? ' (Mobile)' : ''}`;
+  };
+
   // Handle Login
   const handleLogin = async (data: LoginFormData) => {
     setLoading(true);
 
     const payload = {
       email: data.email.trim(),
-      password: data.password
+      password: data.password,
+      device_name: getDeviceName(),
     };
 
     try {
