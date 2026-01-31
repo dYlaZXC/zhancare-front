@@ -34,6 +34,7 @@ import {
   AreaChart,
   Area
 } from "recharts";
+import { api } from "@/utils/api";
 
 interface ReportsViewProps {
   user: any;
@@ -123,29 +124,19 @@ export default function ReportsView({ user }: ReportsViewProps) {
     setError(null);
 
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/reports/?start=${dateRange.start}&end=${dateRange.end}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Token ${localStorage.getItem("access_token")}`,
-          },
-          credentials: "include",
+      const response = await api.get(`/reports/`, {
+        params: {
+          start: dateRange.start,
+          end: dateRange.end
         }
-      );
+      });
 
-      if (!response.ok) {
-        throw new Error("Не удалось загрузить отчеты");
-      }
-
-      const data = await response.json();
-      setReportData(data);
+      setReportData(response.data);
     } catch (err: any) {
       console.error("Error fetching reports:", err);
-      setError(err.message || "Не удалось загрузить отчеты");
+      setError(err.response?.data?.error || err.message || "Не удалось загрузить отчеты");
 
-      // Mock data for development
+      // Mock data for development fallback
       const mockData: ReportData = {
         revenue_report: {
           total_revenue: 15750000,
