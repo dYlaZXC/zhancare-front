@@ -19,40 +19,40 @@ import {
   faBrain,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { toast } from "react-toastify";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 
 export const Sidebar = ({
-  activeTab,
-  setActiveTab,
   isOpen,
   onClose,
   isCollapsed = false,
 }: {
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
   isOpen: boolean;
   onClose: () => void;
   isCollapsed?: boolean;
 }) => {
   const { user, logoutUser, setIsAuthOpen } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
   const menuItems = [
-    { id: "profile", icon: faUser, title: "Профиль", color: "#3772ff" },
-    // { id: "smart-consultation", icon: faBrain, title: "Умная консультация", color: "#8b5cf6" },
-    { id: "video", icon: faVideo, title: "Видео консультации", color: "#3267e6" },
-    { id: "appointments", icon: faCalendar, title: "Вызов на дом", color: "#295bbf" },
-    { id: "history", icon: faNotesMedical, title: "Медицинская история", color: "#1e4099" },
-    { id: "chat", icon: faPlane, title: "Мед Туризм", color: "#173373" },
-    { id: "documents", icon: faFileMedical, title: "Документы", color: "#12263a" },
-    { id: "activity", icon: faHistory, title: "Активность", color: "#29358f" },
+    { id: "profile", icon: faUser, title: "Профиль", color: "#3772ff", href: "/patient/profile" },
+    // { id: "smart-consultation", icon: faBrain, title: "Умная консультация", color: "#8b5cf6", href: "/patient/smart-consultation" },
+    { id: "video", icon: faVideo, title: "Видео консультации", color: "#3267e6", href: "/patient/video" },
+    { id: "appointments", icon: faCalendar, title: "Вызов на дом", color: "#295bbf", href: "/patient/appointments" },
+    { id: "history", icon: faNotesMedical, title: "Медицинская история", color: "#1e4099", href: "/patient/history" },
+    { id: "chat", icon: faPlane, title: "Мед Туризм", color: "#173373", href: "/patient/chat" },
+    { id: "documents", icon: faFileMedical, title: "Документы", color: "#12263a", href: "/patient/documents" },
+    { id: "activity", icon: faHistory, title: "Активность", color: "#29358f", href: "/patient/activity" },
   ];
+
+  // Determine active tab from current pathname
+  const activeTab = menuItems.find(item => pathname?.startsWith(item.href))?.id || "profile";
 
   // Mouse tracking for interactive effects
   useEffect(() => {
@@ -74,21 +74,10 @@ export const Sidebar = ({
     }, 1200);
   };
 
-  const handleTabChange = (tabId: string) => {
-    // Check if user is authenticated before allowing navigation
-    if (!user) {
-      // Show auth popup instead of navigating
-      setIsAuthOpen(true);
-      onClose();
-      setSidebarOpen(false);
-      return;
-    }
-    
-    // User is authenticated, allow navigation
-    setActiveTab(tabId);
+  const handleTabChange = () => {
+    // Close sidebar on navigation
     onClose();
     setSidebarOpen(false);
-    router.push(`/${tabId}`);
   };
 
   const getRoleIcon = (role: string) => {
@@ -359,11 +348,12 @@ export const Sidebar = ({
         <nav className={`mt-2 space-y-2 xs:space-y-3 ${isCollapsed ? 'px-2' : 'px-3 xs:px-4 sm:px-6'} flex-1 overflow-y-auto overflow-x-hidden relative z-10`}>
           {menuItems.map((item, index) => (
             <div key={item.id} className="relative">
-              <button
-              onClick={() => handleTabChange(item.id)}
+              <Link
+              href={item.href}
+              onClick={handleTabChange}
               onMouseEnter={() => setHoveredItem(item.id)}
               onMouseLeave={() => setHoveredItem(null)}
-              className={`w-full group relative transition-all duration-300 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; min-h-[48px] border-0 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform ${
+              className={`w-full group relative transition-all duration-300 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; min-h-[48px] border-0 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform block ${
                 activeTab === item.id
                   ? "transform scale-105"
                   : "hover:scale-102"
@@ -463,7 +453,7 @@ export const Sidebar = ({
                   {/* Hover shimmer effect */}
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
                 </div>
-              </button>
+              </Link>
 
               {/* Tooltip for collapsed state - only on XL screens and above */}
               {isCollapsed && (
@@ -608,11 +598,12 @@ export const Sidebar = ({
         <nav className={`mt-2 space-y-3 ${isCollapsed ? 'px-2' : 'px-6'} flex-1 overflow-y-auto overflow-x-hidden relative z-10`}>
           {menuItems.map((item, index) => (
             <div key={item.id} className="relative">
-              <button
-                onClick={() => handleTabChange(item.id)}
+              <Link
+                href={item.href}
+                onClick={handleTabChange}
                 onMouseEnter={() => setHoveredItem(item.id)}
                 onMouseLeave={() => setHoveredItem(null)}
-                className={`w-full group relative transition-all duration-300 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; min-h-[48px] border-0 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform ${
+                className={`w-full group relative transition-all duration-300 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; min-h-[48px] border-0 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform block ${
                   activeTab === item.id
                     ? "transform scale-105"
                     : "hover:scale-102"
@@ -704,7 +695,7 @@ export const Sidebar = ({
                   {/* Hover shimmer effect */}
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
                 </div>
-              </button>
+              </Link>
 
               {/* Tooltip for collapsed state */}
               {isCollapsed && (

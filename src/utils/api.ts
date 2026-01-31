@@ -1,13 +1,20 @@
-// utils/axiosInstance.ts
+// utils/api.ts - JWT-based API client
 
-import axios from "axios";
+import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import * as Sentry from "@sentry/nextjs";
-import { logoutUser } from "@/utils/auth";
 
 const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 export const baseURLImg = process.env.NEXT_PUBLIC_API_IMG_URL || "http://localhost:8000/api/v1";
 
-// ✅ WebSocket URL configuration
+// Token storage keys
+const ACCESS_TOKEN_KEY = "access_token";
+const REFRESH_TOKEN_KEY = "refresh_token";
+const USER_KEY = "user";
+
+// In-flight refresh promise to prevent multiple simultaneous refresh requests
+let refreshPromise: Promise<string> | null = null;
+
+// WebSocket URL configuration
 export const getWebSocketURL = () => {
   const wsEnv = process.env.NEXT_PUBLIC_WS_URL;
   const wssEnv = process.env.NEXT_PUBLIC_WSS_URL;
@@ -30,32 +37,58 @@ export const getWebSocketURL = () => {
   return baseWsUrl;
 };
 
-// ✅ Get API base URL without /api/v1 suffix for WebSocket
+// Get API base URL without /api/v1 suffix for WebSocket
 export const getAPIHost = () => {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
   return apiUrl.replace('/api/v1', '');
 };
 
+// Token management functions
+export const getAccessToken = (): string | null => {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(ACCESS_TOKEN_KEY);
+};
+
+export const getRefreshToken = (): string | null => {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(REFRESH_TOKEN_KEY);
+};
+
+export const setTokens = (accessToken: string, refreshToken: string): void => {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+  localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+};
+
+export const clearTokens = (): void => {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+};
+
+// Create axios instance
 const axiosInstance = axios.create({
   baseURL,
-  withCredentials: true, // ✅ Include cookies like csrftoken in requests
+  withCredentials: true,
   paramsSerializer: (params: any) => new URLSearchParams(params).toString(),
 });
 
-// ✅ Helper: Extract CSRF token from cookies
+// Helper: Extract CSRF token from cookies
 function getCSRFToken(): string | null {
   if (typeof document === "undefined") return null;
   const match = document.cookie.match(/csrftoken=([^;]+)/);
   return match ? match[1] : null;
 }
 
-// ✅ Request Interceptor — Attach token + CSRF
+// Request Interceptor - Attach JWT Bearer token + CSRF
 axiosInstance.interceptors.request.use(
-  (config) => {
+  (config: InternalAxiosRequestConfig) => {
     if (typeof window !== "undefined") {
-      const token = localStorage.getItem("access_token");
+      const token = getAccessToken();
       if (token) {
-        config.headers.Authorization = `Token ${token}`;
+        // Use Bearer token format for JWT
+        config.headers.Authorization = `Bearer ${token}`;
       }
 
       const method = config.method?.toLowerCase();
@@ -73,40 +106,73 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ✅ Response Interceptor — Handle 401 refresh
+// Refresh access token
+async function refreshAccessToken(): Promise<string> {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) {
+    throw new Error("No refresh token found");
+  }
+
+  // Call the JWT refresh endpoint
+  const response = await axios.post(`${baseURL}/user-profile/auth/refresh/`, {
+    refresh_token: refreshToken,
+  });
+
+  const { access_token, refresh_token: newRefreshToken } = response.data;
+
+  // Store new tokens
+  setTokens(access_token, newRefreshToken);
+
+  return access_token;
+}
+
+// Response Interceptor - Handle 401 with token refresh
 axiosInstance.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
+    // Skip refresh for auth endpoints
     const isAuthRequest =
-      originalRequest.url?.includes("/auth/login/") ||
-      originalRequest.url?.includes("/auth/register/");
+      originalRequest?.url?.includes("/auth/login") ||
+      originalRequest?.url?.includes("/auth/register") ||
+      originalRequest?.url?.includes("/auth/refresh") ||
+      originalRequest?.url?.includes("/auth/token/refresh");
 
-    if (error.response?.status === 401 && !isAuthRequest && !originalRequest._retry) {
+    if (error.response?.status === 401 && !isAuthRequest && !originalRequest?._retry) {
       originalRequest._retry = true;
 
       try {
-        const refresh_token = localStorage.getItem("refresh_token");
-        if (!refresh_token) throw new Error("No refresh token found.");
+        // Use existing refresh promise if one is in flight (prevent race conditions)
+        if (!refreshPromise) {
+          refreshPromise = refreshAccessToken();
+        }
 
-        const { data } = await axios.post(`${baseURL}/auth/refresh/`, {
-          refresh_token,
-        });
+        const newAccessToken = await refreshPromise;
+        refreshPromise = null;
 
-        const newAccessToken = data.access_token;
-        localStorage.setItem("access_token", newAccessToken);
-
-        originalRequest.headers.Authorization = `Token ${newAccessToken}`;
+        // Retry the original request with new token
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return axiosInstance(originalRequest);
       } catch (refreshError) {
-        console.warn("🔐 Refresh token failed. Logging out...");
-        logoutUser("⏳ Ваша сессия истекла. Пожалуйста, войдите снова.");
+        refreshPromise = null;
+        console.warn("🔐 Token refresh failed. Logging out...");
+
+        // Clear tokens and emit logout event
+        clearTokens();
+
+        // Dispatch event for AuthContext to handle
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent('auth:logout', {
+            detail: { message: '⏳ Ваша сессия истекла. Пожалуйста, войдите снова.' }
+          }));
+        }
+
         return Promise.reject(refreshError);
       }
     }
 
-    // 🔎 Report to Sentry
+    // Report to Sentry
     if (error.response) {
       Sentry.captureException(error, {
         extra: {
@@ -126,14 +192,22 @@ axiosInstance.interceptors.response.use(
   }
 );
 
-// ✅ Manual logout
+// Manual logout function
 export const logout = async () => {
   try {
-    await axiosInstance.post("/auth/logout/");
+    const refreshToken = getRefreshToken();
+    if (refreshToken) {
+      await axiosInstance.post("/auth/logout/", { refresh_token: refreshToken });
+    }
   } catch (err) {
     console.warn("🔐 Manual logout error or already logged out");
   } finally {
-    logoutUser("🚪 Вы вышли из системы.");
+    clearTokens();
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent('auth:logout', {
+        detail: { message: '🚪 Вы вышли из системы.' }
+      }));
+    }
   }
 };
 

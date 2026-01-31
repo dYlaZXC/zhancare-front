@@ -2,38 +2,25 @@
 
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
-import { useState, useRef, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
-import ru from "@/locales/ru.json";
-import kz from "@/locales/kz.json";
-import en from "@/locales/en.json";
 import ChatHeader from "./Chat/ChatHeader";
 import ChatMessages from "./Chat/ChatMessages";
 import ChatInput from "./Chat/ChatInput";
+import BookingModal from "./Chat/BookingModal";
 import { Message } from "./Chat/types";
 import { useChat } from "./Chat/hooks/useChat";
 import ZhanBotLogo from "@/assets/ZhanBotAi.png";
 
 export const ChatSection = () => {
-  const { user, setIsAuthOpen } = useAuth();
+  useAuth(); // Keep for BookingModal's internal auth handling
   const { language } = useLanguage();
-  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  
-  // Get translations
-  const translations = useMemo(() => {
-    switch (language) {
-      case "ru": return ru.chat;
-      case "en": return en.chat;
-      case "kz": return kz.chat;
-      default: return ru.chat;
-    }
-  }, [language]);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
   // Custom hook for chat logic
   const {
@@ -56,11 +43,58 @@ export const ChatSection = () => {
   };
 
   const handleBookAppointment = () => {
-    if (user) {
-      const profileRoute = user.role === "doctor" ? "/doctor-profile" : "/profile";
-      router.push(profileRoute);
-    } else {
-      setIsAuthOpen(true);
+    // Open the booking modal instead of navigating away
+    setIsBookingModalOpen(true);
+  };
+
+  const handleBookingComplete = useCallback((bookingDetails: {
+    doctorName: string;
+    doctorType: string;
+    scheduledTime: string;
+    isGuest?: boolean;
+  }) => {
+    // Add a confirmation message to the chat
+    const confirmationText = getBookingConfirmationText(
+      bookingDetails.doctorName,
+      bookingDetails.doctorType,
+      bookingDetails.scheduledTime,
+      language
+    );
+
+    const confirmationMessage: Message = {
+      id: `booking_${Date.now()}`,
+      sender: "bot",
+      text: confirmationText,
+      timestamp: new Date(),
+      showDoctorButton: false,
+    };
+
+    setMessages(prev => [...prev, confirmationMessage]);
+  }, [language]);
+
+  const getBookingConfirmationText = (
+    doctorName: string,
+    doctorType: string,
+    scheduledTime: string,
+    lang: string
+  ): string => {
+    const date = new Date(scheduledTime);
+    const formattedDate = date.toLocaleDateString(
+      lang === "kz" ? "kk-KZ" : lang === "en" ? "en-US" : "ru-RU",
+      { weekday: "long", year: "numeric", month: "long", day: "numeric" }
+    );
+    const formattedTime = date.toLocaleTimeString(
+      lang === "kz" ? "kk-KZ" : lang === "en" ? "en-US" : "ru-RU",
+      { hour: "2-digit", minute: "2-digit" }
+    );
+
+    switch (lang) {
+      case "en":
+        return `✅ **Appointment Confirmed!**\n\nYou have successfully booked an appointment with **${doctorName}** (${doctorType}).\n\n📅 **Date:** ${formattedDate}\n🕐 **Time:** ${formattedTime}\n💻 **Type:** Online video consultation\n\nYou will receive a reminder before your appointment. Make sure you have a stable internet connection and your camera/microphone ready.`;
+      case "kz":
+        return `✅ **Жазылу расталды!**\n\n**${doctorName}** (${doctorType}) дәрігеріне сәтті жазылдыңыз.\n\n📅 **Күні:** ${formattedDate}\n🕐 **Уақыты:** ${formattedTime}\n💻 **Түрі:** Онлайн бейне кеңес\n\nКеңес алдында еске салу аласыз. Тұрақты интернет байланысы мен камера/микрофон дайын екеніне көз жеткізіңіз.`;
+      default:
+        return `✅ **Запись подтверждена!**\n\nВы успешно записались к врачу **${doctorName}** (${doctorType}).\n\n📅 **Дата:** ${formattedDate}\n🕐 **Время:** ${formattedTime}\n💻 **Тип:** Онлайн видеоконсультация\n\nВы получите напоминание перед консультацией. Убедитесь, что у вас стабильное интернет-соединение и готовы камера/микрофон.`;
     }
   };
 
@@ -157,6 +191,14 @@ export const ChatSection = () => {
           />
         </motion.div>
       </motion.div>
+
+      {/* Booking Modal */}
+      <BookingModal
+        isOpen={isBookingModalOpen}
+        onClose={() => setIsBookingModalOpen(false)}
+        onBookingComplete={handleBookingComplete}
+        language={language}
+      />
     </motion.section>
   );
 };

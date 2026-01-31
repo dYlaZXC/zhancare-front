@@ -20,25 +20,23 @@ import {
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { usePathname } from "next/navigation";
 import { toast } from "react-toastify";
 import Link from "next/link";
 
 export interface AdminSidebarProps {
-    activeTab: string;
-    setActiveTab: (tab: string) => void;
     isOpen: boolean;
     onClose: () => void;
     isCollapsed?: boolean;
   }
 
 export const AdminSidebar = ({
-  activeTab,
-  setActiveTab,
   isOpen,
   onClose,
   isCollapsed = false,
 }: AdminSidebarProps) => {
   const { user, logoutUser, setIsAuthOpen } = useAuth();
+  const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
@@ -55,13 +53,16 @@ export const AdminSidebar = ({
   if (!user) return null;
 
   const adminMenu = [
-    { id: "profile", icon: faUser, title: "Профиль", color: "#3772ff" },
-    { id: "staff", icon: faUsers, title: "Персонал", color: "#8b5cf6" },
-    { id: "patients", icon: faUserMd, title: "Пациенты", color: "#10b981" },
-    { id: "schedule", icon: faCalendarCheck, title: "Расписание", color: "#295bbf" },
-    { id: "reports", icon: faChartLine, title: "Отчеты", color: "#3267e6" },
-    { id: "activity", icon: faHistory, title: "Активность", color: "#29358f" },
+    { id: "profile", icon: faUser, title: "Профиль", color: "#3772ff", href: "/admin/profile" },
+    { id: "staff", icon: faUsers, title: "Персонал", color: "#8b5cf6", href: "/admin/staff" },
+    { id: "patients", icon: faUserMd, title: "Пациенты", color: "#10b981", href: "/admin/patients" },
+    { id: "schedule", icon: faCalendarCheck, title: "Расписание", color: "#295bbf", href: "/admin/schedule" },
+    { id: "reports", icon: faChartLine, title: "Отчеты", color: "#3267e6", href: "/admin/reports" },
+    { id: "activity", icon: faHistory, title: "Активность", color: "#29358f", href: "/admin/activity" },
   ];
+
+  // Determine active tab from current pathname
+  const activeTab = adminMenu.find(item => pathname?.startsWith(item.href))?.id || "profile";
 
   const handleLogout = () => {
     toast.success("Вы успешно вышли!", { position: "top-right", autoClose: 1000 });
@@ -79,21 +80,10 @@ export const AdminSidebar = ({
     }, 1200);
   };
 
-  const handleTabChange = (tabId: string) => {
-    // Check if user is authenticated before allowing navigation
-    if (!user) {
-      // Show auth popup instead of navigating
-      setIsAuthOpen(true);
-      onClose();
-      setSidebarOpen(false);
-      return;
-    }
-
-    // User is authenticated, change active tab (no route navigation needed)
-    setActiveTab(tabId);
+  const handleTabChange = () => {
+    // Close sidebar on navigation
     onClose();
     setSidebarOpen(false);
-    // No router.push needed - AdminProfile handles tab switching internally
   };
 
   const getRoleIcon = (role: string) => {
@@ -351,11 +341,12 @@ export const AdminSidebar = ({
         <nav className={`mt-2 space-y-2 xs:space-y-3 ${isCollapsed ? 'px-2' : 'px-3 xs:px-4 sm:px-6'} flex-1 overflow-y-auto overflow-x-hidden relative z-10`}>
           {adminMenu.map((item, index) => (
             <div key={item.id} className="relative">
-              <button
-                onClick={() => handleTabChange(item.id)}
+              <Link
+                href={item.href}
+                onClick={handleTabChange}
                 onMouseEnter={() => setHoveredItem(item.id)}
                 onMouseLeave={() => setHoveredItem(null)}
-                className={`w-full group relative transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] min-h-[48px] border-0 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform ${
+                className={`w-full group relative transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] min-h-[48px] border-0 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform block ${
                   activeTab === item.id
                     ? "transform scale-105"
                     : "hover:scale-102"
@@ -474,7 +465,7 @@ export const AdminSidebar = ({
                   {/* Hover shimmer effect */}
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
                 </div>
-              </button>
+              </Link>
 
               {/* Tooltip for collapsed state - only on XL screens and above */}
               {isCollapsed && (
@@ -614,11 +605,12 @@ export const AdminSidebar = ({
         <nav className={`mt-2 space-y-3 ${isCollapsed ? 'px-2' : 'px-6'} flex-1 overflow-y-auto overflow-x-hidden relative z-10`}>
           {adminMenu.map((item, index) => (
             <div key={`desktop-${item.id}`} className="relative">
-              <button
-                onClick={() => handleTabChange(item.id)}
+              <Link
+                href={item.href}
+                onClick={handleTabChange}
                 onMouseEnter={() => setHoveredItem(item.id)}
                 onMouseLeave={() => setHoveredItem(null)}
-                className={`w-full group relative transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] min-h-[48px] border-0 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform ${
+                className={`w-full group relative transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] min-h-[48px] border-0 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform block ${
                   activeTab === item.id
                     ? "transform scale-105"
                     : "hover:scale-102"
@@ -717,7 +709,7 @@ export const AdminSidebar = ({
                   {/* Hover shimmer effect */}
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
                 </div>
-              </button>
+              </Link>
 
               {/* Tooltip for collapsed state */}
               {isCollapsed && (

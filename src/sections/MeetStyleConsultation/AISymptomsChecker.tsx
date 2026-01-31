@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -19,6 +19,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
+import BookingModal from "@/sections/Chat/BookingModal";
 
 interface TimeSlot {
   id: string;
@@ -124,6 +125,7 @@ export default function AISymptomsChecker() {
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -423,85 +425,47 @@ export default function AISymptomsChecker() {
   };
 
   const handleBookAppointment = async (doctorId: number, doctorName: string) => {
-    setIsLoading(true);
-
-    try {
-      // Call API to get doctor's available time slots
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/consultations/get-doctor-time-slots/${doctorId}/`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch time slots");
-      }
-
-      const data = await response.json();
-      console.log("Time slots response:", data);
-
-      if (data.success && data.timeSlots && data.timeSlots.length > 0) {
-        // Detect language from previous messages
-        const lastBotMessage = messages.filter(m => m.role === "assistant").pop();
-        const detectResponseLanguage = (text: string) => {
-          const hasEnglish = /[a-zA-Z]/.test(text || "");
-          const hasCyrillic = /[а-яА-ЯёЁ]/.test(text || "");
-          const hasKazakh = /[әғқңөұүһіӘҒҚҢӨҰҮҺІ]/.test(text || "");
-
-          if (hasEnglish && !hasCyrillic) return "en";
-          if (hasKazakh) return "kz";
-          return "ru";
-        };
-
-        const responseLang = detectResponseLanguage(lastBotMessage?.content || "");
-
-        const messages_text = {
-          en: `Here are the available appointment times for Dr. ${doctorName}:`,
-          ru: `Вот доступное время приема для врача ${doctorName}:`,
-          kz: `Міне дәрігер ${doctorName} үшін қолжетімді қабылдау уақыты:`
-        };
-
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "time-slots",
-            content: messages_text[responseLang as keyof typeof messages_text] || messages_text.ru,
-            timeSlots: data.timeSlots,
-            doctorId,
-            doctorName
-          }
-        ]);
-      } else {
-        const errorMessages = {
-          en: "Sorry, no available time slots at the moment. Please try again later or contact the clinic directly.",
-          ru: "К сожалению, нет доступных временных слотов в данный момент. Попробуйте позже или свяжитесь с клиникой напрямую.",
-          kz: "Кешіріңіз, қазіргі уақытта бос уақыт жоқ. Кейінірек қайталап көріңіз немесе клиникаға тікелей хабарласыңыз."
-        };
-
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: errorMessages.ru
-          }
-        ]);
-      }
-
-      setIsLoading(false);
-    } catch (error) {
-      console.error("Error fetching time slots:", error);
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "Произошла ошибка при загрузке расписания. Пожалуйста, попробуйте позже."
-        }
-      ]);
-      setIsLoading(false);
-    }
+    // Open the booking modal instead of inline time slots
+    setIsBookingModalOpen(true);
   };
+
+  const handleBookingComplete = useCallback((bookingDetails: {
+    doctorName: string;
+    doctorType: string;
+    scheduledTime: string;
+    isGuest?: boolean;
+  }) => {
+    // Add a confirmation message to the chat
+    const date = new Date(bookingDetails.scheduledTime);
+    const formattedDate = date.toLocaleDateString(
+      language === "kz" ? "kk-KZ" : language === "en" ? "en-US" : "ru-RU",
+      { weekday: "long", year: "numeric", month: "long", day: "numeric" }
+    );
+    const formattedTime = date.toLocaleTimeString(
+      language === "kz" ? "kk-KZ" : language === "en" ? "en-US" : "ru-RU",
+      { hour: "2-digit", minute: "2-digit" }
+    );
+
+    let confirmationText = "";
+    switch (language) {
+      case "en":
+        confirmationText = `✅ Appointment Confirmed!\n\nYou have successfully booked an appointment with ${bookingDetails.doctorName} (${bookingDetails.doctorType}).\n\n📅 Date: ${formattedDate}\n🕐 Time: ${formattedTime}\n💻 Type: Online video consultation\n\nYou will receive a reminder before your appointment.`;
+        break;
+      case "kz":
+        confirmationText = `✅ Жазылу расталды!\n\n${bookingDetails.doctorName} (${bookingDetails.doctorType}) дәрігеріне сәтті жазылдыңыз.\n\n📅 Күні: ${formattedDate}\n🕐 Уақыты: ${formattedTime}\n💻 Түрі: Онлайн бейне кеңес\n\nКеңес алдында еске салу аласыз.`;
+        break;
+      default:
+        confirmationText = `✅ Запись подтверждена!\n\nВы успешно записались к врачу ${bookingDetails.doctorName} (${bookingDetails.doctorType}).\n\n📅 Дата: ${formattedDate}\n🕐 Время: ${formattedTime}\n💻 Тип: Онлайн видеоконсультация\n\nВы получите напоминание перед консультацией.`;
+    }
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        content: confirmationText
+      }
+    ]);
+  }, [language]);
 
   const handleShowOtherDoctors = async () => {
     setIsLoading(true);
@@ -816,9 +780,10 @@ export default function AISymptomsChecker() {
                             {/* Doctor Info */}
                             <div className="flex-1 pt-1">
                               <h3 className="text-white font-bold text-lg sm:text-xl mb-1.5 leading-tight" style={{ textShadow: "0 2px 8px rgba(0, 0, 0, 0.3)" }}>
-                                {message.doctor.name}
+                                {/* {message.doctor.name} */}
+                                Нажмите записаться на прием и ваберите врача в сплывающем окне
                               </h3>
-                              <p className="text-blue-100 text-sm sm:text-base mb-2 font-medium">{doctorSpecialization}</p>
+                              {/* <p className="text-blue-100 text-sm sm:text-base mb-2 font-medium">{doctorSpecialization}</p> */}
                               {message.doctor.years_of_experience && (
                                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold" style={{ background: "rgba(255, 255, 255, 0.15)", backdropFilter: "blur(10px)" }}>
                                   <span className="text-blue-100">✨</span>
@@ -829,7 +794,7 @@ export default function AISymptomsChecker() {
                           </div>
 
                           {/* Clinic Information Card */}
-                          {message.doctor.clinic && (
+                          {/* {message.doctor.clinic && (
                             <div
                               className="rounded-xl p-4 mb-5 relative overflow-hidden"
                               style={{
@@ -872,7 +837,7 @@ export default function AISymptomsChecker() {
                                 </div>
                               </div>
                             </div>
-                          )}
+                          )} */}
 
                           {/* Premium Action Buttons */}
                           <div className="space-y-3">
@@ -1363,6 +1328,14 @@ export default function AISymptomsChecker() {
           </div>
         </div>
       </div>
+
+      {/* Booking Modal */}
+      <BookingModal
+        isOpen={isBookingModalOpen}
+        onClose={() => setIsBookingModalOpen(false)}
+        onBookingComplete={handleBookingComplete}
+        language={language}
+      />
     </div>
   );
 }

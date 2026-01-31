@@ -97,8 +97,6 @@ export default function DoctorProfile() {
     <div className="flex min-h-screen bg-gray-100">
       {/* Sidebar */}
       <DoctorSidebar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         isCollapsed={sidebarCollapsed}
@@ -117,10 +115,7 @@ export default function DoctorProfile() {
         <main className={`flex-1 bg-gray-50 ${activeTab === 'consultations' || activeTab === 'analytics' ? '' : 'p-4 sm:p-6'}`}>
           {/* Breadcrumb - Hide for consultations, analytics and profile tabs */}
           {activeTab !== 'consultations' && activeTab !== 'profile' && activeTab !== 'analytics' && (
-            <DoctorBreadcrumb
-              activeTab={activeTab}
-              onNavigate={setActiveTab}
-            />
+            <DoctorBreadcrumb />
           )}
 
           {/* Page Content with loading animation */}

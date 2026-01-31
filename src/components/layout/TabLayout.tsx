@@ -66,8 +66,6 @@ const TabLayout = ({ children }: TabLayoutProps) => {
     <div className="flex min-h-screen bg-gray-100">
       {/* Sidebar with control */}
       <Sidebar
-        activeTab={activeTab}
-        setActiveTab={handleTabChange}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         isCollapsed={sidebarCollapsed}
@@ -86,7 +84,7 @@ const TabLayout = ({ children }: TabLayoutProps) => {
         <div className="flex-1 overflow-y-auto">
           <main className="flex-1 p-4 sm:p-6 bg-gray-50">
             {/* Breadcrumbs */}
-            <Breadcrumb activeTab={activeTab} />
+            <Breadcrumb />
 
             {/* Animated Content */}
             <MainContent activeTab={activeTab}>{children}</MainContent>

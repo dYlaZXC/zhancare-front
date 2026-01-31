@@ -1,82 +1,86 @@
 "use client";
 
 import React from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { Home, ChevronRight, User, Video, Calendar, FileText, Plane, FolderOpen, Activity } from "lucide-react";
 
 interface BreadcrumbItem {
   key: string;
   title: string;
   icon: React.ReactNode;
-  href?: string;
+  href: string;
 }
 
 interface BreadcrumbProps {
-  activeTab: string;
-  onNavigate?: (tab: string) => void;
   showHome?: boolean;
   customItems?: BreadcrumbItem[];
 }
 
-export const Breadcrumb = ({ 
-  activeTab, 
-  onNavigate, 
-  showHome = true, 
-  customItems 
+export const Breadcrumb = ({
+  showHome = true,
+  customItems
 }: BreadcrumbProps) => {
+  const pathname = usePathname();
+  const router = useRouter();
   const defaultItems: Record<string, BreadcrumbItem> = {
     profile: {
       key: "profile",
       title: "Профиль",
       icon: <User className="w-4 h-4" />,
+      href: "/patient/profile",
     },
     video: {
-      key: "video", 
+      key: "video",
       title: "Видео консультация",
       icon: <Video className="w-4 h-4" />,
+      href: "/patient/video",
     },
     appointments: {
       key: "appointments",
-      title: "Вызов врача на дом", 
+      title: "Вызов врача на дом",
       icon: <Calendar className="w-4 h-4" />,
+      href: "/patient/appointments",
     },
     history: {
       key: "history",
       title: "Медицинская история",
       icon: <FileText className="w-4 h-4" />,
+      href: "/patient/history",
     },
     chat: {
       key: "chat",
       title: "Мед Туризм",
       icon: <Plane className="w-4 h-4" />,
+      href: "/patient/chat",
     },
     documents: {
-      key: "documents", 
+      key: "documents",
       title: "Документы",
       icon: <FolderOpen className="w-4 h-4" />,
+      href: "/patient/documents",
     },
     activity: {
       key: "activity",
       title: "Активность",
       icon: <Activity className="w-4 h-4" />,
+      href: "/patient/activity",
     },
   };
 
-  const items: Record<string, BreadcrumbItem> = customItems ? 
-    customItems.reduce((acc, item) => ({ ...acc, [item.key]: item }), {} as Record<string, BreadcrumbItem>) : 
+  const items: Record<string, BreadcrumbItem> = customItems ?
+    customItems.reduce((acc, item) => ({ ...acc, [item.key]: item }), {} as Record<string, BreadcrumbItem>) :
     defaultItems;
 
+  // Detect active tab from pathname
+  const activeTab = Object.values(items).find(item => pathname?.startsWith(item.href))?.key || "profile";
   const currentItem = items[activeTab];
 
   const handleHomeClick = () => {
-    if (onNavigate) {
-      onNavigate('home');
-    }
+    router.push('/patient/profile');
   };
 
-  const handleItemClick = (itemKey: string) => {
-    if (onNavigate) {
-      onNavigate(itemKey);
-    }
+  const handleItemClick = (item: BreadcrumbItem) => {
+    router.push(item.href);
   };
 
   return (
@@ -118,28 +122,26 @@ export const Breadcrumb = ({
       )}
 
       {/* Quick Navigation Pills (Optional) */}
-      {onNavigate && (
-        <div className="hidden lg:flex items-center space-x-1 ml-4 pl-4 border-l border-gray-300">
-          {Object.values(items)
-            .filter(item => item.key !== activeTab)
-            .slice(0, 3)
-            .map((item) => (
-              <button
-                key={item.key}
-                onClick={() => handleItemClick(item.key)}
-                className="flex items-center space-x-1 px-2 py-1 text-xs text-gray-500 hover:text-blue-600 hover:bg-white/70 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
-                title={`Перейти к: ${item.title}`}
-              >
-                <div className="w-3 h-3">
-                  {item.icon}
-                </div>
-                <span className="max-w-[100px] truncate">
-                  {item.title}
-                </span>
-              </button>
-            ))}
-        </div>
-      )}
+      <div className="hidden lg:flex items-center space-x-1 ml-4 pl-4 border-l border-gray-300">
+        {Object.values(items)
+          .filter(item => item.key !== activeTab)
+          .slice(0, 3)
+          .map((item) => (
+            <button
+              key={item.key}
+              onClick={() => handleItemClick(item)}
+              className="flex items-center space-x-1 px-2 py-1 text-xs text-gray-500 hover:text-blue-600 hover:bg-white/70 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+              title={`Перейти к: ${item.title}`}
+            >
+              <div className="w-3 h-3">
+                {item.icon}
+              </div>
+              <span className="max-w-[100px] truncate">
+                {item.title}
+              </span>
+            </button>
+          ))}
+      </div>
 
       {/* Mobile Menu Indicator */}
       <div className="flex lg:hidden ml-auto">

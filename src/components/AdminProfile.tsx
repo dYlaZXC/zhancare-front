@@ -105,8 +105,6 @@ export default function AdminProfile() {
     <div className="flex min-h-screen bg-gray-100">
       {/* Sidebar */}
       <AdminSidebar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         isCollapsed={sidebarCollapsed}
@@ -125,8 +123,6 @@ export default function AdminProfile() {
         <main className="flex-1 bg-gray-50 p-4 sm:p-6">
           {/* Breadcrumb */}
           <AdminBreadcrumb
-            activeTab={activeTab}
-            onNavigate={setActiveTab}
           />
 
           {/* Page Content with loading animation */}
