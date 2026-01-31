@@ -34,7 +34,13 @@
       "passwordsMismatch": "Passwords don't match",
       "codeDescription": "Enter the 6-digit code sent to your email",
       "resendAvailableIn": "Resend available in:",
-      "resendCooldownMessage": "Please wait {minutes} minutes before requesting a new code"
+      "resendCooldownMessage": "Please wait {minutes} minutes before requesting a new code",
+      "consentPersonalData": "I agree to the",
+      "consentPersonalDataLink": "consent to the collection of personal data",
+      "consentInformAgreement": "I agree to the",
+      "consentInformAgreementLink": "informed consent",
+      "consentOffer": "I agree to the",
+      "consentOfferLink": "offer agreement"
     },
     "telegramAuth": {
       "initializing": "Initializing...",
@@ -225,6 +231,25 @@
       },
       "social": {
         "title": "Follow us"
+      },
+      "newsletter": {
+        "title": "Stay Updated",
+        "description": "Subscribe to our newsletter for health tips and updates",
+        "placeholder": "Enter your email",
+        "button": "Subscribe",
+        "successMessage": "Thank you for subscribing!",
+        "errorMessage": "Please enter a valid email"
+      },
+      "stats": {
+        "patients": "Active Patients",
+        "doctors": "Certified Doctors",
+        "consultations": "Consultations"
+      },
+      "legal": {
+        "title": "Legal",
+        "dataProcessing": "Data Processing Policy",
+        "offer": "Offer Agreement",
+        "terms": "Terms of Use"
       },
       "rights": "ZhanCare.AI. All rights reserved."
     },

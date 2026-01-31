@@ -34,7 +34,13 @@
       "passwordsMismatch": "Пароли не совпадают",
       "codeDescription": "Введите 6-значный код, отправленный на вашу почту",
       "resendAvailableIn": "Повторная отправка доступна через:",
-      "resendCooldownMessage": "Пожалуйста, подождите {minutes} минут перед запросом нового кода"
+      "resendCooldownMessage": "Пожалуйста, подождите {minutes} минут перед запросом нового кода",
+      "consentPersonalData": "Я согласен с",
+      "consentPersonalDataLink": "согласием на сбор персональных данных",
+      "consentInformAgreement": "Я согласен с",
+      "consentInformAgreementLink": "информированным согласием",
+      "consentOffer": "Я согласен с",
+      "consentOfferLink": "договором оферты"
     },
     "telegramAuth": {
       "initializing": "Инициализация...",
@@ -225,6 +231,25 @@
       },
       "social": {
         "title": "Мы в соцсетях"
+      },
+      "newsletter": {
+        "title": "Будьте в курсе",
+        "description": "Подпишитесь на рассылку для получения советов по здоровью",
+        "placeholder": "Введите ваш email",
+        "button": "Подписаться",
+        "successMessage": "Спасибо за подписку!",
+        "errorMessage": "Пожалуйста, введите корректный email"
+      },
+      "stats": {
+        "patients": "Активных пациентов",
+        "doctors": "Сертифицированных врачей",
+        "consultations": "Консультаций"
+      },
+      "legal": {
+        "title": "Правовая информация",
+        "dataProcessing": "Политика обработки данных",
+        "offer": "Договор оферты",
+        "terms": "Условия использования"
       },
       "rights": "ZhanCare.AI. Все права защищены."
     },

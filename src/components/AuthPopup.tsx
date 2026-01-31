@@ -300,6 +300,7 @@ const AuthPopup = () => {
                         translations={translations}
                         onSubmit={handleRegister}
                         loading={loading}
+                        language={language}
                       />
                     </motion.div>
                   )}

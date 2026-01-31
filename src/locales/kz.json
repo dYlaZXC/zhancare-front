@@ -35,7 +35,13 @@
       "passwordsMismatch": "Құпия сөздер сәйкес келмейді",
       "codeDescription": "Поштаңызға жіберілген 6 таңбалы кодты енгізіңіз",
       "resendAvailableIn": "Қайта жіберу қолжетімді:",
-      "resendCooldownMessage": "Жаңа код сұрау алдында {minutes} минут күтіңіз"
+      "resendCooldownMessage": "Жаңа код сұрау алдында {minutes} минут күтіңіз",
+      "consentPersonalData": "Мен келісемін",
+      "consentPersonalDataLink": "жеке деректерді жинауға келісіммен",
+      "consentInformAgreement": "Мен келісемін",
+      "consentInformAgreementLink": "хабардар етілген келісіммен",
+      "consentOffer": "Мен келісемін",
+      "consentOfferLink": "оферта келісімімен"
     },
     "telegramAuth": {
       "initializing": "Telegram WebApp іске қосылуда...",
@@ -225,6 +231,25 @@
       },
       "social": {
         "title": "Біз әлеуметтік желіде"
+      },
+      "newsletter": {
+        "title": "Хабардар болыңыз",
+        "description": "Денсаулық туралы кеңестер алу үшін жазылыңыз",
+        "placeholder": "Email енгізіңіз",
+        "button": "Жазылу",
+        "successMessage": "Жазылғаныңызға рахмет!",
+        "errorMessage": "Дұрыс email енгізіңіз"
+      },
+      "stats": {
+        "patients": "Белсенді науқастар",
+        "doctors": "Сертификатталған дәрігерлер",
+        "consultations": "Консультациялар"
+      },
+      "legal": {
+        "title": "Құқықтық ақпарат",
+        "dataProcessing": "Деректерді өңдеу саясаты",
+        "offer": "Оферта келісімі",
+        "terms": "Пайдалану шарттары"
       },
       "rights": "Барлық құқықтар қорғалған."
     },

@@ -4,11 +4,13 @@ import { useState, useCallback, FormEvent } from "react";
 import { motion } from "framer-motion";
 import { Mail, Phone, User, Lock, Loader2, Shield } from "lucide-react";
 import AuthInput from "./AuthInput";
+import PdfViewerModal from "../PdfViewerModal";
 
 interface RegisterFormProps {
   translations: any;
   onSubmit: (data: RegisterFormData) => Promise<void>;
   loading: boolean;
+  language?: string;
 }
 
 export interface RegisterFormData {
@@ -18,9 +20,12 @@ export interface RegisterFormData {
   phone: string;
   password: string;
   confirmPassword: string;
+  consentPersonalData: boolean;
+  consentInformAgreement: boolean;
+  consentOffer: boolean;
 }
 
-const RegisterForm = ({ translations, onSubmit, loading }: RegisterFormProps) => {
+const RegisterForm = ({ translations, onSubmit, loading, language = "en" }: RegisterFormProps) => {
   const [formData, setFormData] = useState<RegisterFormData>({
     first_name: "",
     last_name: "",
@@ -28,11 +33,45 @@ const RegisterForm = ({ translations, onSubmit, loading }: RegisterFormProps) =>
     phone: "",
     password: "",
     confirmPassword: "",
+    consentPersonalData: false,
+    consentInformAgreement: false,
+    consentOffer: false,
   });
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Partial<RegisterFormData>>({});
+
+  // PDF Modal state
+  const [pdfModal, setPdfModal] = useState<{ isOpen: boolean; url: string; title: string }>({
+    isOpen: false,
+    url: "",
+    title: "",
+  });
+
+  // Helper function to get PDF path based on language
+  const getPdfPath = (docType: string) => {
+    const langSuffix = language === "ru" ? "rus" : language === "kz" ? "kaz" : "eng";
+    return `/docs/${docType}_${langSuffix}.pdf`;
+  };
+
+  // Helper function to open PDF modal
+  const openPdfModal = (docType: string, title: string) => {
+    setPdfModal({
+      isOpen: true,
+      url: getPdfPath(docType),
+      title,
+    });
+  };
+
+  // Helper function to close PDF modal
+  const closePdfModal = () => {
+    setPdfModal({
+      isOpen: false,
+      url: "",
+      title: "",
+    });
+  };
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -66,6 +105,18 @@ const RegisterForm = ({ translations, onSubmit, loading }: RegisterFormProps) =>
       errors.confirmPassword = "Пароли не совпадают";
     }
 
+    if (!formData.consentPersonalData) {
+      errors.consentPersonalData = "Обязательное согласие" as any;
+    }
+
+    if (!formData.consentInformAgreement) {
+      errors.consentInformAgreement = "Обязательное согласие" as any;
+    }
+
+    if (!formData.consentOffer) {
+      errors.consentOffer = "Обязательное согласие" as any;
+    }
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   }, [formData]);
@@ -75,6 +126,16 @@ const RegisterForm = ({ translations, onSubmit, loading }: RegisterFormProps) =>
     setFormData(prev => ({ ...prev, [name]: value }));
 
     // Clear error when user starts typing
+    if (validationErrors[name as keyof RegisterFormData]) {
+      setValidationErrors(prev => ({ ...prev, [name]: undefined }));
+    }
+  }, [validationErrors]);
+
+  const handleCheckboxChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = e.target;
+    setFormData(prev => ({ ...prev, [name]: checked }));
+
+    // Clear error when user checks the checkbox
     if (validationErrors[name as keyof RegisterFormData]) {
       setValidationErrors(prev => ({ ...prev, [name]: undefined }));
     }
@@ -172,6 +233,99 @@ const RegisterForm = ({ translations, onSubmit, loading }: RegisterFormProps) =>
         onTogglePassword={() => setShowConfirmPassword(prev => !prev)}
       />
 
+      {/* Consent Checkboxes */}
+      <div className="space-y-3 mt-2">
+        {/* Personal Data Consent */}
+        <div className="flex items-start gap-2">
+          <input
+            type="checkbox"
+            id="consentPersonalData"
+            name="consentPersonalData"
+            checked={formData.consentPersonalData}
+            onChange={handleCheckboxChange}
+            disabled={loading}
+            className="mt-1 w-4 h-4 text-[#3772ff] bg-white/5 border-gray-300 rounded focus:ring-[#3772ff] focus:ring-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          />
+          <label htmlFor="consentPersonalData" className="text-sm text-gray-300 leading-tight cursor-pointer">
+            {translations.consentPersonalData}{" "}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openPdfModal("consent_to_the_collection_of_personal_data", translations.consentPersonalDataLink);
+              }}
+              className="text-[#3772ff] hover:text-[#3267e6] underline focus:outline-none"
+            >
+              {translations.consentPersonalDataLink}
+            </button>
+          </label>
+        </div>
+        {validationErrors.consentPersonalData && (
+          <p className="text-red-500 text-xs ml-6">{validationErrors.consentPersonalData}</p>
+        )}
+
+        {/* Informed Agreement Consent */}
+        <div className="flex items-start gap-2">
+          <input
+            type="checkbox"
+            id="consentInformAgreement"
+            name="consentInformAgreement"
+            checked={formData.consentInformAgreement}
+            onChange={handleCheckboxChange}
+            disabled={loading}
+            className="mt-1 w-4 h-4 text-[#3772ff] bg-white/5 border-gray-300 rounded focus:ring-[#3772ff] focus:ring-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          />
+          <label htmlFor="consentInformAgreement" className="text-sm text-gray-300 leading-tight cursor-pointer">
+            {translations.consentInformAgreement}{" "}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openPdfModal("inform_aggrement", translations.consentInformAgreementLink);
+              }}
+              className="text-[#3772ff] hover:text-[#3267e6] underline focus:outline-none"
+            >
+              {translations.consentInformAgreementLink}
+            </button>
+          </label>
+        </div>
+        {validationErrors.consentInformAgreement && (
+          <p className="text-red-500 text-xs ml-6">{validationErrors.consentInformAgreement}</p>
+        )}
+
+        {/* Offer Consent */}
+        <div className="flex items-start gap-2">
+          <input
+            type="checkbox"
+            id="consentOffer"
+            name="consentOffer"
+            checked={formData.consentOffer}
+            onChange={handleCheckboxChange}
+            disabled={loading}
+            className="mt-1 w-4 h-4 text-[#3772ff] bg-white/5 border-gray-300 rounded focus:ring-[#3772ff] focus:ring-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          />
+          <label htmlFor="consentOffer" className="text-sm text-gray-300 leading-tight cursor-pointer">
+            {translations.consentOffer}{" "}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openPdfModal("offer", translations.consentOfferLink);
+              }}
+              className="text-[#3772ff] hover:text-[#3267e6] underline focus:outline-none"
+            >
+              {translations.consentOfferLink}
+            </button>
+          </label>
+        </div>
+        {validationErrors.consentOffer && (
+          <p className="text-red-500 text-xs ml-6">{validationErrors.consentOffer}</p>
+        )}
+      </div>
+
       {/* Submit Button */}
       <motion.button
         type="submit"
@@ -203,6 +357,14 @@ const RegisterForm = ({ translations, onSubmit, loading }: RegisterFormProps) =>
         <Shield className="w-4 h-4 text-green-600" />
         <span>Защищенное соединение 256-bit SSL</span>
       </div>
+
+      {/* PDF Viewer Modal */}
+      <PdfViewerModal
+        isOpen={pdfModal.isOpen}
+        onClose={closePdfModal}
+        pdfUrl={pdfModal.url}
+        title={pdfModal.title}
+      />
     </form>
   );
 };
