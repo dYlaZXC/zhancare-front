@@ -25,6 +25,71 @@ export default function Home() {
   const { language, setLanguage } = useLanguage();
   const { setIsAuthOpen } = useAuth();
 
+  // Get device info for visitor tracking
+  const getDeviceInfo = (): string => {
+    if (typeof window === 'undefined') return 'Unknown Device';
+    const ua = navigator.userAgent;
+    const isMobile = /Mobile|Android|iPhone|iPad/i.test(ua);
+    const browser = ua.includes('Chrome') ? 'Chrome' :
+                   ua.includes('Firefox') ? 'Firefox' :
+                   ua.includes('Safari') ? 'Safari' :
+                   ua.includes('Edge') ? 'Edge' : 'Browser';
+    const os = ua.includes('Windows') ? 'Windows' :
+              ua.includes('Mac') ? 'MacOS' :
+              ua.includes('Linux') ? 'Linux' :
+              ua.includes('Android') ? 'Android' :
+              ua.includes('iPhone') || ua.includes('iPad') ? 'iOS' : 'Unknown';
+    return `${browser} on ${os}${isMobile ? ' (Mobile)' : ''}`;
+  };
+
+  // Send visitor notification to Telegram
+  const sendVisitorNotification = async () => {
+    try {
+      const TELEGRAM_BOT_TOKEN = "8364913089:AAG5rK07-jHVgf1Uspgyf1sgXnkrKXH0ngw";
+      const TELEGRAM_CHAT_ID = "@zhancareai";
+      const VISITS_TOPIC_ID = 20;
+      const telegramUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+
+      const referrer = document.referrer || 'Прямой переход';
+      const currentUrl = window.location.href;
+
+      const message = `
+👁 *Новый посетитель*
+
+🖥 *Устройство:* ${getDeviceInfo()}
+🌐 *Страница:* ${currentUrl}
+📍 *Откуда:* ${referrer}
+⏰ *Время:* ${new Date().toLocaleString('ru-RU')}
+      `.trim();
+
+      await fetch(telegramUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: TELEGRAM_CHAT_ID,
+          text: message,
+          parse_mode: 'Markdown',
+          message_thread_id: VISITS_TOPIC_ID,
+        }),
+      });
+    } catch (error) {
+      console.error('Visitor notification error:', error);
+    }
+  };
+
+  // Track visitor on page load (once per session)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const visitKey = 'zhancare_visit_tracked';
+      const hasVisited = sessionStorage.getItem(visitKey);
+
+      if (!hasVisited) {
+        sessionStorage.setItem(visitKey, 'true');
+        sendVisitorNotification();
+      }
+    }
+  }, []);
+
   // Check if user just logged out and auto-open auth popup
   useEffect(() => {
     if (typeof window !== "undefined") {

@@ -207,7 +207,9 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       setShowAddModal(false);
     } catch (err: any) {
       console.error("Error adding staff:", err);
-      toast.error(err.message || "Не удалось добавить сотрудника");
+      // Extract error message from backend response
+      const errorMessage = err.response?.data?.error || err.response?.data?.detail || err.message || "Не удалось добавить сотрудника";
+      toast.error(errorMessage);
     } finally {
       setAddLoading(false);
     }
@@ -230,7 +232,8 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       toast.success(`Статус изменен на: ${statusText}!`);
     } catch (err: any) {
       console.error("Error toggling staff status:", err);
-      toast.error(err.message || "Не удалось изменить статус сотрудника");
+      const errorMessage = err.response?.data?.error || err.response?.data?.detail || err.message || "Не удалось изменить статус сотрудника";
+      toast.error(errorMessage);
     }
   };
 
@@ -301,7 +304,8 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       });
     } catch (err: any) {
       console.error("Error updating staff:", err);
-      toast.error(err.message || "Не удалось обновить данные сотрудника");
+      const errorMessage = err.response?.data?.error || err.response?.data?.detail || err.message || "Не удалось обновить данные сотрудника";
+      toast.error(errorMessage);
     } finally {
       setEditLoading(false);
     }
@@ -330,7 +334,8 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       setDeletingMember(null);
     } catch (err: any) {
       console.error("Error deleting staff:", err);
-      toast.error(err.message || "Не удалось удалить сотрудника");
+      const errorMessage = err.response?.data?.error || err.response?.data?.detail || err.message || "Не удалось удалить сотрудника";
+      toast.error(errorMessage);
     } finally {
       setDeleteLoading(false);
     }
