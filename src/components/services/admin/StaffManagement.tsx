@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, memo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-toastify";
 import { api } from "@/utils/api";
@@ -23,7 +23,9 @@ import {
   Stethoscope,
   Heart,
   X,
-  Lock
+  Lock,
+  Plus,
+  Minus
 } from "lucide-react";
 
 interface StaffMember {
@@ -43,6 +45,123 @@ interface StaffMember {
     name: string;
   };
 }
+
+// Generic memoized input component for smooth typing
+const FormInput = memo(({
+  value,
+  onChange,
+  type = "text",
+  placeholder,
+  required,
+  minLength,
+  className,
+  icon: Icon
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+  placeholder?: string;
+  required?: boolean;
+  minLength?: number;
+  className?: string;
+  icon?: React.ComponentType<{ className?: string }>;
+}) => {
+  const [localValue, setLocalValue] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (document.activeElement !== inputRef.current) {
+      setLocalValue(value);
+    }
+  }, [value]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setLocalValue(newValue);
+    requestAnimationFrame(() => onChange(newValue));
+  };
+
+  return (
+    <div className="relative">
+      {Icon && <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />}
+      <input
+        ref={inputRef}
+        type={type}
+        value={localValue}
+        onChange={handleChange}
+        className={className || `w-full ${Icon ? 'pl-12' : 'px-4'} pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors`}
+        placeholder={placeholder}
+        required={required}
+        minLength={minLength}
+      />
+    </div>
+  );
+});
+
+// Memoized input component that uses local state for instant typing
+// Parent state updates happen in background without blocking UI
+const SpecializationInput = memo(({
+  value,
+  index,
+  onChange,
+  placeholder,
+  showRemove,
+  onRemove
+}: {
+  value: string;
+  index: number;
+  onChange: (index: number, value: string) => void;
+  placeholder: string;
+  showRemove: boolean;
+  onRemove: (index: number) => void;
+}) => {
+  const [localValue, setLocalValue] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Sync local value when prop changes (e.g., when editing different staff)
+  useEffect(() => {
+    // Only sync if input is not focused to avoid overwriting while typing
+    if (document.activeElement !== inputRef.current) {
+      setLocalValue(value);
+    }
+  }, [value]);
+
+  // Handle input change - update local immediately, parent async
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setLocalValue(newValue);
+    // Update parent in next tick to not block typing
+    requestAnimationFrame(() => {
+      onChange(index, newValue);
+    });
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="relative flex-1">
+        <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={localValue}
+          onChange={handleChange}
+          className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+          placeholder={placeholder}
+        />
+      </div>
+      {showRemove && (
+        <button
+          type="button"
+          onClick={() => onRemove(index)}
+          className="p-3 rounded-xl border-2 border-red-200 bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
+          title="Удалить специализацию"
+        >
+          <Minus className="w-5 h-5" />
+        </button>
+      )}
+    </div>
+  );
+});
 
 interface StaffManagementProps {
   user: any;
@@ -74,9 +193,33 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     phone: '',
     password: '',
     role: 'doctor' as 'doctor' | 'nurse',
-    specialization: '',
     clinic_id: '',
   });
+
+  // Separate state for specializations to avoid re-rendering entire form on each keystroke
+  const [specializations, setSpecializations] = useState<string[]>(['']);
+
+  // Helper functions for managing specializations array - using useCallback to prevent re-renders
+  const handleSpecializationChange = useCallback((index: number, value: string) => {
+    setSpecializations(prev => {
+      const newSpecializations = [...prev];
+      newSpecializations[index] = value;
+      return newSpecializations;
+    });
+  }, []);
+
+  const addSpecialization = useCallback(() => {
+    setSpecializations(prev => [...prev, '']);
+  }, []);
+
+  const removeSpecialization = useCallback((index: number) => {
+    setSpecializations(prev => {
+      if (prev.length > 1) {
+        return prev.filter((_, i) => i !== index);
+      }
+      return prev;
+    });
+  }, []);
 
   useEffect(() => {
     fetchStaff();
@@ -185,7 +328,18 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     setAddLoading(true);
 
     try {
-      const response = await api.post("/staff/", formData);
+      // Convert specializations array to comma-separated string (filter out empty values)
+      const specializationString = specializations
+        .map(s => s.trim())
+        .filter(s => s)
+        .join(', ');
+
+      const payload = {
+        ...formData,
+        specialization: specializationString,
+      };
+
+      const response = await api.post("/staff/", payload);
       const newStaff = response.data;
 
       // Add new staff to the list
@@ -201,9 +355,9 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         phone: '',
         password: '',
         role: 'doctor',
-        specialization: '',
         clinic_id: '',
       });
+      setSpecializations(['']);
       setShowAddModal(false);
     } catch (err: any) {
       console.error("Error adding staff:", err);
@@ -239,6 +393,14 @@ export default function StaffManagement({ user }: StaffManagementProps) {
 
   const handleEditClick = (member: StaffMember) => {
     setEditingMember(member);
+    // Convert comma-separated specialization string to array
+    const specializationsArray = member.specialization
+      ? member.specialization.split(',').map(s => s.trim()).filter(s => s)
+      : [''];
+    // Ensure at least one empty input if no specializations
+    if (specializationsArray.length === 0) {
+      specializationsArray.push('');
+    }
     setFormData({
       first_name: member.first_name,
       last_name: member.last_name,
@@ -246,9 +408,9 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       phone: member.phone,
       password: '',
       role: member.role,
-      specialization: member.specialization || '',
       clinic_id: member.clinic?.id?.toString() || '',
     });
+    setSpecializations(specializationsArray);
     setShowEditModal(true);
   };
 
@@ -259,6 +421,12 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     setEditLoading(true);
 
     try {
+      // Convert specializations array to comma-separated string (filter out empty values)
+      const specializationString = specializations
+        .map(s => s.trim())
+        .filter(s => s)
+        .join(', ');
+
       // Don't send password if it's empty
       const updateData: any = {
         first_name: formData.first_name,
@@ -266,7 +434,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         email: formData.email,
         phone: formData.phone,
         role: formData.role,
-        specialization: formData.specialization,
+        specialization: specializationString,
       };
 
       // Only include password if it was changed
@@ -299,9 +467,9 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         phone: '',
         password: '',
         role: 'doctor',
-        specialization: '',
         clinic_id: '',
       });
+      setSpecializations(['']);
     } catch (err: any) {
       console.error("Error updating staff:", err);
       const errorMessage = err.response?.data?.error || err.response?.data?.detail || err.message || "Не удалось обновить данные сотрудника";
@@ -834,21 +1002,39 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                     </div>
                   </div>
 
-                  {/* Specialization */}
+                  {/* Specialization - Multiple inputs with + and - buttons */}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Специализация
-                    </label>
-                    <div className="relative">
-                      <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                      <input
-                        type="text"
-                        value={formData.specialization}
-                        onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
-                        className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
-                        placeholder={formData.role === 'doctor' ? 'Например: Кардиолог' : 'Например: Процедурная медсестра'}
-                      />
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Специализация
+                      </label>
+                      <button
+                        type="button"
+                        onClick={addSpecialization}
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Добавить
+                      </button>
                     </div>
+                    <div className="space-y-3">
+                      {specializations.map((spec, index) => (
+                        <SpecializationInput
+                          key={index}
+                          value={spec}
+                          index={index}
+                          onChange={handleSpecializationChange}
+                          placeholder={formData.role === 'doctor' ? 'Например: Кардиолог' : 'Например: Процедурная медсестра'}
+                          showRemove={specializations.length > 1}
+                          onRemove={removeSpecialization}
+                        />
+                      ))}
+                    </div>
+                    {specializations.length > 0 && specializations.some(s => s.trim()) && (
+                      <p className="text-xs text-gray-500 mt-2">
+                        Добавлено специализаций: {specializations.filter(s => s.trim()).length}
+                      </p>
+                    )}
                   </div>
 
                   {/* Clinic Selection/Display */}
@@ -1103,21 +1289,39 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                     </div>
                   </div>
 
-                  {/* Specialization */}
+                  {/* Specialization - Multiple inputs with + and - buttons */}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Специализация
-                    </label>
-                    <div className="relative">
-                      <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                      <input
-                        type="text"
-                        value={formData.specialization}
-                        onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
-                        className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
-                        placeholder={formData.role === 'doctor' ? 'Например: Кардиолог' : 'Например: Процедурная медсестра'}
-                      />
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Специализация
+                      </label>
+                      <button
+                        type="button"
+                        onClick={addSpecialization}
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Добавить
+                      </button>
                     </div>
+                    <div className="space-y-3">
+                      {specializations.map((spec, index) => (
+                        <SpecializationInput
+                          key={index}
+                          value={spec}
+                          index={index}
+                          onChange={handleSpecializationChange}
+                          placeholder={formData.role === 'doctor' ? 'Например: Кардиолог' : 'Например: Процедурная медсестра'}
+                          showRemove={specializations.length > 1}
+                          onRemove={removeSpecialization}
+                        />
+                      ))}
+                    </div>
+                    {specializations.length > 0 && specializations.some(s => s.trim()) && (
+                      <p className="text-xs text-gray-500 mt-2">
+                        Добавлено специализаций: {specializations.filter(s => s.trim()).length}
+                      </p>
+                    )}
                   </div>
 
                   {/* Clinic Selection/Display */}
