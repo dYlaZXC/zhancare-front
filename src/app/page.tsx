@@ -53,10 +53,26 @@ export default function Home() {
       const referrer = document.referrer || 'Прямой переход';
       const currentUrl = window.location.href;
 
+      // Get location from IP using free geolocation API
+      let locationInfo = 'Не определено';
+      let ipAddress = 'Не определен';
+      try {
+        const geoResponse = await fetch('http://ip-api.com/json/?fields=status,country,countryCode,regionName,city,isp,query&lang=ru');
+        const geoData = await geoResponse.json();
+        if (geoData.status === 'success') {
+          locationInfo = `${geoData.city}, ${geoData.regionName}, ${geoData.country}`;
+          ipAddress = geoData.query;
+        }
+      } catch (geoError) {
+        console.error('Geolocation error:', geoError);
+      }
+
       const message = `
 👁 *Новый посетитель*
 
 🖥 *Устройство:* ${getDeviceInfo()}
+🌍 *Локация:* ${locationInfo}
+🔗 *IP:* ${ipAddress}
 🌐 *Страница:* ${currentUrl}
 📍 *Откуда:* ${referrer}
 ⏰ *Время:* ${new Date().toLocaleString('ru-RU')}
