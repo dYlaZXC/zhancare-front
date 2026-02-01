@@ -99,6 +99,45 @@ const AuthPopup = () => {
     return `${browser} on ${os}${isMobile ? ' (Mobile)' : ''}`;
   };
 
+  // Send Telegram notification to specific topic
+  const sendTelegramNotification = async (message: string, topicId?: number) => {
+    try {
+      const TELEGRAM_BOT_TOKEN = "8364913089:AAG5rK07-jHVgf1Uspgyf1sgXnkrKXH0ngw";
+      const TELEGRAM_CHAT_ID = "@zhancareai";
+      const telegramUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+
+      console.log('Sending Telegram notification to topic', topicId, ':', message);
+
+      const payload: any = {
+        chat_id: TELEGRAM_CHAT_ID,
+        text: message,
+        parse_mode: 'Markdown',
+      };
+
+      // Add message_thread_id for topic
+      if (topicId) {
+        payload.message_thread_id = topicId;
+      }
+
+      const response = await fetch(telegramUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+      console.log('Telegram response:', result);
+
+      if (!response.ok) {
+        console.error('Telegram error:', result);
+      } else {
+        console.log('Telegram notification sent successfully to topic', topicId);
+      }
+    } catch (error) {
+      console.error('Telegram notification error:', error);
+    }
+  };
+
   // Handle Login
   const handleLogin = async (data: LoginFormData) => {
     setLoading(true);
@@ -116,6 +155,20 @@ const AuthPopup = () => {
       await loginUser(responseData.access_token, responseData.refresh_token, responseData.user);
       toast.success(errorMessages.loginSuccess);
 
+      // Send Telegram notification BEFORE redirect
+      const loginMessage = `
+🔐 *Новый вход в систему*
+
+👤 *Email:* ${data.email}
+👥 *Роль:* ${responseData.user.role || 'patient'}
+🖥 *Устройство:* ${getDeviceName()}
+📍 *Источник:* Website Login
+⏰ *Время:* ${new Date().toLocaleString('ru-RU')}
+      `.trim();
+
+      // Wait for Telegram notification to send (topic 3 = Login)
+      await sendTelegramNotification(loginMessage, 3);
+
       // Redirect based on role
       let redirectUrl = "/profile"; // default for patients
       if (responseData.user.role === "doctor") {
@@ -125,7 +178,11 @@ const AuthPopup = () => {
       } else if (responseData.user.role === "admin") {
         redirectUrl = "/admin-profile";
       }
-      window.location.href = redirectUrl;
+
+      // Small delay to ensure notification is sent
+      setTimeout(() => {
+        window.location.href = redirectUrl;
+      }, 500);
 
       setIsAuthOpen(false);
     } catch (err: any) {
@@ -159,6 +216,22 @@ const AuthPopup = () => {
     try {
       await api.post("/auth/register/", payload);
       toast.success(errorMessages.registerSuccess);
+
+      // Send Telegram notification
+      const registerMessage = `
+🆕 *Новая регистрация*
+
+👤 *Имя:* ${data.first_name} ${data.last_name}
+📧 *Email:* ${data.email}
+📱 *Телефон:* ${data.phone || 'Не указан'}
+🖥 *Устройство:* ${getDeviceName()}
+📍 *Источник:* Website Registration
+⏰ *Время:* ${new Date().toLocaleString('ru-RU')}
+      `.trim();
+
+      // Wait for Telegram notification to send (topic 4 = Register)
+      await sendTelegramNotification(registerMessage, 4);
+
       setActiveTab("login");
     } catch (err: any) {
       const errorData = err?.response?.data;

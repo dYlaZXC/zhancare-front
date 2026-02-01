@@ -127,12 +127,48 @@ export const Footer = () => {
 
     setIsSubmitting(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      toast.success(translations.newsletter.successMessage);
-      setEmail("");
+    try {
+      // Telegram Bot API configuration
+      const TELEGRAM_BOT_TOKEN = "8364913089:AAG5rK07-jHVgf1Uspgyf1sgXnkrKXH0ngw";
+      const TELEGRAM_CHAT_ID = "@zhancareai";
+
+      // Format message for Telegram
+      const message = `
+📧 *Новая подписка на рассылку*
+
+✉️ *Email:* ${email}
+📍 *Источник:* Footer Newsletter
+⏰ *Время:* ${new Date().toLocaleString('ru-RU')}
+      `.trim();
+
+      // Send to Telegram
+      const telegramUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+
+      const response = await fetch(telegramUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id: TELEGRAM_CHAT_ID,
+          text: message,
+          parse_mode: 'Markdown',
+          message_thread_id: 5, // Topic 5 = Newsletter
+        }),
+      });
+
+      if (response.ok) {
+        toast.success(translations.newsletter.successMessage);
+        setEmail("");
+      } else {
+        throw new Error('Failed to send message');
+      }
+    } catch (error) {
+      console.error('Error sending to Telegram:', error);
+      toast.error('Ошибка отправки. Попробуйте позже.');
+    } finally {
       setIsSubmitting(false);
-    }, 1000);
+    }
   };
 
   const containerVariants = {
@@ -389,83 +425,107 @@ export const Footer = () => {
 
             {/* Newsletter */}
             <motion.div variants={itemVariants} className="lg:col-span-5">
-              <div className="space-y-4">
-                <h3 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
-                  {translations.newsletter.title}
-                  <div className="h-px flex-1 bg-gradient-to-r from-white/20 to-transparent" />
-                </h3>
+              <div className="relative">
+                {/* Glassmorphic Card Background */}
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-indigo-600/5 to-purple-600/10 rounded-2xl blur-xl" />
 
-                <p className="text-gray-400 text-sm">
-                  {translations.newsletter.description}
-                </p>
-
-                <motion.form
-                  onSubmit={handleNewsletterSubmit}
-                  animate={controls}
-                  className="relative"
-                >
-                  <div className="relative flex gap-2">
-                    <div className="relative flex-1">
-                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder={translations.newsletter.placeholder}
-                        className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-300"
-                        disabled={isSubmitting}
-                      />
+                <div className="relative bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:bg-white/[0.07] transition-all duration-300">
+                  <div className="space-y-4">
+                    {/* Title with Icon */}
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-xl">
+                        <Mail className="w-5 h-5 text-blue-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-white text-lg font-bold">
+                          {translations.newsletter.title}
+                        </h3>
+                        <p className="text-gray-400 text-xs mt-0.5">
+                          {translations.newsletter.description}
+                        </p>
+                      </div>
                     </div>
-                    <motion.button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      {isSubmitting ? (
-                        <motion.div
-                          className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
-                          animate={{ rotate: 360 }}
-                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                        />
-                      ) : (
-                        <>
-                          <Send className="w-5 h-5" />
-                          <span className="hidden sm:inline">{translations.newsletter.button}</span>
-                        </>
-                      )}
-                    </motion.button>
-                  </div>
-                </motion.form>
 
-                {/* Social Links */}
-                <div className="pt-4">
-                  <h4 className="text-sm font-semibold text-white mb-3">
-                    {translations.social.title}
-                  </h4>
-                  <div className="flex items-center gap-3">
-                    {[
-                      { Icon: SocialX, label: "X (Twitter)", href: "#" },
-                      { Icon: SocialInsta, label: "Instagram", href: "#" },
-                      { Icon: SocialLinkedin, label: "LinkedIn", href: "#" },
-                      { Icon: SocialPin, label: "Pinterest", href: "#" },
-                      { Icon: SocialYoutube, label: "YouTube", href: "#" },
-                    ].map((social, index) => (
-                      <motion.a
-                        key={index}
-                        href={social.href}
-                        aria-label={social.label}
-                        className="group relative w-12 h-12 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-blue-500/50 transition-all duration-300"
-                        whileHover={{ scale: 1.1, y: -2 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        <div className="flex items-center justify-center w-6 h-6">
-                          <social.Icon className="w-full h-full text-gray-400 group-hover:text-blue-400 transition-colors duration-300" />
+                    {/* Enhanced Form */}
+                    <motion.form
+                      onSubmit={handleNewsletterSubmit}
+                      animate={controls}
+                      className="relative"
+                    >
+                      <div className="relative">
+                        {/* Glow Effect on Focus */}
+                        <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl opacity-0 group-focus-within:opacity-20 blur transition duration-500" />
+
+                        <div className="relative flex gap-2 group">
+                          <div className="relative flex-1">
+                            <input
+                              type="email"
+                              value={email}
+                              onChange={(e) => setEmail(e.target.value)}
+                              placeholder={translations.newsletter.placeholder}
+                              className="w-full px-4 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 focus:bg-white/[0.15] transition-all duration-300"
+                              disabled={isSubmitting}
+                            />
+                          </div>
+                          <motion.button
+                            type="submit"
+                            disabled={isSubmitting}
+                            className="relative px-6 py-3.5 bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 hover:from-blue-700 hover:via-blue-600 hover:to-indigo-700 text-white font-bold rounded-xl transition-all duration-300 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 overflow-hidden group"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            {/* Shimmer effect */}
+                            <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+
+                            <div className="relative flex items-center gap-2">
+                              {isSubmitting ? (
+                                <motion.div
+                                  className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                                  animate={{ rotate: 360 }}
+                                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                />
+                              ) : (
+                                <>
+                                  <Send className="w-5 h-5" />
+                                  <span className="hidden sm:inline">{translations.newsletter.button}</span>
+                                </>
+                              )}
+                            </div>
+                          </motion.button>
                         </div>
-                        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 opacity-0 group-hover:opacity-10 transition-opacity duration-300" />
-                      </motion.a>
-                    ))}
+                      </div>
+                    </motion.form>
+
+                    {/* Social Links */}
+                    <div className="pt-2 border-t border-white/10">
+                      <h4 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wider">
+                        {translations.social.title}
+                      </h4>
+                      <div className="flex items-center gap-2.5">
+                        {[
+                          { Icon: SocialX, label: "X (Twitter)", href: "#" },
+                          { Icon: SocialInsta, label: "Instagram", href: "#" },
+                          { Icon: SocialLinkedin, label: "LinkedIn", href: "#" },
+                          { Icon: SocialPin, label: "Pinterest", href: "#" },
+                          { Icon: SocialYoutube, label: "YouTube", href: "#" },
+                        ].map((social, index) => (
+                          <motion.a
+                            key={index}
+                            href={social.href}
+                            aria-label={social.label}
+                            className="group relative w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 hover:bg-gradient-to-br hover:from-blue-500/20 hover:to-indigo-500/20 border border-white/10 hover:border-blue-500/50 transition-all duration-300"
+                            whileHover={{ scale: 1.1, y: -2 }}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            <div className="flex items-center justify-center w-5 h-5">
+                              <social.Icon className="w-full h-full text-gray-400 group-hover:text-blue-400 transition-colors duration-300" />
+                            </div>
+                            {/* Glow on hover */}
+                            <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 opacity-0 group-hover:opacity-20 blur transition-opacity duration-300" />
+                          </motion.a>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
