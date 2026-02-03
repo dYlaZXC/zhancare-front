@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "@/utils/api";
 import { toast } from "react-toastify";
@@ -21,7 +21,8 @@ import {
   AlertCircle,
   Filter,
   Edit,
-  Trash2
+  Trash2,
+  ChevronDown
 } from "lucide-react";
 
 interface ScheduleEvent {
@@ -603,6 +604,111 @@ function getStatusColor(status: string) {
   }
 }
 
+// Searchable Select Component
+function SearchSelect({
+  options,
+  value,
+  onChange,
+  placeholder,
+  required
+}: {
+  options: Array<{ id: number; label: string }>;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  required?: boolean;
+}) {
+  const [search, setSearch] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const filtered = options.filter(o =>
+    o.label.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const selectedLabel = options.find(o => String(o.id) === value)?.label;
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div
+        className={`flex items-center gap-2 w-full px-4 py-3 rounded-2xl border-2 cursor-pointer transition-colors bg-white ${
+          isOpen ? 'border-blue-500 shadow-sm' : 'border-gray-200 hover:border-gray-300'
+        }`}
+        onClick={() => { setIsOpen(!isOpen); setSearch(''); }}
+      >
+        {selectedLabel ? (
+          <>
+            <span className="flex-1 text-sm font-medium text-gray-900">{selectedLabel}</span>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onChange(''); }}
+              className="p-0.5 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+            </button>
+          </>
+        ) : (
+          <span className="flex-1 text-sm text-gray-400">{placeholder}</span>
+        )}
+        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-20 w-full mt-1.5 bg-white rounded-2xl border-2 border-gray-200 shadow-xl overflow-hidden">
+          <div className="p-2 border-b border-gray-100">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                autoFocus
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Поиск..."
+                className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 focus:border-blue-400 focus:outline-none text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="max-h-48 overflow-y-auto scrollbar-hide py-1">
+            {filtered.length === 0 ? (
+              <div className="px-4 py-3 text-sm text-gray-400 text-center">Ничего не найдено</div>
+            ) : (
+              filtered.map(option => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => { onChange(String(option.id)); setIsOpen(false); }}
+                  className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                    String(option.id) === value
+                      ? 'bg-blue-50 text-blue-700 font-semibold'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {required && (
+        <input type="text" value={value} required readOnly className="sr-only" tabIndex={-1} />
+      )}
+    </div>
+  );
+}
+
 // Add Event Modal Component
 function AddEventModal({
   isOpen,
@@ -797,17 +903,13 @@ function AddEventModal({
             <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
               Пациент <span className="text-red-500">*</span>
             </label>
-            <select
+            <SearchSelect
+              options={patients.map(p => ({ id: p.id, label: `${p.first_name} ${p.last_name}` }))}
               value={formData.patient_id}
-              onChange={(e) => setFormData({ ...formData, patient_id: e.target.value })}
-              className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
+              onChange={(val) => setFormData({ ...formData, patient_id: val })}
+              placeholder="Выберите пациента..."
               required
-            >
-              <option value="">Выберите пациента...</option>
-              {patients.map(p => (
-                <option key={p.id} value={p.id}>{p.first_name} {p.last_name}</option>
-              ))}
-            </select>
+            />
           </div>
 
           {/* Doctor */}
@@ -815,17 +917,13 @@ function AddEventModal({
             <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
               Доктор {eventType === 'consultation' && <span className="text-red-500">*</span>}
             </label>
-            <select
+            <SearchSelect
+              options={doctors.map(d => ({ id: d.id, label: `${d.first_name} ${d.last_name}` }))}
               value={formData.doctor_id}
-              onChange={(e) => setFormData({ ...formData, doctor_id: e.target.value })}
-              className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
+              onChange={(val) => setFormData({ ...formData, doctor_id: val })}
+              placeholder="Выберите доктора..."
               required={eventType === 'consultation'}
-            >
-              <option value="">Выберите доктора...</option>
-              {doctors.map(d => (
-                <option key={d.id} value={d.id}>{d.first_name} {d.last_name}</option>
-              ))}
-            </select>
+            />
           </div>
 
           {/* Nurse — only for appointments */}
@@ -834,17 +932,13 @@ function AddEventModal({
               <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
                 Медсестра <span className="text-red-500">*</span>
               </label>
-              <select
+              <SearchSelect
+                options={nurses.map(n => ({ id: n.id, label: `${n.first_name} ${n.last_name}` }))}
                 value={formData.nurse_id}
-                onChange={(e) => setFormData({ ...formData, nurse_id: e.target.value })}
-                className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
+                onChange={(val) => setFormData({ ...formData, nurse_id: val })}
+                placeholder="Выберите медсестру..."
                 required
-              >
-                <option value="">Выберите медсестру...</option>
-                {nurses.map(n => (
-                  <option key={n.id} value={n.id}>{n.first_name} {n.last_name}</option>
-                ))}
-              </select>
+              />
             </div>
           )}
 
