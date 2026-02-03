@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { api } from "@/utils/api";
+import { toast } from "react-toastify";
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -23,7 +25,7 @@ import {
 } from "lucide-react";
 
 interface ScheduleEvent {
-  id: number;
+  id: string;
   type: 'consultation' | 'appointment';
   patient_id: number;
   patient_name: string;
@@ -65,135 +67,11 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
     setError(null);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/schedule/`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Token ${localStorage.getItem("access_token")}`,
-        },
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error("Не удалось загрузить расписание");
-      }
-
-      const data = await response.json();
-      setEvents(data);
+      const response = await api.get('/schedule/');
+      setEvents(response.data);
     } catch (err: any) {
       console.error("Error fetching schedule:", err);
-      setError(err.message || "Не удалось загрузить расписание");
-
-      // Mock data for development
-      const mockEvents: ScheduleEvent[] = [
-        {
-          id: 1,
-          type: 'consultation',
-          patient_id: 101,
-          patient_name: 'Айгуль Нурсултанова',
-          doctor_id: 1,
-          doctor_name: 'Доктор Абаев Даурен',
-          date: '2026-01-13',
-          time: '09:00',
-          duration: 30,
-          status: 'scheduled',
-          specialization: 'Кардиолог',
-          notes: 'Первичная консультация'
-        },
-        {
-          id: 2,
-          type: 'appointment',
-          patient_id: 102,
-          patient_name: 'Ерлан Касымов',
-          nurse_id: 3,
-          nurse_name: 'Медсестра Малика',
-          date: '2026-01-13',
-          time: '10:30',
-          duration: 60,
-          status: 'scheduled',
-          location: 'ул. Абая 150, кв. 25',
-          notes: 'Взятие анализов на дому'
-        },
-        {
-          id: 3,
-          type: 'consultation',
-          patient_id: 103,
-          patient_name: 'Асель Токтарова',
-          doctor_id: 2,
-          doctor_name: 'Доктор Сагындыкова',
-          date: '2026-01-13',
-          time: '14:00',
-          duration: 45,
-          status: 'in_progress',
-          specialization: 'Терапевт'
-        },
-        {
-          id: 4,
-          type: 'consultation',
-          patient_id: 104,
-          patient_name: 'Нурлан Аманов',
-          doctor_id: 1,
-          doctor_name: 'Доктор Абаев Даурен',
-          date: '2026-01-14',
-          time: '11:00',
-          duration: 30,
-          status: 'scheduled',
-          specialization: 'Кардиолог'
-        },
-        {
-          id: 5,
-          type: 'appointment',
-          patient_id: 105,
-          patient_name: 'Динара Жумабаева',
-          nurse_id: 4,
-          nurse_name: 'Медсестра Асель',
-          date: '2026-01-14',
-          time: '15:00',
-          duration: 45,
-          status: 'scheduled',
-          location: 'пр. Назарбаева 72, кв. 8'
-        },
-        {
-          id: 6,
-          type: 'consultation',
-          patient_id: 106,
-          patient_name: 'Бахыт Мұратов',
-          doctor_id: 1,
-          doctor_name: 'Доктор Абаев Даурен',
-          date: '2026-01-15',
-          time: '09:30',
-          duration: 30,
-          status: 'scheduled',
-          specialization: 'Кардиолог'
-        },
-        {
-          id: 7,
-          type: 'consultation',
-          patient_id: 107,
-          patient_name: 'Гульнара Сейдахметова',
-          doctor_id: 2,
-          doctor_name: 'Доктор Сагындыкова',
-          date: '2026-01-15',
-          time: '13:00',
-          duration: 30,
-          status: 'scheduled',
-          specialization: 'Терапевт'
-        },
-        {
-          id: 8,
-          type: 'appointment',
-          patient_id: 108,
-          patient_name: 'Марат Есенов',
-          nurse_id: 3,
-          nurse_name: 'Медсестра Малика',
-          date: '2026-01-15',
-          time: '16:00',
-          duration: 60,
-          status: 'scheduled',
-          location: 'ул. Достык 200, кв. 45'
-        },
-      ];
-      setEvents(mockEvents);
+      setError(err.response?.data?.error || err.message || "Не удалось загрузить расписание");
     } finally {
       setLoading(false);
     }
@@ -231,6 +109,10 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
       return date;
     });
   };
+
+  // Format date as YYYY-MM-DD using local time (avoids UTC shift from toISOString)
+  const toLocalDateStr = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
   // Get events for a specific date
   const getEventsForDate = (dateString: string) => {
@@ -297,7 +179,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
     return (
       <div className="grid grid-cols-7 gap-4">
         {weekDays.map((day) => {
-          const dateString = day.toISOString().split('T')[0];
+          const dateString = toLocalDateStr(day);
           const dayEvents = getEventsForDate(dateString);
           const isToday = day.toDateString() === new Date().toDateString();
 
@@ -393,7 +275,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
             <div key={weekIndex} className="grid grid-cols-7 border-b border-gray-200 last:border-b-0">
               {week.map((date) => {
                 const isCurrentMonth = date.getMonth() === month;
-                const dateString = date.toISOString().split('T')[0];
+                const dateString = toLocalDateStr(date);
                 const dayEvents = getEventsForDate(dateString);
                 const isToday = date.toDateString() === new Date().toDateString();
 
@@ -612,11 +494,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
           }}
         >
           <AlertCircle className="w-7 h-7 text-amber-700 flex-shrink-0" />
-          <div>
-            <h3 className="text-amber-900 font-bold text-base mb-1">Демонстрационный режим</h3>
-            <p className="text-amber-800 text-sm">{error}</p>
-            <p className="text-amber-700 text-sm mt-1">Отображаются демонстрационные данные.</p>
-          </div>
+          <p className="text-amber-800 text-sm">{error}</p>
         </motion.div>
       )}
 
@@ -742,30 +620,73 @@ function AddEventModal({
     patient_id: '',
     doctor_id: '',
     nurse_id: '',
-    date: selectedDate || new Date().toISOString().split('T')[0],
+    date: selectedDate || (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; })(),
     time: '09:00',
     duration: 30,
+    address: '',
     notes: ''
   });
+  const [submitting, setSubmitting] = useState(false);
+  const [patients, setPatients] = useState<Array<{ id: number; first_name: string; last_name: string }>>([]);
+  const [doctors, setDoctors] = useState<Array<{ id: number; first_name: string; last_name: string }>>([]);
+  const [nurses, setNurses] = useState<Array<{ id: number; first_name: string; last_name: string }>>([]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const fetchData = async () => {
+      try {
+        const [patientsRes, staffRes] = await Promise.all([
+          api.get('/patients/'),
+          api.get('/staff/')
+        ]);
+        setPatients(patientsRes.data);
+        setDoctors(staffRes.data.filter((s: any) => s.role === 'doctor'));
+        setNurses(staffRes.data.filter((s: any) => s.role === 'nurse'));
+      } catch (err) {
+        console.error("Failed to load patients/staff:", err);
+      }
+    };
+    fetchData();
+  }, [isOpen]);
 
   useEffect(() => {
     if (selectedDate) {
-      setFormData(prev => ({
-        ...prev,
-        date: selectedDate
-      }));
+      setFormData(prev => ({ ...prev, date: selectedDate }));
     }
   }, [selectedDate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
 
-    // TODO: Implement API call to create event
-    console.log('Creating event:', { type: eventType, ...formData });
+    try {
+      const payload: any = {
+        type: eventType,
+        patient_id: formData.patient_id,
+        date: formData.date,
+        time: formData.time,
+        duration: formData.duration,
+        notes: formData.notes,
+      };
 
-    // For now, just close the modal
-    onClose();
-    onEventAdded();
+      if (eventType === 'consultation') {
+        payload.doctor_id = formData.doctor_id;
+      } else {
+        payload.nurse_id = formData.nurse_id;
+        payload.doctor_id = formData.doctor_id || undefined;
+        payload.address = formData.address;
+      }
+
+      await api.post('/schedule/', payload);
+      toast.success('Запись успешно создана!');
+      onClose();
+      onEventAdded();
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || err.message || "Не удалось создать запись";
+      toast.error(errorMessage);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -776,7 +697,7 @@ function AddEventModal({
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
-        className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto scrollbar-hide"
       >
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold" style={{ color: '#1e263e' }}>
@@ -871,31 +792,78 @@ function AddEventModal({
             </select>
           </div>
 
-          {/* Patient Selection - TODO: Add actual patient selector */}
+          {/* Patient */}
           <div>
             <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
-              Пациент
+              Пациент <span className="text-red-500">*</span>
             </label>
-            <input
-              type="text"
-              placeholder="Выберите пациента..."
+            <select
+              value={formData.patient_id}
+              onChange={(e) => setFormData({ ...formData, patient_id: e.target.value })}
               className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
               required
-            />
+            >
+              <option value="">Выберите пациента...</option>
+              {patients.map(p => (
+                <option key={p.id} value={p.id}>{p.first_name} {p.last_name}</option>
+              ))}
+            </select>
           </div>
 
-          {/* Doctor/Nurse Selection */}
+          {/* Doctor */}
           <div>
             <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
-              {eventType === 'consultation' ? 'Доктор' : 'Медсестра'}
+              Доктор {eventType === 'consultation' && <span className="text-red-500">*</span>}
             </label>
-            <input
-              type="text"
-              placeholder={`Выберите ${eventType === 'consultation' ? 'доктора' : 'медсестру'}...`}
+            <select
+              value={formData.doctor_id}
+              onChange={(e) => setFormData({ ...formData, doctor_id: e.target.value })}
               className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
-              required
-            />
+              required={eventType === 'consultation'}
+            >
+              <option value="">Выберите доктора...</option>
+              {doctors.map(d => (
+                <option key={d.id} value={d.id}>{d.first_name} {d.last_name}</option>
+              ))}
+            </select>
           </div>
+
+          {/* Nurse — only for appointments */}
+          {eventType === 'appointment' && (
+            <div>
+              <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
+                Медсестра <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.nurse_id}
+                onChange={(e) => setFormData({ ...formData, nurse_id: e.target.value })}
+                className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
+                required
+              >
+                <option value="">Выберите медсестру...</option>
+                {nurses.map(n => (
+                  <option key={n.id} value={n.id}>{n.first_name} {n.last_name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Address — only for appointments */}
+          {eventType === 'appointment' && (
+            <div>
+              <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
+                Адрес вызова <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                placeholder="ул. Абая 150, кв. 25"
+                className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
+                required
+              />
+            </div>
+          )}
 
           {/* Notes */}
           <div>
@@ -922,10 +890,12 @@ function AddEventModal({
             </button>
             <button
               type="submit"
-              className="flex-1 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+              disabled={submitting}
+              className="flex-1 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
               style={{ background: 'linear-gradient(135deg, #3772ff 0%, #2c5bcc 100%)' }}
             >
-              Создать Запись
+              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              {submitting ? 'Создаётся...' : 'Создать Запись'}
             </button>
           </div>
         </form>
