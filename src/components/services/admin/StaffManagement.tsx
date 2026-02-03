@@ -25,7 +25,11 @@ import {
   X,
   Lock,
   Plus,
-  Minus
+  Minus,
+  MapPin,
+  Globe,
+  Award,
+  RotateCcw
 } from "lucide-react";
 
 interface StaffMember {
@@ -36,6 +40,12 @@ interface StaffMember {
   phone: string;
   role: 'doctor' | 'nurse';
   specialization?: string;
+  gender?: 'male' | 'female' | 'other' | null;
+  birth_date?: string | null;
+  address?: string | null;
+  city?: string | null;
+  language?: 'kz' | 'ru' | 'en' | 'other' | null;
+  years_of_experience?: number | null;
   is_active: boolean;
   is_deleted?: boolean;
   availability_status?: 'available' | 'busy' | 'offline' | 'break';
@@ -381,10 +391,19 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     password: '',
     role: 'doctor' as 'doctor' | 'nurse',
     clinic_id: '',
+    gender: '' as '' | 'male' | 'female' | 'other',
+    birth_date: '',
+    address: '',
+    city: '',
+    language: 'ru' as 'kz' | 'ru' | 'en' | 'other',
+    years_of_experience: '',
     offline_consultation_price: '',
     online_consultation_price: '',
     preferred_consultation_duration: '',
   });
+
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [validationKey, setValidationKey] = useState(0);
 
   // Work schedule state - each day can have its own time range
   const [workSchedule, setWorkSchedule] = useState<{
@@ -478,12 +497,13 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     }
   };
 
-  const fetchStaff = async () => {
+  const fetchStaff = async (deleted = false) => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await api.get("/staff/");
+      const url = deleted ? "/staff/?show_deleted=true" : "/staff/";
+      const response = await api.get(url);
       setStaff(response.data);
     } catch (err: any) {
       console.error("Error fetching staff:", err);
@@ -559,8 +579,37 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     }
   };
 
+  useEffect(() => {
+    if (validationKey === 0) return;
+    const firstError = document.querySelector('.animate-shake');
+    if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [validationKey]);
+
+  const clearError = (field: string) => {
+    if (formErrors[field]) setFormErrors(prev => { const next = { ...prev }; delete next[field]; return next; });
+  };
+
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    if (!formData.first_name.trim()) errors.first_name = 'Введите имя';
+    if (!formData.last_name.trim()) errors.last_name = 'Введите фамилию';
+    if (!formData.email.trim()) errors.email = 'Введите email';
+    if (!formData.phone.trim()) errors.phone = 'Введите номер телефона';
+    if (!showEditModal) {
+      if (!formData.password.trim()) errors.password = 'Введите пароль';
+      else if (formData.password.length < 8) errors.password = 'Минимум 8 символов';
+    } else if (formData.password && formData.password.length < 8) {
+      errors.password = 'Минимум 8 символов';
+    }
+    if (isGlobalAdmin && clinics.length > 0 && !formData.clinic_id) errors.clinic_id = 'Выберите клинику';
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) setValidationKey(k => k + 1);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
     setAddLoading(true);
 
     try {
@@ -573,6 +622,12 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       const payload = {
         ...formData,
         specialization: specializationString,
+        gender: formData.gender || null,
+        birth_date: formData.birth_date || null,
+        address: formData.address || null,
+        city: formData.city || null,
+        language: formData.language || 'ru',
+        years_of_experience: formData.years_of_experience ? Number(formData.years_of_experience) : null,
         offline_consultation_price: formData.offline_consultation_price ? Number(formData.offline_consultation_price) : null,
         online_consultation_price: formData.online_consultation_price ? Number(formData.online_consultation_price) : null,
         preferred_consultation_duration: formData.preferred_consultation_duration ? Number(formData.preferred_consultation_duration) : null,
@@ -596,6 +651,12 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         password: '',
         role: 'doctor',
         clinic_id: '',
+        gender: '',
+        birth_date: '',
+        address: '',
+        city: '',
+        language: 'ru',
+        years_of_experience: '',
         offline_consultation_price: '',
         online_consultation_price: '',
         preferred_consultation_duration: '',
@@ -610,6 +671,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         saturday: { start: '10:00', end: '14:00', enabled: false },
         sunday: { start: '10:00', end: '14:00', enabled: false },
       });
+      setFormErrors({});
       setShowAddModal(false);
     } catch (err: any) {
       console.error("Error adding staff:", err);
@@ -661,6 +723,12 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       password: '',
       role: member.role,
       clinic_id: member.clinic?.id?.toString() || '',
+      gender: (member.gender || '') as '' | 'male' | 'female' | 'other',
+      birth_date: member.birth_date || '',
+      address: member.address || '',
+      city: member.city || '',
+      language: (member.language || 'ru') as 'kz' | 'ru' | 'en' | 'other',
+      years_of_experience: member.years_of_experience?.toString() || '',
       offline_consultation_price: member.offline_consultation_price?.toString() || '',
       online_consultation_price: member.online_consultation_price?.toString() || '',
       preferred_consultation_duration: member.preferred_consultation_duration?.toString() || '',
@@ -681,6 +749,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingMember) return;
+    if (!validateForm()) return;
 
     setEditLoading(true);
 
@@ -699,6 +768,12 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         phone: formData.phone,
         role: formData.role,
         specialization: specializationString,
+        gender: formData.gender || null,
+        birth_date: formData.birth_date || null,
+        address: formData.address || null,
+        city: formData.city || null,
+        language: formData.language || 'ru',
+        years_of_experience: formData.years_of_experience ? Number(formData.years_of_experience) : null,
         offline_consultation_price: formData.offline_consultation_price ? Number(formData.offline_consultation_price) : null,
         online_consultation_price: formData.online_consultation_price ? Number(formData.online_consultation_price) : null,
         preferred_consultation_duration: formData.preferred_consultation_duration ? Number(formData.preferred_consultation_duration) : null,
@@ -728,6 +803,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       // Close modal and reset
       setShowEditModal(false);
       setEditingMember(null);
+      setFormErrors({});
       setFormData({
         first_name: '',
         last_name: '',
@@ -736,6 +812,12 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         password: '',
         role: 'doctor',
         clinic_id: '',
+        gender: '',
+        birth_date: '',
+        address: '',
+        city: '',
+        language: 'ru',
+        years_of_experience: '',
         offline_consultation_price: '',
         online_consultation_price: '',
         preferred_consultation_duration: '',
@@ -772,8 +854,8 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     try {
       await api.patch(`/staff/${deletingMember.id}/`, { is_deleted: true });
 
-      // Remove deleted staff from the list
-      setStaff(staff.filter(member => member.id !== deletingMember.id));
+      // Refetch active staff so the deleted member disappears
+      await fetchStaff(showDeleted);
 
       toast.success(`${deletingMember.first_name} ${deletingMember.last_name} успешно удален(а)!`);
 
@@ -786,6 +868,18 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       toast.error(errorMessage);
     } finally {
       setDeleteLoading(false);
+    }
+  };
+
+  const handleRestore = async (member: StaffMember) => {
+    try {
+      await api.patch(`/staff/${member.id}/`, { is_deleted: false });
+      await fetchStaff(true);
+      toast.success(`${member.first_name} ${member.last_name} успешно восстановлен(а)!`);
+    } catch (err: any) {
+      console.error("Error restoring staff:", err);
+      const errorMessage = err.response?.data?.error || err.response?.data?.detail || err.message || "Не удалось восстановить сотрудника";
+      toast.error(errorMessage);
     }
   };
 
@@ -804,6 +898,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       setShowEditModal(false);
       setShowDeleteModal(false);
       setEditingMember(null);
+      setFormErrors({});
       setDeletingMember(null);
     }
     setMouseDownTarget(null);
@@ -930,7 +1025,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => setShowDeleted(!showDeleted)}
+            onClick={() => { const next = !showDeleted; setShowDeleted(next); fetchStaff(next); }}
             className={`px-6 py-3 rounded-2xl font-semibold text-sm transition-all shadow-sm hover:shadow-md flex items-center gap-2 ${
               showDeleted
                 ? 'bg-red-100 text-red-700 border-2 border-red-300'
@@ -1077,60 +1172,76 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       </div>
                     </div>
 
-                    {/* Actions - Improved Design */}
+                    {/* Actions */}
                     <div className="flex items-center gap-3">
-                      {/* Status Toggle Button - Shows current status, click to toggle */}
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => handleToggleStatus(member.id, member.availability_status)}
-                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-sm hover:shadow-md ${
-                          member.availability_status === 'available'
-                            ? 'bg-green-100 text-green-700 hover:bg-green-200 border-2 border-green-300'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border-2 border-gray-300'
-                        }`}
-                        title={member.availability_status === 'available' ? 'Доступен - нажмите чтобы отключить' : 'Не работает - нажмите чтобы включить'}
-                      >
-                        {member.availability_status === 'available' ? (
-                          <>
-                            <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse" />
-                            <span className="hidden sm:inline">Онлайн</span>
-                            <span className="sm:hidden">
-                              <CheckCircle className="w-4 h-4" />
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <div className="w-2 h-2 bg-gray-400 rounded-full" />
-                            <span className="hidden sm:inline">Офлайн</span>
-                            <span className="sm:hidden">
-                              <XCircle className="w-4 h-4" />
-                            </span>
-                          </>
-                        )}
-                      </motion.button>
+                      {showDeleted ? (
+                        /* Restore button only for deleted staff */
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handleRestore(member)}
+                          className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-sm hover:shadow-md bg-green-100 text-green-700 hover:bg-green-200 border-2 border-green-300"
+                          title="Восстановить сотрудника"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                          <span className="hidden sm:inline">Восстановить</span>
+                        </motion.button>
+                      ) : (
+                        <>
+                          {/* Status Toggle Button */}
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => handleToggleStatus(member.id, member.availability_status)}
+                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-sm hover:shadow-md ${
+                              member.availability_status === 'available'
+                                ? 'bg-green-100 text-green-700 hover:bg-green-200 border-2 border-green-300'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border-2 border-gray-300'
+                            }`}
+                            title={member.availability_status === 'available' ? 'Доступен - нажмите чтобы отключить' : 'Не работает - нажмите чтобы включить'}
+                          >
+                            {member.availability_status === 'available' ? (
+                              <>
+                                <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse" />
+                                <span className="hidden sm:inline">Онлайн</span>
+                                <span className="sm:hidden">
+                                  <CheckCircle className="w-4 h-4" />
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <div className="w-2 h-2 bg-gray-400 rounded-full" />
+                                <span className="hidden sm:inline">Офлайн</span>
+                                <span className="sm:hidden">
+                                  <XCircle className="w-4 h-4" />
+                                </span>
+                              </>
+                            )}
+                          </motion.button>
 
-                      {/* Action Buttons Group */}
-                      <div className="flex items-center gap-2 bg-gray-50 rounded-xl p-1">
-                        <motion.button
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => handleEditClick(member)}
-                          className="p-2.5 rounded-lg hover:bg-white transition-all group"
-                          title="Редактировать профиль"
-                        >
-                          <Edit className="w-5 h-5 text-gray-500 group-hover:text-blue-600 transition-colors" />
-                        </motion.button>
-                        <motion.button
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => handleDeleteClick(member)}
-                          className="p-2.5 rounded-lg hover:bg-white transition-all group"
-                          title="Удалить сотрудника"
-                        >
-                          <Trash2 className="w-5 h-5 text-gray-500 group-hover:text-red-600 transition-colors" />
-                        </motion.button>
-                      </div>
+                          {/* Action Buttons Group */}
+                          <div className="flex items-center gap-2 bg-gray-50 rounded-xl p-1">
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => handleEditClick(member)}
+                              className="p-2.5 rounded-lg hover:bg-white transition-all group"
+                              title="Редактировать профиль"
+                            >
+                              <Edit className="w-5 h-5 text-gray-500 group-hover:text-blue-600 transition-colors" />
+                            </motion.button>
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => handleDeleteClick(member)}
+                              className="p-2.5 rounded-lg hover:bg-white transition-all group"
+                              title="Удалить сотрудника"
+                            >
+                              <Trash2 className="w-5 h-5 text-gray-500 group-hover:text-red-600 transition-colors" />
+                            </motion.button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -1155,7 +1266,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto scrollbar-hide"
             >
               {/* Modal Header */}
               <div className="sticky top-0 bg-white border-b-2 border-gray-100 px-8 py-6 rounded-t-3xl flex items-center justify-between z-10">
@@ -1166,7 +1277,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                   <p className="text-gray-600 mt-1">Заполните форму для добавления нового доктора или медсестры</p>
                 </div>
                 <button
-                  onClick={() => setShowAddModal(false)}
+                  onClick={() => { setShowAddModal(false); setFormErrors({}); }}
                   className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
                 >
                   <X className="w-6 h-6 text-gray-600" />
@@ -1225,12 +1336,12 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       </label>
                       <input
                         type="text"
-                        required
                         value={formData.first_name}
-                        onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                        onChange={(e) => { setFormData({ ...formData, first_name: e.target.value }); clearError('first_name'); }}
+                        className={`w-full px-4 py-3 rounded-xl border-2 ${formErrors.first_name ? 'border-red-500' : 'border-gray-200'} focus:border-blue-500 focus:outline-none transition-colors`}
                         placeholder="Введите имя"
                       />
+                      {formErrors.first_name && <p key={validationKey} className="animate-shake text-red-500 text-xs mt-1">{formErrors.first_name}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -1238,12 +1349,12 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       </label>
                       <input
                         type="text"
-                        required
                         value={formData.last_name}
-                        onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                        onChange={(e) => { setFormData({ ...formData, last_name: e.target.value }); clearError('last_name'); }}
+                        className={`w-full px-4 py-3 rounded-xl border-2 ${formErrors.last_name ? 'border-red-500' : 'border-gray-200'} focus:border-blue-500 focus:outline-none transition-colors`}
                         placeholder="Введите фамилию"
                       />
+                      {formErrors.last_name && <p key={validationKey} className="animate-shake text-red-500 text-xs mt-1">{formErrors.last_name}</p>}
                     </div>
                   </div>
 
@@ -1256,13 +1367,13 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
                         type="email"
-                        required
                         value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                        onChange={(e) => { setFormData({ ...formData, email: e.target.value }); clearError('email'); }}
+                        className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 ${formErrors.email ? 'border-red-500' : 'border-gray-200'} focus:border-blue-500 focus:outline-none transition-colors`}
                         placeholder="example@clinic.kz"
                       />
                     </div>
+                    {formErrors.email && <p key={validationKey} className="animate-shake text-red-500 text-xs mt-1">{formErrors.email}</p>}
                   </div>
 
                   {/* Phone */}
@@ -1272,10 +1383,11 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                     </label>
                     <PhoneInput
                       value={formData.phone}
-                      onChange={(value) => setFormData({ ...formData, phone: value })}
+                      onChange={(value) => { setFormData({ ...formData, phone: value }); clearError('phone'); }}
                       placeholder="+7 (700) 123 45 67"
-                      required
+                      className={formErrors.phone ? 'w-full pl-12 pr-4 py-3 rounded-xl border-2 border-red-500 focus:border-blue-500 focus:outline-none transition-colors' : undefined}
                     />
+                    {formErrors.phone && <p key={validationKey} className="animate-shake text-red-500 text-xs mt-1">{formErrors.phone}</p>}
                   </div>
 
                   {/* Password */}
@@ -1287,13 +1399,116 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
                         type="password"
-                        required
                         value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                        onChange={(e) => { setFormData({ ...formData, password: e.target.value }); clearError('password'); }}
+                        className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 ${formErrors.password ? 'border-red-500' : 'border-gray-200'} focus:border-blue-500 focus:outline-none transition-colors`}
                         placeholder="Минимум 8 символов"
                         minLength={8}
                       />
+                    </div>
+                    {formErrors.password && <p key={validationKey} className="animate-shake text-red-500 text-xs mt-1">{formErrors.password}</p>}
+                  </div>
+
+                  {/* Gender and Birth Date */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Пол
+                      </label>
+                      <select
+                        value={formData.gender}
+                        onChange={(e) => setFormData({ ...formData, gender: e.target.value as '' | 'male' | 'female' | 'other' })}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors bg-white"
+                      >
+                        <option value="">Не указан</option>
+                        <option value="male">Мужской</option>
+                        <option value="female">Женский</option>
+                        <option value="other">Другой</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Дата рождения
+                      </label>
+                      <div className="relative">
+                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="date"
+                          value={formData.birth_date}
+                          onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
+                          className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Address and City */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Адрес
+                      </label>
+                      <div className="relative">
+                        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="text"
+                          value={formData.address}
+                          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                          className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                          placeholder="Улица, дом"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Город
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.city}
+                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                        placeholder="Например: Алматы"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Language and Experience */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Язык
+                      </label>
+                      <div className="relative">
+                        <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <select
+                          value={formData.language}
+                          onChange={(e) => setFormData({ ...formData, language: e.target.value as 'kz' | 'ru' | 'en' | 'other' })}
+                          className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors bg-white"
+                        >
+                          <option value="ru">Русский</option>
+                          <option value="kz">Казахский</option>
+                          <option value="en">Английский</option>
+                          <option value="other">Другой</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Опыт работы (лет)
+                      </label>
+                      <div className="relative">
+                        <Award className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="number"
+                          min="0"
+                          max="70"
+                          value={formData.years_of_experience}
+                          onChange={(e) => setFormData({ ...formData, years_of_experience: e.target.value })}
+                          className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                          placeholder="0"
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -1474,17 +1689,17 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       </label>
                       <select
                         value={formData.clinic_id}
-                        onChange={(e) => setFormData({ ...formData, clinic_id: e.target.value })}
-                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
-                        required={clinics.length > 0}
+                        onChange={(e) => { setFormData({ ...formData, clinic_id: e.target.value }); clearError('clinic_id'); }}
+                        className={`w-full px-4 py-3 rounded-xl border-2 ${formErrors.clinic_id ? 'border-red-500' : 'border-gray-200'} focus:border-blue-500 focus:outline-none transition-colors`}
                       >
-                        <option value="">Выберите клинику (опционально)</option>
+                        <option value="">Выберите клинику</option>
                         {clinics.map((clinic) => (
                           <option key={clinic.id} value={clinic.id}>
                             {clinic.name}
                           </option>
                         ))}
                       </select>
+                      {formErrors.clinic_id && <p key={validationKey} className="animate-shake text-red-500 text-xs mt-1">{formErrors.clinic_id}</p>}
                       <p className="text-sm text-gray-500 mt-2">
                         💡 Глобальные администраторы могут назначить сотрудника в любую клинику
                       </p>
@@ -1518,7 +1733,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                 <div className="flex gap-4 mt-8 pt-6 border-t-2 border-gray-100">
                   <button
                     type="button"
-                    onClick={() => setShowAddModal(false)}
+                    onClick={() => { setShowAddModal(false); setFormErrors({}); }}
                     disabled={addLoading}
                     className="flex-1 px-6 py-3 rounded-2xl border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
                   >
@@ -1564,7 +1779,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto scrollbar-hide"
             >
               {/* Modal Header */}
               <div className="sticky top-0 bg-white border-b-2 border-gray-100 px-8 py-6 rounded-t-3xl flex items-center justify-between z-10">
@@ -1580,6 +1795,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                   onClick={() => {
                     setShowEditModal(false);
                     setEditingMember(null);
+                    setFormErrors({});
                   }}
                   className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
                 >
@@ -1639,12 +1855,12 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       </label>
                       <input
                         type="text"
-                        required
                         value={formData.first_name}
-                        onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                        onChange={(e) => { setFormData({ ...formData, first_name: e.target.value }); clearError('first_name'); }}
+                        className={`w-full px-4 py-3 rounded-xl border-2 ${formErrors.first_name ? 'border-red-500' : 'border-gray-200'} focus:border-blue-500 focus:outline-none transition-colors`}
                         placeholder="Введите имя"
                       />
+                      {formErrors.first_name && <p key={validationKey} className="animate-shake text-red-500 text-xs mt-1">{formErrors.first_name}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -1652,12 +1868,12 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       </label>
                       <input
                         type="text"
-                        required
                         value={formData.last_name}
-                        onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                        onChange={(e) => { setFormData({ ...formData, last_name: e.target.value }); clearError('last_name'); }}
+                        className={`w-full px-4 py-3 rounded-xl border-2 ${formErrors.last_name ? 'border-red-500' : 'border-gray-200'} focus:border-blue-500 focus:outline-none transition-colors`}
                         placeholder="Введите фамилию"
                       />
+                      {formErrors.last_name && <p key={validationKey} className="animate-shake text-red-500 text-xs mt-1">{formErrors.last_name}</p>}
                     </div>
                   </div>
 
@@ -1670,13 +1886,13 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
                         type="email"
-                        required
                         value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                        onChange={(e) => { setFormData({ ...formData, email: e.target.value }); clearError('email'); }}
+                        className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 ${formErrors.email ? 'border-red-500' : 'border-gray-200'} focus:border-blue-500 focus:outline-none transition-colors`}
                         placeholder="example@clinic.kz"
                       />
                     </div>
+                    {formErrors.email && <p key={validationKey} className="animate-shake text-red-500 text-xs mt-1">{formErrors.email}</p>}
                   </div>
 
                   {/* Phone */}
@@ -1686,10 +1902,11 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                     </label>
                     <PhoneInput
                       value={formData.phone}
-                      onChange={(value) => setFormData({ ...formData, phone: value })}
+                      onChange={(value) => { setFormData({ ...formData, phone: value }); clearError('phone'); }}
                       placeholder="+7 (700) 123 45 67"
-                      required
+                      className={formErrors.phone ? 'w-full pl-12 pr-4 py-3 rounded-xl border-2 border-red-500 focus:border-blue-500 focus:outline-none transition-colors' : undefined}
                     />
+                    {formErrors.phone && <p key={validationKey} className="animate-shake text-red-500 text-xs mt-1">{formErrors.phone}</p>}
                   </div>
 
                   {/* Password */}
@@ -1707,6 +1924,109 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                         placeholder="Оставьте пустым для сохранения текущего"
                         minLength={8}
                       />
+                    </div>
+                  </div>
+
+                  {/* Gender and Birth Date */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Пол
+                      </label>
+                      <select
+                        value={formData.gender}
+                        onChange={(e) => setFormData({ ...formData, gender: e.target.value as '' | 'male' | 'female' | 'other' })}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors bg-white"
+                      >
+                        <option value="">Не указан</option>
+                        <option value="male">Мужской</option>
+                        <option value="female">Женский</option>
+                        <option value="other">Другой</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Дата рождения
+                      </label>
+                      <div className="relative">
+                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="date"
+                          value={formData.birth_date}
+                          onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
+                          className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Address and City */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Адрес
+                      </label>
+                      <div className="relative">
+                        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="text"
+                          value={formData.address}
+                          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                          className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                          placeholder="Улица, дом"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Город
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.city}
+                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                        placeholder="Например: Алматы"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Language and Experience */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Язык
+                      </label>
+                      <div className="relative">
+                        <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <select
+                          value={formData.language}
+                          onChange={(e) => setFormData({ ...formData, language: e.target.value as 'kz' | 'ru' | 'en' | 'other' })}
+                          className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors bg-white"
+                        >
+                          <option value="ru">Русский</option>
+                          <option value="kz">Казахский</option>
+                          <option value="en">Английский</option>
+                          <option value="other">Другой</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Опыт работы (лет)
+                      </label>
+                      <div className="relative">
+                        <Award className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="number"
+                          min="0"
+                          max="70"
+                          value={formData.years_of_experience}
+                          onChange={(e) => setFormData({ ...formData, years_of_experience: e.target.value })}
+                          className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                          placeholder="0"
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -1887,11 +2207,10 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       </label>
                       <select
                         value={formData.clinic_id}
-                        onChange={(e) => setFormData({ ...formData, clinic_id: e.target.value })}
-                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
-                        required={clinics.length > 0}
+                        onChange={(e) => { setFormData({ ...formData, clinic_id: e.target.value }); clearError('clinic_id'); }}
+                        className={`w-full px-4 py-3 rounded-xl border-2 ${formErrors.clinic_id ? 'border-red-500' : 'border-gray-200'} focus:border-blue-500 focus:outline-none transition-colors`}
                       >
-                        <option value="">Выберите клинику (опционально)</option>
+                        <option value="">Выберите клинику</option>
                         {clinics.map((clinic) => (
                           <option key={clinic.id} value={clinic.id}>
                             {clinic.name}
