@@ -44,7 +44,191 @@ interface StaffMember {
     id: number;
     name: string;
   };
+  offline_consultation_price?: number;
+  online_consultation_price?: number;
+  preferred_consultation_duration?: number; // in minutes
+  work_schedule?: {
+    [key: string]: { // day name as key
+      start: string; // HH:MM format
+      end: string; // HH:MM format
+      enabled: boolean;
+    };
+  };
 }
+
+// Phone number formatter utility
+const formatPhoneNumber = (value: string): string => {
+  // Remove all non-numeric characters except '+'
+  const cleaned = value.replace(/[^\d+]/g, '');
+
+  // Extract only digits for formatting
+  let digits = cleaned.replace(/\D/g, '');
+
+  // If empty or just one digit, return as is with +
+  if (!digits) return '';
+  if (digits.length === 1) return '+' + digits;
+
+  // Convert Kazakhstan 8 to 7 (8XXXXXXXXXX -> 7XXXXXXXXXX)
+  // This handles cases like 87758249686 -> 77758249686
+  if (digits.startsWith('8') && digits.length === 11) {
+    digits = '7' + digits.substring(1);
+  }
+
+  // Format: +X (XXX) XXX XX XX
+  let formatted = '+' + digits[0];
+
+  // Add area code in parentheses (only if we have at least 2 digits)
+  if (digits.length >= 2) {
+    formatted += ' (' + digits.substring(1, Math.min(4, digits.length));
+
+    // Close parentheses only if we have 4+ digits
+    if (digits.length >= 4) {
+      formatted += ')';
+    }
+  }
+
+  // Add first part (digits 5-7)
+  if (digits.length >= 5) {
+    formatted += ' ' + digits.substring(4, Math.min(7, digits.length));
+  }
+
+  // Add second part (digits 8-9)
+  if (digits.length >= 8) {
+    formatted += ' ' + digits.substring(7, Math.min(9, digits.length));
+  }
+
+  // Add third part (digits 10-11)
+  if (digits.length >= 10) {
+    formatted += ' ' + digits.substring(9, Math.min(11, digits.length));
+  }
+
+  return formatted;
+};
+
+// Memoized phone input component with automatic formatting
+const PhoneInput = memo(({
+  value,
+  onChange,
+  placeholder,
+  required,
+  className
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  required?: boolean;
+  className?: string;
+}) => {
+  const [localValue, setLocalValue] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const previousDigitCount = useRef<number>(0);
+
+  useEffect(() => {
+    if (document.activeElement !== inputRef.current) {
+      setLocalValue(value);
+      previousDigitCount.current = value.replace(/\D/g, '').length;
+    }
+  }, [value]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' || e.key === 'Delete') {
+      if (!inputRef.current) return;
+
+      const cursorPos = inputRef.current.selectionStart || 0;
+      const cursorEnd = inputRef.current.selectionEnd || 0;
+      const value = inputRef.current.value;
+
+      // If text is selected, let default behavior handle it
+      if (cursorPos !== cursorEnd) {
+        return;
+      }
+
+      // Prevent default and handle deletion manually
+      e.preventDefault();
+
+      const digits = value.replace(/\D/g, '');
+
+      if (digits.length === 0) {
+        return; // Nothing to delete
+      }
+
+      // Remove the last digit
+      const newDigits = digits.slice(0, -1);
+      const formatted = newDigits ? formatPhoneNumber(newDigits) : '';
+
+      setLocalValue(formatted);
+      previousDigitCount.current = newDigits.length;
+      requestAnimationFrame(() => onChange(formatted));
+
+      // Set cursor to end
+      setTimeout(() => {
+        if (inputRef.current) {
+          const newLength = formatted.length;
+          inputRef.current.setSelectionRange(newLength, newLength);
+        }
+      }, 0);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target.value;
+
+    // If user cleared the input completely, allow it
+    if (input === '' || input === '+') {
+      setLocalValue('');
+      previousDigitCount.current = 0;
+      requestAnimationFrame(() => onChange(''));
+      return;
+    }
+
+    // Get current digit count
+    const currentDigits = input.replace(/\D/g, '');
+    const currentDigitCount = currentDigits.length;
+
+    // If user is deleting (digit count decreased), handle it properly
+    if (currentDigitCount < previousDigitCount.current) {
+      const formatted = formatPhoneNumber(currentDigits);
+      setLocalValue(formatted);
+      previousDigitCount.current = currentDigitCount;
+      requestAnimationFrame(() => onChange(formatted));
+      return;
+    }
+
+    // Otherwise, format normally
+    const formatted = formatPhoneNumber(input);
+    setLocalValue(formatted);
+    previousDigitCount.current = formatted.replace(/\D/g, '').length;
+    requestAnimationFrame(() => onChange(formatted));
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pastedText = e.clipboardData.getData('text');
+    const formatted = formatPhoneNumber(pastedText);
+    setLocalValue(formatted);
+    previousDigitCount.current = formatted.replace(/\D/g, '').length;
+    requestAnimationFrame(() => onChange(formatted));
+  };
+
+  return (
+    <div className="relative">
+      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+      <input
+        ref={inputRef}
+        type="tel"
+        value={localValue}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        onPaste={handlePaste}
+        className={className || "w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"}
+        placeholder={placeholder}
+        required={required}
+        maxLength={18} // +X (XXX) XXX XX XX = 18 characters
+      />
+    </div>
+  );
+});
+PhoneInput.displayName = 'PhoneInput';
 
 // Generic memoized input component for smooth typing
 const FormInput = memo(({
@@ -97,6 +281,7 @@ const FormInput = memo(({
     </div>
   );
 });
+FormInput.displayName = 'FormInput';
 
 // Memoized input component that uses local state for instant typing
 // Parent state updates happen in background without blocking UI
@@ -162,6 +347,7 @@ const SpecializationInput = memo(({
     </div>
   );
 });
+SpecializationInput.displayName = 'SpecializationInput';
 
 interface StaffManagementProps {
   user: any;
@@ -186,6 +372,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
   const [editingMember, setEditingMember] = useState<StaffMember | null>(null);
   const [deletingMember, setDeletingMember] = useState<StaffMember | null>(null);
   const [showDeleted, setShowDeleted] = useState(false);
+  const [mouseDownTarget, setMouseDownTarget] = useState<EventTarget | null>(null);
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -194,10 +381,59 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     password: '',
     role: 'doctor' as 'doctor' | 'nurse',
     clinic_id: '',
+    offline_consultation_price: '',
+    online_consultation_price: '',
+    preferred_consultation_duration: '',
+  });
+
+  // Work schedule state - each day can have its own time range
+  const [workSchedule, setWorkSchedule] = useState<{
+    [key: string]: { start: string; end: string; enabled: boolean };
+  }>({
+    monday: { start: '09:00', end: '18:00', enabled: false },
+    tuesday: { start: '09:00', end: '18:00', enabled: false },
+    wednesday: { start: '09:00', end: '18:00', enabled: false },
+    thursday: { start: '09:00', end: '18:00', enabled: false },
+    friday: { start: '09:00', end: '18:00', enabled: false },
+    saturday: { start: '10:00', end: '14:00', enabled: false },
+    sunday: { start: '10:00', end: '14:00', enabled: false },
   });
 
   // Separate state for specializations to avoid re-rendering entire form on each keystroke
   const [specializations, setSpecializations] = useState<string[]>(['']);
+
+  // Days of the week
+  const daysOfWeek = [
+    { value: 'monday', labelRu: 'Понедельник', labelShort: 'Пн' },
+    { value: 'tuesday', labelRu: 'Вторник', labelShort: 'Вт' },
+    { value: 'wednesday', labelRu: 'Среда', labelShort: 'Ср' },
+    { value: 'thursday', labelRu: 'Четверг', labelShort: 'Чт' },
+    { value: 'friday', labelRu: 'Пятница', labelShort: 'Пт' },
+    { value: 'saturday', labelRu: 'Суббота', labelShort: 'Сб' },
+    { value: 'sunday', labelRu: 'Воскресенье', labelShort: 'Вс' },
+  ];
+
+  // Toggle day selection
+  const toggleDay = useCallback((day: string) => {
+    setWorkSchedule(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        enabled: !prev[day].enabled,
+      }
+    }));
+  }, []);
+
+  // Update time for a specific day
+  const updateDayTime = useCallback((day: string, field: 'start' | 'end', value: string) => {
+    setWorkSchedule(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        [field]: value,
+      }
+    }));
+  }, []);
 
   // Helper functions for managing specializations array - using useCallback to prevent re-renders
   const handleSpecializationChange = useCallback((index: number, value: string) => {
@@ -337,6 +573,10 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       const payload = {
         ...formData,
         specialization: specializationString,
+        offline_consultation_price: formData.offline_consultation_price ? Number(formData.offline_consultation_price) : null,
+        online_consultation_price: formData.online_consultation_price ? Number(formData.online_consultation_price) : null,
+        preferred_consultation_duration: formData.preferred_consultation_duration ? Number(formData.preferred_consultation_duration) : null,
+        work_schedule: workSchedule,
       };
 
       const response = await api.post("/staff/", payload);
@@ -356,8 +596,20 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         password: '',
         role: 'doctor',
         clinic_id: '',
+        offline_consultation_price: '',
+        online_consultation_price: '',
+        preferred_consultation_duration: '',
       });
       setSpecializations(['']);
+      setWorkSchedule({
+        monday: { start: '09:00', end: '18:00', enabled: false },
+        tuesday: { start: '09:00', end: '18:00', enabled: false },
+        wednesday: { start: '09:00', end: '18:00', enabled: false },
+        thursday: { start: '09:00', end: '18:00', enabled: false },
+        friday: { start: '09:00', end: '18:00', enabled: false },
+        saturday: { start: '10:00', end: '14:00', enabled: false },
+        sunday: { start: '10:00', end: '14:00', enabled: false },
+      });
       setShowAddModal(false);
     } catch (err: any) {
       console.error("Error adding staff:", err);
@@ -405,12 +657,24 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       first_name: member.first_name,
       last_name: member.last_name,
       email: member.email,
-      phone: member.phone,
+      phone: formatPhoneNumber(member.phone), // Format existing phone number
       password: '',
       role: member.role,
       clinic_id: member.clinic?.id?.toString() || '',
+      offline_consultation_price: member.offline_consultation_price?.toString() || '',
+      online_consultation_price: member.online_consultation_price?.toString() || '',
+      preferred_consultation_duration: member.preferred_consultation_duration?.toString() || '',
     });
     setSpecializations(specializationsArray);
+    setWorkSchedule(member.work_schedule || {
+      monday: { start: '09:00', end: '18:00', enabled: false },
+      tuesday: { start: '09:00', end: '18:00', enabled: false },
+      wednesday: { start: '09:00', end: '18:00', enabled: false },
+      thursday: { start: '09:00', end: '18:00', enabled: false },
+      friday: { start: '09:00', end: '18:00', enabled: false },
+      saturday: { start: '10:00', end: '14:00', enabled: false },
+      sunday: { start: '10:00', end: '14:00', enabled: false },
+    });
     setShowEditModal(true);
   };
 
@@ -435,6 +699,10 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         phone: formData.phone,
         role: formData.role,
         specialization: specializationString,
+        offline_consultation_price: formData.offline_consultation_price ? Number(formData.offline_consultation_price) : null,
+        online_consultation_price: formData.online_consultation_price ? Number(formData.online_consultation_price) : null,
+        preferred_consultation_duration: formData.preferred_consultation_duration ? Number(formData.preferred_consultation_duration) : null,
+        work_schedule: workSchedule,
       };
 
       // Only include password if it was changed
@@ -468,8 +736,20 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         password: '',
         role: 'doctor',
         clinic_id: '',
+        offline_consultation_price: '',
+        online_consultation_price: '',
+        preferred_consultation_duration: '',
       });
       setSpecializations(['']);
+      setWorkSchedule({
+        monday: { start: '09:00', end: '18:00', enabled: false },
+        tuesday: { start: '09:00', end: '18:00', enabled: false },
+        wednesday: { start: '09:00', end: '18:00', enabled: false },
+        thursday: { start: '09:00', end: '18:00', enabled: false },
+        friday: { start: '09:00', end: '18:00', enabled: false },
+        saturday: { start: '10:00', end: '14:00', enabled: false },
+        sunday: { start: '10:00', end: '14:00', enabled: false },
+      });
     } catch (err: any) {
       console.error("Error updating staff:", err);
       const errorMessage = err.response?.data?.error || err.response?.data?.detail || err.message || "Не удалось обновить данные сотрудника";
@@ -507,6 +787,26 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     } finally {
       setDeleteLoading(false);
     }
+  };
+
+  // Handle overlay click - only close if it's a real click, not text selection
+  const handleOverlayMouseDown = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      setMouseDownTarget(e.target);
+    }
+  };
+
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    // Only close if mousedown and mouseup happened on the same overlay element
+    // This prevents closing when user is selecting text and drags outside
+    if (e.target === e.currentTarget && mouseDownTarget === e.target) {
+      setShowAddModal(false);
+      setShowEditModal(false);
+      setShowDeleteModal(false);
+      setEditingMember(null);
+      setDeletingMember(null);
+    }
+    setMouseDownTarget(null);
   };
 
   // Filter staff based on search and filters
@@ -848,17 +1148,17 @@ export default function StaffManagement({ user }: StaffManagementProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={() => setShowAddModal(false)}
+            onMouseDown={handleOverlayMouseDown}
+            onClick={handleOverlayClick}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
               className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
             >
               {/* Modal Header */}
-              <div className="sticky top-0 bg-white border-b-2 border-gray-100 px-8 py-6 rounded-t-3xl flex items-center justify-between">
+              <div className="sticky top-0 bg-white border-b-2 border-gray-100 px-8 py-6 rounded-t-3xl flex items-center justify-between z-10">
                 <div>
                   <h2 className="text-2xl font-bold" style={{ color: '#1e263e' }}>
                     Добавить Сотрудника
@@ -970,17 +1270,12 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Телефон <span className="text-red-500">*</span>
                     </label>
-                    <div className="relative">
-                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                      <input
-                        type="tel"
-                        required
-                        value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
-                        placeholder="+7 (700) 123-45-67"
-                      />
-                    </div>
+                    <PhoneInput
+                      value={formData.phone}
+                      onChange={(value) => setFormData({ ...formData, phone: value })}
+                      placeholder="+7 (700) 123 45 67"
+                      required
+                    />
                   </div>
 
                   {/* Password */}
@@ -1000,6 +1295,140 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                         minLength={8}
                       />
                     </div>
+                  </div>
+
+                  {/* Consultation Prices */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Цена офлайн консультации
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={formData.offline_consultation_price}
+                          onChange={(e) => setFormData({ ...formData, offline_consultation_price: e.target.value })}
+                          className="w-full pl-4 pr-12 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                          placeholder="0"
+                        />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium pointer-events-none">₸</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Цена онлайн консультации
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={formData.online_consultation_price}
+                          onChange={(e) => setFormData({ ...formData, online_consultation_price: e.target.value })}
+                          className="w-full pl-4 pr-12 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                          placeholder="0"
+                        />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium pointer-events-none">₸</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Preferred Consultation Duration */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Длительность консультации
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="5"
+                        max="180"
+                        step="5"
+                        value={formData.preferred_consultation_duration}
+                        onChange={(e) => setFormData({ ...formData, preferred_consultation_duration: e.target.value })}
+                        className="w-full pl-4 pr-16 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                        placeholder="30"
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium pointer-events-none">минут</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      💡 Рекомендуемая длительность одной консультации (5-180 минут)
+                    </p>
+                  </div>
+
+                  {/* Work Schedule - Days and Times */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      График работы (дни и время приема)
+                    </label>
+                    <div className="space-y-3">
+                      {daysOfWeek.map((day) => (
+                        <div
+                          key={day.value}
+                          className={`rounded-xl border-2 p-4 transition-all ${
+                            workSchedule[day.value]?.enabled
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-gray-200 bg-white'
+                          }`}
+                        >
+                          <div className="flex items-center gap-4">
+                            {/* Day Toggle */}
+                            <button
+                              type="button"
+                              onClick={() => toggleDay(day.value)}
+                              className={`flex items-center justify-center w-12 h-12 rounded-xl border-2 transition-all font-semibold text-sm ${
+                                workSchedule[day.value]?.enabled
+                                  ? 'border-blue-500 bg-blue-500 text-white'
+                                  : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
+                              }`}
+                              title={day.labelRu}
+                            >
+                              {day.labelShort}
+                            </button>
+
+                            {/* Day Name */}
+                            <div className="flex-1">
+                              <p className="font-semibold text-gray-700">{day.labelRu}</p>
+                            </div>
+
+                            {/* Time Inputs (only shown when enabled) */}
+                            {workSchedule[day.value]?.enabled && (
+                              <div className="flex items-center gap-3">
+                                <div>
+                                  <label className="block text-xs text-gray-600 mb-1">С</label>
+                                  <input
+                                    type="time"
+                                    value={workSchedule[day.value]?.start || '09:00'}
+                                    onChange={(e) => updateDayTime(day.value, 'start', e.target.value)}
+                                    className="w-32 px-3 py-2 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:outline-none transition-colors text-sm"
+                                  />
+                                </div>
+                                <div className="text-gray-400 pt-5">—</div>
+                                <div>
+                                  <label className="block text-xs text-gray-600 mb-1">До</label>
+                                  <input
+                                    type="time"
+                                    value={workSchedule[day.value]?.end || '18:00'}
+                                    onChange={(e) => updateDayTime(day.value, 'end', e.target.value)}
+                                    className="w-32 px-3 py-2 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:outline-none transition-colors text-sm"
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-3">
+                      💡 Нажмите на день недели, чтобы включить/выключить. Укажите время работы для каждого активного дня.
+                    </p>
+                    {Object.values(workSchedule).filter(d => d.enabled).length > 0 && (
+                      <p className="text-xs text-blue-600 mt-2 font-medium">
+                        ✓ Рабочих дней: {Object.values(workSchedule).filter(d => d.enabled).length}
+                      </p>
+                    )}
                   </div>
 
                   {/* Specialization - Multiple inputs with + and - buttons */}
@@ -1128,20 +1557,17 @@ export default function StaffManagement({ user }: StaffManagementProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={() => {
-              setShowEditModal(false);
-              setEditingMember(null);
-            }}
+            onMouseDown={handleOverlayMouseDown}
+            onClick={handleOverlayClick}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
               className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
             >
               {/* Modal Header */}
-              <div className="sticky top-0 bg-white border-b-2 border-gray-100 px-8 py-6 rounded-t-3xl flex items-center justify-between">
+              <div className="sticky top-0 bg-white border-b-2 border-gray-100 px-8 py-6 rounded-t-3xl flex items-center justify-between z-10">
                 <div>
                   <h2 className="text-2xl font-bold" style={{ color: '#1e263e' }}>
                     Редактировать Сотрудника
@@ -1258,17 +1684,12 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Телефон <span className="text-red-500">*</span>
                     </label>
-                    <div className="relative">
-                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                      <input
-                        type="tel"
-                        required
-                        value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
-                        placeholder="+7 (700) 123-45-67"
-                      />
-                    </div>
+                    <PhoneInput
+                      value={formData.phone}
+                      onChange={(value) => setFormData({ ...formData, phone: value })}
+                      placeholder="+7 (700) 123 45 67"
+                      required
+                    />
                   </div>
 
                   {/* Password */}
@@ -1287,6 +1708,140 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                         minLength={8}
                       />
                     </div>
+                  </div>
+
+                  {/* Consultation Prices */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Цена офлайн консультации
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={formData.offline_consultation_price}
+                          onChange={(e) => setFormData({ ...formData, offline_consultation_price: e.target.value })}
+                          className="w-full pl-4 pr-12 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                          placeholder="0"
+                        />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium pointer-events-none">₸</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Цена онлайн консультации
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={formData.online_consultation_price}
+                          onChange={(e) => setFormData({ ...formData, online_consultation_price: e.target.value })}
+                          className="w-full pl-4 pr-12 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                          placeholder="0"
+                        />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium pointer-events-none">₸</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Preferred Consultation Duration */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Длительность консультации
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="5"
+                        max="180"
+                        step="5"
+                        value={formData.preferred_consultation_duration}
+                        onChange={(e) => setFormData({ ...formData, preferred_consultation_duration: e.target.value })}
+                        className="w-full pl-4 pr-16 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                        placeholder="30"
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium pointer-events-none">минут</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      💡 Рекомендуемая длительность одной консультации (5-180 минут)
+                    </p>
+                  </div>
+
+                  {/* Work Schedule - Days and Times */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      График работы (дни и время приема)
+                    </label>
+                    <div className="space-y-3">
+                      {daysOfWeek.map((day) => (
+                        <div
+                          key={day.value}
+                          className={`rounded-xl border-2 p-4 transition-all ${
+                            workSchedule[day.value]?.enabled
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-gray-200 bg-white'
+                          }`}
+                        >
+                          <div className="flex items-center gap-4">
+                            {/* Day Toggle */}
+                            <button
+                              type="button"
+                              onClick={() => toggleDay(day.value)}
+                              className={`flex items-center justify-center w-12 h-12 rounded-xl border-2 transition-all font-semibold text-sm ${
+                                workSchedule[day.value]?.enabled
+                                  ? 'border-blue-500 bg-blue-500 text-white'
+                                  : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
+                              }`}
+                              title={day.labelRu}
+                            >
+                              {day.labelShort}
+                            </button>
+
+                            {/* Day Name */}
+                            <div className="flex-1">
+                              <p className="font-semibold text-gray-700">{day.labelRu}</p>
+                            </div>
+
+                            {/* Time Inputs (only shown when enabled) */}
+                            {workSchedule[day.value]?.enabled && (
+                              <div className="flex items-center gap-3">
+                                <div>
+                                  <label className="block text-xs text-gray-600 mb-1">С</label>
+                                  <input
+                                    type="time"
+                                    value={workSchedule[day.value]?.start || '09:00'}
+                                    onChange={(e) => updateDayTime(day.value, 'start', e.target.value)}
+                                    className="w-32 px-3 py-2 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:outline-none transition-colors text-sm"
+                                  />
+                                </div>
+                                <div className="text-gray-400 pt-5">—</div>
+                                <div>
+                                  <label className="block text-xs text-gray-600 mb-1">До</label>
+                                  <input
+                                    type="time"
+                                    value={workSchedule[day.value]?.end || '18:00'}
+                                    onChange={(e) => updateDayTime(day.value, 'end', e.target.value)}
+                                    className="w-32 px-3 py-2 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:outline-none transition-colors text-sm"
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-3">
+                      💡 Нажмите на день недели, чтобы включить/выключить. Укажите время работы для каждого активного дня.
+                    </p>
+                    {Object.values(workSchedule).filter(d => d.enabled).length > 0 && (
+                      <p className="text-xs text-blue-600 mt-2 font-medium">
+                        ✓ Рабочих дней: {Object.values(workSchedule).filter(d => d.enabled).length}
+                      </p>
+                    )}
                   </div>
 
                   {/* Specialization - Multiple inputs with + and - buttons */}
@@ -1412,16 +1967,13 @@ export default function StaffManagement({ user }: StaffManagementProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={() => {
-              setShowDeleteModal(false);
-              setDeletingMember(null);
-            }}
+            onMouseDown={handleOverlayMouseDown}
+            onClick={handleOverlayClick}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
               className="bg-white rounded-3xl shadow-2xl max-w-md w-full"
             >
               {/* Modal Header */}
