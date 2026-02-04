@@ -22,7 +22,10 @@ import {
   Filter,
   Edit,
   Trash2,
-  ChevronDown
+  ChevronDown,
+  Mail,
+  Phone,
+  MapPin
 } from "lucide-react";
 
 interface ScheduleEvent {
@@ -612,7 +615,7 @@ function SearchSelect({
   placeholder,
   required
 }: {
-  options: Array<{ id: number; label: string }>;
+  options: Array<{ id: number; label: string; subtitle?: string }>;
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
@@ -633,7 +636,8 @@ function SearchSelect({
   }, []);
 
   const filtered = options.filter(o =>
-    o.label.toLowerCase().includes(search.toLowerCase())
+    o.label.toLowerCase().includes(search.toLowerCase()) ||
+    (o.subtitle && o.subtitle.toLowerCase().includes(search.toLowerCase()))
   );
 
   const selectedLabel = options.find(o => String(o.id) === value)?.label;
@@ -688,13 +692,20 @@ function SearchSelect({
                   key={option.id}
                   type="button"
                   onClick={() => { onChange(String(option.id)); setIsOpen(false); }}
-                  className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                  className={`w-full text-left px-4 py-2.5 transition-colors ${
                     String(option.id) === value
-                      ? 'bg-blue-50 text-blue-700 font-semibold'
-                      : 'text-gray-700 hover:bg-gray-50'
+                      ? 'bg-blue-50'
+                      : 'hover:bg-gray-50'
                   }`}
                 >
-                  {option.label}
+                  <div className={`text-sm font-medium ${String(option.id) === value ? 'text-blue-700' : 'text-gray-700'}`}>
+                    {option.label}
+                  </div>
+                  {option.subtitle && (
+                    <div className={`text-xs ${String(option.id) === value ? 'text-blue-500' : 'text-gray-400'}`}>
+                      {option.subtitle}
+                    </div>
+                  )}
                 </button>
               ))
             )}
@@ -733,16 +744,49 @@ function AddEventModal({
     notes: ''
   });
   const [submitting, setSubmitting] = useState(false);
-  const [patients, setPatients] = useState<Array<{ id: number; first_name: string; last_name: string }>>([]);
-  const [doctors, setDoctors] = useState<Array<{ id: number; first_name: string; last_name: string }>>([]);
-  const [nurses, setNurses] = useState<Array<{ id: number; first_name: string; last_name: string }>>([]);
+  const [patients, setPatients] = useState<Array<{
+    id: number;
+    first_name: string;
+    last_name: string;
+    email?: string;
+    phone?: string;
+    birth_date?: string;
+    gender?: string;
+    address?: string;
+    city?: string;
+    clinic?: { id: number; name: string };
+  }>>([]);
+  const [doctors, setDoctors] = useState<Array<{
+    id: number;
+    first_name: string;
+    last_name: string;
+    email?: string;
+    phone?: string;
+    specialization?: string;
+    years_of_experience?: number;
+    address?: string;
+    city?: string;
+    clinic?: { id: number; name: string };
+  }>>([]);
+  const [nurses, setNurses] = useState<Array<{
+    id: number;
+    first_name: string;
+    last_name: string;
+    email?: string;
+    phone?: string;
+    specialization?: string;
+    years_of_experience?: number;
+    address?: string;
+    city?: string;
+    clinic?: { id: number; name: string };
+  }>>([]);
 
   useEffect(() => {
     if (!isOpen) return;
     const fetchData = async () => {
       try {
         const [patientsRes, staffRes] = await Promise.all([
-          api.get('/patients/'),
+          api.get('/patients/?all=true'),
           api.get('/staff/')
         ]);
         setPatients(patientsRes.data);
@@ -904,12 +948,64 @@ function AddEventModal({
               Пациент <span className="text-red-500">*</span>
             </label>
             <SearchSelect
-              options={patients.map(p => ({ id: p.id, label: `${p.first_name} ${p.last_name}` }))}
+              options={patients.map(p => ({ id: p.id, label: `${p.first_name} ${p.last_name}`, subtitle: p.email }))}
               value={formData.patient_id}
               onChange={(val) => setFormData({ ...formData, patient_id: val })}
               placeholder="Выберите пациента..."
               required
             />
+
+            {/* Patient info card */}
+            {formData.patient_id && (() => {
+              const patient = patients.find(p => String(p.id) === formData.patient_id);
+              if (!patient) return null;
+              return (
+                <div className="mt-3 p-4 rounded-2xl border-2 border-blue-100 bg-blue-50/40">
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <User className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm font-bold text-blue-700">Информация о пациенте</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                    {patient.email && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Mail className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                        <span className="truncate">{patient.email}</span>
+                      </div>
+                    )}
+                    {patient.phone && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Phone className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                        <span>{patient.phone}</span>
+                      </div>
+                    )}
+                    {patient.birth_date && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <CalendarIcon className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                        <span>{patient.birth_date}</span>
+                      </div>
+                    )}
+                    {patient.gender && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <User className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                        <span>{patient.gender === 'M' ? 'Мужчина' : patient.gender === 'F' ? 'Женщина' : patient.gender}</span>
+                      </div>
+                    )}
+                    {(patient.address || patient.city) && (
+                      <div className="flex items-center gap-2 text-gray-600 col-span-2">
+                        <MapPin className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                        <span>{[patient.address, patient.city].filter(Boolean).join(', ')}</span>
+                      </div>
+                    )}
+                    {patient.clinic && (
+                      <div className="flex items-center gap-2 text-gray-600 col-span-2">
+                        <Stethoscope className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                        <span>{patient.clinic.name}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Doctor */}
@@ -918,12 +1014,64 @@ function AddEventModal({
               Доктор {eventType === 'consultation' && <span className="text-red-500">*</span>}
             </label>
             <SearchSelect
-              options={doctors.map(d => ({ id: d.id, label: `${d.first_name} ${d.last_name}` }))}
+              options={doctors.map(d => ({ id: d.id, label: `${d.first_name} ${d.last_name}`, subtitle: d.email }))}
               value={formData.doctor_id}
               onChange={(val) => setFormData({ ...formData, doctor_id: val })}
               placeholder="Выберите доктора..."
               required={eventType === 'consultation'}
             />
+
+            {/* Doctor info card */}
+            {formData.doctor_id && (() => {
+              const doctor = doctors.find(d => String(d.id) === formData.doctor_id);
+              if (!doctor) return null;
+              return (
+                <div className="mt-3 p-4 rounded-2xl border-2 border-emerald-100 bg-emerald-50/40">
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <Stethoscope className="w-4 h-4 text-emerald-600" />
+                    <span className="text-sm font-bold text-emerald-700">Информация о докторе</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                    {doctor.email && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Mail className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                        <span className="truncate">{doctor.email}</span>
+                      </div>
+                    )}
+                    {doctor.phone && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Phone className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                        <span>{doctor.phone}</span>
+                      </div>
+                    )}
+                    {doctor.specialization && (
+                      <div className="flex items-center gap-2 text-gray-600 col-span-2">
+                        <Stethoscope className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                        <span>{doctor.specialization}</span>
+                      </div>
+                    )}
+                    {doctor.years_of_experience != null && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <CalendarIcon className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                        <span>{doctor.years_of_experience} лет опыта</span>
+                      </div>
+                    )}
+                    {(doctor.address || doctor.city) && (
+                      <div className="flex items-center gap-2 text-gray-600 col-span-2">
+                        <MapPin className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                        <span>{[doctor.address, doctor.city].filter(Boolean).join(', ')}</span>
+                      </div>
+                    )}
+                    {doctor.clinic && (
+                      <div className="flex items-center gap-2 text-gray-600 col-span-2">
+                        <User className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                        <span>{doctor.clinic.name}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Nurse — only for appointments */}
@@ -933,12 +1081,64 @@ function AddEventModal({
                 Медсестра <span className="text-red-500">*</span>
               </label>
               <SearchSelect
-                options={nurses.map(n => ({ id: n.id, label: `${n.first_name} ${n.last_name}` }))}
+                options={nurses.map(n => ({ id: n.id, label: `${n.first_name} ${n.last_name}`, subtitle: n.email }))}
                 value={formData.nurse_id}
                 onChange={(val) => setFormData({ ...formData, nurse_id: val })}
                 placeholder="Выберите медсестру..."
                 required
               />
+
+              {/* Nurse info card */}
+              {formData.nurse_id && (() => {
+                const nurse = nurses.find(n => String(n.id) === formData.nurse_id);
+                if (!nurse) return null;
+                return (
+                  <div className="mt-3 p-4 rounded-2xl border-2 border-violet-100 bg-violet-50/40">
+                    <div className="flex items-center gap-2 mb-2.5">
+                      <User className="w-4 h-4 text-violet-600" />
+                      <span className="text-sm font-bold text-violet-700">Информация о медсестре</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                      {nurse.email && (
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <Mail className="w-3.5 h-3.5 text-violet-500 flex-shrink-0" />
+                          <span className="truncate">{nurse.email}</span>
+                        </div>
+                      )}
+                      {nurse.phone && (
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <Phone className="w-3.5 h-3.5 text-violet-500 flex-shrink-0" />
+                          <span>{nurse.phone}</span>
+                        </div>
+                      )}
+                      {nurse.specialization && (
+                        <div className="flex items-center gap-2 text-gray-600 col-span-2">
+                          <Stethoscope className="w-3.5 h-3.5 text-violet-500 flex-shrink-0" />
+                          <span>{nurse.specialization}</span>
+                        </div>
+                      )}
+                      {nurse.years_of_experience != null && (
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <CalendarIcon className="w-3.5 h-3.5 text-violet-500 flex-shrink-0" />
+                          <span>{nurse.years_of_experience} лет опыта</span>
+                        </div>
+                      )}
+                      {(nurse.address || nurse.city) && (
+                        <div className="flex items-center gap-2 text-gray-600 col-span-2">
+                          <MapPin className="w-3.5 h-3.5 text-violet-500 flex-shrink-0" />
+                          <span>{[nurse.address, nurse.city].filter(Boolean).join(', ')}</span>
+                        </div>
+                      )}
+                      {nurse.clinic && (
+                        <div className="flex items-center gap-2 text-gray-600 col-span-2">
+                          <User className="w-3.5 h-3.5 text-violet-500 flex-shrink-0" />
+                          <span>{nurse.clinic.name}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
 
