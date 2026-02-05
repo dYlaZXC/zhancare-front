@@ -49,7 +49,7 @@ export const DoctorBreadcrumb = ({
     },
     consultations: {
       key: "consultations",
-      title: "Видео Консультация",
+      title: "Консультация",
       icon: <FontAwesomeIcon icon={faVideo} className="w-4 h-4" />,
       href: "/doctor/consultations",
     },

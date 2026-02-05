@@ -603,7 +603,7 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
             {/* Compact header section */}
             <div className="mb-4 space-y-3">
               <h2 className="text-xl md:text-2xl lg:text-3xl font-extrabold text-[#001E80]">
-                Видео консультация
+                Консультация
               </h2>
               
               {/* Progress bar */}

@@ -43,7 +43,7 @@ export const Sidebar = ({
   const menuItems = [
     { id: "profile", icon: faUser, title: "Профиль", color: "#3772ff", href: "/patient/profile" },
     // { id: "smart-consultation", icon: faBrain, title: "Умная консультация", color: "#8b5cf6", href: "/patient/smart-consultation" },
-    { id: "video", icon: faVideo, title: "Видео консультации", color: "#3267e6", href: "/patient/video" },
+    { id: "video", icon: faVideo, title: "Консультация", color: "#3267e6", href: "/patient/video" },
     { id: "appointments", icon: faCalendar, title: "Вызов на дом", color: "#295bbf", href: "/patient/appointments" },
     { id: "history", icon: faNotesMedical, title: "Медицинская история", color: "#1e4099", href: "/patient/history" },
     { id: "chat", icon: faPlane, title: "Мед Туризм", color: "#173373", href: "/patient/chat" },

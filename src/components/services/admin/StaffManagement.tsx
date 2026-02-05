@@ -1516,7 +1516,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Цена офлайн консультации
+                        Цена оффлайн консультации
                       </label>
                       <div className="relative">
                         <input
@@ -2034,7 +2034,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Цена офлайн консультации
+                        Цена оффлайн консультации
                       </label>
                       <div className="relative">
                         <input

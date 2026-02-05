@@ -361,7 +361,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
               Расписание
             </h1>
             <p className="text-gray-600">
-              Управление консультациями и записями на дому
+              Управление онлайн и оффлайн консультациями
             </p>
           </div>
 
@@ -457,8 +457,8 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
             className="px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
           >
             <option value="all">Все типы</option>
-            <option value="consultation">Консультации</option>
-            <option value="appointment">Записи на дому</option>
+            <option value="consultation">Онлайн консультации</option>
+            <option value="appointment">Оффлайн консультации</option>
           </select>
 
           {/* Status Filter */}
@@ -878,7 +878,7 @@ function AddEventModal({
                 }`}
               >
                 <Video className="w-6 h-6 mx-auto mb-2" style={{ color: '#3772ff' }} />
-                <div className="font-semibold">Консультация</div>
+                <div className="font-semibold">Онлайн консультация</div>
               </button>
               <button
                 type="button"
@@ -890,7 +890,7 @@ function AddEventModal({
                 }`}
               >
                 <Home className="w-6 h-6 mx-auto mb-2" style={{ color: '#8b5cf6' }} />
-                <div className="font-semibold">Запись на дому</div>
+                <div className="font-semibold">Оффлайн консультация</div>
               </button>
             </div>
           </div>

@@ -16,7 +16,9 @@ import {
   AlertCircle,
   CheckCircle2,
   ArrowRight,
-  Video
+  Video,
+  Home,
+  Stethoscope
 } from "lucide-react";
 import PatientConsultationsTable from "./PatientConsultationsTable";
 
@@ -153,30 +155,49 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
           className="text-center space-y-3"
         >
           <h3 className="text-2xl md:text-3xl font-bold text-gray-900">
-            Видеоконсультации
+            Консультации
           </h3>
           <p className="text-gray-600 text-sm md:text-base">
-            Просмотрите ваши консультации или назначьте новую встречу с врачом
+            Онлайн, оффлайн и диагностика — всё в одном месте
           </p>
         </motion.div>
 
-        {/* Big Action Button */}
+        {/* Action Buttons */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2 }}
-          className="flex justify-center"
+          className="flex justify-center gap-4 flex-wrap"
         >
+          {/* Онлайн консультация — active */}
           <motion.button
             onClick={onNext}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
-            className="w-full max-w-md px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-lg shadow-xl hover:shadow-2xl hover:shadow-blue-500/30 transition-all flex items-center justify-center gap-3"
+            className="px-6 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-base shadow-xl hover:shadow-2xl hover:shadow-blue-500/30 transition-all flex items-center justify-center gap-3"
           >
-            <Video size={24} />
-            Назначить новую консультацию
-            <ArrowRight size={20} />
+            <Video size={22} />
+            Онлайн консультация
+            <ArrowRight size={18} />
           </motion.button>
+
+          {/* Оффлайн консультация — disabled */}
+          <button
+            disabled
+            className="px-6 py-4 rounded-2xl bg-gray-100 border-2 border-dashed border-gray-300 text-gray-400 font-bold text-base cursor-not-allowed flex items-center justify-center gap-3"
+          >
+            <Home size={22} />
+            Оффлайн консультация
+          </button>
+
+          {/* Диагностика — disabled */}
+          <button
+            disabled
+            className="px-6 py-4 rounded-2xl bg-gray-100 border-2 border-dashed border-gray-300 text-gray-400 font-bold text-base cursor-not-allowed flex items-center justify-center gap-3"
+          >
+            <Stethoscope size={22} />
+            Диагностика
+          </button>
         </motion.div>
       </motion.div>
 
