@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Users, Search, UserPlus, Mail, Phone, Lock, Calendar,
@@ -8,6 +9,9 @@ import {
   CheckCircle, XCircle
 } from "lucide-react";
 import { toast } from "react-toastify";
+
+import bnClinicLogo from "@/assets/clinics_logos/bn-clinica.png";
+import ayalaClinicLogo from "@/assets/clinics_logos/ayala_clinic.png";
 
 interface Patient {
   id: number;
@@ -358,7 +362,17 @@ export default function PatientManagement({ user }: PatientManagementProps) {
                         </div>
                         {patient.clinic && (
                           <div className="mt-2 flex items-center gap-2">
-                            <Building className="w-4 h-4 text-green-600" />
+                            {(patient.clinic.id === 913 || patient.clinic.name?.toLowerCase().includes('ayala')) ? (
+                              <div className="bg-white px-1.5 py-0.5 rounded border border-green-200">
+                                <Image src={ayalaClinicLogo} alt="Ayala Clinic" width={40} height={14} className="object-contain" priority={false} />
+                              </div>
+                            ) : (patient.clinic.name?.toLowerCase().includes('bn') || patient.clinic.name?.toLowerCase().includes('бн')) ? (
+                              <div className="bg-white px-1.5 py-0.5 rounded border border-green-200">
+                                <Image src={bnClinicLogo} alt="BN Clinic" width={40} height={14} className="object-contain" priority={false} />
+                              </div>
+                            ) : (
+                              <Building className="w-4 h-4 text-green-600" />
+                            )}
                             <span className="text-sm font-medium text-green-700">
                               {patient.clinic.name}
                             </span>
@@ -597,9 +611,19 @@ export default function PatientManagement({ user }: PatientManagementProps) {
                         Клиника <span className="text-red-500">*</span>
                       </label>
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-green-500 flex items-center justify-center">
-                          <Building className="w-6 h-6 text-white" />
-                        </div>
+                        {(user.clinic?.id === 913 || user.clinic?.name?.toLowerCase().includes('ayala')) ? (
+                          <div className="flex-shrink-0 bg-white p-2 rounded-xl border-2 border-green-200 shadow-md">
+                            <Image src={ayalaClinicLogo} alt="Ayala Clinic" width={80} height={28} className="object-contain" priority={false} />
+                          </div>
+                        ) : (user.clinic?.name?.toLowerCase().includes('bn') || user.clinic?.name?.toLowerCase().includes('бн')) ? (
+                          <div className="flex-shrink-0 bg-white p-2 rounded-xl border-2 border-green-200 shadow-md">
+                            <Image src={bnClinicLogo} alt="BN Clinic" width={80} height={28} className="object-contain" priority={false} />
+                          </div>
+                        ) : (
+                          <div className="w-10 h-10 rounded-xl bg-green-500 flex items-center justify-center">
+                            <Building className="w-6 h-6 text-white" />
+                          </div>
+                        )}
                         <div>
                           <p className="text-base font-bold text-gray-800">{user.clinic?.name || 'Ваша клиника'}</p>
                           <p className="text-sm text-gray-600">Администратор клиники</p>

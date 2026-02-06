@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, memo, useRef } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-toastify";
 import { api } from "@/utils/api";
@@ -31,6 +32,9 @@ import {
   Award,
   RotateCcw
 } from "lucide-react";
+
+import bnClinicLogo from "@/assets/clinics_logos/bn-clinica.png";
+import ayalaClinicLogo from "@/assets/clinics_logos/ayala_clinic.png";
 
 interface StaffMember {
   id: number;
@@ -1710,11 +1714,21 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                         Клиника <span className="text-red-500">*</span>
                       </label>
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center">
-                          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                          </svg>
-                        </div>
+                        {(user.clinic?.id === 913 || user.clinic?.name?.toLowerCase().includes('ayala')) ? (
+                          <div className="flex-shrink-0 bg-white p-2 rounded-xl border-2 border-blue-200 shadow-md">
+                            <Image src={ayalaClinicLogo} alt="Ayala Clinic" width={80} height={28} className="object-contain" priority={false} />
+                          </div>
+                        ) : (user.clinic?.name?.toLowerCase().includes('bn') || user.clinic?.name?.toLowerCase().includes('бн')) ? (
+                          <div className="flex-shrink-0 bg-white p-2 rounded-xl border-2 border-blue-200 shadow-md">
+                            <Image src={bnClinicLogo} alt="BN Clinic" width={80} height={28} className="object-contain" priority={false} />
+                          </div>
+                        ) : (
+                          <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center">
+                            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                          </div>
+                        )}
                         <div>
                           <p className="text-base font-bold text-gray-800">{user.clinic?.name || 'Ваша клиника'}</p>
                           <p className="text-sm text-gray-600">Администратор клиники</p>
@@ -2224,11 +2238,23 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                         Клиника
                       </label>
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center">
-                          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                          </svg>
-                        </div>
+                        {((editingMember.clinic?.id === 913 || editingMember.clinic?.name?.toLowerCase().includes('ayala')) ||
+                          (!editingMember.clinic && (user.clinic?.id === 913 || user.clinic?.name?.toLowerCase().includes('ayala')))) ? (
+                          <div className="flex-shrink-0 bg-white p-2 rounded-xl border-2 border-blue-200 shadow-md">
+                            <Image src={ayalaClinicLogo} alt="Ayala Clinic" width={80} height={28} className="object-contain" priority={false} />
+                          </div>
+                        ) : ((editingMember.clinic?.name?.toLowerCase().includes('bn') || editingMember.clinic?.name?.toLowerCase().includes('бн')) ||
+                          (!editingMember.clinic && (user.clinic?.name?.toLowerCase().includes('bn') || user.clinic?.name?.toLowerCase().includes('бн')))) ? (
+                          <div className="flex-shrink-0 bg-white p-2 rounded-xl border-2 border-blue-200 shadow-md">
+                            <Image src={bnClinicLogo} alt="BN Clinic" width={80} height={28} className="object-contain" priority={false} />
+                          </div>
+                        ) : (
+                          <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center">
+                            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                          </div>
+                        )}
                         <div>
                           <p className="text-base font-bold text-gray-800">
                             {editingMember.clinic?.name || user.clinic?.name || 'Текущая клиника'}

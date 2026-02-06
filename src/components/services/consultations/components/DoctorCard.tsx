@@ -22,6 +22,7 @@ import type { Doctor, TimeSlot, Language } from "../types/doctor";
 import { getSpecializationName } from "../utils/doctorUtils";
 import { formatTime, getTimeLabel, generateCalendarDates } from "../utils/timeslotUtils";
 import bnClinicLogo from "@/assets/clinics_logos/bn-clinica.png";
+import ayalaClinicLogo from "@/assets/clinics_logos/ayala_clinic.png";
 
 interface DoctorCardProps {
   doctor: Doctor;
@@ -130,6 +131,21 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
               <Image
                 src={bnClinicLogo}
                 alt="BN Clinic"
+                width={60}
+                height={20}
+                className="object-contain"
+                priority={false}
+              />
+            </div>
+          )}
+
+          {/* Ayala Clinic badge - under avatar */}
+          {(doctor.clinic?.id === 913 ||
+            doctor.clinic?.name?.toLowerCase().includes('ayala')) && (
+            <div className="mt-2 bg-white px-2 py-1 rounded-lg shadow-md border border-blue-200 flex items-center justify-center">
+              <Image
+                src={ayalaClinicLogo}
+                alt="Ayala Clinic"
                 width={60}
                 height={20}
                 className="object-contain"
