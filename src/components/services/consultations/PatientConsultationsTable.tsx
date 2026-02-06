@@ -66,7 +66,15 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
     }
 
     const now = new Date();
-    const scheduledTime = new Date(consultation.scheduled_at);
+    // Parse scheduled_at as local time by removing 'Z' suffix if present
+    // and ensuring it's treated as local time, not UTC
+    let scheduledTimeString = consultation.scheduled_at;
+    if (scheduledTimeString.endsWith('Z')) {
+      scheduledTimeString = scheduledTimeString.slice(0, -1);
+    }
+    // If the string doesn't contain timezone info, append 'T00:00:00' format to ensure local parsing
+    // For datetime strings like "2026-02-06T13:15:00", this will parse as local time
+    const scheduledTime = new Date(scheduledTimeString.replace('Z', ''));
     const timeDiffMs = scheduledTime.getTime() - now.getTime();
     const timeDiffMinutes = Math.floor(timeDiffMs / (1000 * 60));
 
