@@ -42,6 +42,7 @@ interface ScheduleEvent {
   duration: number; // in minutes
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   location?: string;
+  address?: string;
   specialization?: string;
   notes?: string;
 }

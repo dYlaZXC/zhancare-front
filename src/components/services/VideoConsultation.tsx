@@ -83,7 +83,10 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
       // console.log("Enhanced doctor data:", res.data); // Debug log to see the new structure
 
       const filtered = res.data?.doctors?.filter(
-        (doc: Doctor) => doc.doctor_type !== "Сестринское дело"
+        (doc: Doctor) =>
+          doc.doctor_type !== "Сестринское дело" && // Exclude nurses
+          doc.is_active !== false &&                 // Exclude inactive doctors
+          doc.is_deleted !== true                    // Exclude deleted doctors
       );
       setDoctors(filtered || []);
 
