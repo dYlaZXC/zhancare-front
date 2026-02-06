@@ -30,7 +30,9 @@ import {
   MapPin,
   Globe,
   Award,
-  RotateCcw
+  RotateCcw,
+  Video,
+  Home
 } from "lucide-react";
 
 import bnClinicLogo from "@/assets/clinics_logos/bn-clinica.png";
@@ -65,6 +67,20 @@ interface StaffMember {
     [key: string]: { // day name as key
       start: string; // HH:MM format
       end: string; // HH:MM format
+      enabled: boolean;
+    };
+  };
+  online_work_schedule?: {
+    [key: string]: {
+      start: string;
+      end: string;
+      enabled: boolean;
+    };
+  };
+  offline_work_schedule?: {
+    [key: string]: {
+      start: string;
+      end: string;
       enabled: boolean;
     };
   };
@@ -422,8 +438,37 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     sunday: { start: '10:00', end: '14:00', enabled: false },
   });
 
+  // Online work schedule - for online consultations
+  const [onlineWorkSchedule, setOnlineWorkSchedule] = useState<{
+    [key: string]: { start: string; end: string; enabled: boolean };
+  }>({
+    monday: { start: '09:00', end: '18:00', enabled: false },
+    tuesday: { start: '09:00', end: '18:00', enabled: false },
+    wednesday: { start: '09:00', end: '18:00', enabled: false },
+    thursday: { start: '09:00', end: '18:00', enabled: false },
+    friday: { start: '09:00', end: '18:00', enabled: false },
+    saturday: { start: '10:00', end: '14:00', enabled: false },
+    sunday: { start: '10:00', end: '14:00', enabled: false },
+  });
+
+  // Offline work schedule - for offline/home consultations
+  const [offlineWorkSchedule, setOfflineWorkSchedule] = useState<{
+    [key: string]: { start: string; end: string; enabled: boolean };
+  }>({
+    monday: { start: '09:00', end: '18:00', enabled: false },
+    tuesday: { start: '09:00', end: '18:00', enabled: false },
+    wednesday: { start: '09:00', end: '18:00', enabled: false },
+    thursday: { start: '09:00', end: '18:00', enabled: false },
+    friday: { start: '09:00', end: '18:00', enabled: false },
+    saturday: { start: '10:00', end: '14:00', enabled: false },
+    sunday: { start: '10:00', end: '14:00', enabled: false },
+  });
+
   // Separate state for specializations to avoid re-rendering entire form on each keystroke
   const [specializations, setSpecializations] = useState<string[]>(['']);
+
+  // Schedule type switcher state - 'online' or 'offline'
+  const [scheduleType, setScheduleType] = useState<'online' | 'offline'>('online');
 
   // Days of the week
   const daysOfWeek = [
@@ -457,6 +502,103 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       }
     }));
   }, []);
+
+  // Toggle day selection for online schedule
+  const toggleOnlineDay = useCallback((day: string) => {
+    setOnlineWorkSchedule(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        enabled: !prev[day].enabled,
+      }
+    }));
+  }, []);
+
+  // Update time for online schedule
+  const updateOnlineDayTime = useCallback((day: string, field: 'start' | 'end', value: string) => {
+    setOnlineWorkSchedule(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        [field]: value,
+      }
+    }));
+  }, []);
+
+  // Toggle day selection for offline schedule
+  const toggleOfflineDay = useCallback((day: string) => {
+    setOfflineWorkSchedule(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        enabled: !prev[day].enabled,
+      }
+    }));
+  }, []);
+
+  // Update time for offline schedule
+  const updateOfflineDayTime = useCallback((day: string, field: 'start' | 'end', value: string) => {
+    setOfflineWorkSchedule(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        [field]: value,
+      }
+    }));
+  }, []);
+
+  // Helper function to check if two time ranges overlap
+  const timeRangesOverlap = useCallback((start1: string, end1: string, start2: string, end2: string): boolean => {
+    // Convert time strings to minutes for easier comparison
+    const timeToMinutes = (time: string): number => {
+      const [hours, minutes] = time.split(':').map(Number);
+      return hours * 60 + minutes;
+    };
+
+    const start1Minutes = timeToMinutes(start1);
+    const end1Minutes = timeToMinutes(end1);
+    const start2Minutes = timeToMinutes(start2);
+    const end2Minutes = timeToMinutes(end2);
+
+    // Handle case where end time is past midnight (e.g., 22:00 - 02:00)
+    const adjustedEnd1 = end1Minutes < start1Minutes ? end1Minutes + 1440 : end1Minutes;
+    const adjustedEnd2 = end2Minutes < start2Minutes ? end2Minutes + 1440 : end2Minutes;
+    const adjustedStart1 = start1Minutes;
+    const adjustedStart2 = start2Minutes;
+
+    // Check for overlap: ranges overlap if one starts before the other ends
+    return (adjustedStart1 < adjustedEnd2) && (adjustedStart2 < adjustedEnd1);
+  }, []);
+
+  // Function to check for schedule conflicts on a specific day
+  const getScheduleConflict = useCallback((day: string, scheduleType: 'online' | 'offline'): boolean => {
+    const onlineSchedule = onlineWorkSchedule[day];
+    const offlineSchedule = offlineWorkSchedule[day];
+
+    // Check if both schedules are enabled for this day
+    if (onlineSchedule?.enabled && offlineSchedule?.enabled) {
+      // Check if time ranges overlap
+      return timeRangesOverlap(
+        onlineSchedule.start,
+        onlineSchedule.end,
+        offlineSchedule.start,
+        offlineSchedule.end
+      );
+    }
+
+    return false;
+  }, [onlineWorkSchedule, offlineWorkSchedule, timeRangesOverlap]);
+
+  // Get all days with conflicts
+  const getConflictDays = useCallback((): string[] => {
+    const conflicts: string[] = [];
+    daysOfWeek.forEach(day => {
+      if (getScheduleConflict(day.value, 'online')) {
+        conflicts.push(day.value);
+      }
+    });
+    return conflicts;
+  }, [daysOfWeek, getScheduleConflict]);
 
   // Helper functions for managing specializations array - using useCallback to prevent re-renders
   const handleSpecializationChange = useCallback((index: number, value: string) => {
@@ -614,6 +756,14 @@ export default function StaffManagement({ user }: StaffManagementProps) {
   const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
+
+    // Check for schedule conflicts
+    const conflictDays = getConflictDays();
+    if (conflictDays.length > 0) {
+      toast.error(`⛔ Невозможно сохранить! Обнаружены конфликты расписания на ${conflictDays.length} ${conflictDays.length === 1 ? 'день' : 'дней'}. Пожалуйста, исправьте конфликты времени перед сохранением.`);
+      return;
+    }
+
     setAddLoading(true);
 
     try {
@@ -635,7 +785,9 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         offline_consultation_price: formData.offline_consultation_price ? Number(formData.offline_consultation_price) : null,
         online_consultation_price: formData.online_consultation_price ? Number(formData.online_consultation_price) : null,
         preferred_consultation_duration: formData.preferred_consultation_duration ? Number(formData.preferred_consultation_duration) : null,
-        work_schedule: workSchedule,
+        work_schedule: workSchedule,  // Keep for backward compatibility
+        online_work_schedule: onlineWorkSchedule,
+        offline_work_schedule: offlineWorkSchedule,
       };
 
       const response = await api.post("/staff/", payload);
@@ -667,6 +819,24 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       });
       setSpecializations(['']);
       setWorkSchedule({
+        monday: { start: '09:00', end: '18:00', enabled: false },
+        tuesday: { start: '09:00', end: '18:00', enabled: false },
+        wednesday: { start: '09:00', end: '18:00', enabled: false },
+        thursday: { start: '09:00', end: '18:00', enabled: false },
+        friday: { start: '09:00', end: '18:00', enabled: false },
+        saturday: { start: '10:00', end: '14:00', enabled: false },
+        sunday: { start: '10:00', end: '14:00', enabled: false },
+      });
+      setOnlineWorkSchedule({
+        monday: { start: '09:00', end: '18:00', enabled: false },
+        tuesday: { start: '09:00', end: '18:00', enabled: false },
+        wednesday: { start: '09:00', end: '18:00', enabled: false },
+        thursday: { start: '09:00', end: '18:00', enabled: false },
+        friday: { start: '09:00', end: '18:00', enabled: false },
+        saturday: { start: '10:00', end: '14:00', enabled: false },
+        sunday: { start: '10:00', end: '14:00', enabled: false },
+      });
+      setOfflineWorkSchedule({
         monday: { start: '09:00', end: '18:00', enabled: false },
         tuesday: { start: '09:00', end: '18:00', enabled: false },
         wednesday: { start: '09:00', end: '18:00', enabled: false },
@@ -747,6 +917,24 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       saturday: { start: '10:00', end: '14:00', enabled: false },
       sunday: { start: '10:00', end: '14:00', enabled: false },
     });
+    setOnlineWorkSchedule(member.online_work_schedule || member.work_schedule || {
+      monday: { start: '09:00', end: '18:00', enabled: false },
+      tuesday: { start: '09:00', end: '18:00', enabled: false },
+      wednesday: { start: '09:00', end: '18:00', enabled: false },
+      thursday: { start: '09:00', end: '18:00', enabled: false },
+      friday: { start: '09:00', end: '18:00', enabled: false },
+      saturday: { start: '10:00', end: '14:00', enabled: false },
+      sunday: { start: '10:00', end: '14:00', enabled: false },
+    });
+    setOfflineWorkSchedule(member.offline_work_schedule || {
+      monday: { start: '09:00', end: '18:00', enabled: false },
+      tuesday: { start: '09:00', end: '18:00', enabled: false },
+      wednesday: { start: '09:00', end: '18:00', enabled: false },
+      thursday: { start: '09:00', end: '18:00', enabled: false },
+      friday: { start: '09:00', end: '18:00', enabled: false },
+      saturday: { start: '10:00', end: '14:00', enabled: false },
+      sunday: { start: '10:00', end: '14:00', enabled: false },
+    });
     setShowEditModal(true);
   };
 
@@ -754,6 +942,13 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     e.preventDefault();
     if (!editingMember) return;
     if (!validateForm()) return;
+
+    // Check for schedule conflicts
+    const conflictDays = getConflictDays();
+    if (conflictDays.length > 0) {
+      toast.error(`⛔ Невозможно сохранить! Обнаружены конфликты расписания на ${conflictDays.length} ${conflictDays.length === 1 ? 'день' : 'дней'}. Пожалуйста, исправьте конфликты времени перед сохранением.`);
+      return;
+    }
 
     setEditLoading(true);
 
@@ -781,7 +976,9 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         offline_consultation_price: formData.offline_consultation_price ? Number(formData.offline_consultation_price) : null,
         online_consultation_price: formData.online_consultation_price ? Number(formData.online_consultation_price) : null,
         preferred_consultation_duration: formData.preferred_consultation_duration ? Number(formData.preferred_consultation_duration) : null,
-        work_schedule: workSchedule,
+        work_schedule: workSchedule,  // Keep for backward compatibility
+        online_work_schedule: onlineWorkSchedule,
+        offline_work_schedule: offlineWorkSchedule,
       };
 
       // Only include password if it was changed
@@ -1577,77 +1774,268 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                     </p>
                   </div>
 
-                  {/* Work Schedule - Days and Times */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-3">
-                      График работы (дни и время приема)
-                    </label>
-                    <div className="space-y-3">
-                      {daysOfWeek.map((day) => (
-                        <div
-                          key={day.value}
-                          className={`rounded-xl border-2 p-4 transition-all ${
-                            workSchedule[day.value]?.enabled
-                              ? 'border-blue-500 bg-blue-50'
-                              : 'border-gray-200 bg-white'
-                          }`}
-                        >
-                          <div className="flex items-center gap-4">
-                            {/* Day Toggle */}
-                            <button
-                              type="button"
-                              onClick={() => toggleDay(day.value)}
-                              className={`flex items-center justify-center w-12 h-12 rounded-xl border-2 transition-all font-semibold text-sm ${
-                                workSchedule[day.value]?.enabled
-                                  ? 'border-blue-500 bg-blue-500 text-white'
-                                  : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
-                              }`}
-                              title={day.labelRu}
-                            >
-                              {day.labelShort}
-                            </button>
-
-                            {/* Day Name */}
-                            <div className="flex-1">
-                              <p className="font-semibold text-gray-700">{day.labelRu}</p>
-                            </div>
-
-                            {/* Time Inputs (only shown when enabled) */}
-                            {workSchedule[day.value]?.enabled && (
-                              <div className="flex items-center gap-3">
-                                <div>
-                                  <label className="block text-xs text-gray-600 mb-1">С</label>
-                                  <input
-                                    type="time"
-                                    value={workSchedule[day.value]?.start || '09:00'}
-                                    onChange={(e) => updateDayTime(day.value, 'start', e.target.value)}
-                                    className="w-32 px-3 py-2 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:outline-none transition-colors text-sm"
-                                  />
-                                </div>
-                                <div className="text-gray-400 pt-5">—</div>
-                                <div>
-                                  <label className="block text-xs text-gray-600 mb-1">До</label>
-                                  <input
-                                    type="time"
-                                    value={workSchedule[day.value]?.end || '18:00'}
-                                    onChange={(e) => updateDayTime(day.value, 'end', e.target.value)}
-                                    className="w-32 px-3 py-2 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:outline-none transition-colors text-sm"
-                                  />
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                  {/* Work Schedule with Tabs */}
+                  <div className="border-2 border-gray-200 rounded-2xl overflow-hidden">
+                    {/* Tab Switcher */}
+                    <div className="flex bg-gray-50 border-b-2 border-gray-200">
+                      <button
+                        type="button"
+                        onClick={() => setScheduleType('online')}
+                        className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 font-semibold transition-all ${
+                          scheduleType === 'online'
+                            ? 'bg-blue-500 text-white border-b-4 border-blue-600'
+                            : 'text-gray-600 hover:bg-gray-100'
+                        }`}
+                      >
+                        <Video className="w-5 h-5" />
+                        <span>Онлайн консультации</span>
+                        {Object.values(onlineWorkSchedule).filter(d => d.enabled).length > 0 && (
+                          <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+                            scheduleType === 'online' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'
+                          }`}>
+                            {Object.values(onlineWorkSchedule).filter(d => d.enabled).length}
+                          </span>
+                        )}
+                        {getConflictDays().length > 0 && (
+                          <span className="ml-1 px-2 py-0.5 rounded-full text-xs bg-red-500 text-white font-bold">
+                            ⚠ {getConflictDays().length}
+                          </span>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setScheduleType('offline')}
+                        className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 font-semibold transition-all ${
+                          scheduleType === 'offline'
+                            ? 'bg-purple-500 text-white border-b-4 border-purple-600'
+                            : 'text-gray-600 hover:bg-gray-100'
+                        }`}
+                      >
+                        <Home className="w-5 h-5" />
+                        <span>Оффлайн консультации</span>
+                        {Object.values(offlineWorkSchedule).filter(d => d.enabled).length > 0 && (
+                          <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+                            scheduleType === 'offline' ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-700'
+                          }`}>
+                            {Object.values(offlineWorkSchedule).filter(d => d.enabled).length}
+                          </span>
+                        )}
+                        {getConflictDays().length > 0 && (
+                          <span className="ml-1 px-2 py-0.5 rounded-full text-xs bg-red-500 text-white font-bold">
+                            ⚠ {getConflictDays().length}
+                          </span>
+                        )}
+                      </button>
                     </div>
-                    <p className="text-xs text-gray-500 mt-3">
-                      💡 Нажмите на день недели, чтобы включить/выключить. Укажите время работы для каждого активного дня.
-                    </p>
-                    {Object.values(workSchedule).filter(d => d.enabled).length > 0 && (
-                      <p className="text-xs text-blue-600 mt-2 font-medium">
-                        ✓ Рабочих дней: {Object.values(workSchedule).filter(d => d.enabled).length}
-                      </p>
-                    )}
+
+                    {/* Schedule Content */}
+                    <div className={`p-5 ${scheduleType === 'online' ? 'bg-blue-50/30' : 'bg-purple-50/30'}`}>
+                      {scheduleType === 'online' ? (
+                        /* Online Schedule */
+                        <>
+                          <div className="mb-4">
+                            <p className="text-sm text-blue-700 font-medium">
+                              Настройте расписание для онлайн приемов
+                            </p>
+                          </div>
+                          <div className="space-y-3">
+                            {daysOfWeek.map((day) => {
+                              const hasConflict = getScheduleConflict(day.value, 'online');
+                              const offlineEnabled = offlineWorkSchedule[day.value]?.enabled;
+                              const offlineTime = offlineEnabled ? `${offlineWorkSchedule[day.value]?.start} - ${offlineWorkSchedule[day.value]?.end}` : '';
+
+                              return (
+                                <div
+                                  key={day.value}
+                                  className={`rounded-xl border-2 p-4 transition-all ${
+                                    hasConflict
+                                      ? 'border-red-500 bg-red-50'
+                                      : onlineWorkSchedule[day.value]?.enabled
+                                      ? 'border-blue-500 bg-blue-50'
+                                      : 'border-gray-200 bg-white'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-4">
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleOnlineDay(day.value)}
+                                      className={`flex items-center justify-center w-12 h-12 rounded-xl border-2 transition-all font-semibold text-sm ${
+                                        hasConflict
+                                          ? 'border-red-500 bg-red-500 text-white'
+                                          : onlineWorkSchedule[day.value]?.enabled
+                                          ? 'border-blue-500 bg-blue-500 text-white'
+                                          : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
+                                      }`}
+                                      title={day.labelRu}
+                                    >
+                                      {day.labelShort}
+                                    </button>
+                                    <div className="flex-1">
+                                      <p className="font-semibold text-gray-700">{day.labelRu}</p>
+                                      {offlineEnabled && !onlineWorkSchedule[day.value]?.enabled && (
+                                        <p className="text-xs text-purple-600 mt-1">
+                                          🏠 Оффлайн: {offlineTime}
+                                        </p>
+                                      )}
+                                    </div>
+                                    {onlineWorkSchedule[day.value]?.enabled && (
+                                      <div className="flex items-center gap-3">
+                                        <div>
+                                          <label className="block text-xs text-gray-600 mb-1">С</label>
+                                          <input
+                                            type="time"
+                                            value={onlineWorkSchedule[day.value]?.start || '09:00'}
+                                            onChange={(e) => updateOnlineDayTime(day.value, 'start', e.target.value)}
+                                            className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
+                                              hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
+                                            }`}
+                                          />
+                                        </div>
+                                        <div className="text-gray-400 pt-5">—</div>
+                                        <div>
+                                          <label className="block text-xs text-gray-600 mb-1">До</label>
+                                          <input
+                                            type="time"
+                                            value={onlineWorkSchedule[day.value]?.end || '18:00'}
+                                            onChange={(e) => updateOnlineDayTime(day.value, 'end', e.target.value)}
+                                            className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
+                                              hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
+                                            }`}
+                                          />
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                  {hasConflict && (
+                                    <div className="mt-3 p-3 bg-red-100 border-l-4 border-red-500 rounded">
+                                      <p className="text-xs text-red-800 font-semibold">
+                                        ⚠️ Конфликт времени! Оффлайн расписание: {offlineTime}
+                                      </p>
+                                      <p className="text-xs text-red-700 mt-1">
+                                        Измените время или отключите один из графиков
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </>
+                      ) : (
+                        /* Offline Schedule */
+                        <>
+                          <div className="mb-4">
+                            <p className="text-sm text-purple-700 font-medium">
+                              Настройте расписание для оффлайн приемов
+                            </p>
+                          </div>
+                          <div className="space-y-3">
+                            {daysOfWeek.map((day) => {
+                              const hasConflict = getScheduleConflict(day.value, 'offline');
+                              const onlineEnabled = onlineWorkSchedule[day.value]?.enabled;
+                              const onlineTime = onlineEnabled ? `${onlineWorkSchedule[day.value]?.start} - ${onlineWorkSchedule[day.value]?.end}` : '';
+
+                              return (
+                                <div
+                                  key={day.value}
+                                  className={`rounded-xl border-2 p-4 transition-all ${
+                                    hasConflict
+                                      ? 'border-red-500 bg-red-50'
+                                      : offlineWorkSchedule[day.value]?.enabled
+                                      ? 'border-purple-500 bg-purple-50'
+                                      : 'border-gray-200 bg-white'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-4">
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleOfflineDay(day.value)}
+                                      className={`flex items-center justify-center w-12 h-12 rounded-xl border-2 transition-all font-semibold text-sm ${
+                                        hasConflict
+                                          ? 'border-red-500 bg-red-500 text-white'
+                                          : offlineWorkSchedule[day.value]?.enabled
+                                          ? 'border-purple-500 bg-purple-500 text-white'
+                                          : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
+                                      }`}
+                                      title={day.labelRu}
+                                    >
+                                      {day.labelShort}
+                                    </button>
+                                    <div className="flex-1">
+                                      <p className="font-semibold text-gray-700">{day.labelRu}</p>
+                                      {onlineEnabled && !offlineWorkSchedule[day.value]?.enabled && (
+                                        <p className="text-xs text-blue-600 mt-1">
+                                          📱 Онлайн: {onlineTime}
+                                        </p>
+                                      )}
+                                    </div>
+                                    {offlineWorkSchedule[day.value]?.enabled && (
+                                      <div className="flex items-center gap-3">
+                                        <div>
+                                          <label className="block text-xs text-gray-600 mb-1">С</label>
+                                          <input
+                                            type="time"
+                                            value={offlineWorkSchedule[day.value]?.start || '09:00'}
+                                            onChange={(e) => updateOfflineDayTime(day.value, 'start', e.target.value)}
+                                            className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
+                                              hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-purple-500'
+                                            }`}
+                                          />
+                                        </div>
+                                        <div className="text-gray-400 pt-5">—</div>
+                                        <div>
+                                          <label className="block text-xs text-gray-600 mb-1">До</label>
+                                          <input
+                                            type="time"
+                                            value={offlineWorkSchedule[day.value]?.end || '18:00'}
+                                            onChange={(e) => updateOfflineDayTime(day.value, 'end', e.target.value)}
+                                            className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
+                                              hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-purple-500'
+                                            }`}
+                                          />
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                  {hasConflict && (
+                                    <div className="mt-3 p-3 bg-red-100 border-l-4 border-red-500 rounded">
+                                      <p className="text-xs text-red-800 font-semibold">
+                                        ⚠️ Конфликт времени! Онлайн расписание: {onlineTime}
+                                      </p>
+                                      <p className="text-xs text-red-700 mt-1">
+                                        Измените время или отключите один из графиков
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Warning */}
+                    <div className={`border-t-2 p-4 ${
+                      getConflictDays().length > 0
+                        ? 'bg-red-50 border-red-300'
+                        : 'bg-yellow-50 border-yellow-200'
+                    }`}>
+                      {getConflictDays().length > 0 ? (
+                        <div>
+                          <p className="text-sm text-red-800 font-bold mb-2">
+                            ⛔ Обнаружены конфликты расписания! ({getConflictDays().length} дней)
+                          </p>
+                          <p className="text-xs text-red-700">
+                            Пожалуйста, исправьте конфликты времени перед сохранением. Доктор не может проводить онлайн и оффлайн консультации одновременно.
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-yellow-800 font-medium">
+                          ⚠️ <strong>Важно:</strong> Если доктор занят онлайн консультацией, он не сможет проводить оффлайн в это же время (и наоборот).
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   {/* Specialization - Multiple inputs with + and - buttons */}
@@ -2105,77 +2493,268 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                     </p>
                   </div>
 
-                  {/* Work Schedule - Days and Times */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-3">
-                      График работы (дни и время приема)
-                    </label>
-                    <div className="space-y-3">
-                      {daysOfWeek.map((day) => (
-                        <div
-                          key={day.value}
-                          className={`rounded-xl border-2 p-4 transition-all ${
-                            workSchedule[day.value]?.enabled
-                              ? 'border-blue-500 bg-blue-50'
-                              : 'border-gray-200 bg-white'
-                          }`}
-                        >
-                          <div className="flex items-center gap-4">
-                            {/* Day Toggle */}
-                            <button
-                              type="button"
-                              onClick={() => toggleDay(day.value)}
-                              className={`flex items-center justify-center w-12 h-12 rounded-xl border-2 transition-all font-semibold text-sm ${
-                                workSchedule[day.value]?.enabled
-                                  ? 'border-blue-500 bg-blue-500 text-white'
-                                  : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
-                              }`}
-                              title={day.labelRu}
-                            >
-                              {day.labelShort}
-                            </button>
-
-                            {/* Day Name */}
-                            <div className="flex-1">
-                              <p className="font-semibold text-gray-700">{day.labelRu}</p>
-                            </div>
-
-                            {/* Time Inputs (only shown when enabled) */}
-                            {workSchedule[day.value]?.enabled && (
-                              <div className="flex items-center gap-3">
-                                <div>
-                                  <label className="block text-xs text-gray-600 mb-1">С</label>
-                                  <input
-                                    type="time"
-                                    value={workSchedule[day.value]?.start || '09:00'}
-                                    onChange={(e) => updateDayTime(day.value, 'start', e.target.value)}
-                                    className="w-32 px-3 py-2 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:outline-none transition-colors text-sm"
-                                  />
-                                </div>
-                                <div className="text-gray-400 pt-5">—</div>
-                                <div>
-                                  <label className="block text-xs text-gray-600 mb-1">До</label>
-                                  <input
-                                    type="time"
-                                    value={workSchedule[day.value]?.end || '18:00'}
-                                    onChange={(e) => updateDayTime(day.value, 'end', e.target.value)}
-                                    className="w-32 px-3 py-2 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:outline-none transition-colors text-sm"
-                                  />
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                  {/* Work Schedule with Tabs */}
+                  <div className="border-2 border-gray-200 rounded-2xl overflow-hidden">
+                    {/* Tab Switcher */}
+                    <div className="flex bg-gray-50 border-b-2 border-gray-200">
+                      <button
+                        type="button"
+                        onClick={() => setScheduleType('online')}
+                        className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 font-semibold transition-all ${
+                          scheduleType === 'online'
+                            ? 'bg-blue-500 text-white border-b-4 border-blue-600'
+                            : 'text-gray-600 hover:bg-gray-100'
+                        }`}
+                      >
+                        <Video className="w-5 h-5" />
+                        <span>Онлайн консультации</span>
+                        {Object.values(onlineWorkSchedule).filter(d => d.enabled).length > 0 && (
+                          <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+                            scheduleType === 'online' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'
+                          }`}>
+                            {Object.values(onlineWorkSchedule).filter(d => d.enabled).length}
+                          </span>
+                        )}
+                        {getConflictDays().length > 0 && (
+                          <span className="ml-1 px-2 py-0.5 rounded-full text-xs bg-red-500 text-white font-bold">
+                            ⚠ {getConflictDays().length}
+                          </span>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setScheduleType('offline')}
+                        className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 font-semibold transition-all ${
+                          scheduleType === 'offline'
+                            ? 'bg-purple-500 text-white border-b-4 border-purple-600'
+                            : 'text-gray-600 hover:bg-gray-100'
+                        }`}
+                      >
+                        <Home className="w-5 h-5" />
+                        <span>Оффлайн консультации</span>
+                        {Object.values(offlineWorkSchedule).filter(d => d.enabled).length > 0 && (
+                          <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+                            scheduleType === 'offline' ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-700'
+                          }`}>
+                            {Object.values(offlineWorkSchedule).filter(d => d.enabled).length}
+                          </span>
+                        )}
+                        {getConflictDays().length > 0 && (
+                          <span className="ml-1 px-2 py-0.5 rounded-full text-xs bg-red-500 text-white font-bold">
+                            ⚠ {getConflictDays().length}
+                          </span>
+                        )}
+                      </button>
                     </div>
-                    <p className="text-xs text-gray-500 mt-3">
-                      💡 Нажмите на день недели, чтобы включить/выключить. Укажите время работы для каждого активного дня.
-                    </p>
-                    {Object.values(workSchedule).filter(d => d.enabled).length > 0 && (
-                      <p className="text-xs text-blue-600 mt-2 font-medium">
-                        ✓ Рабочих дней: {Object.values(workSchedule).filter(d => d.enabled).length}
-                      </p>
-                    )}
+
+                    {/* Schedule Content */}
+                    <div className={`p-5 ${scheduleType === 'online' ? 'bg-blue-50/30' : 'bg-purple-50/30'}`}>
+                      {scheduleType === 'online' ? (
+                        /* Online Schedule */
+                        <>
+                          <div className="mb-4">
+                            <p className="text-sm text-blue-700 font-medium">
+                              Настройте расписание для онлайн приемов
+                            </p>
+                          </div>
+                          <div className="space-y-3">
+                            {daysOfWeek.map((day) => {
+                              const hasConflict = getScheduleConflict(day.value, 'online');
+                              const offlineEnabled = offlineWorkSchedule[day.value]?.enabled;
+                              const offlineTime = offlineEnabled ? `${offlineWorkSchedule[day.value]?.start} - ${offlineWorkSchedule[day.value]?.end}` : '';
+
+                              return (
+                                <div
+                                  key={day.value}
+                                  className={`rounded-xl border-2 p-4 transition-all ${
+                                    hasConflict
+                                      ? 'border-red-500 bg-red-50'
+                                      : onlineWorkSchedule[day.value]?.enabled
+                                      ? 'border-blue-500 bg-blue-50'
+                                      : 'border-gray-200 bg-white'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-4">
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleOnlineDay(day.value)}
+                                      className={`flex items-center justify-center w-12 h-12 rounded-xl border-2 transition-all font-semibold text-sm ${
+                                        hasConflict
+                                          ? 'border-red-500 bg-red-500 text-white'
+                                          : onlineWorkSchedule[day.value]?.enabled
+                                          ? 'border-blue-500 bg-blue-500 text-white'
+                                          : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
+                                      }`}
+                                      title={day.labelRu}
+                                    >
+                                      {day.labelShort}
+                                    </button>
+                                    <div className="flex-1">
+                                      <p className="font-semibold text-gray-700">{day.labelRu}</p>
+                                      {offlineEnabled && !onlineWorkSchedule[day.value]?.enabled && (
+                                        <p className="text-xs text-purple-600 mt-1">
+                                          🏠 Оффлайн: {offlineTime}
+                                        </p>
+                                      )}
+                                    </div>
+                                    {onlineWorkSchedule[day.value]?.enabled && (
+                                      <div className="flex items-center gap-3">
+                                        <div>
+                                          <label className="block text-xs text-gray-600 mb-1">С</label>
+                                          <input
+                                            type="time"
+                                            value={onlineWorkSchedule[day.value]?.start || '09:00'}
+                                            onChange={(e) => updateOnlineDayTime(day.value, 'start', e.target.value)}
+                                            className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
+                                              hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
+                                            }`}
+                                          />
+                                        </div>
+                                        <div className="text-gray-400 pt-5">—</div>
+                                        <div>
+                                          <label className="block text-xs text-gray-600 mb-1">До</label>
+                                          <input
+                                            type="time"
+                                            value={onlineWorkSchedule[day.value]?.end || '18:00'}
+                                            onChange={(e) => updateOnlineDayTime(day.value, 'end', e.target.value)}
+                                            className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
+                                              hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
+                                            }`}
+                                          />
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                  {hasConflict && (
+                                    <div className="mt-3 p-3 bg-red-100 border-l-4 border-red-500 rounded">
+                                      <p className="text-xs text-red-800 font-semibold">
+                                        ⚠️ Конфликт времени! Оффлайн расписание: {offlineTime}
+                                      </p>
+                                      <p className="text-xs text-red-700 mt-1">
+                                        Измените время или отключите один из графиков
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </>
+                      ) : (
+                        /* Offline Schedule */
+                        <>
+                          <div className="mb-4">
+                            <p className="text-sm text-purple-700 font-medium">
+                              Настройте расписание для оффлайн приемов
+                            </p>
+                          </div>
+                          <div className="space-y-3">
+                            {daysOfWeek.map((day) => {
+                              const hasConflict = getScheduleConflict(day.value, 'offline');
+                              const onlineEnabled = onlineWorkSchedule[day.value]?.enabled;
+                              const onlineTime = onlineEnabled ? `${onlineWorkSchedule[day.value]?.start} - ${onlineWorkSchedule[day.value]?.end}` : '';
+
+                              return (
+                                <div
+                                  key={day.value}
+                                  className={`rounded-xl border-2 p-4 transition-all ${
+                                    hasConflict
+                                      ? 'border-red-500 bg-red-50'
+                                      : offlineWorkSchedule[day.value]?.enabled
+                                      ? 'border-purple-500 bg-purple-50'
+                                      : 'border-gray-200 bg-white'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-4">
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleOfflineDay(day.value)}
+                                      className={`flex items-center justify-center w-12 h-12 rounded-xl border-2 transition-all font-semibold text-sm ${
+                                        hasConflict
+                                          ? 'border-red-500 bg-red-500 text-white'
+                                          : offlineWorkSchedule[day.value]?.enabled
+                                          ? 'border-purple-500 bg-purple-500 text-white'
+                                          : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
+                                      }`}
+                                      title={day.labelRu}
+                                    >
+                                      {day.labelShort}
+                                    </button>
+                                    <div className="flex-1">
+                                      <p className="font-semibold text-gray-700">{day.labelRu}</p>
+                                      {onlineEnabled && !offlineWorkSchedule[day.value]?.enabled && (
+                                        <p className="text-xs text-blue-600 mt-1">
+                                          📱 Онлайн: {onlineTime}
+                                        </p>
+                                      )}
+                                    </div>
+                                    {offlineWorkSchedule[day.value]?.enabled && (
+                                      <div className="flex items-center gap-3">
+                                        <div>
+                                          <label className="block text-xs text-gray-600 mb-1">С</label>
+                                          <input
+                                            type="time"
+                                            value={offlineWorkSchedule[day.value]?.start || '09:00'}
+                                            onChange={(e) => updateOfflineDayTime(day.value, 'start', e.target.value)}
+                                            className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
+                                              hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-purple-500'
+                                            }`}
+                                          />
+                                        </div>
+                                        <div className="text-gray-400 pt-5">—</div>
+                                        <div>
+                                          <label className="block text-xs text-gray-600 mb-1">До</label>
+                                          <input
+                                            type="time"
+                                            value={offlineWorkSchedule[day.value]?.end || '18:00'}
+                                            onChange={(e) => updateOfflineDayTime(day.value, 'end', e.target.value)}
+                                            className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
+                                              hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-purple-500'
+                                            }`}
+                                          />
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                  {hasConflict && (
+                                    <div className="mt-3 p-3 bg-red-100 border-l-4 border-red-500 rounded">
+                                      <p className="text-xs text-red-800 font-semibold">
+                                        ⚠️ Конфликт времени! Онлайн расписание: {onlineTime}
+                                      </p>
+                                      <p className="text-xs text-red-700 mt-1">
+                                        Измените время или отключите один из графиков
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Warning */}
+                    <div className={`border-t-2 p-4 ${
+                      getConflictDays().length > 0
+                        ? 'bg-red-50 border-red-300'
+                        : 'bg-yellow-50 border-yellow-200'
+                    }`}>
+                      {getConflictDays().length > 0 ? (
+                        <div>
+                          <p className="text-sm text-red-800 font-bold mb-2">
+                            ⛔ Обнаружены конфликты расписания! ({getConflictDays().length} дней)
+                          </p>
+                          <p className="text-xs text-red-700">
+                            Пожалуйста, исправьте конфликты времени перед сохранением. Доктор не может проводить онлайн и оффлайн консультации одновременно.
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-yellow-800 font-medium">
+                          ⚠️ <strong>Важно:</strong> Если доктор занят онлайн консультацией, он не сможет проводить оффлайн в это же время (и наоборот).
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   {/* Specialization - Multiple inputs with + and - buttons */}

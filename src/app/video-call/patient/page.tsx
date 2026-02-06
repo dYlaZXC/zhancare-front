@@ -75,7 +75,7 @@ const PatientVideoCallPage: React.FC = () => {
   }, []);
 
   const handleEndCall = () => {
-    router.push("/video");
+    router.push("/patient/video");
   };
 
   // Loading or error states
