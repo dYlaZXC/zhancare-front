@@ -32,7 +32,8 @@ import {
   Award,
   RotateCcw,
   Video,
-  Home
+  Home,
+  ChevronDown
 } from "lucide-react";
 
 import bnClinicLogo from "@/assets/clinics_logos/bn-clinica.png";
@@ -50,7 +51,7 @@ interface StaffMember {
   birth_date?: string | null;
   address?: string | null;
   city?: string | null;
-  language?: 'kz' | 'ru' | 'en' | 'other' | null;
+  language?: string[] | null;  // Changed to array to support multiple languages
   years_of_experience?: number | null;
   is_active: boolean;
   is_deleted?: boolean;
@@ -415,7 +416,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     birth_date: '',
     address: '',
     city: '',
-    language: 'ru' as 'kz' | 'ru' | 'en' | 'other',
+    language: ['ru'] as string[],  // Changed to array
     years_of_experience: '',
     offline_consultation_price: '',
     online_consultation_price: '',
@@ -424,6 +425,8 @@ export default function StaffManagement({ user }: StaffManagementProps) {
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [validationKey, setValidationKey] = useState(0);
+  const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
+  const languageDropdownRef = useRef<HTMLDivElement>(null);
 
   // Work schedule state - each day can have its own time range
   const [workSchedule, setWorkSchedule] = useState<{
@@ -516,13 +519,53 @@ export default function StaffManagement({ user }: StaffManagementProps) {
 
   // Update time for online schedule
   const updateOnlineDayTime = useCallback((day: string, field: 'start' | 'end', value: string) => {
-    setOnlineWorkSchedule(prev => ({
-      ...prev,
-      [day]: {
-        ...prev[day],
-        [field]: value,
+    setOnlineWorkSchedule(prev => {
+      const currentDay = prev[day];
+      let newStart = field === 'start' ? value : currentDay.start;
+      let newEnd = field === 'end' ? value : currentDay.end;
+
+      // Convert times to minutes for comparison
+      let startMinutes = parseInt(newStart.split(':')[0]) * 60 + parseInt(newStart.split(':')[1]);
+      let endMinutes = parseInt(newEnd.split(':')[0]) * 60 + parseInt(newEnd.split(':')[1]);
+
+      // Auto-adjust if time range is invalid (excluding realistic overnight shifts)
+      // Allow overnight shifts only if end time is between 00:00 and 06:00
+      if (endMinutes < startMinutes && endMinutes > 360) {
+        if (field === 'end') {
+          // When changing end time, adjust start time backward by 1 hour
+          const adjustedStartMinutes = endMinutes - 60;
+          if (adjustedStartMinutes >= 0) {
+            const adjustedHour = Math.floor(adjustedStartMinutes / 60);
+            const adjustedMinute = adjustedStartMinutes % 60;
+            newStart = `${String(adjustedHour).padStart(2, '0')}:${String(adjustedMinute).padStart(2, '0')}`;
+            toast.info(`⏰ Время начала автоматически изменено на ${newStart}`);
+          } else {
+            // Can't go below 00:00, so adjust end time forward instead
+            const adjustedEndMinutes = startMinutes + 60;
+            const adjustedHour = Math.floor(adjustedEndMinutes / 60) % 24;
+            const adjustedMinute = adjustedEndMinutes % 60;
+            newEnd = `${String(adjustedHour).padStart(2, '0')}:${String(adjustedMinute).padStart(2, '0')}`;
+            toast.info(`⏰ Время окончания автоматически изменено на ${newEnd}`);
+          }
+        } else {
+          // When changing start time, adjust end time forward by 1 hour
+          const adjustedEndMinutes = startMinutes + 60;
+          const adjustedHour = Math.floor(adjustedEndMinutes / 60) % 24;
+          const adjustedMinute = adjustedEndMinutes % 60;
+          newEnd = `${String(adjustedHour).padStart(2, '0')}:${String(adjustedMinute).padStart(2, '0')}`;
+          toast.info(`⏰ Время окончания автоматически изменено на ${newEnd}`);
+        }
       }
-    }));
+
+      return {
+        ...prev,
+        [day]: {
+          ...prev[day],
+          start: newStart,
+          end: newEnd,
+        }
+      };
+    });
   }, []);
 
   // Toggle day selection for offline schedule
@@ -538,13 +581,53 @@ export default function StaffManagement({ user }: StaffManagementProps) {
 
   // Update time for offline schedule
   const updateOfflineDayTime = useCallback((day: string, field: 'start' | 'end', value: string) => {
-    setOfflineWorkSchedule(prev => ({
-      ...prev,
-      [day]: {
-        ...prev[day],
-        [field]: value,
+    setOfflineWorkSchedule(prev => {
+      const currentDay = prev[day];
+      let newStart = field === 'start' ? value : currentDay.start;
+      let newEnd = field === 'end' ? value : currentDay.end;
+
+      // Convert times to minutes for comparison
+      let startMinutes = parseInt(newStart.split(':')[0]) * 60 + parseInt(newStart.split(':')[1]);
+      let endMinutes = parseInt(newEnd.split(':')[0]) * 60 + parseInt(newEnd.split(':')[1]);
+
+      // Auto-adjust if time range is invalid (excluding realistic overnight shifts)
+      // Allow overnight shifts only if end time is between 00:00 and 06:00
+      if (endMinutes < startMinutes && endMinutes > 360) {
+        if (field === 'end') {
+          // When changing end time, adjust start time backward by 1 hour
+          const adjustedStartMinutes = endMinutes - 60;
+          if (adjustedStartMinutes >= 0) {
+            const adjustedHour = Math.floor(adjustedStartMinutes / 60);
+            const adjustedMinute = adjustedStartMinutes % 60;
+            newStart = `${String(adjustedHour).padStart(2, '0')}:${String(adjustedMinute).padStart(2, '0')}`;
+            toast.info(`⏰ Время начала автоматически изменено на ${newStart}`);
+          } else {
+            // Can't go below 00:00, so adjust end time forward instead
+            const adjustedEndMinutes = startMinutes + 60;
+            const adjustedHour = Math.floor(adjustedEndMinutes / 60) % 24;
+            const adjustedMinute = adjustedEndMinutes % 60;
+            newEnd = `${String(adjustedHour).padStart(2, '0')}:${String(adjustedMinute).padStart(2, '0')}`;
+            toast.info(`⏰ Время окончания автоматически изменено на ${newEnd}`);
+          }
+        } else {
+          // When changing start time, adjust end time forward by 1 hour
+          const adjustedEndMinutes = startMinutes + 60;
+          const adjustedHour = Math.floor(adjustedEndMinutes / 60) % 24;
+          const adjustedMinute = adjustedEndMinutes % 60;
+          newEnd = `${String(adjustedHour).padStart(2, '0')}:${String(adjustedMinute).padStart(2, '0')}`;
+          toast.info(`⏰ Время окончания автоматически изменено на ${newEnd}`);
+        }
       }
-    }));
+
+      return {
+        ...prev,
+        [day]: {
+          ...prev[day],
+          start: newStart,
+          end: newEnd,
+        }
+      };
+    });
   }, []);
 
   // Helper function to check if two time ranges overlap
@@ -735,6 +818,58 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     if (formErrors[field]) setFormErrors(prev => { const next = { ...prev }; delete next[field]; return next; });
   };
 
+  // Reset form to initial state
+  const resetForm = () => {
+    setFormData({
+      first_name: '',
+      last_name: '',
+      email: '',
+      phone: '',
+      password: '',
+      role: 'doctor',
+      clinic_id: '',
+      gender: '',
+      birth_date: '',
+      address: '',
+      city: '',
+      language: ['ru'],
+      years_of_experience: '',
+      offline_consultation_price: '',
+      online_consultation_price: '',
+      preferred_consultation_duration: '',
+    });
+    setSpecializations(['']);
+    setWorkSchedule({
+      monday: { start: '09:00', end: '18:00', enabled: false },
+      tuesday: { start: '09:00', end: '18:00', enabled: false },
+      wednesday: { start: '09:00', end: '18:00', enabled: false },
+      thursday: { start: '09:00', end: '18:00', enabled: false },
+      friday: { start: '09:00', end: '18:00', enabled: false },
+      saturday: { start: '10:00', end: '14:00', enabled: false },
+      sunday: { start: '10:00', end: '14:00', enabled: false },
+    });
+    setOnlineWorkSchedule({
+      monday: { start: '09:00', end: '18:00', enabled: false },
+      tuesday: { start: '09:00', end: '18:00', enabled: false },
+      wednesday: { start: '09:00', end: '18:00', enabled: false },
+      thursday: { start: '09:00', end: '18:00', enabled: false },
+      friday: { start: '09:00', end: '18:00', enabled: false },
+      saturday: { start: '10:00', end: '14:00', enabled: false },
+      sunday: { start: '10:00', end: '14:00', enabled: false },
+    });
+    setOfflineWorkSchedule({
+      monday: { start: '09:00', end: '18:00', enabled: false },
+      tuesday: { start: '09:00', end: '18:00', enabled: false },
+      wednesday: { start: '09:00', end: '18:00', enabled: false },
+      thursday: { start: '09:00', end: '18:00', enabled: false },
+      friday: { start: '09:00', end: '18:00', enabled: false },
+      saturday: { start: '10:00', end: '14:00', enabled: false },
+      sunday: { start: '10:00', end: '14:00', enabled: false },
+    });
+    setFormErrors({});
+    setScheduleType('online');
+  };
+
   const validateForm = () => {
     const errors: Record<string, string> = {};
     if (!formData.first_name.trim()) errors.first_name = 'Введите имя';
@@ -811,7 +946,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         birth_date: '',
         address: '',
         city: '',
-        language: 'ru',
+        language: ['ru'],
         years_of_experience: '',
         offline_consultation_price: '',
         online_consultation_price: '',
@@ -901,7 +1036,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       birth_date: member.birth_date || '',
       address: member.address || '',
       city: member.city || '',
-      language: (member.language || 'ru') as 'kz' | 'ru' | 'en' | 'other',
+      language: Array.isArray(member.language) ? member.language : (member.language ? [member.language as string] : ['ru']),  // Handle both old string and new array format
       years_of_experience: member.years_of_experience?.toString() || '',
       offline_consultation_price: member.offline_consultation_price?.toString() || '',
       online_consultation_price: member.online_consultation_price?.toString() || '',
@@ -1004,35 +1139,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       // Close modal and reset
       setShowEditModal(false);
       setEditingMember(null);
-      setFormErrors({});
-      setFormData({
-        first_name: '',
-        last_name: '',
-        email: '',
-        phone: '',
-        password: '',
-        role: 'doctor',
-        clinic_id: '',
-        gender: '',
-        birth_date: '',
-        address: '',
-        city: '',
-        language: 'ru',
-        years_of_experience: '',
-        offline_consultation_price: '',
-        online_consultation_price: '',
-        preferred_consultation_duration: '',
-      });
-      setSpecializations(['']);
-      setWorkSchedule({
-        monday: { start: '09:00', end: '18:00', enabled: false },
-        tuesday: { start: '09:00', end: '18:00', enabled: false },
-        wednesday: { start: '09:00', end: '18:00', enabled: false },
-        thursday: { start: '09:00', end: '18:00', enabled: false },
-        friday: { start: '09:00', end: '18:00', enabled: false },
-        saturday: { start: '10:00', end: '14:00', enabled: false },
-        sunday: { start: '10:00', end: '14:00', enabled: false },
-      });
+      resetForm();
     } catch (err: any) {
       console.error("Error updating staff:", err);
       const errorMessage = err.response?.data?.error || err.response?.data?.detail || err.message || "Не удалось обновить данные сотрудника";
@@ -1099,11 +1206,25 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       setShowEditModal(false);
       setShowDeleteModal(false);
       setEditingMember(null);
-      setFormErrors({});
       setDeletingMember(null);
+      resetForm();
     }
     setMouseDownTarget(null);
   };
+
+  // Close language dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (languageDropdownRef.current && !languageDropdownRef.current.contains(event.target as Node)) {
+        setIsLanguageDropdownOpen(false);
+      }
+    };
+
+    if (isLanguageDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isLanguageDropdownOpen]);
 
   // Filter staff based on search and filters
   const filteredStaff = staff.filter((member) => {
@@ -1146,7 +1267,10 @@ export default function StaffManagement({ user }: StaffManagementProps) {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => setShowAddModal(true)}
+            onClick={() => {
+              resetForm();
+              setShowAddModal(true);
+            }}
             className="flex items-center gap-2 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all"
             style={{ background: 'linear-gradient(135deg, #3772ff 0%, #2c5bcc 100%)' }}
           >
@@ -1677,21 +1801,86 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                   {/* Language and Experience */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Язык
+                      <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                        <Globe className="w-4 h-4 text-gray-600" />
+                        Языки
                       </label>
-                      <div className="relative">
-                        <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <select
-                          value={formData.language}
-                          onChange={(e) => setFormData({ ...formData, language: e.target.value as 'kz' | 'ru' | 'en' | 'other' })}
-                          className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors bg-white"
+                      <div className="relative" ref={languageDropdownRef}>
+                        <div
+                          onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
+                          className="min-h-[3rem] px-4 py-2 border-2 border-gray-200 rounded-2xl bg-white flex flex-wrap items-center gap-2 cursor-pointer hover:border-gray-300 transition-colors"
                         >
-                          <option value="ru">Русский</option>
-                          <option value="kz">Казахский</option>
-                          <option value="en">Английский</option>
-                          <option value="other">Другой</option>
-                        </select>
+                          {formData.language.length > 0 ? (
+                            formData.language.map((langValue) => {
+                              const lang = [
+                                { value: 'ru', label: 'Русский', emoji: '🇷🇺' },
+                                { value: 'kz', label: 'Казахский', emoji: '🇰🇿' },
+                                { value: 'en', label: 'Английский', emoji: '🇬🇧' },
+                                { value: 'other', label: 'Другой', emoji: '🌍' },
+                              ].find(l => l.value === langValue);
+                              if (!lang) return null;
+                              return (
+                                <div
+                                  key={lang.value}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-500 text-white rounded-lg text-xs font-medium"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <span>{lang.emoji}</span>
+                                  <span>{lang.label}</span>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setFormData({ ...formData, language: formData.language.filter(l => l !== lang.value) });
+                                    }}
+                                    className="ml-1 hover:bg-blue-600 rounded-full p-0.5 transition-colors"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <span className="text-gray-400 text-sm">Выберите языки...</span>
+                          )}
+                          <ChevronDown className={`w-4 h-4 text-gray-400 ml-auto transition-transform ${isLanguageDropdownOpen ? 'rotate-180' : ''}`} />
+                        </div>
+
+                        {/* Dropdown */}
+                        {isLanguageDropdownOpen && (
+                          <div className="absolute z-50 mt-2 w-full bg-white border-2 border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                            {[
+                              { value: 'ru', label: 'Русский', emoji: '🇷🇺' },
+                              { value: 'kz', label: 'Казахский', emoji: '🇰🇿' },
+                              { value: 'en', label: 'Английский', emoji: '🇬🇧' },
+                              { value: 'other', label: 'Другой', emoji: '🌍' },
+                            ].map((lang) => {
+                              const isSelected = formData.language.includes(lang.value);
+                              return (
+                                <button
+                                  key={lang.value}
+                                  type="button"
+                                  onClick={() => {
+                                    if (isSelected) {
+                                      setFormData({ ...formData, language: formData.language.filter(l => l !== lang.value) });
+                                    } else {
+                                      setFormData({ ...formData, language: [...formData.language, lang.value] });
+                                    }
+                                  }}
+                                  className={`w-full px-4 py-2.5 flex items-center gap-3 text-left transition-colors ${
+                                    isSelected
+                                      ? 'bg-blue-50 text-blue-700'
+                                      : 'hover:bg-gray-50 text-gray-700'
+                                  }`}
+                                >
+                                  <span className="text-lg">{lang.emoji}</span>
+                                  <span className="flex-1 text-sm font-medium">{lang.label}</span>
+                                  {isSelected && <CheckCircle className="w-4 h-4 text-blue-600" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div>
@@ -2197,7 +2386,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                   onClick={() => {
                     setShowEditModal(false);
                     setEditingMember(null);
-                    setFormErrors({});
+                    resetForm();
                   }}
                   className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
                 >
@@ -2396,21 +2585,86 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                   {/* Language and Experience */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Язык
+                      <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                        <Globe className="w-4 h-4 text-gray-600" />
+                        Языки
                       </label>
-                      <div className="relative">
-                        <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <select
-                          value={formData.language}
-                          onChange={(e) => setFormData({ ...formData, language: e.target.value as 'kz' | 'ru' | 'en' | 'other' })}
-                          className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors bg-white"
+                      <div className="relative" ref={languageDropdownRef}>
+                        <div
+                          onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
+                          className="min-h-[3rem] px-4 py-2 border-2 border-gray-200 rounded-2xl bg-white flex flex-wrap items-center gap-2 cursor-pointer hover:border-gray-300 transition-colors"
                         >
-                          <option value="ru">Русский</option>
-                          <option value="kz">Казахский</option>
-                          <option value="en">Английский</option>
-                          <option value="other">Другой</option>
-                        </select>
+                          {formData.language.length > 0 ? (
+                            formData.language.map((langValue) => {
+                              const lang = [
+                                { value: 'ru', label: 'Русский', emoji: '🇷🇺' },
+                                { value: 'kz', label: 'Казахский', emoji: '🇰🇿' },
+                                { value: 'en', label: 'Английский', emoji: '🇬🇧' },
+                                { value: 'other', label: 'Другой', emoji: '🌍' },
+                              ].find(l => l.value === langValue);
+                              if (!lang) return null;
+                              return (
+                                <div
+                                  key={lang.value}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-500 text-white rounded-lg text-xs font-medium"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <span>{lang.emoji}</span>
+                                  <span>{lang.label}</span>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setFormData({ ...formData, language: formData.language.filter(l => l !== lang.value) });
+                                    }}
+                                    className="ml-1 hover:bg-blue-600 rounded-full p-0.5 transition-colors"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <span className="text-gray-400 text-sm">Выберите языки...</span>
+                          )}
+                          <ChevronDown className={`w-4 h-4 text-gray-400 ml-auto transition-transform ${isLanguageDropdownOpen ? 'rotate-180' : ''}`} />
+                        </div>
+
+                        {/* Dropdown */}
+                        {isLanguageDropdownOpen && (
+                          <div className="absolute z-50 mt-2 w-full bg-white border-2 border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                            {[
+                              { value: 'ru', label: 'Русский', emoji: '🇷🇺' },
+                              { value: 'kz', label: 'Казахский', emoji: '🇰🇿' },
+                              { value: 'en', label: 'Английский', emoji: '🇬🇧' },
+                              { value: 'other', label: 'Другой', emoji: '🌍' },
+                            ].map((lang) => {
+                              const isSelected = formData.language.includes(lang.value);
+                              return (
+                                <button
+                                  key={lang.value}
+                                  type="button"
+                                  onClick={() => {
+                                    if (isSelected) {
+                                      setFormData({ ...formData, language: formData.language.filter(l => l !== lang.value) });
+                                    } else {
+                                      setFormData({ ...formData, language: [...formData.language, lang.value] });
+                                    }
+                                  }}
+                                  className={`w-full px-4 py-2.5 flex items-center gap-3 text-left transition-colors ${
+                                    isSelected
+                                      ? 'bg-blue-50 text-blue-700'
+                                      : 'hover:bg-gray-50 text-gray-700'
+                                  }`}
+                                >
+                                  <span className="text-lg">{lang.emoji}</span>
+                                  <span className="flex-1 text-sm font-medium">{lang.label}</span>
+                                  {isSelected && <CheckCircle className="w-4 h-4 text-blue-600" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div>
@@ -2852,6 +3106,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                     onClick={() => {
                       setShowEditModal(false);
                       setEditingMember(null);
+                      resetForm();
                     }}
                     disabled={editLoading}
                     className="flex-1 px-6 py-3 rounded-2xl border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"

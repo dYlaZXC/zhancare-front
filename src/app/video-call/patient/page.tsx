@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw, Mail, Lock, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/utils/api";
 import { Consultation } from "@/types/consultation";
+import { motion, AnimatePresence } from "framer-motion";
 
 // Patient-specific components
 import PatientVideoHeader from "./components/PatientVideoHeader";
@@ -29,6 +30,13 @@ const PatientVideoCallPage: React.FC = () => {
   const [consultationLoading, setConsultationLoading] = useState(true);
   const [consultationError, setConsultationError] = useState<string | null>(null);
 
+  // Access code modal state
+  const [showAccessCodeModal, setShowAccessCodeModal] = useState(false);
+  const [accessCodeEmail, setAccessCodeEmail] = useState("");
+  const [accessCode, setAccessCode] = useState("");
+  const [verifyingCode, setVerifyingCode] = useState(false);
+  const [codeError, setCodeError] = useState<string | null>(null);
+
   const safeUserName = user?.first_name || user?.email?.split("@")[0] || "patient";
   const userEmail = user?.email || `${safeUserName.toLowerCase().replace(/\s+/g, "")}@example.com`;
 
@@ -49,7 +57,9 @@ const PatientVideoCallPage: React.FC = () => {
         const meetingIdParam = params.get("meetingId");
 
         if (!meetingIdParam) {
-          setConsultationError("Meeting ID не найден в URL");
+          // Show access code modal if no meetingId in URL
+          setShowAccessCodeModal(true);
+          setConsultationLoading(false);
           return;
         }
 
@@ -74,9 +84,156 @@ const PatientVideoCallPage: React.FC = () => {
     fetchConsultationData();
   }, []);
 
+  // Handle access code verification
+  const handleVerifyAccessCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setVerifyingCode(true);
+    setCodeError(null);
+
+    try {
+      const response = await api.post('/consultations/verify-access-code/', {
+        access_code: accessCode.toUpperCase().trim()
+      });
+
+      if (response.data.success) {
+        const { consultation } = response.data;
+
+        // Redirect to video call page with meetingId
+        router.push(`/video-call/patient?meetingId=${consultation.meeting_id}`);
+        setShowAccessCodeModal(false);
+      } else {
+        setCodeError(response.data.error || "Неверный код доступа");
+      }
+    } catch (err: any) {
+      console.error('Error verifying access code:', err);
+      setCodeError(err.response?.data?.error || "Ошибка проверки кода доступа");
+    } finally {
+      setVerifyingCode(false);
+    }
+  };
+
   const handleEndCall = () => {
     router.push("/patient/video");
   };
+
+  // Access Code Modal
+  if (showAccessCodeModal) {
+    return (
+      <div className="relative flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-hidden">
+        {/* Animated background circles */}
+        <div className="absolute inset-0">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        </div>
+
+        {/* Modal */}
+        <AnimatePresence>
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="relative z-10 bg-white rounded-3xl shadow-2xl max-w-md w-full mx-4 p-8"
+          >
+            {/* Header */}
+            <div className="text-center mb-6">
+              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Lock className="w-10 h-10 text-white" />
+              </div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">Вход в консультацию</h2>
+              <p className="text-gray-600">Введите email и код доступа из письма</p>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleVerifyAccessCode} className="space-y-6">
+              {/* Email Input */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Email
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="email"
+                    required
+                    value={accessCodeEmail}
+                    onChange={(e) => setAccessCodeEmail(e.target.value)}
+                    placeholder="example@mail.com"
+                    className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                  />
+                </div>
+              </div>
+
+              {/* Access Code Input */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Код доступа (6 символов)
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={accessCode}
+                  onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
+                  placeholder="ABC123"
+                  maxLength={6}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors text-center text-2xl font-bold tracking-widest uppercase"
+                />
+              </div>
+
+              {/* Error Message */}
+              {codeError && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-start gap-3"
+                >
+                  <X className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-700">{codeError}</p>
+                </motion.div>
+              )}
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={verifyingCode || accessCode.length !== 6}
+                className="w-full px-6 py-4 rounded-xl text-white font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)' }}
+              >
+                {verifyingCode ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Проверка кода...
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-5 h-5" />
+                    Войти в консультацию
+                  </>
+                )}
+              </button>
+            </form>
+
+            {/* Help Text */}
+            <p className="text-xs text-gray-500 text-center mt-6">
+              Код доступа отправлен на ваш email при создании консультации
+            </p>
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Grid overlay */}
+        <div className="absolute inset-0 opacity-[0.02] pointer-events-none">
+          <div className="w-full h-full"
+               style={{
+                 backgroundImage: `
+                   linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+                   linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px)
+                 `,
+                 backgroundSize: '24px 24px'
+               }}>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Loading or error states
   if (consultationLoading) {

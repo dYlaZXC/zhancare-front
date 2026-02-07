@@ -44,6 +44,12 @@ export default function PatientManagement({ user }: PatientManagementProps) {
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deletingPatient, setDeletingPatient] = useState<Patient | null>(null);
   const [clinics, setClinics] = useState<Array<{id: number; name: string}>>([]);
   const [isGlobalAdmin, setIsGlobalAdmin] = useState(false);
   const [formData, setFormData] = useState({
@@ -169,6 +175,122 @@ export default function PatientManagement({ user }: PatientManagementProps) {
     }
   };
 
+  const handleEditClick = (patient: Patient) => {
+    setEditingPatient(patient);
+    setFormData({
+      first_name: patient.first_name,
+      last_name: patient.last_name,
+      email: patient.email,
+      phone: patient.phone,
+      password: '',
+      birth_date: patient.birth_date || '',
+      gender: patient.gender || 'male',
+      address: patient.address || '',
+      city: patient.city || '',
+      clinic_id: patient.clinic?.id?.toString() || '',
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditPatient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPatient) return;
+
+    setEditLoading(true);
+
+    try {
+      const updateData = { ...formData };
+      // Remove password if empty (don't change password)
+      if (!updateData.password) {
+        delete updateData.password;
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/patients/${editingPatient.id}/`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Token ${localStorage.getItem("access_token")}`,
+        },
+        credentials: "include",
+        body: JSON.stringify(updateData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Не удалось обновить данные пациента");
+      }
+
+      const updatedPatient = await response.json();
+
+      // Update patient in the list
+      setPatients(patients.map(p => p.id === editingPatient.id ? updatedPatient : p));
+
+      toast.success("Данные пациента успешно обновлены!");
+
+      // Close modal and reset
+      setShowEditModal(false);
+      setEditingPatient(null);
+      setFormData({
+        first_name: '',
+        last_name: '',
+        email: '',
+        phone: '',
+        password: '',
+        birth_date: '',
+        gender: 'male',
+        address: '',
+        city: '',
+        clinic_id: '',
+      });
+    } catch (err: any) {
+      console.error("Error updating patient:", err);
+      toast.error(err.message || "Не удалось обновить данные пациента");
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleDeleteClick = (patient: Patient) => {
+    setDeletingPatient(patient);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeletePatient = async () => {
+    if (!deletingPatient) return;
+
+    setDeleteLoading(true);
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/patients/${deletingPatient.id}/`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Token ${localStorage.getItem("access_token")}`,
+        },
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Не удалось удалить пациента");
+      }
+
+      // Remove patient from the list
+      setPatients(patients.filter(p => p.id !== deletingPatient.id));
+
+      toast.success("Пациент успешно удален!");
+
+      // Close modal and reset
+      setShowDeleteModal(false);
+      setDeletingPatient(null);
+    } catch (err: any) {
+      console.error("Error deleting patient:", err);
+      toast.error(err.message || "Не удалось удалить пациента");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   // Filter patients based on search and filters
   const filteredPatients = patients.filter((patient) => {
     const matchesSearch =
@@ -258,16 +380,48 @@ export default function PatientManagement({ user }: PatientManagementProps) {
             />
           </div>
 
-          {/* Status Filter */}
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value as any)}
-            className="px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-green-500 focus:outline-none transition-colors"
-          >
-            <option value="all">Все статусы</option>
-            <option value="active">Активные</option>
-            <option value="inactive">Неактивные</option>
-          </select>
+          {/* Status Filter Buttons */}
+          <div className="flex gap-2">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setFilterStatus('all')}
+              className={`px-4 py-3 rounded-2xl font-semibold transition-all flex items-center gap-2 ${
+                filterStatus === 'all'
+                  ? 'bg-green-600 text-white shadow-lg'
+                  : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-green-300'
+              }`}
+            >
+              <Users className="w-5 h-5" />
+              Все
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setFilterStatus('active')}
+              className={`px-4 py-3 rounded-2xl font-semibold transition-all flex items-center gap-2 ${
+                filterStatus === 'active'
+                  ? 'bg-green-600 text-white shadow-lg'
+                  : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-green-300'
+              }`}
+            >
+              <CheckCircle className="w-5 h-5" />
+              Активные
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setFilterStatus('inactive')}
+              className={`px-4 py-3 rounded-2xl font-semibold transition-all flex items-center gap-2 ${
+                filterStatus === 'inactive'
+                  ? 'bg-green-600 text-white shadow-lg'
+                  : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-green-300'
+              }`}
+            >
+              <XCircle className="w-5 h-5" />
+              Неактивные
+            </motion.button>
+          </div>
         </div>
       </div>
 
@@ -393,6 +547,28 @@ export default function PatientManagement({ user }: PatientManagementProps) {
                           Неактивен
                         </span>
                       )}
+
+                      {/* Edit Button */}
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => handleEditClick(patient)}
+                        className="p-2 rounded-xl bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
+                        title="Редактировать"
+                      >
+                        <Edit2 className="w-5 h-5" />
+                      </motion.button>
+
+                      {/* Delete Button */}
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => handleDeleteClick(patient)}
+                        className="p-2 rounded-xl bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                        title="Удалить"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </motion.button>
                     </div>
                   </div>
                 </motion.div>
@@ -668,6 +844,297 @@ export default function PatientManagement({ user }: PatientManagementProps) {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Patient Modal */}
+      <AnimatePresence>
+        {showEditModal && editingPatient && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => {
+              setShowEditModal(false);
+              setEditingPatient(null);
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            >
+              {/* Modal Header */}
+              <div className="sticky top-0 bg-white border-b-2 border-gray-100 px-8 py-6 rounded-t-3xl flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold" style={{ color: '#1e263e' }}>
+                    Редактировать Пациента
+                  </h2>
+                  <p className="text-gray-600 mt-1">Обновите данные пациента {editingPatient.first_name} {editingPatient.last_name}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingPatient(null);
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                >
+                  <XCircle className="w-6 h-6 text-gray-600" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <form onSubmit={handleEditPatient} className="p-8">
+                <div className="space-y-6">
+                  {/* Name Fields */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Имя <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.first_name}
+                        onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Фамилия <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.last_name}
+                        onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Email */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Email <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="email"
+                        required
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Phone */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Телефон <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="tel"
+                        required
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Password (Optional for edit) */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Новый пароль <span className="text-gray-500 text-xs">(оставьте пустым, чтобы не менять)</span>
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="password"
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                        placeholder="Минимум 8 символов"
+                        minLength={8}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Birth Date & Gender */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Дата рождения
+                      </label>
+                      <div className="relative">
+                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="date"
+                          value={formData.birth_date}
+                          onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
+                          className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Пол
+                      </label>
+                      <select
+                        value={formData.gender}
+                        onChange={(e) => setFormData({ ...formData, gender: e.target.value as any })}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                      >
+                        <option value="male">Мужской</option>
+                        <option value="female">Женский</option>
+                        <option value="other">Другое</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Address & City */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Адрес
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.address}
+                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Город
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.city}
+                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="flex gap-4 mt-8 pt-6 border-t-2 border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEditModal(false);
+                      setEditingPatient(null);
+                    }}
+                    disabled={editLoading}
+                    className="flex-1 px-6 py-3 rounded-2xl border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    Отмена
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={editLoading}
+                    className="flex-1 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' }}
+                  >
+                    {editLoading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Сохранение...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-5 h-5" />
+                        Сохранить
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteModal && deletingPatient && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => {
+              setShowDeleteModal(false);
+              setDeletingPatient(null);
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8"
+            >
+              {/* Warning Icon */}
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="w-8 h-8 text-red-600" />
+              </div>
+
+              {/* Title */}
+              <h2 className="text-2xl font-bold text-center mb-3" style={{ color: '#1e263e' }}>
+                Удалить пациента?
+              </h2>
+
+              {/* Description */}
+              <p className="text-center text-gray-600 mb-6">
+                Вы действительно хотите удалить пациента <span className="font-semibold">{deletingPatient.first_name} {deletingPatient.last_name}</span>?
+                Это действие нельзя отменить.
+              </p>
+
+              {/* Buttons */}
+              <div className="flex gap-4">
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setDeletingPatient(null);
+                  }}
+                  disabled={deleteLoading}
+                  className="flex-1 px-6 py-3 rounded-2xl border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={handleDeletePatient}
+                  disabled={deleteLoading}
+                  className="flex-1 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  style={{ background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' }}
+                >
+                  {deleteLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Удаление...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-5 h-5" />
+                      Удалить
+                    </>
+                  )}
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
