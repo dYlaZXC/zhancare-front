@@ -6,6 +6,12 @@ export interface Clinic {
   city?: string;
 }
 
+export interface WorkScheduleDay {
+  start: string; // "HH:MM"
+  end: string;   // "HH:MM"
+  enabled: boolean;
+}
+
 export interface Doctor {
   id: number;
   name: string;
@@ -29,6 +35,11 @@ export interface Doctor {
     name_kz: string;
     name_en: string;
   } | null;
+  online_consultation_price?: string | null;
+  language?: string | null;
+  work_schedule?: Record<string, WorkScheduleDay> | null;
+  is_active?: boolean;
+  is_deleted?: boolean;
 }
 
 export interface TimeSlot {

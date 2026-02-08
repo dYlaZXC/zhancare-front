@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   Building2,
@@ -40,6 +41,8 @@ import {
   Area,
   AreaChart
 } from "recharts";
+import bnClinicLogo from "@/assets/clinics_logos/bn-clinica.png";
+import ayalaClinicLogo from "@/assets/clinics_logos/ayala_clinic.png";
 
 interface User {
   id: number;
@@ -294,7 +297,32 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
               borderColor: '#3772ff'
             }}
           >
-            <Stethoscope className="w-7 h-7 flex-shrink-0" style={{ color: '#3772ff' }} />
+            {/* Clinic Logo or Stethoscope Icon */}
+            {(stats.clinic_info.id === 913 || stats.clinic_info.name?.toLowerCase().includes('ayala')) ? (
+              <div className="flex-shrink-0 bg-white p-2 rounded-xl border-2 border-[#3772ff] shadow-md">
+                <Image
+                  src={ayalaClinicLogo}
+                  alt="Ayala Clinic"
+                  width={80}
+                  height={28}
+                  className="object-contain"
+                  priority={false}
+                />
+              </div>
+            ) : (stats.clinic_info.name?.toLowerCase().includes('bn') || stats.clinic_info.name?.toLowerCase().includes('бн')) ? (
+              <div className="flex-shrink-0 bg-white p-2 rounded-xl border-2 border-[#3772ff] shadow-md">
+                <Image
+                  src={bnClinicLogo}
+                  alt="BN Clinic"
+                  width={80}
+                  height={28}
+                  className="object-contain"
+                  priority={false}
+                />
+              </div>
+            ) : (
+              <Stethoscope className="w-7 h-7 flex-shrink-0" style={{ color: '#3772ff' }} />
+            )}
             <div className="flex-1">
               <h3 className="font-bold text-base mb-1" style={{ color: '#1e263e' }}>
                 {stats.clinic_info.name}

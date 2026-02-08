@@ -10,7 +10,7 @@ import AIRecommendationBlock from "./components/AIRecommendationBlock";
 import DoctorCard from "./components/DoctorCard";
 
 // Import types and utilities
-import type { Doctor, TimeSlot, RecommendedDoctor, AIErrorData, Language } from "./types/doctor";
+import type { Doctor, TimeSlot, RecommendedDoctor, AIErrorData, Language, WorkScheduleDay } from "./types/doctor";
 import { useDoctorFiltering } from "./hooks/useDoctorFiltering";
 import { getSpecializationName } from "./utils/doctorUtils";
 
@@ -152,64 +152,73 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doctors, lastUpdateTime]);
 
-  const generateDynamicTimeslots = (doctorId: number, bookedSlots: string[] = []) => {
+  const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+  const generateDynamicTimeslots = (doctorId: number, bookedSlots: string[] = [], workSchedule?: Record<string, WorkScheduleDay> | null) => {
+    // No schedule set — return empty (card will show "Пока что не указано")
+    if (!workSchedule) return [];
+
     const slots: TimeSlot[] = [];
     const now = new Date();
 
-    // Get user's timezone info
-    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const timezoneOffset = now.getTimezoneOffset() * 60000; // Convert to milliseconds
-
-    // console.log(`🌍 User timezone: ${userTimezone}, offset: ${now.getTimezoneOffset()} minutes`);
-
     // Generate slots for next 14 days
     for (let day = 0; day < 14; day++) {
-      // Create date in user's local timezone
       const baseDate = new Date();
       baseDate.setDate(baseDate.getDate() + day);
 
-      // Reset to start of day in user's timezone
       const startOfDay = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), 0, 0, 0, 0);
-
       const isToday = day === 0;
 
-      // Generate 15-minute slots for full 24 hours in user's timezone
-      for (let hour = 0; hour < 24; hour++) {
-        for (let minute = 0; minute < 60; minute += 15) {
-          // Create slot time in user's local timezone
+      // Determine working hours for this day from work_schedule
+      const dayName = DAY_NAMES[baseDate.getDay()];
+      const daySchedule = workSchedule?.[dayName];
+
+      // If schedule exists but this day is disabled, skip entirely
+      if (workSchedule && daySchedule && !daySchedule.enabled) continue;
+
+      // Parse working hours (fall back to 0-24 if no schedule)
+      let startHour = 0, startMinute = 0, endHour = 24, endMinute = 0;
+      if (workSchedule && daySchedule && daySchedule.enabled) {
+        const [sh, sm] = daySchedule.start.split(':').map(Number);
+        const [eh, em] = daySchedule.end.split(':').map(Number);
+        startHour = sh; startMinute = sm;
+        endHour = eh; endMinute = em;
+      }
+
+      for (let hour = startHour; hour <= endHour; hour++) {
+        const minuteStart = hour === startHour ? startMinute : 0;
+        const minuteEnd = hour === endHour ? endMinute : 60;
+
+        for (let minute = minuteStart; minute < minuteEnd; minute += 15) {
           const slotStart = new Date(startOfDay);
           slotStart.setHours(hour, minute, 0, 0);
 
-          // Skip past times ONLY for today
+          // Skip past times for today
           if (isToday && slotStart <= now) continue;
 
-          const slotEnd = new Date(slotStart.getTime() + 15 * 60 * 1000); // +15 minutes
+          const slotEnd = new Date(slotStart.getTime() + 15 * 60 * 1000);
 
-          const slotId = Date.parse(slotStart.toISOString()) + doctorId; // Unique numeric ID
+          // Don't create a slot if it extends past end of working hours
+          if (workSchedule && daySchedule && daySchedule.enabled) {
+            if (slotEnd.getHours() > endHour || (slotEnd.getHours() === endHour && slotEnd.getMinutes() > endMinute)) continue;
+          }
+
+          const slotId = Date.parse(slotStart.toISOString()) + doctorId;
           const slotTimeString = slotStart.toISOString();
 
-          // More robust booking check - compare both exact string and parsed time
           let isBooked = bookedSlots.includes(slotTimeString);
-
-          // If exact string match fails, try comparing parsed times (account for timezone/precision differences)
           if (!isBooked) {
             const slotTime = slotStart.getTime();
             isBooked = bookedSlots.some(bookedSlot => {
               try {
                 const bookedTime = new Date(bookedSlot).getTime();
-                return Math.abs(slotTime - bookedTime) < 60000; // Within 1 minute tolerance
+                return Math.abs(slotTime - bookedTime) < 60000;
               } catch {
                 return false;
               }
             });
           }
 
-          // Debug: Log first few slots to see what's happening
-          if (slots.length < 5) {
-            // console.log(`🔍 Slot debug - Time: ${slotTimeString}, Booked: ${isBooked}, BookedSlots sample:`, bookedSlots.slice(0, 3));
-          }
-
-          // Include ALL slots but mark booked ones
           slots.push({
             id: slotId,
             start_time: slotStart.toISOString(),
@@ -220,14 +229,6 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
           });
         }
       }
-    }
-
-    if (slots.length > 0) {
-      // console.log(`🕐 Generated ${slots.length} slots in timezone ${userTimezone}`);
-      // console.log(`🕐 First slot: ${new Date(slots[0].start_time).toLocaleString()}`);
-      // console.log(`🕐 Last slot: ${new Date(slots[slots.length - 1].start_time).toLocaleString()}`);
-      // console.log(`🕐 First slot ISO: ${slots[0].start_time}`);
-      // console.log(`🕐 Last slot ISO: ${slots[slots.length - 1].start_time}`);
     }
 
     return slots;
@@ -258,8 +259,9 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
         // console.log(`Doctor ${doctorId}: Found ${bookedSlots.length} booked slots`);
       }
 
-      // Generate dynamic available slots (excluding booked ones)
-      const availableSlots = generateDynamicTimeslots(doctorId, bookedSlots);
+      // Generate dynamic available slots (excluding booked ones, respecting work schedule)
+      const doctor = doctors.find(d => d.id === doctorId);
+      const availableSlots = generateDynamicTimeslots(doctorId, bookedSlots, doctor?.work_schedule);
 
       // Check if slots actually changed before updating state
       const currentSlots = doctorTimeslots[doctorId] || [];
@@ -292,8 +294,9 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
       if (!silent) {
         console.error('Error fetching booked slots for doctor', doctorId, error);
 
-        // Fallback: Generate all slots (assume none are booked)
-        const availableSlots = generateDynamicTimeslots(doctorId, []);
+        // Fallback: Generate slots with schedule but assume none are booked
+        const fallbackDoctor = doctors.find(d => d.id === doctorId);
+        const availableSlots = generateDynamicTimeslots(doctorId, [], fallbackDoctor?.work_schedule);
 
         setDoctorTimeslots(prev => ({
           ...prev,

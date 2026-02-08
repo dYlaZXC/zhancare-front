@@ -110,7 +110,7 @@ const DoctorVideoCallPage: React.FC = () => {
   }, []);
 
   const handleEndCall = () => {
-    router.push("/doctor-profile");
+    router.push("/doctor/consultations");
   };
 
   const handleStartRecording = async () => {

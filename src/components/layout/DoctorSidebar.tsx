@@ -52,7 +52,7 @@ export const DoctorSidebar = ({
   const doctorMenu = [
     { id: "profile", icon: faUser, title: "Профиль", color: "#1e40af", href: "/doctor/profile" },
     { id: "analytics", icon: faChartLine, title: "Аналитика", color: "#8b5cf6", href: "/doctor/analytics" },
-    { id: "consultations", icon: faVideo, title: "Видео Консультация", color: "#295bbf", href: "/doctor/consultations" },
+    { id: "consultations", icon: faVideo, title: "Консультация", color: "#295bbf", href: "/doctor/consultations" },
     { id: "appointments", icon: faCalendar, title: "Мои вызовы на дом", color: "#3772ff", href: "/doctor/appointments" },
     { id: "patients", icon: faNotesMedical, title: "История Пациентов", color: "#3267e6", href: "/doctor/patients" },
   ];

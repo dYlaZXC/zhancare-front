@@ -95,6 +95,16 @@ html {
     animation: blob 7s infinite;
   }
 
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+    20%, 40%, 60%, 80% { transform: translateX(4px); }
+  }
+
+  .animate-shake {
+    animation: shake 0.4s ease-in-out;
+  }
+
   .animation-delay-2000 {
     animation-delay: 2s;
   }
@@ -105,6 +115,15 @@ html {
 
   .animation-delay-1000 {
     animation-delay: 1s;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
 

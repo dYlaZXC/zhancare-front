@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { api } from "@/utils/api";
+import { toast } from "react-toastify";
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -19,11 +21,15 @@ import {
   AlertCircle,
   Filter,
   Edit,
-  Trash2
+  Trash2,
+  ChevronDown,
+  Mail,
+  Phone,
+  MapPin
 } from "lucide-react";
 
 interface ScheduleEvent {
-  id: number;
+  id: string;
   type: 'consultation' | 'appointment';
   patient_id: number;
   patient_name: string;
@@ -36,6 +42,7 @@ interface ScheduleEvent {
   duration: number; // in minutes
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   location?: string;
+  address?: string;
   specialization?: string;
   notes?: string;
 }
@@ -51,6 +58,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showDateDetailsDrawer, setShowDateDetailsDrawer] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<'all' | 'consultation' | 'appointment'>('all');
@@ -65,135 +73,11 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
     setError(null);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/schedule/`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Token ${localStorage.getItem("access_token")}`,
-        },
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error("Не удалось загрузить расписание");
-      }
-
-      const data = await response.json();
-      setEvents(data);
+      const response = await api.get('/schedule/');
+      setEvents(response.data);
     } catch (err: any) {
       console.error("Error fetching schedule:", err);
-      setError(err.message || "Не удалось загрузить расписание");
-
-      // Mock data for development
-      const mockEvents: ScheduleEvent[] = [
-        {
-          id: 1,
-          type: 'consultation',
-          patient_id: 101,
-          patient_name: 'Айгуль Нурсултанова',
-          doctor_id: 1,
-          doctor_name: 'Доктор Абаев Даурен',
-          date: '2026-01-13',
-          time: '09:00',
-          duration: 30,
-          status: 'scheduled',
-          specialization: 'Кардиолог',
-          notes: 'Первичная консультация'
-        },
-        {
-          id: 2,
-          type: 'appointment',
-          patient_id: 102,
-          patient_name: 'Ерлан Касымов',
-          nurse_id: 3,
-          nurse_name: 'Медсестра Малика',
-          date: '2026-01-13',
-          time: '10:30',
-          duration: 60,
-          status: 'scheduled',
-          location: 'ул. Абая 150, кв. 25',
-          notes: 'Взятие анализов на дому'
-        },
-        {
-          id: 3,
-          type: 'consultation',
-          patient_id: 103,
-          patient_name: 'Асель Токтарова',
-          doctor_id: 2,
-          doctor_name: 'Доктор Сагындыкова',
-          date: '2026-01-13',
-          time: '14:00',
-          duration: 45,
-          status: 'in_progress',
-          specialization: 'Терапевт'
-        },
-        {
-          id: 4,
-          type: 'consultation',
-          patient_id: 104,
-          patient_name: 'Нурлан Аманов',
-          doctor_id: 1,
-          doctor_name: 'Доктор Абаев Даурен',
-          date: '2026-01-14',
-          time: '11:00',
-          duration: 30,
-          status: 'scheduled',
-          specialization: 'Кардиолог'
-        },
-        {
-          id: 5,
-          type: 'appointment',
-          patient_id: 105,
-          patient_name: 'Динара Жумабаева',
-          nurse_id: 4,
-          nurse_name: 'Медсестра Асель',
-          date: '2026-01-14',
-          time: '15:00',
-          duration: 45,
-          status: 'scheduled',
-          location: 'пр. Назарбаева 72, кв. 8'
-        },
-        {
-          id: 6,
-          type: 'consultation',
-          patient_id: 106,
-          patient_name: 'Бахыт Мұратов',
-          doctor_id: 1,
-          doctor_name: 'Доктор Абаев Даурен',
-          date: '2026-01-15',
-          time: '09:30',
-          duration: 30,
-          status: 'scheduled',
-          specialization: 'Кардиолог'
-        },
-        {
-          id: 7,
-          type: 'consultation',
-          patient_id: 107,
-          patient_name: 'Гульнара Сейдахметова',
-          doctor_id: 2,
-          doctor_name: 'Доктор Сагындыкова',
-          date: '2026-01-15',
-          time: '13:00',
-          duration: 30,
-          status: 'scheduled',
-          specialization: 'Терапевт'
-        },
-        {
-          id: 8,
-          type: 'appointment',
-          patient_id: 108,
-          patient_name: 'Марат Есенов',
-          nurse_id: 3,
-          nurse_name: 'Медсестра Малика',
-          date: '2026-01-15',
-          time: '16:00',
-          duration: 60,
-          status: 'scheduled',
-          location: 'ул. Достык 200, кв. 45'
-        },
-      ];
-      setEvents(mockEvents);
+      setError(err.response?.data?.error || err.message || "Не удалось загрузить расписание");
     } finally {
       setLoading(false);
     }
@@ -231,6 +115,10 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
       return date;
     });
   };
+
+  // Format date as YYYY-MM-DD using local time (avoids UTC shift from toISOString)
+  const toLocalDateStr = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
   // Get events for a specific date
   const getEventsForDate = (dateString: string) => {
@@ -297,7 +185,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
     return (
       <div className="grid grid-cols-7 gap-4">
         {weekDays.map((day) => {
-          const dateString = day.toISOString().split('T')[0];
+          const dateString = toLocalDateStr(day);
           const dayEvents = getEventsForDate(dateString);
           const isToday = day.toDateString() === new Date().toDateString();
 
@@ -393,16 +281,22 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
             <div key={weekIndex} className="grid grid-cols-7 border-b border-gray-200 last:border-b-0">
               {week.map((date) => {
                 const isCurrentMonth = date.getMonth() === month;
-                const dateString = date.toISOString().split('T')[0];
+                const dateString = toLocalDateStr(date);
                 const dayEvents = getEventsForDate(dateString);
                 const isToday = date.toDateString() === new Date().toDateString();
 
                 return (
                   <div
                     key={date.toISOString()}
-                    className={`border-r border-gray-200 last:border-r-0 p-2 min-h-[120px] ${
+                    className={`border-r border-gray-200 last:border-r-0 p-2 min-h-[120px] cursor-pointer hover:bg-blue-50/30 transition-colors ${
                       !isCurrentMonth ? 'bg-gray-50/50' : 'bg-white'
                     } ${isToday ? 'bg-blue-50/50' : ''}`}
+                    onClick={() => {
+                      if (dayEvents.length > 0) {
+                        setSelectedDate(dateString);
+                        setShowDateDetailsDrawer(true);
+                      }
+                    }}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <span
@@ -417,7 +311,8 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
                         {date.getDate()}
                       </span>
                       <button
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setSelectedDate(dateString);
                           setShowAddModal(true);
                         }}
@@ -475,7 +370,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
               Расписание
             </h1>
             <p className="text-gray-600">
-              Управление консультациями и записями на дому
+              Управление онлайн и оффлайн консультациями
             </p>
           </div>
 
@@ -571,8 +466,8 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
             className="px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
           >
             <option value="all">Все типы</option>
-            <option value="consultation">Консультации</option>
-            <option value="appointment">Записи на дому</option>
+            <option value="consultation">Онлайн консультации</option>
+            <option value="appointment">Оффлайн консультации</option>
           </select>
 
           {/* Status Filter */}
@@ -612,11 +507,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
           }}
         >
           <AlertCircle className="w-7 h-7 text-amber-700 flex-shrink-0" />
-          <div>
-            <h3 className="text-amber-900 font-bold text-base mb-1">Демонстрационный режим</h3>
-            <p className="text-amber-800 text-sm">{error}</p>
-            <p className="text-amber-700 text-sm mt-1">Отображаются демонстрационные данные.</p>
-          </div>
+          <p className="text-amber-800 text-sm">{error}</p>
         </motion.div>
       )}
 
@@ -637,6 +528,22 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
         }}
         selectedDate={selectedDate}
         onEventAdded={fetchSchedule}
+      />
+
+      {/* Date Details Drawer */}
+      <DateDetailsDrawer
+        isOpen={showDateDetailsDrawer}
+        onClose={() => {
+          setShowDateDetailsDrawer(false);
+        }}
+        selectedDate={selectedDate}
+        events={selectedDate ? events.filter(e => {
+          const eventDate = new Date(e.date + 'T' + e.time);
+          const targetDate = new Date(selectedDate);
+          return eventDate.getFullYear() === targetDate.getFullYear() &&
+                 eventDate.getMonth() === targetDate.getMonth() &&
+                 eventDate.getDate() === targetDate.getDate();
+        }) : []}
       />
     </div>
   );
@@ -725,6 +632,119 @@ function getStatusColor(status: string) {
   }
 }
 
+// Searchable Select Component
+function SearchSelect({
+  options,
+  value,
+  onChange,
+  placeholder,
+  required
+}: {
+  options: Array<{ id: number; label: string; subtitle?: string }>;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  required?: boolean;
+}) {
+  const [search, setSearch] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const filtered = options.filter(o =>
+    o.label.toLowerCase().includes(search.toLowerCase()) ||
+    (o.subtitle && o.subtitle.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  const selectedLabel = options.find(o => String(o.id) === value)?.label;
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div
+        className={`flex items-center gap-2 w-full px-4 py-3 rounded-2xl border-2 cursor-pointer transition-colors bg-white ${
+          isOpen ? 'border-blue-500 shadow-sm' : 'border-gray-200 hover:border-gray-300'
+        }`}
+        onClick={() => { setIsOpen(!isOpen); setSearch(''); }}
+      >
+        {selectedLabel ? (
+          <>
+            <span className="flex-1 text-sm font-medium text-gray-900">{selectedLabel}</span>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onChange(''); }}
+              className="p-0.5 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+            </button>
+          </>
+        ) : (
+          <span className="flex-1 text-sm text-gray-400">{placeholder}</span>
+        )}
+        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-20 w-full mt-1.5 bg-white rounded-2xl border-2 border-gray-200 shadow-xl overflow-hidden">
+          <div className="p-2 border-b border-gray-100">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                autoFocus
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Поиск..."
+                className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 focus:border-blue-400 focus:outline-none text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="max-h-48 overflow-y-auto scrollbar-hide py-1">
+            {filtered.length === 0 ? (
+              <div className="px-4 py-3 text-sm text-gray-400 text-center">Ничего не найдено</div>
+            ) : (
+              filtered.map(option => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => { onChange(String(option.id)); setIsOpen(false); }}
+                  className={`w-full text-left px-4 py-2.5 transition-colors ${
+                    String(option.id) === value
+                      ? 'bg-blue-50'
+                      : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <div className={`text-sm font-medium ${String(option.id) === value ? 'text-blue-700' : 'text-gray-700'}`}>
+                    {option.label}
+                  </div>
+                  {option.subtitle && (
+                    <div className={`text-xs ${String(option.id) === value ? 'text-blue-500' : 'text-gray-400'}`}>
+                      {option.subtitle}
+                    </div>
+                  )}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {required && (
+        <input type="text" value={value} required readOnly className="sr-only" tabIndex={-1} />
+      )}
+    </div>
+  );
+}
+
 // Add Event Modal Component
 function AddEventModal({
   isOpen,
@@ -742,30 +762,106 @@ function AddEventModal({
     patient_id: '',
     doctor_id: '',
     nurse_id: '',
-    date: selectedDate || new Date().toISOString().split('T')[0],
+    date: selectedDate || (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; })(),
     time: '09:00',
     duration: 30,
+    address: '',
     notes: ''
   });
+  const [submitting, setSubmitting] = useState(false);
+  const [patients, setPatients] = useState<Array<{
+    id: number;
+    first_name: string;
+    last_name: string;
+    email?: string;
+    phone?: string;
+    birth_date?: string;
+    gender?: string;
+    address?: string;
+    city?: string;
+    clinic?: { id: number; name: string };
+  }>>([]);
+  const [doctors, setDoctors] = useState<Array<{
+    id: number;
+    first_name: string;
+    last_name: string;
+    email?: string;
+    phone?: string;
+    specialization?: string;
+    years_of_experience?: number;
+    address?: string;
+    city?: string;
+    clinic?: { id: number; name: string };
+  }>>([]);
+  const [nurses, setNurses] = useState<Array<{
+    id: number;
+    first_name: string;
+    last_name: string;
+    email?: string;
+    phone?: string;
+    specialization?: string;
+    years_of_experience?: number;
+    address?: string;
+    city?: string;
+    clinic?: { id: number; name: string };
+  }>>([]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const fetchData = async () => {
+      try {
+        const [patientsRes, staffRes] = await Promise.all([
+          api.get('/patients/?all=true'),
+          api.get('/staff/')
+        ]);
+        setPatients(patientsRes.data);
+        setDoctors(staffRes.data.filter((s: any) => s.role === 'doctor'));
+        setNurses(staffRes.data.filter((s: any) => s.role === 'nurse'));
+      } catch (err) {
+        console.error("Failed to load patients/staff:", err);
+      }
+    };
+    fetchData();
+  }, [isOpen]);
 
   useEffect(() => {
     if (selectedDate) {
-      setFormData(prev => ({
-        ...prev,
-        date: selectedDate
-      }));
+      setFormData(prev => ({ ...prev, date: selectedDate }));
     }
   }, [selectedDate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
 
-    // TODO: Implement API call to create event
-    console.log('Creating event:', { type: eventType, ...formData });
+    try {
+      const payload: any = {
+        type: eventType,
+        patient_id: formData.patient_id,
+        date: formData.date,
+        time: formData.time,
+        duration: formData.duration,
+        notes: formData.notes,
+      };
 
-    // For now, just close the modal
-    onClose();
-    onEventAdded();
+      if (eventType === 'consultation') {
+        payload.doctor_id = formData.doctor_id;
+      } else {
+        payload.nurse_id = formData.nurse_id;
+        payload.doctor_id = formData.doctor_id || undefined;
+        payload.address = formData.address;
+      }
+
+      await api.post('/schedule/', payload);
+      toast.success('Запись успешно создана!');
+      onClose();
+      onEventAdded();
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || err.message || "Не удалось создать запись";
+      toast.error(errorMessage);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -776,7 +872,7 @@ function AddEventModal({
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
-        className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto scrollbar-hide"
       >
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold" style={{ color: '#1e263e' }}>
@@ -807,7 +903,7 @@ function AddEventModal({
                 }`}
               >
                 <Video className="w-6 h-6 mx-auto mb-2" style={{ color: '#3772ff' }} />
-                <div className="font-semibold">Консультация</div>
+                <div className="font-semibold">Онлайн консультация</div>
               </button>
               <button
                 type="button"
@@ -819,7 +915,7 @@ function AddEventModal({
                 }`}
               >
                 <Home className="w-6 h-6 mx-auto mb-2" style={{ color: '#8b5cf6' }} />
-                <div className="font-semibold">Запись на дому</div>
+                <div className="font-semibold">Оффлайн консультация</div>
               </button>
             </div>
           </div>
@@ -871,31 +967,222 @@ function AddEventModal({
             </select>
           </div>
 
-          {/* Patient Selection - TODO: Add actual patient selector */}
+          {/* Patient */}
           <div>
             <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
-              Пациент
+              Пациент <span className="text-red-500">*</span>
             </label>
-            <input
-              type="text"
+            <SearchSelect
+              options={patients.map(p => ({ id: p.id, label: `${p.first_name} ${p.last_name}`, subtitle: p.email }))}
+              value={formData.patient_id}
+              onChange={(val) => setFormData({ ...formData, patient_id: val })}
               placeholder="Выберите пациента..."
-              className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
               required
             />
+
+            {/* Patient info card */}
+            {formData.patient_id && (() => {
+              const patient = patients.find(p => String(p.id) === formData.patient_id);
+              if (!patient) return null;
+              return (
+                <div className="mt-3 p-4 rounded-2xl border-2 border-blue-100 bg-blue-50/40">
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <User className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm font-bold text-blue-700">Информация о пациенте</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                    {patient.email && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Mail className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                        <span className="truncate">{patient.email}</span>
+                      </div>
+                    )}
+                    {patient.phone && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Phone className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                        <span>{patient.phone}</span>
+                      </div>
+                    )}
+                    {patient.birth_date && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <CalendarIcon className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                        <span>{patient.birth_date}</span>
+                      </div>
+                    )}
+                    {patient.gender && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <User className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                        <span>{patient.gender === 'M' ? 'Мужчина' : patient.gender === 'F' ? 'Женщина' : patient.gender}</span>
+                      </div>
+                    )}
+                    {(patient.address || patient.city) && (
+                      <div className="flex items-center gap-2 text-gray-600 col-span-2">
+                        <MapPin className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                        <span>{[patient.address, patient.city].filter(Boolean).join(', ')}</span>
+                      </div>
+                    )}
+                    {patient.clinic && (
+                      <div className="flex items-center gap-2 text-gray-600 col-span-2">
+                        <Stethoscope className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                        <span>{patient.clinic.name}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
-          {/* Doctor/Nurse Selection */}
+          {/* Doctor */}
           <div>
             <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
-              {eventType === 'consultation' ? 'Доктор' : 'Медсестра'}
+              Доктор {eventType === 'consultation' && <span className="text-red-500">*</span>}
             </label>
-            <input
-              type="text"
-              placeholder={`Выберите ${eventType === 'consultation' ? 'доктора' : 'медсестру'}...`}
-              className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
-              required
+            <SearchSelect
+              options={doctors.map(d => ({ id: d.id, label: `${d.first_name} ${d.last_name}`, subtitle: d.email }))}
+              value={formData.doctor_id}
+              onChange={(val) => setFormData({ ...formData, doctor_id: val })}
+              placeholder="Выберите доктора..."
+              required={eventType === 'consultation'}
             />
+
+            {/* Doctor info card */}
+            {formData.doctor_id && (() => {
+              const doctor = doctors.find(d => String(d.id) === formData.doctor_id);
+              if (!doctor) return null;
+              return (
+                <div className="mt-3 p-4 rounded-2xl border-2 border-emerald-100 bg-emerald-50/40">
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <Stethoscope className="w-4 h-4 text-emerald-600" />
+                    <span className="text-sm font-bold text-emerald-700">Информация о докторе</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                    {doctor.email && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Mail className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                        <span className="truncate">{doctor.email}</span>
+                      </div>
+                    )}
+                    {doctor.phone && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Phone className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                        <span>{doctor.phone}</span>
+                      </div>
+                    )}
+                    {doctor.specialization && (
+                      <div className="flex items-center gap-2 text-gray-600 col-span-2">
+                        <Stethoscope className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                        <span>{doctor.specialization}</span>
+                      </div>
+                    )}
+                    {doctor.years_of_experience != null && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <CalendarIcon className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                        <span>{doctor.years_of_experience} лет опыта</span>
+                      </div>
+                    )}
+                    {(doctor.address || doctor.city) && (
+                      <div className="flex items-center gap-2 text-gray-600 col-span-2">
+                        <MapPin className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                        <span>{[doctor.address, doctor.city].filter(Boolean).join(', ')}</span>
+                      </div>
+                    )}
+                    {doctor.clinic && (
+                      <div className="flex items-center gap-2 text-gray-600 col-span-2">
+                        <User className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                        <span>{doctor.clinic.name}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
+
+          {/* Nurse — only for appointments */}
+          {eventType === 'appointment' && (
+            <div>
+              <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
+                Медсестра <span className="text-red-500">*</span>
+              </label>
+              <SearchSelect
+                options={nurses.map(n => ({ id: n.id, label: `${n.first_name} ${n.last_name}`, subtitle: n.email }))}
+                value={formData.nurse_id}
+                onChange={(val) => setFormData({ ...formData, nurse_id: val })}
+                placeholder="Выберите медсестру..."
+                required
+              />
+
+              {/* Nurse info card */}
+              {formData.nurse_id && (() => {
+                const nurse = nurses.find(n => String(n.id) === formData.nurse_id);
+                if (!nurse) return null;
+                return (
+                  <div className="mt-3 p-4 rounded-2xl border-2 border-violet-100 bg-violet-50/40">
+                    <div className="flex items-center gap-2 mb-2.5">
+                      <User className="w-4 h-4 text-violet-600" />
+                      <span className="text-sm font-bold text-violet-700">Информация о медсестре</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                      {nurse.email && (
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <Mail className="w-3.5 h-3.5 text-violet-500 flex-shrink-0" />
+                          <span className="truncate">{nurse.email}</span>
+                        </div>
+                      )}
+                      {nurse.phone && (
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <Phone className="w-3.5 h-3.5 text-violet-500 flex-shrink-0" />
+                          <span>{nurse.phone}</span>
+                        </div>
+                      )}
+                      {nurse.specialization && (
+                        <div className="flex items-center gap-2 text-gray-600 col-span-2">
+                          <Stethoscope className="w-3.5 h-3.5 text-violet-500 flex-shrink-0" />
+                          <span>{nurse.specialization}</span>
+                        </div>
+                      )}
+                      {nurse.years_of_experience != null && (
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <CalendarIcon className="w-3.5 h-3.5 text-violet-500 flex-shrink-0" />
+                          <span>{nurse.years_of_experience} лет опыта</span>
+                        </div>
+                      )}
+                      {(nurse.address || nurse.city) && (
+                        <div className="flex items-center gap-2 text-gray-600 col-span-2">
+                          <MapPin className="w-3.5 h-3.5 text-violet-500 flex-shrink-0" />
+                          <span>{[nurse.address, nurse.city].filter(Boolean).join(', ')}</span>
+                        </div>
+                      )}
+                      {nurse.clinic && (
+                        <div className="flex items-center gap-2 text-gray-600 col-span-2">
+                          <User className="w-3.5 h-3.5 text-violet-500 flex-shrink-0" />
+                          <span>{nurse.clinic.name}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* Address — only for appointments */}
+          {eventType === 'appointment' && (
+            <div>
+              <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
+                Адрес вызова <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                placeholder="ул. Абая 150, кв. 25"
+                className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
+                required
+              />
+            </div>
+          )}
 
           {/* Notes */}
           <div>
@@ -922,14 +1209,209 @@ function AddEventModal({
             </button>
             <button
               type="submit"
-              className="flex-1 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+              disabled={submitting}
+              className="flex-1 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
               style={{ background: 'linear-gradient(135deg, #3772ff 0%, #2c5bcc 100%)' }}
             >
-              Создать Запись
+              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              {submitting ? 'Создаётся...' : 'Создать Запись'}
             </button>
           </div>
         </form>
       </motion.div>
     </div>
+  );
+}
+
+// Date Details Drawer Component
+function DateDetailsDrawer({
+  isOpen,
+  onClose,
+  selectedDate,
+  events
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  selectedDate: string | null;
+  events: ScheduleEvent[];
+}) {
+  if (!isOpen || !selectedDate) return null;
+
+  const formattedDate = new Date(selectedDate).toLocaleDateString('ru-RU', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+
+  const sortedEvents = [...events].sort((a, b) => a.time.localeCompare(b.time));
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 overflow-hidden">
+        {/* Backdrop */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        />
+
+        {/* Drawer */}
+        <motion.div
+          initial={{ x: '100%' }}
+          animate={{ x: 0 }}
+          exit={{ x: '100%' }}
+          transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+          className="absolute right-0 top-0 bottom-0 w-full max-w-2xl bg-white shadow-2xl flex flex-col"
+        >
+          {/* Header */}
+          <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5 flex items-center justify-between z-10">
+            <div className="text-white">
+              <h2 className="text-2xl font-bold mb-1">Консультации на дату</h2>
+              <p className="text-blue-100 capitalize">{formattedDate}</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl hover:bg-white/20 transition-colors"
+            >
+              <X className="w-6 h-6 text-white" />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {sortedEvents.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <CalendarIcon className="w-10 h-10 text-gray-400" />
+                </div>
+                <p className="text-gray-600 text-lg font-medium">Нет запланированных консультаций</p>
+                <p className="text-gray-400 text-sm mt-2">На эту дату пока нет записей</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-gray-600 font-medium">
+                    Всего: {sortedEvents.length} {sortedEvents.length === 1 ? 'консультация' : 'консультаций'}
+                  </p>
+                </div>
+
+                {sortedEvents.map((event) => (
+                  <motion.div
+                    key={event.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-white border-2 border-gray-200 rounded-2xl p-5 hover:border-blue-300 hover:shadow-lg transition-all"
+                  >
+                    {/* Event Header */}
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-12 h-12 rounded-xl flex items-center justify-center"
+                          style={{
+                            backgroundColor: event.type === 'consultation' ? '#ebf1ff' : '#f3e8ff'
+                          }}
+                        >
+                          {event.type === 'consultation' ? (
+                            <Video className="w-6 h-6" style={{ color: '#3772ff' }} />
+                          ) : (
+                            <Home className="w-6 h-6" style={{ color: '#8b5cf6' }} />
+                          )}
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-lg" style={{ color: '#1e263e' }}>
+                            {event.type === 'consultation' ? 'Онлайн консультация' : 'Оффлайн консультация'}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            {event.time} ({event.duration} мин)
+                          </p>
+                        </div>
+                      </div>
+                      <div
+                        className="px-3 py-1.5 rounded-full text-xs font-semibold"
+                        style={{
+                          backgroundColor: getStatusColor(event.status).bg,
+                          color: getStatusColor(event.status).text
+                        }}
+                      >
+                        {event.status === 'scheduled' && 'Запланировано'}
+                        {event.status === 'in_progress' && 'В процессе'}
+                        {event.status === 'completed' && 'Завершено'}
+                        {event.status === 'cancelled' && 'Отменено'}
+                      </div>
+                    </div>
+
+                    {/* Event Details */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Patient Info */}
+                      <div className="bg-blue-50 p-4 rounded-xl">
+                        <div className="flex items-center gap-2 mb-3">
+                          <User className="w-4 h-4 text-blue-600" />
+                          <span className="text-sm font-bold text-blue-700">Пациент</span>
+                        </div>
+                        <p className="font-semibold text-gray-900">{event.patient_name}</p>
+                      </div>
+
+                      {/* Doctor Info */}
+                      {event.doctor_name && (
+                        <div className="bg-emerald-50 p-4 rounded-xl">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Stethoscope className="w-4 h-4 text-emerald-600" />
+                            <span className="text-sm font-bold text-emerald-700">Доктор</span>
+                          </div>
+                          <p className="font-semibold text-gray-900">{event.doctor_name}</p>
+                        </div>
+                      )}
+
+                      {/* Nurse Info */}
+                      {event.nurse_name && (
+                        <div className="bg-violet-50 p-4 rounded-xl">
+                          <div className="flex items-center gap-2 mb-3">
+                            <User className="w-4 h-4 text-violet-600" />
+                            <span className="text-sm font-bold text-violet-700">Медсестра</span>
+                          </div>
+                          <p className="font-semibold text-gray-900">{event.nurse_name}</p>
+                        </div>
+                      )}
+
+                      {/* Address (for appointments) */}
+                      {event.address && (
+                        <div className="bg-purple-50 p-4 rounded-xl md:col-span-2">
+                          <div className="flex items-center gap-2 mb-3">
+                            <MapPin className="w-4 h-4 text-purple-600" />
+                            <span className="text-sm font-bold text-purple-700">Адрес</span>
+                          </div>
+                          <p className="font-semibold text-gray-900">{event.address}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Notes */}
+                    {event.notes && (
+                      <div className="mt-4 bg-gray-50 p-4 rounded-xl">
+                        <p className="text-sm font-semibold text-gray-700 mb-2">Примечания:</p>
+                        <p className="text-sm text-gray-600">{event.notes}</p>
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="sticky bottom-0 bg-white border-t-2 border-gray-200 px-6 py-4">
+            <button
+              onClick={onClose}
+              className="w-full px-6 py-3 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold transition-colors"
+            >
+              Закрыть
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
   );
 }

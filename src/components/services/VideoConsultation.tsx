@@ -83,7 +83,10 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
       // console.log("Enhanced doctor data:", res.data); // Debug log to see the new structure
 
       const filtered = res.data?.doctors?.filter(
-        (doc: Doctor) => doc.doctor_type !== "Сестринское дело"
+        (doc: Doctor) =>
+          doc.doctor_type !== "Сестринское дело" && // Exclude nurses
+          doc.is_active !== false &&                 // Exclude inactive doctors
+          doc.is_deleted !== true                    // Exclude deleted doctors
       );
       setDoctors(filtered || []);
 
@@ -603,7 +606,7 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
             {/* Compact header section */}
             <div className="mb-4 space-y-3">
               <h2 className="text-xl md:text-2xl lg:text-3xl font-extrabold text-[#001E80]">
-                Видео консультация
+                Консультация
               </h2>
               
               {/* Progress bar */}

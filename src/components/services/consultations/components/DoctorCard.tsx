@@ -5,20 +5,14 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import clsx from "clsx";
 import {
-  Star,
   CheckCircle2,
   Shield,
-  TrendingUp,
-  GraduationCap,
   Calendar,
-  Award,
   MessageSquare,
   Video,
   Phone,
-  Heart,
   MapPin,
   Bot,
-  ChevronDown,
   ChevronUp,
   Stethoscope,
   Building2,
@@ -28,6 +22,7 @@ import type { Doctor, TimeSlot, Language } from "../types/doctor";
 import { getSpecializationName } from "../utils/doctorUtils";
 import { formatTime, getTimeLabel, generateCalendarDates } from "../utils/timeslotUtils";
 import bnClinicLogo from "@/assets/clinics_logos/bn-clinica.png";
+import ayalaClinicLogo from "@/assets/clinics_logos/ayala_clinic.png";
 
 interface DoctorCardProps {
   doctor: Doctor;
@@ -63,6 +58,21 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
   onClick,
 }) => {
   const calendarDates = generateCalendarDates().slice(0, 7);
+
+  // Auto-select the first date with available slots when the full calendar opens
+  React.useEffect(() => {
+    if (!showFullCalendar || !timeslots.length) return;
+
+    const availableSlot = timeslots.find(s => !s.is_booked && s.available_spots > 0);
+    if (!availableSlot) return;
+
+    const d = new Date(availableSlot.start_time);
+    const firstAvailableDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+    if (selectedDate !== firstAvailableDate) {
+      onDateSelect?.(firstAvailableDate);
+    }
+  }, [showFullCalendar]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div
@@ -128,6 +138,21 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
               />
             </div>
           )}
+
+          {/* Ayala Clinic badge - under avatar */}
+          {(doctor.clinic?.id === 913 ||
+            doctor.clinic?.name?.toLowerCase().includes('ayala')) && (
+            <div className="mt-2 bg-white px-2 py-1 rounded-lg shadow-md border border-blue-200 flex items-center justify-center">
+              <Image
+                src={ayalaClinicLogo}
+                alt="Ayala Clinic"
+                width={60}
+                height={20}
+                className="object-contain"
+                priority={false}
+              />
+            </div>
+          )}
         </div>
 
         {/* Doctor Info */}
@@ -157,26 +182,14 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-1 bg-gradient-to-r from-green-100 to-emerald-100 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full self-start">
-                <TrendingUp className="text-green-600" size={9} />
-                <span className="text-green-700 font-bold text-[10px] sm:text-xs">ТОП</span>
-              </div>
             </div>
 
-            {/* Doctor credentials */}
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 md:gap-2 lg:gap-3 xl:gap-4 text-[10px] sm:text-xs text-gray-600 mb-1.5 sm:mb-2">
-              <div className="flex items-center gap-1">
-                <GraduationCap className="text-indigo-500" size={9} />
-                <span className="font-medium">К.м.н</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Calendar className="text-purple-500" size={9} />
-                <span className="font-medium">{doctor.experience || 5} лет</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Award className="text-amber-500" size={9} />
-                <span className="font-medium">Сертифицирован</span>
-              </div>
+            {/* Doctor experience */}
+            <div className="flex items-center gap-1.5 text-[10px] sm:text-xs mb-1.5 sm:mb-2">
+              <Calendar className={doctor.years_of_experience ? "text-purple-500" : "text-gray-300"} size={9} />
+              <span className={doctor.years_of_experience ? "font-medium text-gray-600" : "text-gray-400 italic"}>
+                {doctor.years_of_experience ? `${doctor.years_of_experience} лет опыта` : 'Не указано'}
+              </span>
             </div>
 
             {/* Clinic information */}
@@ -200,19 +213,17 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
               </div>
             )}
 
-            {/* Tags */}
-            <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 md:gap-1.5 lg:gap-2 text-[10px] sm:text-xs">
-              <div className="bg-blue-100 text-blue-800 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full font-medium">Взрослые</div>
-              <div className="bg-purple-100 text-purple-800 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full font-medium">Ассоциация</div>
-              <div className="bg-green-100 text-green-800 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full font-medium">Премиум</div>
-            </div>
           </div>
 
           {/* Communication methods */}
           <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-            <div className="inline-flex items-center gap-1 px-2 sm:px-2.5 md:px-3 py-0.5 sm:py-1 rounded-full bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 text-[10px] sm:text-xs font-semibold">
+            <div className={`inline-flex items-center gap-1 px-2 sm:px-2.5 md:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs ${
+              doctor.language
+                ? 'bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 font-semibold'
+                : 'bg-gray-100 text-gray-400 italic'
+            }`}>
               <MessageSquare size={9} />
-              Русский язык
+              {doctor.language === 'kz' ? 'Қазақ тілі' : doctor.language === 'en' ? 'English' : doctor.language === 'ru' ? 'Русский язык' : 'Не указано'}
             </div>
             <div className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full bg-green-100 text-green-800 text-[10px] sm:text-xs font-medium">
               <Video size={9} />
@@ -224,64 +235,28 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
             </div>
           </div>
 
-          {/* Rating section */}
-          <div className="bg-gradient-to-r from-amber-50 to-yellow-50 p-2 sm:p-2.5 md:p-2.5 lg:p-3 rounded-xl sm:rounded-2xl border border-amber-200">
-            <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <div className="flex items-center gap-0.5 sm:gap-1">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-3 md:h-3 lg:w-4 lg:h-4 fill-yellow-400 text-yellow-400" />
-                  ))}
-                </div>
-                <span className="font-bold text-gray-900 text-sm sm:text-base md:text-base lg:text-lg">{doctor.rating || "4.9"}</span>
-              </div>
-              <div className="text-right">
-                <div className="text-[10px] sm:text-xs text-gray-600">из 1247 отзывов</div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between text-[10px] sm:text-xs">
-              <div className="flex items-center gap-1 text-emerald-600">
-                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-emerald-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-[8px] sm:text-xs">✓</span>
-                </div>
-                <span className="font-bold">98% рекомендуют</span>
-              </div>
-              <div className="flex items-center gap-1 text-blue-600">
-                <Heart className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-red-400 text-red-400" />
-                <span className="font-bold">1.2k лайков</span>
-              </div>
-            </div>
-          </div>
-
           {/* Pricing section */}
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-1.5 sm:p-2 md:p-2.5 lg:p-3 rounded-lg sm:rounded-xl border border-green-200">
-            <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
-              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-green-500 rounded-full flex items-center justify-center">
+          <div className={`p-1.5 sm:p-2 md:p-2.5 lg:p-3 rounded-lg sm:rounded-xl border ${
+            doctor.online_consultation_price
+              ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200'
+              : 'bg-gray-50 border-gray-200'
+          }`}>
+            <div className="flex items-center gap-1.5 sm:gap-2 mb-1 sm:mb-1.5">
+              <div className={`w-3 h-3 sm:w-4 sm:h-4 rounded-full flex items-center justify-center ${
+                doctor.online_consultation_price ? 'bg-green-500' : 'bg-gray-300'
+              }`}>
                 <span className="text-white text-[10px] sm:text-xs">₸</span>
               </div>
-              <p className="text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-wide">ПРЕМИУМ КОНСУЛЬТАЦИЯ</p>
+              <p className="text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-wide">Онлайн консультация</p>
             </div>
-            <div className="grid grid-cols-2 gap-1.5 sm:gap-2 md:gap-2 lg:gap-3">
-              <div className="bg-white p-1.5 sm:p-1.5 md:p-2 rounded-lg border border-green-200">
-                <div className="text-center">
-                  <div className="text-[10px] sm:text-xs text-gray-500 mb-0.5 sm:mb-1">Первичная</div>
-                  <div className="font-bold text-green-600 text-xs sm:text-sm">1740,00 ₸</div>
-                  <div className="text-[10px] sm:text-xs text-gray-400 line-through">2320,00 ₸</div>
+            <div className="text-center">
+              {doctor.online_consultation_price ? (
+                <div className="font-bold text-green-600 text-sm sm:text-base">
+                  {Number(doctor.online_consultation_price).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₸
                 </div>
-              </div>
-              <div className="bg-white p-1.5 sm:p-1.5 md:p-2 rounded-lg border border-green-200">
-                <div className="text-center">
-                  <div className="text-[10px] sm:text-xs text-gray-500 mb-0.5 sm:mb-1">Повторная</div>
-                  <div className="font-bold text-green-600 text-xs sm:text-sm">1392,00 ₸</div>
-                  <div className="text-[10px] sm:text-xs text-gray-400 line-through">1856,00 ₸</div>
-                </div>
-              </div>
-            </div>
-            <div className="mt-1.5 sm:mt-2 text-center">
-              <span className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold">
-                🔥 СКИДКА 25%
-              </span>
+              ) : (
+                <div className="text-gray-400 italic text-[10px] sm:text-xs">Не указано</div>
+              )}
             </div>
           </div>
         </div>
@@ -296,6 +271,13 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
               <span className="text-[9px] sm:text-[10px] md:text-[10px] lg:text-xs xl:text-sm font-bold text-indigo-800">Расписание</span>
             </div>
 
+            {!doctor.work_schedule ? (
+              /* No schedule set — show placeholder */
+              <div className="flex-1 flex flex-col items-center justify-center py-4 sm:py-6">
+                <div className="text-gray-400 text-[10px] sm:text-xs text-center italic">Пока что не указано</div>
+              </div>
+            ) : (
+            <>
             {/* Mini Calendar or Full Date Picker */}
             <div className="flex-1 flex flex-col space-y-1.5 sm:space-y-2 md:space-y-2 lg:space-y-2.5">
               {showFullCalendar ? (
@@ -338,7 +320,9 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
                   {/* Time slots for selected date */}
                   {selectedDate && (
                     <div className="space-y-1.5 sm:space-y-2 md:space-y-2 lg:space-y-2">
-                      <div className="text-[9px] sm:text-[10px] md:text-[10px] lg:text-xs font-bold text-indigo-700 text-center">Доступное время</div>
+                      <div className="text-[9px] sm:text-[10px] md:text-[10px] lg:text-xs font-bold text-indigo-700 text-center">
+                        Доступное время на {new Date(selectedDate + 'T00:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </div>
                       <div className="grid grid-cols-3 gap-1 sm:gap-1.5 md:gap-1.5 lg:gap-2 max-h-32 sm:max-h-36 md:max-h-36 lg:max-h-40 overflow-y-auto">
                         {(() => {
                           // Filter slots properly using local date comparison
@@ -485,8 +469,15 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
               ) : (
                 <>
                   {!showFullCalendar && (
-                    <div className="flex items-center justify-between">
-                      <p className="text-[10px] sm:text-xs font-bold text-indigo-700 uppercase">Слоты</p>
+                    <div className="text-center mt-1.5 sm:mt-2">
+                      <p className="text-[10px] sm:text-xs font-bold text-indigo-700 uppercase">
+                        {(() => {
+                          const first = timeslots.find(s => !s.is_booked && s.available_spots > 0);
+                          if (!first) return 'Слоты';
+                          const d = new Date(first.start_time);
+                          return `Слоты на ${d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}`;
+                        })()}
+                      </p>
                     </div>
                   )}
 
@@ -576,6 +567,8 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
                 </>
               )}
             </div>
+            </>
+            )}
 
             {/* Location */}
             <div className="mt-2 sm:mt-2.5 md:mt-3 pt-2 sm:pt-2.5 md:pt-3 border-t border-indigo-200">

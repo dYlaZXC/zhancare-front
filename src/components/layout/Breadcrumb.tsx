@@ -31,7 +31,7 @@ export const Breadcrumb = ({
     },
     video: {
       key: "video",
-      title: "Видео консультация",
+      title: "Консультация",
       icon: <Video className="w-4 h-4" />,
       href: "/patient/video",
     },
