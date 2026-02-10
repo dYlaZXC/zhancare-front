@@ -39,28 +39,41 @@ import {
 import bnClinicLogo from "@/assets/clinics_logos/bn-clinica.png";
 import ayalaClinicLogo from "@/assets/clinics_logos/ayala_clinic.png";
 
+/**
+ * Staff member interface representing doctors and nurses.
+ *
+ * Note: The backend uses profile models (DoctorProfile/NurseProfile) to store
+ * role-specific fields like availability_status, clinic, pricing, and schedules.
+ * The API flattens this data for backward compatibility, so all fields appear
+ * at the top level in the response.
+ */
 interface StaffMember {
+  // Basic user fields
   id: number;
   first_name: string;
   last_name: string;
   email: string;
   phone: string;
   role: 'doctor' | 'nurse';
-  specialization?: string;
   gender?: 'male' | 'female' | 'other' | null;
   birth_date?: string | null;
   address?: string | null;
   city?: string | null;
-  language?: string[] | null;  // Changed to array to support multiple languages
-  years_of_experience?: number | null;
+  language?: string[] | null;
   is_active: boolean;
   is_deleted?: boolean;
-  availability_status?: 'available' | 'busy' | 'offline' | 'break';
   created_at: string;
+
+  // Profile fields (from DoctorProfile/NurseProfile)
+  specialization?: string;
+  years_of_experience?: number | null;
+  availability_status?: 'available' | 'busy' | 'offline' | 'break';
   clinic?: {
     id: number;
     name: string;
-  };
+  } | null;
+
+  // Pricing and scheduling (from profile)
   offline_consultation_price?: number;
   online_consultation_price?: number;
   preferred_consultation_duration?: number; // in minutes

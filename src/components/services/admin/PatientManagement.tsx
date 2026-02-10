@@ -13,7 +13,15 @@ import { toast } from "react-toastify";
 import bnClinicLogo from "@/assets/clinics_logos/bn-clinica.png";
 import ayalaClinicLogo from "@/assets/clinics_logos/ayala_clinic.png";
 
+/**
+ * Patient interface.
+ *
+ * Note: The backend uses PatientProfile for personal information
+ * (citizenship, marital_status, profession) and PatientMedicalProfile
+ * for medical data. The API flattens this data for compatibility.
+ */
 interface Patient {
+  // Basic user fields
   id: number;
   first_name: string;
   last_name: string;
@@ -25,10 +33,18 @@ interface Patient {
   city?: string;
   is_active: boolean;
   created_at: string;
+
+  // Profile fields (from PatientProfile)
+  citizenship?: string;
+  marital_status?: string;
+  profession?: string;
+
+  // Note: Patients don't have direct clinic assignment
+  // They're associated with clinics through consultations/appointments
   clinic?: {
     id: number;
     name: string;
-  };
+  } | null;
 }
 
 interface PatientManagementProps {
