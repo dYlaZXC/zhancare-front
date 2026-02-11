@@ -215,11 +215,9 @@ export default function PatientManagement({ user }: PatientManagementProps) {
     setEditLoading(true);
 
     try {
-      const updateData = { ...formData };
       // Remove password if empty (don't change password)
-      if (!updateData.password) {
-        delete updateData.password;
-      }
+      const { password, ...updateData } = formData;
+      const finalData = password ? { ...updateData, password } : updateData;
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/patients/${editingPatient.id}/`, {
         method: "PATCH",
@@ -228,7 +226,7 @@ export default function PatientManagement({ user }: PatientManagementProps) {
           Authorization: `Token ${localStorage.getItem("access_token")}`,
         },
         credentials: "include",
-        body: JSON.stringify(updateData),
+        body: JSON.stringify(finalData),
       });
 
       if (!response.ok) {

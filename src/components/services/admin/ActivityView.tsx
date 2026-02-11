@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Joyride, { CallBackProps, STATUS, Step } from "react-joyride";
 import {
   Activity,
   Calendar,
@@ -26,7 +27,8 @@ import {
   LogOut,
   Database,
   FileText,
-  Users
+  Users,
+  HelpCircle
 } from "lucide-react";
 
 interface ActivityLog {
@@ -54,6 +56,121 @@ export default function ActivityView({ user }: ActivityViewProps) {
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterAction, setFilterAction] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+
+  // Joyride tour state
+  const [runTour, setRunTour] = useState(false);
+  const [tourSteps] = useState<Step[]>([
+    {
+      target: 'body',
+      content: (
+        <div>
+          <h2 className="text-xl font-bold mb-2">Добро пожаловать в Журнал Активности! 🎉</h2>
+          <p>Давайте совершим быстрый тур по основным возможностям этой страницы.</p>
+        </div>
+      ),
+      placement: 'center',
+      disableBeacon: true,
+    },
+    {
+      target: '.stats-cards',
+      content: (
+        <div>
+          <h3 className="font-bold mb-2">Статистика активности</h3>
+          <p>Здесь отображается общая статистика: всего действий, действий за сегодня, успешных операций и ошибок.</p>
+        </div>
+      ),
+      placement: 'bottom',
+    },
+    {
+      target: '.search-bar',
+      content: (
+        <div>
+          <h3 className="font-bold mb-2">Поиск действий</h3>
+          <p>Используйте поиск для быстрого нахождения действий по имени пользователя или описанию.</p>
+        </div>
+      ),
+      placement: 'bottom',
+    },
+    {
+      target: '.filter-category',
+      content: (
+        <div>
+          <h3 className="font-bold mb-2">Фильтр по категориям</h3>
+          <p>Фильтруйте логи по категориям: пользователи, персонал, консультации, записи и другие.</p>
+        </div>
+      ),
+      placement: 'bottom',
+    },
+    {
+      target: '.filter-action',
+      content: (
+        <div>
+          <h3 className="font-bold mb-2">Фильтр по типу действия</h3>
+          <p>Отфильтруйте логи по типу: создание, обновление, удаление, вход/выход, просмотр или экспорт.</p>
+        </div>
+      ),
+      placement: 'bottom',
+    },
+    {
+      target: '.filter-status',
+      content: (
+        <div>
+          <h3 className="font-bold mb-2">Фильтр по статусу</h3>
+          <p>Выберите статус: успешно, ошибка или предупреждение для отображения соответствующих логов.</p>
+        </div>
+      ),
+      placement: 'bottom',
+    },
+    {
+      target: '.export-button',
+      content: (
+        <div>
+          <h3 className="font-bold mb-2">Экспорт логов</h3>
+          <p>Экспортируйте логи активности для анализа или архивирования.</p>
+        </div>
+      ),
+      placement: 'left',
+    },
+    {
+      target: '.activity-timeline',
+      content: (
+        <div>
+          <h3 className="font-bold mb-2">Временная шкала активности</h3>
+          <p>Здесь отображаются все действия пользователей с подробной информацией: кто, что, когда и откуда (IP адрес).</p>
+        </div>
+      ),
+      placement: 'top',
+    },
+    {
+      target: '.help-tour-button',
+      content: (
+        <div>
+          <h3 className="font-bold mb-2">Повторный показ тура</h3>
+          <p>Нажмите эту кнопку в любое время, чтобы снова запустить этот тур. Удачной работы! 🚀</p>
+        </div>
+      ),
+      placement: 'left',
+    },
+  ]);
+
+  // Check if user has seen the tour
+  useEffect(() => {
+    const hasSeenTour = localStorage.getItem('activityViewTourCompleted');
+    if (!hasSeenTour && user?.role === 'admin') {
+      // Delay tour start to ensure DOM is ready
+      setTimeout(() => setRunTour(true), 1000);
+    }
+  }, [user]);
+
+  const handleJoyrideCallback = (data: CallBackProps) => {
+    const { status } = data;
+    const finishedStatuses: string[] = [STATUS.FINISHED, STATUS.SKIPPED];
+
+    if (finishedStatuses.includes(status)) {
+      setRunTour(false);
+      localStorage.setItem('activityViewTourCompleted', 'true');
+    }
+  };
 
   useEffect(() => {
     fetchActivities();
@@ -369,6 +486,55 @@ export default function ActivityView({ user }: ActivityViewProps) {
 
   return (
     <div className="w-full">
+      {/* Joyride Tour Component */}
+      <Joyride
+        steps={tourSteps}
+        run={runTour}
+        continuous
+        showProgress
+        showSkipButton
+        disableScrolling={true}
+        disableScrollParentFix={true}
+        callback={handleJoyrideCallback}
+        styles={{
+          options: {
+            primaryColor: '#3772ff',
+            textColor: '#1e263e',
+            backgroundColor: '#ffffff',
+            arrowColor: '#ffffff',
+            overlayColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 99999,
+          },
+          overlay: {
+            zIndex: 99998,
+          },
+          tooltip: {
+            borderRadius: 16,
+            padding: 20,
+          },
+          buttonNext: {
+            backgroundColor: '#3772ff',
+            borderRadius: 12,
+            padding: '10px 20px',
+            fontWeight: 600,
+          },
+          buttonBack: {
+            color: '#6b7280',
+            marginRight: 10,
+          },
+          buttonSkip: {
+            color: '#6b7280',
+          },
+        }}
+        locale={{
+          back: 'Назад',
+          close: 'Закрыть',
+          last: 'Завершить',
+          next: 'Далее',
+          skip: 'Пропустить',
+        }}
+      />
+
       {/* Header Section */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-6">
@@ -380,19 +546,30 @@ export default function ActivityView({ user }: ActivityViewProps) {
               Отслеживайте все действия пользователей и системные события
             </p>
           </div>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="flex items-center gap-2 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all"
-            style={{ background: 'linear-gradient(135deg, #3772ff 0%, #2c5bcc 100%)' }}
-          >
-            <Download className="w-5 h-5" />
-            Экспорт Логов
-          </motion.button>
+          <div className="flex items-center gap-3">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setRunTour(true)}
+              className="help-tour-button flex items-center gap-2 px-4 py-3 rounded-2xl border-2 border-blue-500 text-blue-500 font-semibold hover:bg-blue-50 transition-all"
+              title="Показать тур по странице"
+            >
+              <HelpCircle className="w-5 h-5" />
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="export-button flex items-center gap-2 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+              style={{ background: 'linear-gradient(135deg, #3772ff 0%, #2c5bcc 100%)' }}
+            >
+              <Download className="w-5 h-5" />
+              Экспорт Логов
+            </motion.button>
+          </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="stats-cards grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           {[
             { label: "Всего действий", value: stats.total, icon: Activity, color: "#3772ff", bg: "#ebf1ff" },
             { label: "Сегодня", value: stats.today, icon: Calendar, color: "#8b5cf6", bg: "#f3e8ff" },
@@ -423,7 +600,7 @@ export default function ActivityView({ user }: ActivityViewProps) {
         {/* Search and Filters */}
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Search */}
-          <div className="flex-1 relative">
+          <div className="search-bar flex-1 relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
@@ -438,7 +615,7 @@ export default function ActivityView({ user }: ActivityViewProps) {
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+            className="filter-category px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
           >
             <option value="all">Все категории</option>
             <option value="user">Пользователи</option>
@@ -454,7 +631,7 @@ export default function ActivityView({ user }: ActivityViewProps) {
           <select
             value={filterAction}
             onChange={(e) => setFilterAction(e.target.value)}
-            className="px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+            className="filter-action px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
           >
             <option value="all">Все действия</option>
             <option value="create">Создание</option>
@@ -470,7 +647,7 @@ export default function ActivityView({ user }: ActivityViewProps) {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+            className="filter-status px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
           >
             <option value="all">Все статусы</option>
             <option value="success">Успешно</option>
@@ -512,7 +689,7 @@ export default function ActivityView({ user }: ActivityViewProps) {
 
       {/* Activity Timeline */}
       {!loading && (
-        <div className="space-y-4">
+        <div className="activity-timeline space-y-4">
           {filteredActivities.length === 0 ? (
             <div className="text-center py-20">
               <Activity className="w-16 h-16 mx-auto mb-4 text-gray-400" />
