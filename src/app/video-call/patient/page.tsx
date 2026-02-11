@@ -50,7 +50,18 @@ const PatientVideoCallPage: React.FC = () => {
     : "Доктор";
 
   // Fetch consultation data from API using meetingId
+  // ⚠️ Wait for magic link auth to complete before fetching
   useEffect(() => {
+    // Don't fetch if magic link auth is still in progress
+    if (magicLinkAuth.isAuthenticating) {
+      return;
+    }
+
+    // Don't fetch if magic link auth failed (will redirect to login)
+    if (magicLinkAuth.error) {
+      return;
+    }
+
     const fetchConsultationData = async () => {
       try {
         setConsultationLoading(true);
@@ -69,7 +80,23 @@ const PatientVideoCallPage: React.FC = () => {
 
         setMeetingId(meetingIdParam);
 
-        // Fetch consultation data from API
+        // 🔐 If magic link auth was used, get consultation from sessionStorage
+        if (magicLinkAuth.authMethod === 'magic_link' && magicLinkAuth.isAuthenticated) {
+          const storedConsultation = sessionStorage.getItem('consultation');
+          if (storedConsultation) {
+            try {
+              const consultationData = JSON.parse(storedConsultation);
+              setConsultation(consultationData);
+              setConsultationLoading(false);
+              console.log('✅ Using consultation data from magic link auth');
+              return;
+            } catch (e) {
+              console.warn('Failed to parse stored consultation, fetching from API');
+            }
+          }
+        }
+
+        // Fetch consultation data from API (fallback or normal flow)
         const response = await api.get(`/consultations/?meeting_id=${meetingIdParam}`);
 
         if (response.data && response.data.length > 0) {
@@ -86,7 +113,7 @@ const PatientVideoCallPage: React.FC = () => {
     };
 
     fetchConsultationData();
-  }, []);
+  }, [magicLinkAuth.isAuthenticating, magicLinkAuth.error, magicLinkAuth.isAuthenticated, magicLinkAuth.authMethod]);
 
   // Handle access code verification
   const handleVerifyAccessCode = async (e: React.FormEvent) => {
@@ -100,11 +127,26 @@ const PatientVideoCallPage: React.FC = () => {
       });
 
       if (response.data.success) {
-        const { consultation } = response.data;
+        const { access_token, refresh_token, user, consultation } = response.data;
 
-        // Redirect to video call page with meetingId
-        router.push(`/video-call/patient?meetingId=${consultation.meeting_id}`);
-        setShowAccessCodeModal(false);
+        // 🔐 Store authentication tokens (same as magic link auth)
+        sessionStorage.setItem('access_token', access_token);
+        sessionStorage.setItem('refresh_token', refresh_token);
+        sessionStorage.setItem('user', JSON.stringify(user));
+        sessionStorage.setItem('consultation', JSON.stringify(consultation));
+
+        // Also set in localStorage for backward compatibility
+        localStorage.setItem('access_token', access_token);
+        localStorage.setItem('refresh_token', refresh_token);
+        localStorage.setItem('user', JSON.stringify(user));
+
+        console.log('✅ Access code verified and authenticated');
+        console.log('🔑 Access token stored');
+        console.log('👤 User:', user.email);
+        console.log('🏥 Consultation:', consultation.meeting_id);
+
+        // Force full page reload to clear magic link error state
+        window.location.href = `/video-call/patient?meetingId=${consultation.meeting_id}`;
       } else {
         setCodeError(response.data.error || "Неверный код доступа");
       }
@@ -161,7 +203,7 @@ const PatientVideoCallPage: React.FC = () => {
     );
   }
 
-  // Show error state if magic link auth failed
+  // Show error state if magic link auth failed - with access code fallback
   if (magicLinkAuth.error) {
     return (
       <div className="relative flex items-center justify-center min-h-screen bg-gradient-to-br from-red-900 via-rose-900 to-orange-900 overflow-hidden">
@@ -171,15 +213,106 @@ const PatientVideoCallPage: React.FC = () => {
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
         </div>
 
-        {/* Content */}
-        <div className="relative z-10 text-center max-w-md px-8">
-          <div className="mb-6 inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-red-600/20 border-2 border-red-400/30 backdrop-blur-sm">
-            <X className="w-10 h-10 text-red-400" />
-          </div>
-          <h2 className="text-2xl font-bold text-white mb-4">Ошибка аутентификации</h2>
-          <p className="text-red-200/90 mb-6">{magicLinkAuth.error}</p>
-          <p className="text-sm text-white/60">Перенаправление на страницу входа...</p>
-        </div>
+        {/* Content - Error message + Access code form */}
+        <AnimatePresence>
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="relative z-10 max-w-md w-full mx-4"
+          >
+            {/* Error Alert */}
+            <div className="bg-red-600/20 border-2 border-red-400/30 backdrop-blur-sm rounded-2xl p-6 mb-6">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0">
+                  <X className="w-8 h-8 text-red-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-white mb-2">Ошибка магической ссылки</h3>
+                  <p className="text-red-200/90 text-sm">{magicLinkAuth.error}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Access Code Form as Fallback */}
+            <div className="bg-white rounded-3xl shadow-2xl p-8">
+              {/* Header */}
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Lock className="w-8 h-8 text-white" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Используйте код доступа</h2>
+                <p className="text-gray-600 text-sm">Введите код из письма для входа в консультацию</p>
+              </div>
+
+              {/* Form */}
+              <form onSubmit={handleVerifyAccessCode} className="space-y-5">
+                {/* Access Code Input */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Код доступа (6 символов)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={accessCode}
+                    onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
+                    placeholder="ABC123"
+                    maxLength={6}
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors text-center text-2xl font-bold tracking-widest uppercase"
+                  />
+                </div>
+
+                {/* Error Message */}
+                {codeError && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-start gap-3"
+                  >
+                    <X className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-red-700">{codeError}</p>
+                  </motion.div>
+                )}
+
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  disabled={verifyingCode || accessCode.length !== 6}
+                  className="w-full px-6 py-4 rounded-xl text-white font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)' }}
+                >
+                  {verifyingCode ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Проверка кода...
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="w-5 h-5" />
+                      Войти в консультацию
+                    </>
+                  )}
+                </button>
+              </form>
+
+              {/* Help Text */}
+              <p className="text-xs text-gray-500 text-center mt-6">
+                Код доступа отправлен на ваш email при создании консультации
+              </p>
+
+              {/* Login Link */}
+              <div className="mt-4 text-center">
+                <button
+                  onClick={() => router.push('/login')}
+                  className="text-sm text-gray-600 hover:text-blue-600 transition-colors underline"
+                >
+                  Вернуться на страницу входа
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </AnimatePresence>
 
         {/* Grid overlay */}
         <div className="absolute inset-0 opacity-5 pointer-events-none">

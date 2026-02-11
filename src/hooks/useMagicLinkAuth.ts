@@ -26,6 +26,7 @@ export interface MagicLinkAuthState {
 }
 
 export interface MagicLinkAuthResult {
+  success: boolean;
   access_token: string;
   refresh_token: string;
   user: {
@@ -36,6 +37,7 @@ export interface MagicLinkAuthResult {
     role: string;
   };
   consultation: any;
+  error?: string;
 }
 
 export function useMagicLinkAuth() {
@@ -97,15 +99,23 @@ export function useMagicLinkAuth() {
 
       try {
         // Call auto-login endpoint
+        console.log('🔐 Calling auto-login endpoint...');
         const response = await axios.post(`${baseURL}/consultations/auto-login/`, {
           token
         });
 
+        console.log('📥 Auto-login response:', response.status, response.data);
+
         const data: MagicLinkAuthResult = response.data;
 
         if (!data.success) {
+          console.error('❌ Auto-login failed:', data.error);
           throw new Error(data.error || 'Authentication failed');
         }
+
+        console.log('✅ Magic link authentication successful');
+        console.log('🔑 Access token received:', data.access_token ? 'Yes' : 'No');
+        console.log('🔄 Refresh token received:', data.refresh_token ? 'Yes' : 'No');
 
         // 🔐 Use sessionStorage for consultation tokens (expires on tab close - safer for healthcare)
         sessionStorage.setItem('access_token', data.access_token);
@@ -118,7 +128,7 @@ export function useMagicLinkAuth() {
         localStorage.setItem('refresh_token', data.refresh_token);
         localStorage.setItem('user', JSON.stringify(data.user));
 
-        console.log('✅ Magic link authentication successful');
+        console.log('💾 Tokens stored in sessionStorage and localStorage');
         console.log('👤 User:', data.user.email);
         console.log('🏥 Consultation:', data.consultation.meeting_id);
 
@@ -160,10 +170,7 @@ export function useMagicLinkAuth() {
           authMethod: 'magic_link'
         });
 
-        // Redirect to login after 3 seconds
-        setTimeout(() => {
-          router.push('/login');
-        }, 3000);
+        // No automatic redirect - user can use access code fallback
       }
     };
 
