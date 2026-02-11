@@ -86,13 +86,47 @@ const PatientVideoCallPage: React.FC = () => {
         const response = await api.get(`/consultations/?meeting_id=${meetingIdParam}`);
 
         if (response.data && response.data.length > 0) {
-          setConsultation(response.data[0]);
+          const consultationData = response.data[0];
+
+          // ⏰ Check if user is trying to connect before scheduled time
+          if (consultationData.scheduled_at) {
+            const scheduledTime = new Date(consultationData.scheduled_at);
+            const now = new Date();
+            const timeDiff = scheduledTime.getTime() - now.getTime();
+
+            // Allow access 5 minutes before scheduled time (grace period)
+            const gracePeriodMs = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+            if (timeDiff > gracePeriodMs) {
+              const scheduledTimeStr = scheduledTime.toLocaleString('ru-RU', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              });
+
+              setConsultationError(
+                `Консультация запланирована на ${scheduledTimeStr}.`
+              );
+              return;
+            }
+          }
+
+          setConsultation(consultationData);
         } else {
           setConsultationError("Консультация не найдена");
         }
       } catch (err: any) {
         console.error('Error fetching consultation data:', err);
-        setConsultationError("Ошибка загрузки данных консультации");
+
+        // Handle 403 error (early access blocked)
+        if (err.response?.status === 403) {
+          const errorMessage = err.response?.data?.error || "Доступ к консультации ограничен по времени";
+          setConsultationError(errorMessage);
+        } else {
+          setConsultationError(err.response?.data?.error || "Ошибка загрузки данных консультации");
+        }
       } finally {
         setConsultationLoading(false);
       }
@@ -486,22 +520,29 @@ const PatientVideoCallPage: React.FC = () => {
 
   if (consultationError) {
     return (
-      <div className="relative flex items-center justify-center h-screen bg-gradient-to-br from-gray-900 via-red-900/20 to-orange-900/20 overflow-hidden">
+      <div className="relative flex items-center justify-center h-screen bg-gradient-to-br from-slate-900 via-blue-900/20 to-indigo-900/20 overflow-hidden">
         {/* Animated background circles */}
         <div className="absolute inset-0">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-red-500/10 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
         </div>
 
         {/* Content */}
-        <div className="relative z-10 text-center max-w-md px-8">
-          <div className="mb-6 inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-red-600/20 border-2 border-red-400/30 backdrop-blur-sm">
-            <svg className="w-10 h-10 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        <div className="relative z-10 text-center max-w-2xl px-8">
+          <div className="mb-6 inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-blue-600/30 border-2 border-blue-400/50 backdrop-blur-sm shadow-xl">
+            <svg className="w-12 h-12 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-white mb-4">Ошибка загрузки</h2>
-          <p className="text-red-200/90 mb-6">{consultationError}</p>
+          <h2 className="text-3xl font-bold text-white mb-6 drop-shadow-lg">Вы зашли раньше времени</h2>
+
+          {/* Info message box with better visibility */}
+          <div className="bg-black/40 backdrop-blur-md border-2 border-blue-400/30 rounded-2xl p-6 mb-6">
+            <p className="text-lg text-white font-medium leading-relaxed drop-shadow-md mb-4">{consultationError}</p>
+            <p className="text-base text-blue-200 font-normal drop-shadow-md">
+              💡 Вы сможете зайти за 5 минут до назначенного времени
+            </p>
+          </div>
           <button
             onClick={() => window.location.reload()}
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 border-2 border-blue-400/50 shadow-lg hover:shadow-blue-500/50 hover:scale-105"
