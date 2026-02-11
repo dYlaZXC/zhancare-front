@@ -113,17 +113,19 @@ async function refreshAccessToken(): Promise<string> {
     throw new Error("No refresh token found");
   }
 
-  // Call the JWT refresh endpoint
-  const response = await axios.post(`${baseURL}/user-profile/auth/refresh/`, {
-    refresh_token: refreshToken,
+  // Call the JWT refresh endpoint (simplejwt format)
+  const response = await axios.post(`${baseURL}/auth/token/refresh/`, {
+    refresh: refreshToken,
   });
 
-  const { access_token, refresh_token: newRefreshToken } = response.data;
+  const { access } = response.data;
 
-  // Store new tokens
-  setTokens(access_token, newRefreshToken);
+  // Store new access token (refresh token stays the same in simplejwt)
+  if (typeof window !== "undefined") {
+    localStorage.setItem(ACCESS_TOKEN_KEY, access);
+  }
 
-  return access_token;
+  return access;
 }
 
 // Response Interceptor - Handle 401 with token refresh

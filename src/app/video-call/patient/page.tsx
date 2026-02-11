@@ -80,23 +80,9 @@ const PatientVideoCallPage: React.FC = () => {
 
         setMeetingId(meetingIdParam);
 
-        // 🔐 If magic link auth was used, get consultation from sessionStorage
-        if (magicLinkAuth.authMethod === 'magic_link' && magicLinkAuth.isAuthenticated) {
-          const storedConsultation = sessionStorage.getItem('consultation');
-          if (storedConsultation) {
-            try {
-              const consultationData = JSON.parse(storedConsultation);
-              setConsultation(consultationData);
-              setConsultationLoading(false);
-              console.log('✅ Using consultation data from magic link auth');
-              return;
-            } catch (e) {
-              console.warn('Failed to parse stored consultation, fetching from API');
-            }
-          }
-        }
-
-        // Fetch consultation data from API (fallback or normal flow)
+        // ✅ Always fetch fresh consultation data from API
+        // This ensures we have the most up-to-date doctor information
+        console.log('🔄 Fetching fresh consultation data from API...');
         const response = await api.get(`/consultations/?meeting_id=${meetingIdParam}`);
 
         if (response.data && response.data.length > 0) {
@@ -141,12 +127,21 @@ const PatientVideoCallPage: React.FC = () => {
         localStorage.setItem('user', JSON.stringify(user));
 
         console.log('✅ Access code verified and authenticated');
-        console.log('🔑 Access token stored');
+        console.log('🔑 Access token:', access_token.substring(0, 20) + '...');
+        console.log('🔄 Refresh token:', refresh_token.substring(0, 20) + '...');
         console.log('👤 User:', user.email);
         console.log('🏥 Consultation:', consultation.meeting_id);
 
-        // Force full page reload to clear magic link error state
-        window.location.href = `/video-call/patient?meetingId=${consultation.meeting_id}`;
+        // Verify tokens were stored
+        console.log('📦 Verifying localStorage...');
+        console.log('  - access_token:', localStorage.getItem('access_token') ? 'STORED ✅' : 'MISSING ❌');
+        console.log('  - refresh_token:', localStorage.getItem('refresh_token') ? 'STORED ✅' : 'MISSING ❌');
+
+        // Small delay to ensure localStorage write completes before redirect
+        setTimeout(() => {
+          console.log('🚀 Redirecting to video call...');
+          window.location.href = `/video-call/patient?meetingId=${consultation.meeting_id}`;
+        }, 100);
       } else {
         setCodeError(response.data.error || "Неверный код доступа");
       }

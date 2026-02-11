@@ -65,6 +65,10 @@ export function useMagicLinkAuth() {
       const existingToken = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
       if (existingToken && !token) {
         console.log('✅ Using existing session');
+        console.log('📦 localStorage check:');
+        console.log('  - access_token:', localStorage.getItem('access_token') ? 'EXISTS ✅' : 'MISSING ❌');
+        console.log('  - refresh_token:', localStorage.getItem('refresh_token') ? 'EXISTS ✅' : 'MISSING ❌');
+        console.log('  - user:', localStorage.getItem('user') ? 'EXISTS ✅' : 'MISSING ❌');
         setAuthState({
           isAuthenticating: false,
           isAuthenticated: true,
