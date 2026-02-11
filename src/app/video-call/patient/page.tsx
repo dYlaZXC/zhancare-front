@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { api } from "@/utils/api";
 import { Consultation } from "@/types/consultation";
 import { motion, AnimatePresence } from "framer-motion";
+import { useMagicLinkAuth } from "@/hooks/useMagicLinkAuth";
 
 // Patient-specific components
 import PatientVideoHeader from "./components/PatientVideoHeader";
@@ -16,6 +17,9 @@ import PatientCallFooter from "./components/PatientCallFooter";
 const PatientVideoCallPage: React.FC = () => {
   const router = useRouter();
   const { user } = useAuth();
+
+  // 🔐 Production-grade magic link authentication
+  const magicLinkAuth = useMagicLinkAuth();
 
   // Redirect if not a patient
   useEffect(() => {
@@ -115,6 +119,83 @@ const PatientVideoCallPage: React.FC = () => {
   const handleEndCall = () => {
     router.push("/patient/video");
   };
+
+  // 🔐 Magic Link Authentication States
+  // Show authenticating state while magic link auth is in progress
+  if (magicLinkAuth.isAuthenticating) {
+    return (
+      <div className="relative flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900 overflow-hidden">
+        {/* Animated background */}
+        <div className="absolute inset-0">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        </div>
+
+        {/* Content */}
+        <div className="relative z-10 text-center max-w-md px-8">
+          <div className="mb-6 inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-blue-600/30 border-2 border-blue-400/50 backdrop-blur-sm shadow-xl shadow-blue-500/20">
+            <Lock className="w-12 h-12 text-blue-300 animate-pulse" />
+          </div>
+          <h2 className="text-3xl font-bold text-white mb-4 drop-shadow-lg">Безопасная аутентификация</h2>
+          <p className="text-lg text-blue-200 mb-6">Проверяем ваш магический линк...</p>
+          <div className="flex items-center justify-center gap-3">
+            <div className="w-3 h-3 bg-blue-400 rounded-full animate-bounce shadow-lg shadow-blue-400/50"></div>
+            <div className="w-3 h-3 bg-indigo-400 rounded-full animate-bounce delay-75 shadow-lg shadow-indigo-400/50"></div>
+            <div className="w-3 h-3 bg-purple-400 rounded-full animate-bounce delay-150 shadow-lg shadow-purple-400/50"></div>
+          </div>
+        </div>
+
+        {/* Grid overlay */}
+        <div className="absolute inset-0 opacity-[0.02] pointer-events-none">
+          <div className="w-full h-full"
+               style={{
+                 backgroundImage: `
+                   linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+                   linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px)
+                 `,
+                 backgroundSize: '24px 24px'
+               }}>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if magic link auth failed
+  if (magicLinkAuth.error) {
+    return (
+      <div className="relative flex items-center justify-center min-h-screen bg-gradient-to-br from-red-900 via-rose-900 to-orange-900 overflow-hidden">
+        {/* Animated background */}
+        <div className="absolute inset-0">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-red-500/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        </div>
+
+        {/* Content */}
+        <div className="relative z-10 text-center max-w-md px-8">
+          <div className="mb-6 inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-red-600/20 border-2 border-red-400/30 backdrop-blur-sm">
+            <X className="w-10 h-10 text-red-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-4">Ошибка аутентификации</h2>
+          <p className="text-red-200/90 mb-6">{magicLinkAuth.error}</p>
+          <p className="text-sm text-white/60">Перенаправление на страницу входа...</p>
+        </div>
+
+        {/* Grid overlay */}
+        <div className="absolute inset-0 opacity-5 pointer-events-none">
+          <div className="w-full h-full"
+               style={{
+                 backgroundImage: `
+                   linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                   linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px)
+                 `,
+                 backgroundSize: '24px 24px'
+               }}>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Access Code Modal
   if (showAccessCodeModal) {
