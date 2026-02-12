@@ -878,7 +878,7 @@ function AddEventModal({
             duration: formData.duration
           }
         });
-        const doctorIds = new Set(response.data.available_doctors.map((d: any) => d.id));
+        const doctorIds = new Set<number>(response.data.available_doctors.map((d: any) => d.id));
         setAvailableDoctorIds(doctorIds);
 
         // If currently selected doctor is not available, clear selection
