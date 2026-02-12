@@ -895,7 +895,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     } else if (formData.password && formData.password.length < 8) {
       errors.password = 'Минимум 8 символов';
     }
-    if (isGlobalAdmin && clinics.length > 0 && !formData.clinic_id) errors.clinic_id = 'Выберите клинику';
+    // ✅ Clinic is optional - global admins can choose to assign or not assign a clinic
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) setValidationKey(k => k + 1);
     return Object.keys(errors).length === 0;

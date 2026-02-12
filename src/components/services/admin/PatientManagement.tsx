@@ -80,6 +80,7 @@ export default function PatientManagement({ user }: PatientManagementProps) {
     city: '',
     clinic_id: '',
   });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchPatients();
@@ -142,8 +143,34 @@ export default function PatientManagement({ user }: PatientManagementProps) {
     }
   };
 
+  const validatePatientForm = () => {
+    const errors: Record<string, string> = {};
+
+    if (!formData.first_name.trim()) errors.first_name = 'Введите имя';
+    if (!formData.last_name.trim()) errors.last_name = 'Введите фамилию';
+    if (!formData.email.trim()) errors.email = 'Введите email';
+    if (!formData.phone.trim()) errors.phone = 'Введите номер телефона';
+
+    if (!showEditModal) {
+      if (!formData.password.trim()) errors.password = 'Введите пароль';
+      else if (formData.password.length < 8) errors.password = 'Минимум 8 символов';
+    } else if (formData.password && formData.password.length < 8) {
+      errors.password = 'Минимум 8 символов';
+    }
+
+    // ✅ Clinic is optional - global admins can choose to assign or not assign a clinic
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleAddPatient = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!validatePatientForm()) {
+      toast.error('Пожалуйста, заполните все обязательные поля');
+      return;
+    }
+
     setAddLoading(true);
 
     try {
@@ -211,6 +238,11 @@ export default function PatientManagement({ user }: PatientManagementProps) {
   const handleEditPatient = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingPatient) return;
+
+    if (!validatePatientForm()) {
+      toast.error('Пожалуйста, заполните все обязательные поля');
+      return;
+    }
 
     setEditLoading(true);
 
@@ -777,14 +809,14 @@ export default function PatientManagement({ user }: PatientManagementProps) {
                   {isGlobalAdmin ? (
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Клиника
+                        Клиника <span className="text-gray-500 text-xs">(опционально)</span>
                       </label>
                       <select
                         value={formData.clinic_id}
                         onChange={(e) => setFormData({ ...formData, clinic_id: e.target.value })}
                         className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:outline-none transition-colors"
                       >
-                        <option value="">Без клиники (опционально)</option>
+                        <option value="">Без клиники</option>
                         {clinics.map((clinic) => (
                           <option key={clinic.id} value={clinic.id}>
                             {clinic.name}
@@ -792,7 +824,7 @@ export default function PatientManagement({ user }: PatientManagementProps) {
                         ))}
                       </select>
                       <p className="text-sm text-gray-500 mt-2">
-                        💡 Глобальные администраторы могут назначить пациента в любую клинику
+                        💡 Глобальные администраторы могут назначить пациента в любую клинику или оставить без клиники
                       </p>
                     </div>
                   ) : (user.clinic?.name || user.clinic_id) && (
