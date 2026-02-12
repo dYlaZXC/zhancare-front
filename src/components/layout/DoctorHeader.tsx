@@ -48,8 +48,10 @@ export const DoctorHeader = ({
         const response = await api.get('/user-profile/profile/');
         const profileData = response.data;
 
-        // Handle availability_status - if null/undefined, default to offline for doctors
-        const status = profileData.availability_status || 'offline';
+        // Handle availability_status - check both top-level and nested profile_data
+        const status = profileData.availability_status
+          || profileData.profile_data?.availability_status
+          || 'offline';
         setAvailabilityStatus(status as 'available' | 'busy' | 'offline' | 'break');
       } catch (error) {
         console.error('Failed to fetch current availability status:', error);
