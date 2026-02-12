@@ -895,6 +895,21 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     } else if (formData.password && formData.password.length < 8) {
       errors.password = 'Минимум 8 символов';
     }
+
+    // ✅ Validate consultation duration for doctors
+    if (formData.role === 'doctor') {
+      const duration = formData.preferred_consultation_duration;
+      if (!duration || Number(duration) < 5 || Number(duration) > 180) {
+        errors.preferredConsultationDuration = 'Укажите длительность консультации (5-180 минут)';
+      }
+
+      // ✅ Validate that at least one day is enabled in the schedule
+      const hasEnabledDay = Object.values(onlineWorkSchedule).some((day: any) => day.enabled);
+      if (!hasEnabledDay) {
+        errors.schedule = 'Необходимо включить хотя бы один день в расписании работы';
+      }
+    }
+
     // ✅ Clinic is optional - global admins can choose to assign or not assign a clinic
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) setValidationKey(k => k + 1);
@@ -1239,23 +1254,41 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     }
   }, [isLanguageDropdownOpen]);
 
-  // Filter staff based on search and filters
-  const filteredStaff = staff.filter((member) => {
-    const matchesSearch =
-      member.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.email.toLowerCase().includes(searchQuery.toLowerCase());
+  // Helper function to check if a doctor/nurse has a configured schedule
+  const hasConfiguredSchedule = (member: StaffMember): boolean => {
+    if (member.role !== 'doctor' && member.role !== 'nurse') return false;
 
-    const matchesRole = filterRole === 'all' || member.role === filterRole;
-    const matchesStatus =
-      filterStatus === 'all' ||
-      member.availability_status === filterStatus;
+    const schedule = member.online_work_schedule || member.work_schedule;
+    if (!schedule) return false;
 
-    // Filter by deleted status
-    const matchesDeleted = showDeleted ? member.is_deleted === true : !member.is_deleted;
+    // Check if at least one day is enabled
+    return Object.values(schedule).some((day: any) =>
+      typeof day === 'object' && day.enabled === true
+    );
+  };
 
-    return matchesSearch && matchesRole && matchesStatus && matchesDeleted;
-  });
+  // Filter and sort staff based on search and filters
+  const filteredStaff = staff
+    .filter((member) => {
+      const matchesSearch =
+        member.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        member.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        member.email.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesRole = filterRole === 'all' || member.role === filterRole;
+      const matchesStatus =
+        filterStatus === 'all' ||
+        member.availability_status === filterStatus;
+
+      // Filter by deleted status
+      const matchesDeleted = showDeleted ? member.is_deleted === true : !member.is_deleted;
+
+      return matchesSearch && matchesRole && matchesStatus && matchesDeleted;
+    })
+    .sort((a, b) => {
+      // Sort by created_at descending (newest first)
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
 
   const stats = {
     total: staff.filter(s => !s.is_deleted).length,
@@ -1483,6 +1516,20 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                               <XCircle className="w-3 h-3" />
                               Не работает
                             </span>
+                          )}
+                          {/* Schedule status badge for doctors */}
+                          {member.role === 'doctor' && (
+                            hasConfiguredSchedule(member) ? (
+                              <span className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
+                                <CheckCircle className="w-3 h-3" />
+                                Расписание настроено
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+                                <AlertCircle className="w-3 h-3" />
+                                Нет расписания
+                              </span>
+                            )
                           )}
                         </div>
 
@@ -1956,7 +2003,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                   {/* Preferred Consultation Duration */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Длительность консультации
+                      Длительность консультации <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <input
@@ -1966,11 +2013,19 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                         step="5"
                         value={formData.preferred_consultation_duration}
                         onChange={(e) => setFormData({ ...formData, preferred_consultation_duration: e.target.value })}
-                        className="w-full pl-4 pr-16 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                        className={`w-full pl-4 pr-16 py-3 rounded-xl border-2 ${
+                          formErrors.preferredConsultationDuration ? 'border-red-500' : 'border-gray-200'
+                        } focus:border-blue-500 focus:outline-none transition-colors`}
                         placeholder="30"
+                        required
                       />
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium pointer-events-none">минут</span>
                     </div>
+                    {formErrors.preferredConsultationDuration && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {formErrors.preferredConsultationDuration}
+                      </p>
+                    )}
                     <p className="text-xs text-gray-500 mt-2">
                       💡 Рекомендуемая длительность одной консультации (5-180 минут)
                     </p>
@@ -2235,6 +2290,11 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       ) : (
                         <p className="text-sm text-yellow-800 font-medium">
                           ⚠️ <strong>Важно:</strong> Если доктор занят онлайн консультацией, он не сможет проводить оффлайн в это же время (и наоборот).
+                        </p>
+                      )}
+                      {formErrors.schedule && (
+                        <p className="text-sm text-red-600 font-semibold mt-2 bg-red-50 p-3 rounded-lg">
+                          ❌ {formErrors.schedule}
                         </p>
                       )}
                     </div>
@@ -2740,7 +2800,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                   {/* Preferred Consultation Duration */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Длительность консультации
+                      Длительность консультации <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <input
@@ -2750,11 +2810,19 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                         step="5"
                         value={formData.preferred_consultation_duration}
                         onChange={(e) => setFormData({ ...formData, preferred_consultation_duration: e.target.value })}
-                        className="w-full pl-4 pr-16 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                        className={`w-full pl-4 pr-16 py-3 rounded-xl border-2 ${
+                          formErrors.preferredConsultationDuration ? 'border-red-500' : 'border-gray-200'
+                        } focus:border-blue-500 focus:outline-none transition-colors`}
                         placeholder="30"
+                        required
                       />
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium pointer-events-none">минут</span>
                     </div>
+                    {formErrors.preferredConsultationDuration && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {formErrors.preferredConsultationDuration}
+                      </p>
+                    )}
                     <p className="text-xs text-gray-500 mt-2">
                       💡 Рекомендуемая длительность одной консультации (5-180 минут)
                     </p>
@@ -3019,6 +3087,11 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       ) : (
                         <p className="text-sm text-yellow-800 font-medium">
                           ⚠️ <strong>Важно:</strong> Если доктор занят онлайн консультацией, он не сможет проводить оффлайн в это же время (и наоборот).
+                        </p>
+                      )}
+                      {formErrors.schedule && (
+                        <p className="text-sm text-red-600 font-semibold mt-2 bg-red-50 p-3 rounded-lg">
+                          ❌ {formErrors.schedule}
                         </p>
                       )}
                     </div>

@@ -10,7 +10,6 @@ import { OptimizedConsultationProvider } from "@/context/OptimizedConsultationCo
 import AuthPopup from "@/components/AuthPopup";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { ClientCSRFLoader } from "@/components/ClientCSRFLoader"; // ✅ Import
 
 const dmSans = DM_Sans({ subsets: ["latin"] });
 
@@ -77,7 +76,6 @@ export default function RootLayout({
         <AuthProvider>
           <LanguageProvider>
             <OptimizedConsultationProvider>
-              <ClientCSRFLoader /> {/* ✅ Set CSRF cookie once on load */}
               <main>{children}</main>
               <AuthPopup />
             </OptimizedConsultationProvider>

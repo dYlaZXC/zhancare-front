@@ -4,6 +4,7 @@ import { useState, useCallback, FormEvent } from "react";
 import { motion } from "framer-motion";
 import { Mail, Phone, User, Lock, Loader2, Shield } from "lucide-react";
 import AuthInput from "./AuthInput";
+import PhoneAuthInput from "./PhoneAuthInput";
 import PdfViewerModal from "../PdfViewerModal";
 
 interface RegisterFormProps {
@@ -191,11 +192,9 @@ const RegisterForm = ({ translations, onSubmit, loading, language = "en" }: Regi
       />
 
       {/* Phone */}
-      <AuthInput
+      <PhoneAuthInput
         name="phone"
-        type="tel"
         placeholder={translations.phone}
-        icon={Phone}
         value={formData.phone}
         autoComplete="tel"
         onChange={handleChange}

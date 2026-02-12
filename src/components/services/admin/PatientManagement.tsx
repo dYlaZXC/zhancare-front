@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, memo } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -50,6 +50,180 @@ interface Patient {
 interface PatientManagementProps {
   user: any;
 }
+
+// Phone number formatter utility
+const formatPhoneNumber = (value: string): string => {
+  // Remove all non-numeric characters except '+'
+  const cleaned = value.replace(/[^\d+]/g, '');
+
+  // Extract only digits for formatting
+  let digits = cleaned.replace(/\D/g, '');
+
+  // If empty or just one digit, return as is with +
+  if (!digits) return '';
+  if (digits.length === 1) return '+' + digits;
+
+  // Convert Kazakhstan 8 to 7 (8XXXXXXXXXX -> 7XXXXXXXXXX)
+  // This handles cases like 87758249686 -> 77758249686
+  if (digits.startsWith('8') && digits.length === 11) {
+    digits = '7' + digits.substring(1);
+  }
+
+  // Format: +X (XXX) XXX XX XX
+  let formatted = '+' + digits[0];
+
+  // Add area code in parentheses (only if we have at least 2 digits)
+  if (digits.length >= 2) {
+    formatted += ' (' + digits.substring(1, Math.min(4, digits.length));
+
+    // Close parentheses only if we have 4+ digits
+    if (digits.length >= 4) {
+      formatted += ')';
+    }
+  }
+
+  // Add first part (digits 5-7)
+  if (digits.length >= 5) {
+    formatted += ' ' + digits.substring(4, Math.min(7, digits.length));
+  }
+
+  // Add second part (digits 8-9)
+  if (digits.length >= 8) {
+    formatted += ' ' + digits.substring(7, Math.min(9, digits.length));
+  }
+
+  // Add third part (digits 10-11)
+  if (digits.length >= 10) {
+    formatted += ' ' + digits.substring(9, Math.min(11, digits.length));
+  }
+
+  return formatted;
+};
+
+// Memoized phone input component with automatic formatting
+const PhoneInput = memo(({
+  value,
+  onChange,
+  placeholder,
+  required,
+  className
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  required?: boolean;
+  className?: string;
+}) => {
+  const [localValue, setLocalValue] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const previousDigitCount = useRef<number>(0);
+
+  useEffect(() => {
+    if (document.activeElement !== inputRef.current) {
+      setLocalValue(value);
+      previousDigitCount.current = value.replace(/\D/g, '').length;
+    }
+  }, [value]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' || e.key === 'Delete') {
+      if (!inputRef.current) return;
+
+      const cursorPos = inputRef.current.selectionStart || 0;
+      const cursorEnd = inputRef.current.selectionEnd || 0;
+      const value = inputRef.current.value;
+
+      // If text is selected, let default behavior handle it
+      if (cursorPos !== cursorEnd) {
+        return;
+      }
+
+      // Prevent default and handle deletion manually
+      e.preventDefault();
+
+      const digits = value.replace(/\D/g, '');
+
+      if (digits.length === 0) {
+        return; // Nothing to delete
+      }
+
+      // Remove the last digit
+      const newDigits = digits.slice(0, -1);
+      const formatted = newDigits ? formatPhoneNumber(newDigits) : '';
+
+      setLocalValue(formatted);
+      previousDigitCount.current = newDigits.length;
+      requestAnimationFrame(() => onChange(formatted));
+
+      // Set cursor to end
+      setTimeout(() => {
+        if (inputRef.current) {
+          const newLength = formatted.length;
+          inputRef.current.setSelectionRange(newLength, newLength);
+        }
+      }, 0);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target.value;
+
+    // If user cleared the input completely, allow it
+    if (input === '' || input === '+') {
+      setLocalValue('');
+      previousDigitCount.current = 0;
+      requestAnimationFrame(() => onChange(''));
+      return;
+    }
+
+    // Get current digit count
+    const currentDigits = input.replace(/\D/g, '');
+    const currentDigitCount = currentDigits.length;
+
+    // If user is deleting (digit count decreased), handle it properly
+    if (currentDigitCount < previousDigitCount.current) {
+      const formatted = formatPhoneNumber(currentDigits);
+      setLocalValue(formatted);
+      previousDigitCount.current = currentDigitCount;
+      requestAnimationFrame(() => onChange(formatted));
+      return;
+    }
+
+    // Otherwise, format normally
+    const formatted = formatPhoneNumber(input);
+    setLocalValue(formatted);
+    previousDigitCount.current = formatted.replace(/\D/g, '').length;
+    requestAnimationFrame(() => onChange(formatted));
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pastedText = e.clipboardData.getData('text');
+    const formatted = formatPhoneNumber(pastedText);
+    setLocalValue(formatted);
+    previousDigitCount.current = formatted.replace(/\D/g, '').length;
+    requestAnimationFrame(() => onChange(formatted));
+  };
+
+  return (
+    <div className="relative">
+      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+      <input
+        ref={inputRef}
+        type="tel"
+        value={localValue}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        onPaste={handlePaste}
+        className={className || "w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:outline-none transition-colors"}
+        placeholder={placeholder}
+        required={required}
+        maxLength={18} // +X (XXX) XXX XX XX = 18 characters
+      />
+    </div>
+  );
+});
+PhoneInput.displayName = 'PhoneInput';
 
 export default function PatientManagement({ user }: PatientManagementProps) {
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -218,6 +392,24 @@ export default function PatientManagement({ user }: PatientManagementProps) {
     }
   };
 
+  const handleAddClick = () => {
+    // Reset form data before opening add modal
+    setFormData({
+      first_name: '',
+      last_name: '',
+      email: '',
+      phone: '',
+      password: '',
+      birth_date: '',
+      gender: 'male',
+      address: '',
+      city: '',
+      clinic_id: '',
+    });
+    setFormErrors({});
+    setShowAddModal(true);
+  };
+
   const handleEditClick = (patient: Patient) => {
     setEditingPatient(patient);
     setFormData({
@@ -232,6 +424,7 @@ export default function PatientManagement({ user }: PatientManagementProps) {
       city: patient.city || '',
       clinic_id: patient.clinic?.id?.toString() || '',
     });
+    setFormErrors({});
     setShowEditModal(true);
   };
 
@@ -337,21 +530,26 @@ export default function PatientManagement({ user }: PatientManagementProps) {
     }
   };
 
-  // Filter patients based on search and filters
-  const filteredPatients = patients.filter((patient) => {
-    const matchesSearch =
-      patient.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      patient.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      patient.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (patient.phone && patient.phone.includes(searchQuery));
+  // Filter and sort patients based on search and filters
+  const filteredPatients = patients
+    .filter((patient) => {
+      const matchesSearch =
+        patient.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        patient.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        patient.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (patient.phone && patient.phone.includes(searchQuery));
 
-    const matchesStatus =
-      filterStatus === 'all' ||
-      (filterStatus === 'active' && patient.is_active) ||
-      (filterStatus === 'inactive' && !patient.is_active);
+      const matchesStatus =
+        filterStatus === 'all' ||
+        (filterStatus === 'active' && patient.is_active) ||
+        (filterStatus === 'inactive' && !patient.is_active);
 
-    return matchesSearch && matchesStatus;
-  });
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      // Sort by created_at descending (newest first)
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
 
   const stats = {
     total: patients.length,
@@ -375,7 +573,7 @@ export default function PatientManagement({ user }: PatientManagementProps) {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => setShowAddModal(true)}
+            onClick={handleAddClick}
             className="flex items-center gap-2 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all"
             style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
           >
@@ -713,17 +911,12 @@ export default function PatientManagement({ user }: PatientManagementProps) {
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Телефон <span className="text-red-500">*</span>
                     </label>
-                    <div className="relative">
-                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                      <input
-                        type="tel"
-                        required
-                        value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:outline-none transition-colors"
-                        placeholder="+7 (700) 123-45-67"
-                      />
-                    </div>
+                    <PhoneInput
+                      value={formData.phone}
+                      onChange={(value) => setFormData({ ...formData, phone: value })}
+                      placeholder="+7 (700) 123 45 67"
+                      required
+                    />
                   </div>
 
                   {/* Password */}
@@ -987,16 +1180,13 @@ export default function PatientManagement({ user }: PatientManagementProps) {
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Телефон <span className="text-red-500">*</span>
                     </label>
-                    <div className="relative">
-                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                      <input
-                        type="tel"
-                        required
-                        value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
-                      />
-                    </div>
+                    <PhoneInput
+                      value={formData.phone}
+                      onChange={(value) => setFormData({ ...formData, phone: value })}
+                      placeholder="+7 (700) 123 45 67"
+                      required
+                      className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                    />
                   </div>
 
                   {/* Password (Optional for edit) */}

@@ -74,14 +74,7 @@ const axiosInstance = axios.create({
   paramsSerializer: (params: any) => new URLSearchParams(params).toString(),
 });
 
-// Helper: Extract CSRF token from cookies
-function getCSRFToken(): string | null {
-  if (typeof document === "undefined") return null;
-  const match = document.cookie.match(/csrftoken=([^;]+)/);
-  return match ? match[1] : null;
-}
-
-// Request Interceptor - Attach JWT Bearer token + CSRF
+// Request Interceptor - Attach JWT Bearer token
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     if (typeof window !== "undefined") {
@@ -91,13 +84,7 @@ axiosInstance.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`;
       }
 
-      const method = config.method?.toLowerCase();
-      const csrfToken = getCSRFToken();
-
-      if (csrfToken && ["post", "put", "patch", "delete"].includes(method || "")) {
-        config.headers["X-CSRFToken"] = csrfToken;
-      }
-
+      // withCredentials for CORS if backend requires it
       config.withCredentials = true;
     }
 
@@ -118,11 +105,15 @@ async function refreshAccessToken(): Promise<string> {
     refresh: refreshToken,
   });
 
-  const { access } = response.data;
+  const { access, refresh: newRefreshToken } = response.data;
 
-  // Store new access token (refresh token stays the same in simplejwt)
+  // Store new tokens (both access and refresh are rotated when ROTATE_REFRESH_TOKENS is enabled)
   if (typeof window !== "undefined") {
     localStorage.setItem(ACCESS_TOKEN_KEY, access);
+    // ✅ Update refresh token if backend returns a new one (token rotation)
+    if (newRefreshToken) {
+      localStorage.setItem(REFRESH_TOKEN_KEY, newRefreshToken);
+    }
   }
 
   return access;

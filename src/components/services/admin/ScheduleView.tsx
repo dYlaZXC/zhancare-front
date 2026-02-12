@@ -763,12 +763,21 @@ function AddEventModal({
     doctor_id: '',
     nurse_id: '',
     date: selectedDate || (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; })(),
-    time: '09:00',
+    time: '',
     duration: 30,
     address: '',
     notes: ''
   });
   const [submitting, setSubmitting] = useState(false);
+  const [availableSlots, setAvailableSlots] = useState<Array<{
+    id: number;
+    start_time: string;
+    end_time: string;
+    available_capacity: number;
+  }>>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [availableDoctorIds, setAvailableDoctorIds] = useState<Set<number>>(new Set());
+  const [loadingAvailableDoctors, setLoadingAvailableDoctors] = useState(false);
   const [patients, setPatients] = useState<Array<{
     id: number;
     first_name: string;
@@ -792,6 +801,8 @@ function AddEventModal({
     address?: string;
     city?: string;
     clinic?: { id: number; name: string };
+    preferred_consultation_duration?: number;
+    work_schedule?: any;
   }>>([]);
   const [nurses, setNurses] = useState<Array<{
     id: number;
@@ -829,6 +840,117 @@ function AddEventModal({
       setFormData(prev => ({ ...prev, date: selectedDate }));
     }
   }, [selectedDate]);
+
+  // Reset form when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      const today = new Date();
+      const dateString = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+      setFormData({
+        patient_id: '',
+        doctor_id: '',
+        nurse_id: '',
+        date: selectedDate || dateString,
+        time: '',
+        duration: 30,
+        address: '',
+        notes: ''
+      });
+      setEventType('consultation');
+    }
+  }, [isOpen, selectedDate]);
+
+  // Fetch available doctors when date, time, or duration changes
+  useEffect(() => {
+    if (!formData.date || !formData.time || eventType !== 'consultation') {
+      setAvailableDoctorIds(new Set());
+      return;
+    }
+
+    const fetchAvailableDoctors = async () => {
+      setLoadingAvailableDoctors(true);
+      try {
+        const response = await api.get('/consultations/available-doctors/', {
+          params: {
+            date: formData.date,
+            time: formData.time,
+            duration: formData.duration
+          }
+        });
+        const doctorIds = new Set(response.data.available_doctors.map((d: any) => d.id));
+        setAvailableDoctorIds(doctorIds);
+
+        // If currently selected doctor is not available, clear selection
+        if (formData.doctor_id && !doctorIds.has(parseInt(formData.doctor_id))) {
+          setFormData(prev => ({ ...prev, doctor_id: '' }));
+        }
+      } catch (err) {
+        console.error("Failed to fetch available doctors:", err);
+        setAvailableDoctorIds(new Set());
+      } finally {
+        setLoadingAvailableDoctors(false);
+      }
+    };
+
+    fetchAvailableDoctors();
+  }, [formData.date, formData.time, formData.duration, eventType]);
+
+  // Fetch available time slots when doctor, date, or duration changes
+  useEffect(() => {
+    if (!formData.doctor_id || !formData.date || eventType !== 'consultation') {
+      setAvailableSlots([]);
+      return;
+    }
+
+    const fetchAvailableSlots = async () => {
+      setLoadingSlots(true);
+      try {
+        const response = await api.get('/consultations/available-slots/', {
+          params: {
+            doctor_id: formData.doctor_id,
+            date: formData.date,
+            duration: formData.duration
+          }
+        });
+        setAvailableSlots(response.data.available_slots || []);
+      } catch (err) {
+        console.error("Failed to fetch available slots:", err);
+        setAvailableSlots([]);
+      } finally {
+        setLoadingSlots(false);
+      }
+    };
+
+    fetchAvailableSlots();
+  }, [formData.doctor_id, formData.date, formData.duration, eventType]);
+
+  // Auto-fill duration based on doctor's preferred consultation duration
+  useEffect(() => {
+    if (formData.doctor_id && eventType === 'consultation') {
+      const selectedDoctor = doctors.find(d => String(d.id) === formData.doctor_id);
+      if (selectedDoctor?.preferred_consultation_duration) {
+        setFormData(prev => ({
+          ...prev,
+          duration: selectedDoctor.preferred_consultation_duration!
+        }));
+      }
+    }
+  }, [formData.doctor_id, doctors, eventType]);
+
+  // Helper function to check if doctor has a valid schedule configured
+  const doctorHasSchedule = (doctor: typeof doctors[0]) => {
+    const schedule = doctor.work_schedule;
+    if (!schedule) return false;
+
+    // Check if at least one day is enabled
+    return Object.values(schedule).some((day: any) =>
+      typeof day === 'object' && day.enabled === true
+    );
+  };
+
+  // Count doctors without schedules
+  const doctorsWithoutSchedule = doctors.filter(d => !doctorHasSchedule(d)).length;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -920,53 +1042,6 @@ function AddEventModal({
             </div>
           </div>
 
-          {/* Date and Time */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
-                Дата
-              </label>
-              <input
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
-                Время
-              </label>
-              <input
-                type="time"
-                value={formData.time}
-                onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
-                required
-              />
-            </div>
-          </div>
-
-          {/* Duration */}
-          <div>
-            <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
-              Продолжительность (минут)
-            </label>
-            <select
-              value={formData.duration}
-              onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
-              className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
-            >
-              <option value={15}>15 минут</option>
-              <option value={30}>30 минут</option>
-              <option value={45}>45 минут</option>
-              <option value={60}>1 час</option>
-              <option value={90}>1.5 часа</option>
-              <option value={120}>2 часа</option>
-            </select>
-          </div>
-
           {/* Patient */}
           <div>
             <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
@@ -1037,14 +1112,78 @@ function AddEventModal({
           <div>
             <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
               Доктор {eventType === 'consultation' && <span className="text-red-500">*</span>}
+              {loadingAvailableDoctors && (
+                <span className="ml-2 text-xs text-gray-500">
+                  <Loader2 className="inline w-3 h-3 animate-spin mr-1" />
+                  Проверка доступности...
+                </span>
+              )}
             </label>
             <SearchSelect
-              options={doctors.map(d => ({ id: d.id, label: `${d.first_name} ${d.last_name}`, subtitle: d.email }))}
+              options={doctors
+                .filter(d => {
+                  // First, check if doctor has a schedule configured
+                  if (!doctorHasSchedule(d)) return false;
+
+                  // If date & time are selected for consultation, only show available doctors
+                  if (formData.date && formData.time && eventType === 'consultation') {
+                    return availableDoctorIds.has(d.id);
+                  }
+                  // Otherwise show all doctors with schedules
+                  return true;
+                })
+                .map(d => {
+                  const isAvailable = availableDoctorIds.has(d.id);
+                  const availabilityBadge = formData.date && formData.time && eventType === 'consultation' && isAvailable
+                    ? ' ✅'
+                    : '';
+
+                  // Build subtitle with specialization and email
+                  const subtitleParts = [];
+                  if (d.specialization) subtitleParts.push(d.specialization);
+                  if (d.email) subtitleParts.push(d.email);
+                  const subtitle = subtitleParts.join(' • ');
+
+                  return {
+                    id: d.id,
+                    label: `${d.first_name} ${d.last_name}${availabilityBadge}`,
+                    subtitle: subtitle || undefined
+                  };
+                })}
               value={formData.doctor_id}
               onChange={(val) => setFormData({ ...formData, doctor_id: val })}
-              placeholder="Выберите доктора..."
+              placeholder={
+                formData.date && formData.time && eventType === 'consultation' && availableDoctorIds.size === 0
+                  ? "Нет доступных докторов"
+                  : "Выберите доктора..."
+              }
               required={eventType === 'consultation'}
             />
+
+            {/* Info about doctors without schedules */}
+            {doctorsWithoutSchedule > 0 && (
+              <div className="mt-2 p-3 rounded-xl border-2 border-amber-200 bg-amber-50 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-amber-800">
+                  <span className="font-semibold">{doctorsWithoutSchedule}</span> {doctorsWithoutSchedule === 1 ? 'доктор не имеет' : 'докторов не имеют'} настроенного расписания. Пожалуйста, обновите расписание для {doctorsWithoutSchedule === 1 ? 'этого доктора' : 'этих докторов'} в разделе "Персонал".
+                </p>
+              </div>
+            )}
+
+            {/* Availability info */}
+            {formData.date && formData.time && eventType === 'consultation' && !loadingAvailableDoctors && (
+              <div className="mt-2 text-sm">
+                {availableDoctorIds.size > 0 ? (
+                  <p className="text-emerald-600">
+                    ✅ {availableDoctorIds.size} {availableDoctorIds.size === 1 ? 'доктор доступен' : 'докторов доступно'} на {formData.time}
+                  </p>
+                ) : (
+                  <p className="text-amber-600">
+                    ⚠️ Нет доступных докторов на выбранное время
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Doctor info card */}
             {formData.doctor_id && (() => {
@@ -1097,6 +1236,95 @@ function AddEventModal({
                 </div>
               );
             })()}
+          </div>
+
+          {/* Duration */}
+          <div>
+            <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
+              Продолжительность (минут)
+            </label>
+            <select
+              value={formData.duration}
+              onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
+              className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
+            >
+              <option value={15}>15 минут</option>
+              <option value={30}>30 минут</option>
+              <option value={45}>45 минут</option>
+              <option value={60}>1 час</option>
+              <option value={90}>1.5 часа</option>
+              <option value={120}>2 часа</option>
+            </select>
+          </div>
+
+          {/* Date */}
+          <div>
+            <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
+              Дата
+            </label>
+            <input
+              type="date"
+              value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
+              required
+            />
+          </div>
+
+          {/* Time */}
+          <div>
+            <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
+              Время
+            </label>
+            {/* Show available slots dropdown for consultations with selected doctor */}
+            {eventType === 'consultation' && formData.doctor_id && formData.date ? (
+              <div className="relative">
+                <select
+                  value={formData.time}
+                  onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                  className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none appearance-none"
+                  required
+                  disabled={loadingSlots}
+                >
+                  {loadingSlots ? (
+                    <option value="">Загрузка доступных слотов...</option>
+                  ) : availableSlots.length === 0 ? (
+                    <option value="">Нет доступных слотов</option>
+                  ) : (
+                    <>
+                      <option value="">Выберите время</option>
+                      {availableSlots.map((slot) => (
+                        <option key={slot.id} value={slot.start_time}>
+                          {slot.start_time} - {slot.end_time} ({slot.available_capacity} доступно)
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </select>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                {!loadingSlots && availableSlots.length === 0 && formData.doctor_id && formData.date && (
+                  <p className="mt-2 text-sm text-amber-600">
+                    ⚠️ У выбранного доктора нет доступных слотов на эту дату
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div>
+                <input
+                  type="time"
+                  value={formData.time}
+                  onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                  className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
+                  required
+                  disabled={eventType === 'consultation' && !formData.doctor_id}
+                />
+                {eventType === 'consultation' && !formData.doctor_id && (
+                  <p className="mt-2 text-sm text-gray-500">
+                    💡 Сначала выберите доктора, чтобы увидеть доступное время
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Nurse — only for appointments */}
