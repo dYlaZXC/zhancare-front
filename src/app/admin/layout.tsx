@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { AdminSidebar } from "@/components/layout/AdminSidebar";
 import { AdminHeader } from "@/components/layout/AdminHeader";
 import { AdminBreadcrumb } from "@/components/layout/AdminBreadcrumb";
+import { PremiumLoadingScreen } from "@/components/layout/PremiumLoadingScreen";
 
 export default function AdminLayout({
   children,
@@ -46,11 +47,7 @@ export default function AdminLayout({
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-lg">
-        🔄 Проверка авторизации...
-      </div>
-    );
+    return <PremiumLoadingScreen message="Проверка авторизации" />;
   }
 
   if (!user || user.role !== "admin") {

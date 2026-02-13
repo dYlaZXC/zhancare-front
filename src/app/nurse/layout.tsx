@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { NurseSidebar } from "@/components/layout/NurseSidebar";
 import { NurseHeader } from "@/components/layout/NurseHeader";
+import { PremiumLoadingScreen } from "@/components/layout/PremiumLoadingScreen";
 
 export default function NurseLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, setIsAuthOpen } = useAuth();
@@ -32,17 +33,13 @@ export default function NurseLayout({ children }: { children: React.ReactNode })
   }, [loading, user, router, setIsAuthOpen]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-lg">
-        🔄 Проверка авторизации...
-      </div>
-    );
+    return <PremiumLoadingScreen message="Проверка авторизации" />;
   }
 
   if (!user || user.role !== "nurse") {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg text-gray-600">Redirecting...</div>
+        <div className="text-lg text-gray-600">Перенаправление на страницу профиля медсестры...</div>
       </div>
     );
   }

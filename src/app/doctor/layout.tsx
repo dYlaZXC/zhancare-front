@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { DoctorSidebar } from "@/components/layout/DoctorSidebar";
 import { DoctorHeader } from "@/components/layout/DoctorHeader";
 import { DoctorBreadcrumb } from "@/components/layout/DoctorBreadcrumb";
+import { PremiumLoadingScreen } from "@/components/layout/PremiumLoadingScreen";
 
 export default function DoctorLayout({
   children,
@@ -41,11 +42,7 @@ export default function DoctorLayout({
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-lg">
-        🔄 Проверка авторизации...
-      </div>
-    );
+    return <PremiumLoadingScreen message="Проверка авторизации" />;
   }
 
   if (!user || user.role !== "doctor") {
