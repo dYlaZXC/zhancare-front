@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Building2, AlertCircle, Loader2, TrendingUp } from "lucide-react";
+import { api } from "@/utils/api";
 import ClinicInfo from "./ClinicInfo";
 import StaffOverview from "./StaffOverview";
 import ActivityOverview from "./ActivityOverview";
@@ -53,21 +54,8 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
     setError(null);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/clinic-stats/`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Token ${localStorage.getItem("access_token")}`,
-        },
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch clinic statistics");
-      }
-
-      const data = await response.json();
-      setStats(data);
+      const response = await api.get('/admin/clinic-stats/');
+      setStats(response.data);
     } catch (err: any) {
       console.error("Error fetching clinic stats:", err);
       setError(err.message || "Failed to load clinic statistics");

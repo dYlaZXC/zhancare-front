@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Joyride, { CallBackProps, STATUS, Step } from "react-joyride";
+import { api } from "@/utils/api";
 import {
   Activity,
   Calendar,
@@ -181,21 +182,8 @@ export default function ActivityView({ user }: ActivityViewProps) {
     setError(null);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/activity/`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Token ${localStorage.getItem("access_token")}`,
-        },
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error("Не удалось загрузить логи активности");
-      }
-
-      const data = await response.json();
-      setActivities(data);
+      const response = await api.get('/activity/');
+      setActivities(response.data);
     } catch (err: any) {
       console.error("Error fetching activities:", err);
       setError(err.message || "Не удалось загрузить логи активности");

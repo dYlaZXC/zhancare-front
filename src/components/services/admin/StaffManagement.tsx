@@ -1258,7 +1258,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
   const hasConfiguredSchedule = (member: StaffMember): boolean => {
     if (member.role !== 'doctor' && member.role !== 'nurse') return false;
 
-    const schedule = member.online_work_schedule || member.work_schedule;
+    const schedule = member.online_work_schedule;
     if (!schedule) return false;
 
     // Check if at least one day is enabled

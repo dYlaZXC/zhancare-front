@@ -9,6 +9,7 @@ import {
   CheckCircle, XCircle
 } from "lucide-react";
 import { toast } from "react-toastify";
+import { api } from "@/utils/api";
 
 import bnClinicLogo from "@/assets/clinics_logos/bn-clinica.png";
 import ayalaClinicLogo from "@/assets/clinics_logos/ayala_clinic.png";
@@ -269,19 +270,8 @@ export default function PatientManagement({ user }: PatientManagementProps) {
     // If global admin, fetch list of clinics
     if (isGlobal) {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clinics/`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Token ${localStorage.getItem("access_token")}`,
-          },
-          credentials: "include",
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setClinics(data);
-        }
+        const response = await api.get('/clinics/');
+        setClinics(response.data);
       } catch (err) {
         console.error("Error fetching clinics:", err);
       }
@@ -293,24 +283,11 @@ export default function PatientManagement({ user }: PatientManagementProps) {
     setError(null);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/patients/`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Token ${localStorage.getItem("access_token")}`,
-        },
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error("Не удалось загрузить список пациентов");
-      }
-
-      const data = await response.json();
-      setPatients(data);
+      const response = await api.get('/patients/');
+      setPatients(response.data);
     } catch (err: any) {
       console.error("Error fetching patients:", err);
-      setError(err.message || "Не удалось загрузить список пациентов");
+      setError(err.response?.data?.error || err.message || "Не удалось загрузить список пациентов");
     } finally {
       setLoading(false);
       setInitialLoad(false);
@@ -348,22 +325,8 @@ export default function PatientManagement({ user }: PatientManagementProps) {
     setAddLoading(true);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/patients/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Token ${localStorage.getItem("access_token")}`,
-        },
-        credentials: "include",
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Не удалось добавить пациента");
-      }
-
-      const newPatient = await response.json();
+      const response = await api.post('/patients/', formData);
+      const newPatient = response.data;
 
       // Add new patient to the list
       setPatients([newPatient, ...patients]);
@@ -386,7 +349,7 @@ export default function PatientManagement({ user }: PatientManagementProps) {
       setShowAddModal(false);
     } catch (err: any) {
       console.error("Error adding patient:", err);
-      toast.error(err.message || "Не удалось добавить пациента");
+      toast.error(err.response?.data?.error || err.message || "Не удалось добавить пациента");
     } finally {
       setAddLoading(false);
     }
@@ -444,22 +407,8 @@ export default function PatientManagement({ user }: PatientManagementProps) {
       const { password, ...updateData } = formData;
       const finalData = password ? { ...updateData, password } : updateData;
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/patients/${editingPatient.id}/`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Token ${localStorage.getItem("access_token")}`,
-        },
-        credentials: "include",
-        body: JSON.stringify(finalData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Не удалось обновить данные пациента");
-      }
-
-      const updatedPatient = await response.json();
+      const response = await api.patch(`/patients/${editingPatient.id}/`, finalData);
+      const updatedPatient = response.data;
 
       // Update patient in the list
       setPatients(patients.map(p => p.id === editingPatient.id ? updatedPatient : p));
@@ -483,7 +432,7 @@ export default function PatientManagement({ user }: PatientManagementProps) {
       });
     } catch (err: any) {
       console.error("Error updating patient:", err);
-      toast.error(err.message || "Не удалось обновить данные пациента");
+      toast.error(err.response?.data?.error || err.message || "Не удалось обновить данные пациента");
     } finally {
       setEditLoading(false);
     }
@@ -500,19 +449,7 @@ export default function PatientManagement({ user }: PatientManagementProps) {
     setDeleteLoading(true);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/patients/${deletingPatient.id}/`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Token ${localStorage.getItem("access_token")}`,
-        },
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Не удалось удалить пациента");
-      }
+      await api.delete(`/patients/${deletingPatient.id}/`);
 
       // Remove patient from the list
       setPatients(patients.filter(p => p.id !== deletingPatient.id));
@@ -524,7 +461,7 @@ export default function PatientManagement({ user }: PatientManagementProps) {
       setDeletingPatient(null);
     } catch (err: any) {
       console.error("Error deleting patient:", err);
-      toast.error(err.message || "Не удалось удалить пациента");
+      toast.error(err.response?.data?.error || err.message || "Не удалось удалить пациента");
     } finally {
       setDeleteLoading(false);
     }

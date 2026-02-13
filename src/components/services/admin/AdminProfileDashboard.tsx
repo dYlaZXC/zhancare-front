@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
+import { api } from "@/utils/api";
 import {
   Building2,
   AlertCircle,
@@ -123,21 +124,8 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
     setError(null);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clinic-stats/`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Token ${localStorage.getItem("access_token")}`,
-        },
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error("Не удалось загрузить статистику клиники");
-      }
-
-      const data = await response.json();
-      setStats(data);
+      const response = await api.get('/clinic-stats/');
+      setStats(response.data);
     } catch (err: any) {
       console.error("Error fetching clinic stats:", err);
       // More user-friendly error message

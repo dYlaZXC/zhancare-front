@@ -97,7 +97,7 @@ const DoctorAvailabilityToggle: React.FC<DoctorAvailabilityToggleProps> = ({
     setIsUpdating(true);
     try {
       // Use the new availability endpoint that broadcasts WebSocket events
-      const response = await api.patch('/auth/update-availability/', {
+      const response = await api.patch('/user-profile/update-availability/', {
         availability_status: newStatus,
         availability_note: note || availabilityNote
       });

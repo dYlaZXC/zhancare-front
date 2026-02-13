@@ -97,26 +97,37 @@ axiosInstance.interceptors.request.use(
 async function refreshAccessToken(): Promise<string> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) {
+    console.error("🔐 No refresh token found in localStorage");
     throw new Error("No refresh token found");
   }
 
-  // Call the JWT refresh endpoint (simplejwt format)
-  const response = await axios.post(`${baseURL}/auth/token/refresh/`, {
-    refresh: refreshToken,
-  });
+  console.log("🔄 Attempting to refresh access token...");
 
-  const { access, refresh: newRefreshToken } = response.data;
+  try {
+    // Call the JWT refresh endpoint (simplejwt format)
+    const response = await axios.post(`${baseURL}/auth/token/refresh/`, {
+      refresh: refreshToken,
+    });
 
-  // Store new tokens (both access and refresh are rotated when ROTATE_REFRESH_TOKENS is enabled)
-  if (typeof window !== "undefined") {
-    localStorage.setItem(ACCESS_TOKEN_KEY, access);
-    // ✅ Update refresh token if backend returns a new one (token rotation)
-    if (newRefreshToken) {
-      localStorage.setItem(REFRESH_TOKEN_KEY, newRefreshToken);
+    const { access, refresh: newRefreshToken } = response.data;
+
+    // Store new tokens (both access and refresh are rotated when ROTATE_REFRESH_TOKENS is enabled)
+    if (typeof window !== "undefined") {
+      localStorage.setItem(ACCESS_TOKEN_KEY, access);
+      // ✅ Update refresh token if backend returns a new one (token rotation)
+      if (newRefreshToken) {
+        localStorage.setItem(REFRESH_TOKEN_KEY, newRefreshToken);
+        console.log("✅ Token refresh successful (with rotation)");
+      } else {
+        console.log("✅ Token refresh successful");
+      }
     }
-  }
 
-  return access;
+    return access;
+  } catch (error: any) {
+    console.error("❌ Token refresh failed:", error.response?.data || error.message);
+    throw error;
+  }
 }
 
 // Response Interceptor - Handle 401 with token refresh
@@ -133,6 +144,7 @@ axiosInstance.interceptors.response.use(
       originalRequest?.url?.includes("/auth/token/refresh");
 
     if (error.response?.status === 401 && !isAuthRequest && !originalRequest?._retry) {
+      console.log("🔐 Received 401 error, attempting token refresh...", originalRequest?.url);
       originalRequest._retry = true;
 
       try {
@@ -144,6 +156,7 @@ axiosInstance.interceptors.response.use(
         const newAccessToken = await refreshPromise;
         refreshPromise = null;
 
+        console.log("✅ Retrying original request with new token:", originalRequest?.url);
         // Retry the original request with new token
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return axiosInstance(originalRequest);

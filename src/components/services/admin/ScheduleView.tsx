@@ -802,7 +802,8 @@ function AddEventModal({
     city?: string;
     clinic?: { id: number; name: string };
     preferred_consultation_duration?: number;
-    work_schedule?: any;
+    online_work_schedule?: any;
+    offline_work_schedule?: any;
   }>>([]);
   const [nurses, setNurses] = useState<Array<{
     id: number;
@@ -940,7 +941,7 @@ function AddEventModal({
 
   // Helper function to check if doctor has a valid schedule configured
   const doctorHasSchedule = (doctor: typeof doctors[0]) => {
-    const schedule = doctor.work_schedule;
+    const schedule = doctor.online_work_schedule;
     if (!schedule) return false;
 
     // Check if at least one day is enabled
