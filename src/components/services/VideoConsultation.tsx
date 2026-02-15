@@ -75,7 +75,7 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
     setFetchingDoctors(true);
     setDoctorsError(null);
     try {
-      const res = await api.get("/auth/doctor/available/", {
+      const res = await api.get("/public/doctors/available/", {
         headers: { Authorization: `Token ${token}` },
         params: { lang: 'ru' } // Request Russian by default, can be made dynamic later
       });
