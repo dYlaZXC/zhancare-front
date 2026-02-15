@@ -74,7 +74,7 @@ In your Django console, look for:
 # Extract the token from the URL
 
 # Test the endpoint
-curl -X POST https://exp-admin.smartalmaty.kz/api/v1/consultations/auto-login/ \
+curl -X POST https://api.zhan.care/api/v1/consultations/auto-login/ \
   -H "Content-Type: application/json" \
   -d '{"token": "YOUR_TOKEN_HERE"}'
 ```
@@ -139,7 +139,7 @@ CORS_ALLOWED_ORIGINS = [
 
 **Solution:** Check frontend .env.local:
 ```bash
-NEXT_PUBLIC_API_URL=https://exp-admin.smartalmaty.kz/api/v1
+NEXT_PUBLIC_API_URL=https://api.zhan.care/api/v1
 ```
 
 ---
@@ -191,7 +191,7 @@ def test_auth(self, request):
 
 2. **Test it:**
 ```bash
-curl https://exp-admin.smartalmaty.kz/api/v1/consultations/test-auth/
+curl https://api.zhan.care/api/v1/consultations/test-auth/
 ```
 
 Should return: `{"message": "Auth endpoint working!"}`

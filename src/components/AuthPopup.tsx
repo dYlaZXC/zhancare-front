@@ -205,9 +205,12 @@ const AuthPopup = () => {
   const handleRegister = async (data: RegisterFormData) => {
     setLoading(true);
 
+    // Strip phone number formatting: +7 (775) 814 81 90 -> +77758148190
+    const cleanPhone = data.phone ? data.phone.replace(/[^\d+]/g, '') : null;
+
     const payload = {
       email: data.email.trim(),
-      phone: data.phone.trim() || null,
+      phone: cleanPhone,
       password: data.password,
       first_name: data.first_name.trim(),
       last_name: data.last_name.trim(),
