@@ -42,12 +42,52 @@ export interface MagicLinkAuthResult {
 
 export function useMagicLinkAuth() {
   const router = useRouter();
-  const [authState, setAuthState] = useState<MagicLinkAuthState>({
-    isAuthenticating: false,
-    isAuthenticated: false,
-    error: null,
-    authMethod: 'none'
-  });
+
+  // 🔒 Check if there's a magic link token in URL synchronously
+  // This prevents race condition where page starts fetching before auth completes
+  const getInitialAuthState = (): MagicLinkAuthState => {
+    if (typeof window === 'undefined') {
+      return {
+        isAuthenticating: false,
+        isAuthenticated: false,
+        error: null,
+        authMethod: 'none'
+      };
+    }
+
+    const url = new URL(window.location.href);
+    const hasToken = url.searchParams.has('token');
+
+    // If there's a token, start in authenticating state
+    if (hasToken) {
+      return {
+        isAuthenticating: true,
+        isAuthenticated: false,
+        error: null,
+        authMethod: 'magic_link'
+      };
+    }
+
+    // Check for existing session
+    const existingToken = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
+    if (existingToken) {
+      return {
+        isAuthenticating: false,
+        isAuthenticated: true,
+        error: null,
+        authMethod: 'existing_session'
+      };
+    }
+
+    return {
+      isAuthenticating: false,
+      isAuthenticated: false,
+      error: null,
+      authMethod: 'none'
+    };
+  };
+
+  const [authState, setAuthState] = useState<MagicLinkAuthState>(getInitialAuthState);
 
   // 🔒 Prevent double execution in React StrictMode
   const hasAttempted = useRef(false);
