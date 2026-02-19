@@ -19,37 +19,28 @@ import {
 export default function DoctorAnalytics() {
   // Mock data - replace with real API calls later
   const stats = {
-    totalPatients: 156,
-    patientsChange: 12,
-    totalConsultations: 324,
-    consultationsChange: 8,
-    avgRating: 4.8,
-    ratingChange: 0.2,
-    revenue: 450000,
-    revenueChange: 15,
+    totalPatients: 0,
+    patientsChange: 0,
+    totalConsultations: 0,
+    consultationsChange: 0,
+    avgRating: 0,
+    ratingChange: 0,
+    revenue: 0,
+    revenueChange: 0,
   };
 
   const monthlyData = [
-    { month: "Янв", consultations: 45, revenue: 67500 },
-    { month: "Фев", consultations: 52, revenue: 78000 },
-    { month: "Мар", consultations: 48, revenue: 72000 },
-    { month: "Апр", consultations: 61, revenue: 91500 },
-    { month: "Май", consultations: 58, revenue: 87000 },
-    { month: "Июн", consultations: 60, revenue: 90000 },
+    { month: "Янв", consultations: 0, revenue: 0 },
+    { month: "Фев", consultations: 0, revenue: 0 },
+    { month: "Мар", consultations: 0, revenue: 0 },
+    { month: "Апр", consultations: 0, revenue: 0 },
+    { month: "Май", consultations: 0, revenue: 0 },
+    { month: "Июн", consultations: 0, revenue: 0 },
   ];
 
-  const recentActivity = [
-    { type: "consultation", patient: "Иван И.", time: "2 часа назад", status: "completed" },
-    { type: "appointment", patient: "Мария К.", time: "5 часов назад", status: "scheduled" },
-    { type: "consultation", patient: "Петр С.", time: "1 день назад", status: "completed" },
-    { type: "review", patient: "Анна Л.", time: "2 дня назад", rating: 5 },
-  ];
+  const recentActivity: { type: string; patient: string; time: string; status?: string; rating?: number }[] = [];
 
-  const upcomingAppointments = [
-    { patient: "Сергей М.", time: "Сегодня, 14:00", type: "Видео консультация" },
-    { patient: "Елена П.", time: "Сегодня, 16:30", type: "Вызов на дом" },
-    { patient: "Дмитрий К.", time: "Завтра, 10:00", type: "Видео консультация" },
-  ];
+  const upcomingAppointments: { patient: string; time: string; type: string }[] = [];
 
   return (
     <div className="w-full space-y-6 p-4 sm:p-6 lg:p-8">
@@ -173,7 +164,7 @@ export default function DoctorAnalytics() {
           <div className="space-y-4">
             {monthlyData.map((data, index) => {
               const maxConsultations = Math.max(...monthlyData.map(d => d.consultations));
-              const percentage = (data.consultations / maxConsultations) * 100;
+              const percentage = maxConsultations > 0 ? (data.consultations / maxConsultations) * 100 : 0;
 
               return (
                 <div key={index} className="space-y-2">

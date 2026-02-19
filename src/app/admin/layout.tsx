@@ -53,7 +53,7 @@ export default function AdminLayout({
   if (!user || user.role !== "admin") {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg text-gray-600">Redirecting...</div>
+        <div className="text-lg text-gray-600">Перенаправление на страницу профиля администратора...</div>
       </div>
     );
   }
