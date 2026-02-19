@@ -77,7 +77,9 @@ export default function DoctorLayout({
           <DoctorBreadcrumb />
 
           {/* Page Content */}
-          {children}
+          <div className="p-3">
+            {children}
+          </div>
         </main>
       </div>
     </div>

@@ -51,7 +51,7 @@ export default function DoctorProfile() {
   if (!user || user.role !== "doctor") {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg text-gray-600">Redirecting...</div>
+        <div className="text-lg text-gray-600">Перенаправление на страницу профиля врача...</div>
       </div>
     );
   }
