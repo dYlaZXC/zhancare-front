@@ -486,16 +486,102 @@ export default function StaffManagement({ user }: StaffManagementProps) {
   // Schedule type switcher state - 'online' or 'offline'
   const [scheduleType, setScheduleType] = useState<'online' | 'offline'>('online');
 
+  // Rotating schedule states
+  const [isRotatingSchedule, setIsRotatingSchedule] = useState(false);
+  const [rotationWeeksCount, setRotationWeeksCount] = useState(2);
+  const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
+
+  // Rotating schedules - array of weekly schedules for rotation mode
+  const [onlineRotationSchedules, setOnlineRotationSchedules] = useState<Array<{
+    [key: string]: { start: string; end: string; enabled: boolean };
+  }>>([
+    // Week 1
+    {
+      monday: { start: '09:00', end: '18:00', enabled: false },
+      tuesday: { start: '09:00', end: '18:00', enabled: false },
+      wednesday: { start: '09:00', end: '18:00', enabled: false },
+      thursday: { start: '09:00', end: '18:00', enabled: false },
+      friday: { start: '09:00', end: '18:00', enabled: false },
+      saturday: { start: '10:00', end: '14:00', enabled: false },
+      sunday: { start: '10:00', end: '14:00', enabled: false },
+    },
+    // Week 2
+    {
+      monday: { start: '09:00', end: '18:00', enabled: false },
+      tuesday: { start: '09:00', end: '18:00', enabled: false },
+      wednesday: { start: '09:00', end: '18:00', enabled: false },
+      thursday: { start: '09:00', end: '18:00', enabled: false },
+      friday: { start: '09:00', end: '18:00', enabled: false },
+      saturday: { start: '10:00', end: '14:00', enabled: false },
+      sunday: { start: '10:00', end: '14:00', enabled: false },
+    },
+  ]);
+
+  const [offlineRotationSchedules, setOfflineRotationSchedules] = useState<Array<{
+    [key: string]: { start: string; end: string; enabled: boolean };
+  }>>([
+    // Week 1
+    {
+      monday: { start: '09:00', end: '18:00', enabled: false },
+      tuesday: { start: '09:00', end: '18:00', enabled: false },
+      wednesday: { start: '09:00', end: '18:00', enabled: false },
+      thursday: { start: '09:00', end: '18:00', enabled: false },
+      friday: { start: '09:00', end: '18:00', enabled: false },
+      saturday: { start: '10:00', end: '14:00', enabled: false },
+      sunday: { start: '10:00', end: '14:00', enabled: false },
+    },
+    // Week 2
+    {
+      monday: { start: '09:00', end: '18:00', enabled: false },
+      tuesday: { start: '09:00', end: '18:00', enabled: false },
+      wednesday: { start: '09:00', end: '18:00', enabled: false },
+      thursday: { start: '09:00', end: '18:00', enabled: false },
+      friday: { start: '09:00', end: '18:00', enabled: false },
+      saturday: { start: '10:00', end: '14:00', enabled: false },
+      sunday: { start: '10:00', end: '14:00', enabled: false },
+    },
+  ]);
+
   // Days of the week
   const daysOfWeek = [
-    { value: 'monday', labelRu: 'Понедельник', labelShort: 'Пн' },
-    { value: 'tuesday', labelRu: 'Вторник', labelShort: 'Вт' },
-    { value: 'wednesday', labelRu: 'Среда', labelShort: 'Ср' },
-    { value: 'thursday', labelRu: 'Четверг', labelShort: 'Чт' },
-    { value: 'friday', labelRu: 'Пятница', labelShort: 'Пт' },
-    { value: 'saturday', labelRu: 'Суббота', labelShort: 'Сб' },
-    { value: 'sunday', labelRu: 'Воскресенье', labelShort: 'Вс' },
+    { value: 'monday', labelRu: 'Понедельник', labelShort: 'Пн', dayIndex: 1 },
+    { value: 'tuesday', labelRu: 'Вторник', labelShort: 'Вт', dayIndex: 2 },
+    { value: 'wednesday', labelRu: 'Среда', labelShort: 'Ср', dayIndex: 3 },
+    { value: 'thursday', labelRu: 'Четверг', labelShort: 'Чт', dayIndex: 4 },
+    { value: 'friday', labelRu: 'Пятница', labelShort: 'Пт', dayIndex: 5 },
+    { value: 'saturday', labelRu: 'Суббота', labelShort: 'Сб', dayIndex: 6 },
+    { value: 'sunday', labelRu: 'Воскресенье', labelShort: 'Вс', dayIndex: 0 },
   ];
+
+  // Get next date for a day in the selected rotation week
+  const getNextDateForDay = useCallback((dayIndex: number) => {
+    if (!isRotatingSchedule) return null;
+
+    const today = new Date();
+    const currentDayIndex = today.getDay(); // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+
+    // Calculate days until next Monday
+    let daysUntilMonday = (1 - currentDayIndex + 7) % 7;
+    if (daysUntilMonday === 0) daysUntilMonday = 7; // If today is Monday, go to next Monday
+
+    // Get next Monday
+    const nextMonday = new Date(today);
+    nextMonday.setDate(today.getDate() + daysUntilMonday);
+
+    // Add weeks based on selected rotation week (0-indexed)
+    const targetWeekStart = new Date(nextMonday);
+    targetWeekStart.setDate(nextMonday.getDate() + (currentWeekIndex * 7));
+
+    // Get the specific day in that week
+    // Convert dayIndex to offset from Monday: Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6
+    const offsetFromMonday = dayIndex === 0 ? 6 : dayIndex - 1;
+    const targetDate = new Date(targetWeekStart);
+    targetDate.setDate(targetWeekStart.getDate() + offsetFromMonday);
+
+    const day = targetDate.getDate();
+    const month = targetDate.toLocaleDateString('ru-RU', { month: 'short' });
+    return `${day} ${month}`;
+  }, [isRotatingSchedule, currentWeekIndex]);
 
   // Toggle day selection
   const toggleDay = useCallback((day: string) => {
@@ -521,127 +607,145 @@ export default function StaffManagement({ user }: StaffManagementProps) {
 
   // Toggle day selection for online schedule
   const toggleOnlineDay = useCallback((day: string) => {
-    setOnlineWorkSchedule(prev => ({
-      ...prev,
-      [day]: {
-        ...prev[day],
-        enabled: !prev[day].enabled,
-      }
-    }));
-  }, []);
+    if (isRotatingSchedule) {
+      setOnlineRotationSchedules(prev => {
+        const newSchedules = [...prev];
+        newSchedules[currentWeekIndex] = {
+          ...newSchedules[currentWeekIndex],
+          [day]: {
+            ...newSchedules[currentWeekIndex][day],
+            enabled: !newSchedules[currentWeekIndex][day].enabled,
+          }
+        };
+        return newSchedules;
+      });
+    } else {
+      setOnlineWorkSchedule(prev => ({
+        ...prev,
+        [day]: {
+          ...prev[day],
+          enabled: !prev[day].enabled,
+        }
+      }));
+    }
+  }, [isRotatingSchedule, currentWeekIndex]);
 
   // Update time for online schedule
   const updateOnlineDayTime = useCallback((day: string, field: 'start' | 'end', value: string) => {
-    setOnlineWorkSchedule(prev => {
-      const currentDay = prev[day];
+    const adjustTime = (currentDay: any) => {
       let newStart = field === 'start' ? value : currentDay.start;
       let newEnd = field === 'end' ? value : currentDay.end;
-
-      // Convert times to minutes for comparison
       let startMinutes = parseInt(newStart.split(':')[0]) * 60 + parseInt(newStart.split(':')[1]);
       let endMinutes = parseInt(newEnd.split(':')[0]) * 60 + parseInt(newEnd.split(':')[1]);
 
-      // Auto-adjust if time range is invalid (excluding realistic overnight shifts)
-      // Allow overnight shifts only if end time is between 00:00 and 06:00
       if (endMinutes < startMinutes && endMinutes > 360) {
         if (field === 'end') {
-          // When changing end time, adjust start time backward by 1 hour
           const adjustedStartMinutes = endMinutes - 60;
           if (adjustedStartMinutes >= 0) {
-            const adjustedHour = Math.floor(adjustedStartMinutes / 60);
-            const adjustedMinute = adjustedStartMinutes % 60;
-            newStart = `${String(adjustedHour).padStart(2, '0')}:${String(adjustedMinute).padStart(2, '0')}`;
+            newStart = `${String(Math.floor(adjustedStartMinutes / 60)).padStart(2, '0')}:${String(adjustedStartMinutes % 60).padStart(2, '0')}`;
             toast.info(`⏰ Время начала автоматически изменено на ${newStart}`);
           } else {
-            // Can't go below 00:00, so adjust end time forward instead
             const adjustedEndMinutes = startMinutes + 60;
-            const adjustedHour = Math.floor(adjustedEndMinutes / 60) % 24;
-            const adjustedMinute = adjustedEndMinutes % 60;
-            newEnd = `${String(adjustedHour).padStart(2, '0')}:${String(adjustedMinute).padStart(2, '0')}`;
+            newEnd = `${String(Math.floor(adjustedEndMinutes / 60) % 24).padStart(2, '0')}:${String(adjustedEndMinutes % 60).padStart(2, '0')}`;
             toast.info(`⏰ Время окончания автоматически изменено на ${newEnd}`);
           }
         } else {
-          // When changing start time, adjust end time forward by 1 hour
           const adjustedEndMinutes = startMinutes + 60;
-          const adjustedHour = Math.floor(adjustedEndMinutes / 60) % 24;
-          const adjustedMinute = adjustedEndMinutes % 60;
-          newEnd = `${String(adjustedHour).padStart(2, '0')}:${String(adjustedMinute).padStart(2, '0')}`;
+          newEnd = `${String(Math.floor(adjustedEndMinutes / 60) % 24).padStart(2, '0')}:${String(adjustedEndMinutes % 60).padStart(2, '0')}`;
           toast.info(`⏰ Время окончания автоматически изменено на ${newEnd}`);
         }
       }
+      return { start: newStart, end: newEnd };
+    };
 
-      return {
-        ...prev,
-        [day]: {
-          ...prev[day],
-          start: newStart,
-          end: newEnd,
-        }
-      };
-    });
-  }, []);
+    if (isRotatingSchedule) {
+      setOnlineRotationSchedules(prev => {
+        const newSchedules = [...prev];
+        const adjusted = adjustTime(newSchedules[currentWeekIndex][day]);
+        newSchedules[currentWeekIndex] = {
+          ...newSchedules[currentWeekIndex],
+          [day]: { ...newSchedules[currentWeekIndex][day], ...adjusted }
+        };
+        return newSchedules;
+      });
+    } else {
+      setOnlineWorkSchedule(prev => {
+        const adjusted = adjustTime(prev[day]);
+        return { ...prev, [day]: { ...prev[day], ...adjusted } };
+      });
+    }
+  }, [isRotatingSchedule, currentWeekIndex]);
 
   // Toggle day selection for offline schedule
   const toggleOfflineDay = useCallback((day: string) => {
-    setOfflineWorkSchedule(prev => ({
-      ...prev,
-      [day]: {
-        ...prev[day],
-        enabled: !prev[day].enabled,
-      }
-    }));
-  }, []);
-
-  // Update time for offline schedule
-  const updateOfflineDayTime = useCallback((day: string, field: 'start' | 'end', value: string) => {
-    setOfflineWorkSchedule(prev => {
-      const currentDay = prev[day];
-      let newStart = field === 'start' ? value : currentDay.start;
-      let newEnd = field === 'end' ? value : currentDay.end;
-
-      // Convert times to minutes for comparison
-      let startMinutes = parseInt(newStart.split(':')[0]) * 60 + parseInt(newStart.split(':')[1]);
-      let endMinutes = parseInt(newEnd.split(':')[0]) * 60 + parseInt(newEnd.split(':')[1]);
-
-      // Auto-adjust if time range is invalid (excluding realistic overnight shifts)
-      // Allow overnight shifts only if end time is between 00:00 and 06:00
-      if (endMinutes < startMinutes && endMinutes > 360) {
-        if (field === 'end') {
-          // When changing end time, adjust start time backward by 1 hour
-          const adjustedStartMinutes = endMinutes - 60;
-          if (adjustedStartMinutes >= 0) {
-            const adjustedHour = Math.floor(adjustedStartMinutes / 60);
-            const adjustedMinute = adjustedStartMinutes % 60;
-            newStart = `${String(adjustedHour).padStart(2, '0')}:${String(adjustedMinute).padStart(2, '0')}`;
-            toast.info(`⏰ Время начала автоматически изменено на ${newStart}`);
-          } else {
-            // Can't go below 00:00, so adjust end time forward instead
-            const adjustedEndMinutes = startMinutes + 60;
-            const adjustedHour = Math.floor(adjustedEndMinutes / 60) % 24;
-            const adjustedMinute = adjustedEndMinutes % 60;
-            newEnd = `${String(adjustedHour).padStart(2, '0')}:${String(adjustedMinute).padStart(2, '0')}`;
-            toast.info(`⏰ Время окончания автоматически изменено на ${newEnd}`);
+    if (isRotatingSchedule) {
+      setOfflineRotationSchedules(prev => {
+        const newSchedules = [...prev];
+        newSchedules[currentWeekIndex] = {
+          ...newSchedules[currentWeekIndex],
+          [day]: {
+            ...newSchedules[currentWeekIndex][day],
+            enabled: !newSchedules[currentWeekIndex][day].enabled,
           }
-        } else {
-          // When changing start time, adjust end time forward by 1 hour
-          const adjustedEndMinutes = startMinutes + 60;
-          const adjustedHour = Math.floor(adjustedEndMinutes / 60) % 24;
-          const adjustedMinute = adjustedEndMinutes % 60;
-          newEnd = `${String(adjustedHour).padStart(2, '0')}:${String(adjustedMinute).padStart(2, '0')}`;
-          toast.info(`⏰ Время окончания автоматически изменено на ${newEnd}`);
-        }
-      }
-
-      return {
+        };
+        return newSchedules;
+      });
+    } else {
+      setOfflineWorkSchedule(prev => ({
         ...prev,
         [day]: {
           ...prev[day],
-          start: newStart,
-          end: newEnd,
+          enabled: !prev[day].enabled,
         }
-      };
-    });
-  }, []);
+      }));
+    }
+  }, [isRotatingSchedule, currentWeekIndex]);
+
+  // Update time for offline schedule
+  const updateOfflineDayTime = useCallback((day: string, field: 'start' | 'end', value: string) => {
+    const adjustTime = (currentDay: any) => {
+      let newStart = field === 'start' ? value : currentDay.start;
+      let newEnd = field === 'end' ? value : currentDay.end;
+      let startMinutes = parseInt(newStart.split(':')[0]) * 60 + parseInt(newStart.split(':')[1]);
+      let endMinutes = parseInt(newEnd.split(':')[0]) * 60 + parseInt(newEnd.split(':')[1]);
+
+      if (endMinutes < startMinutes && endMinutes > 360) {
+        if (field === 'end') {
+          const adjustedStartMinutes = endMinutes - 60;
+          if (adjustedStartMinutes >= 0) {
+            newStart = `${String(Math.floor(adjustedStartMinutes / 60)).padStart(2, '0')}:${String(adjustedStartMinutes % 60).padStart(2, '0')}`;
+            toast.info(`⏰ Время начала автоматически изменено на ${newStart}`);
+          } else {
+            const adjustedEndMinutes = startMinutes + 60;
+            newEnd = `${String(Math.floor(adjustedEndMinutes / 60) % 24).padStart(2, '0')}:${String(adjustedEndMinutes % 60).padStart(2, '0')}`;
+            toast.info(`⏰ Время окончания автоматически изменено на ${newEnd}`);
+          }
+        } else {
+          const adjustedEndMinutes = startMinutes + 60;
+          newEnd = `${String(Math.floor(adjustedEndMinutes / 60) % 24).padStart(2, '0')}:${String(adjustedEndMinutes % 60).padStart(2, '0')}`;
+          toast.info(`⏰ Время окончания автоматически изменено на ${newEnd}`);
+        }
+      }
+      return { start: newStart, end: newEnd };
+    };
+
+    if (isRotatingSchedule) {
+      setOfflineRotationSchedules(prev => {
+        const newSchedules = [...prev];
+        const adjusted = adjustTime(newSchedules[currentWeekIndex][day]);
+        newSchedules[currentWeekIndex] = {
+          ...newSchedules[currentWeekIndex],
+          [day]: { ...newSchedules[currentWeekIndex][day], ...adjusted }
+        };
+        return newSchedules;
+      });
+    } else {
+      setOfflineWorkSchedule(prev => {
+        const adjusted = adjustTime(prev[day]);
+        return { ...prev, [day]: { ...prev[day], ...adjusted } };
+      });
+    }
+  }, [isRotatingSchedule, currentWeekIndex]);
 
   // Helper function to check if two time ranges overlap
   const timeRangesOverlap = useCallback((start1: string, end1: string, start2: string, end2: string): boolean => {
@@ -2033,6 +2137,106 @@ export default function StaffManagement({ user }: StaffManagementProps) {
 
                   {/* Work Schedule with Tabs */}
                   <div className="border-2 border-gray-200 rounded-2xl overflow-hidden">
+                    {/* Rotation Mode Toggle */}
+                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 border-b-2 border-gray-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <RotateCcw className="w-5 h-5 text-indigo-600" />
+                          <div>
+                            <h4 className="font-bold text-gray-900">Тип расписания</h4>
+                            <p className="text-xs text-gray-600">Выберите постоянный или ротационный график</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 bg-white rounded-xl p-1 shadow-sm border border-gray-200">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsRotatingSchedule(false);
+                              setCurrentWeekIndex(0);
+                            }}
+                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                              !isRotatingSchedule
+                                ? 'bg-indigo-600 text-white shadow-md'
+                                : 'text-gray-600 hover:bg-gray-100'
+                            }`}
+                          >
+                            Постоянный
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsRotatingSchedule(true)}
+                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                              isRotatingSchedule
+                                ? 'bg-indigo-600 text-white shadow-md'
+                                : 'text-gray-600 hover:bg-gray-100'
+                            }`}
+                          >
+                            Ротационный
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Week count selector */}
+                      {isRotatingSchedule && (
+                        <div className="flex items-center gap-4">
+                          <label className="text-sm font-semibold text-gray-700">
+                            Количество недель в цикле:
+                          </label>
+                          <select
+                            value={rotationWeeksCount}
+                            onChange={(e) => {
+                              const newCount = parseInt(e.target.value);
+                              setRotationWeeksCount(newCount);
+                              if (currentWeekIndex >= newCount) setCurrentWeekIndex(newCount - 1);
+                              const adjustSchedules = (schedules: any[]) => {
+                                const emptyWeek = {
+                                  monday: { start: '09:00', end: '18:00', enabled: false },
+                                  tuesday: { start: '09:00', end: '18:00', enabled: false },
+                                  wednesday: { start: '09:00', end: '18:00', enabled: false },
+                                  thursday: { start: '09:00', end: '18:00', enabled: false },
+                                  friday: { start: '09:00', end: '18:00', enabled: false },
+                                  saturday: { start: '10:00', end: '14:00', enabled: false },
+                                  sunday: { start: '10:00', end: '14:00', enabled: false },
+                                };
+                                return newCount > schedules.length
+                                  ? [...schedules, ...Array(newCount - schedules.length).fill(null).map(() => ({...emptyWeek}))]
+                                  : schedules.slice(0, newCount);
+                              };
+                              setOnlineRotationSchedules(adjustSchedules(onlineRotationSchedules));
+                              setOfflineRotationSchedules(adjustSchedules(offlineRotationSchedules));
+                            }}
+                            className="px-3 py-2 rounded-lg border-2 border-gray-300 focus:border-indigo-500 focus:outline-none font-semibold text-sm"
+                          >
+                            <option value={2}>2 недели</option>
+                            <option value={3}>3 недели</option>
+                            <option value={4}>4 недели</option>
+                            <option value={5}>5 недель</option>
+                            <option value={6}>6 недель</option>
+                          </select>
+                        </div>
+                      )}
+
+                      {/* Week selector tabs */}
+                      {isRotatingSchedule && (
+                        <div className="mt-4 flex gap-2 overflow-x-auto">
+                          {Array.from({ length: rotationWeeksCount }, (_, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => setCurrentWeekIndex(i)}
+                              className={`px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap transition-all ${
+                                currentWeekIndex === i
+                                  ? 'bg-white text-indigo-600 shadow-md border-2 border-indigo-600'
+                                  : 'bg-white/50 text-gray-600 border-2 border-transparent hover:border-gray-300'
+                              }`}
+                            >
+                              📅 Неделя {i + 1}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
                     {/* Tab Switcher */}
                     <div className="flex bg-gray-50 border-b-2 border-gray-200">
                       <button
@@ -2046,11 +2250,11 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       >
                         <Video className="w-5 h-5" />
                         <span>Онлайн консультации</span>
-                        {Object.values(onlineWorkSchedule).filter(d => d.enabled).length > 0 && (
+                        {Object.values(isRotatingSchedule ? onlineRotationSchedules[currentWeekIndex] : onlineWorkSchedule).filter(d => d.enabled).length > 0 && (
                           <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
                             scheduleType === 'online' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'
                           }`}>
-                            {Object.values(onlineWorkSchedule).filter(d => d.enabled).length}
+                            {Object.values(isRotatingSchedule ? onlineRotationSchedules[currentWeekIndex] : onlineWorkSchedule).filter(d => d.enabled).length}
                           </span>
                         )}
                         {getConflictDays().length > 0 && (
@@ -2070,11 +2274,11 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       >
                         <Home className="w-5 h-5" />
                         <span>Оффлайн консультации</span>
-                        {Object.values(offlineWorkSchedule).filter(d => d.enabled).length > 0 && (
+                        {Object.values(isRotatingSchedule ? offlineRotationSchedules[currentWeekIndex] : offlineWorkSchedule).filter(d => d.enabled).length > 0 && (
                           <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
                             scheduleType === 'offline' ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-700'
                           }`}>
-                            {Object.values(offlineWorkSchedule).filter(d => d.enabled).length}
+                            {Object.values(isRotatingSchedule ? offlineRotationSchedules[currentWeekIndex] : offlineWorkSchedule).filter(d => d.enabled).length}
                           </span>
                         )}
                         {getConflictDays().length > 0 && (
@@ -2097,9 +2301,12 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                           </div>
                           <div className="space-y-3">
                             {daysOfWeek.map((day) => {
+                              const currentOnlineSchedule = isRotatingSchedule ? onlineRotationSchedules[currentWeekIndex] : onlineWorkSchedule;
+                              const currentOfflineSchedule = isRotatingSchedule ? offlineRotationSchedules[currentWeekIndex] : offlineWorkSchedule;
+
                               const hasConflict = getScheduleConflict(day.value, 'online');
-                              const offlineEnabled = offlineWorkSchedule[day.value]?.enabled;
-                              const offlineTime = offlineEnabled ? `${offlineWorkSchedule[day.value]?.start} - ${offlineWorkSchedule[day.value]?.end}` : '';
+                              const offlineEnabled = currentOfflineSchedule[day.value]?.enabled;
+                              const offlineTime = offlineEnabled ? `${currentOfflineSchedule[day.value]?.start} - ${currentOfflineSchedule[day.value]?.end}` : '';
 
                               return (
                                 <div
@@ -2107,7 +2314,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                   className={`rounded-xl border-2 p-4 transition-all ${
                                     hasConflict
                                       ? 'border-red-500 bg-red-50'
-                                      : onlineWorkSchedule[day.value]?.enabled
+                                      : currentOnlineSchedule[day.value]?.enabled
                                       ? 'border-blue-500 bg-blue-50'
                                       : 'border-gray-200 bg-white'
                                   }`}
@@ -2119,7 +2326,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                       className={`flex items-center justify-center w-12 h-12 rounded-xl border-2 transition-all font-semibold text-sm ${
                                         hasConflict
                                           ? 'border-red-500 bg-red-500 text-white'
-                                          : onlineWorkSchedule[day.value]?.enabled
+                                          : currentOnlineSchedule[day.value]?.enabled
                                           ? 'border-blue-500 bg-blue-500 text-white'
                                           : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
                                       }`}
@@ -2128,20 +2335,27 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                       {day.labelShort}
                                     </button>
                                     <div className="flex-1">
-                                      <p className="font-semibold text-gray-700">{day.labelRu}</p>
-                                      {offlineEnabled && !onlineWorkSchedule[day.value]?.enabled && (
+                                      <p className="font-semibold text-gray-700">
+                                        {day.labelRu}
+                                        {isRotatingSchedule && (
+                                          <span className="ml-2 text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                                            {getNextDateForDay(day.dayIndex)}
+                                          </span>
+                                        )}
+                                      </p>
+                                      {offlineEnabled && !currentOnlineSchedule[day.value]?.enabled && (
                                         <p className="text-xs text-purple-600 mt-1">
                                           🏠 Оффлайн: {offlineTime}
                                         </p>
                                       )}
                                     </div>
-                                    {onlineWorkSchedule[day.value]?.enabled && (
+                                    {currentOnlineSchedule[day.value]?.enabled && (
                                       <div className="flex items-center gap-3">
                                         <div>
                                           <label className="block text-xs text-gray-600 mb-1">С</label>
                                           <input
                                             type="time"
-                                            value={onlineWorkSchedule[day.value]?.start || '09:00'}
+                                            value={currentOnlineSchedule[day.value]?.start || '09:00'}
                                             onChange={(e) => updateOnlineDayTime(day.value, 'start', e.target.value)}
                                             className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
                                               hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
@@ -2153,7 +2367,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                           <label className="block text-xs text-gray-600 mb-1">До</label>
                                           <input
                                             type="time"
-                                            value={onlineWorkSchedule[day.value]?.end || '18:00'}
+                                            value={currentOnlineSchedule[day.value]?.end || '18:00'}
                                             onChange={(e) => updateOnlineDayTime(day.value, 'end', e.target.value)}
                                             className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
                                               hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
@@ -2188,9 +2402,12 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                           </div>
                           <div className="space-y-3">
                             {daysOfWeek.map((day) => {
+                              const currentOnlineSchedule = isRotatingSchedule ? onlineRotationSchedules[currentWeekIndex] : onlineWorkSchedule;
+                              const currentOfflineSchedule = isRotatingSchedule ? offlineRotationSchedules[currentWeekIndex] : offlineWorkSchedule;
+
                               const hasConflict = getScheduleConflict(day.value, 'offline');
-                              const onlineEnabled = onlineWorkSchedule[day.value]?.enabled;
-                              const onlineTime = onlineEnabled ? `${onlineWorkSchedule[day.value]?.start} - ${onlineWorkSchedule[day.value]?.end}` : '';
+                              const onlineEnabled = currentOnlineSchedule[day.value]?.enabled;
+                              const onlineTime = onlineEnabled ? `${currentOnlineSchedule[day.value]?.start} - ${currentOnlineSchedule[day.value]?.end}` : '';
 
                               return (
                                 <div
@@ -2198,7 +2415,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                   className={`rounded-xl border-2 p-4 transition-all ${
                                     hasConflict
                                       ? 'border-red-500 bg-red-50'
-                                      : offlineWorkSchedule[day.value]?.enabled
+                                      : currentOfflineSchedule[day.value]?.enabled
                                       ? 'border-purple-500 bg-purple-50'
                                       : 'border-gray-200 bg-white'
                                   }`}
@@ -2210,7 +2427,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                       className={`flex items-center justify-center w-12 h-12 rounded-xl border-2 transition-all font-semibold text-sm ${
                                         hasConflict
                                           ? 'border-red-500 bg-red-500 text-white'
-                                          : offlineWorkSchedule[day.value]?.enabled
+                                          : currentOfflineSchedule[day.value]?.enabled
                                           ? 'border-purple-500 bg-purple-500 text-white'
                                           : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
                                       }`}
@@ -2219,20 +2436,27 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                       {day.labelShort}
                                     </button>
                                     <div className="flex-1">
-                                      <p className="font-semibold text-gray-700">{day.labelRu}</p>
-                                      {onlineEnabled && !offlineWorkSchedule[day.value]?.enabled && (
+                                      <p className="font-semibold text-gray-700">
+                                        {day.labelRu}
+                                        {isRotatingSchedule && (
+                                          <span className="ml-2 text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                                            {getNextDateForDay(day.dayIndex)}
+                                          </span>
+                                        )}
+                                      </p>
+                                      {onlineEnabled && !currentOfflineSchedule[day.value]?.enabled && (
                                         <p className="text-xs text-blue-600 mt-1">
                                           📱 Онлайн: {onlineTime}
                                         </p>
                                       )}
                                     </div>
-                                    {offlineWorkSchedule[day.value]?.enabled && (
+                                    {currentOfflineSchedule[day.value]?.enabled && (
                                       <div className="flex items-center gap-3">
                                         <div>
                                           <label className="block text-xs text-gray-600 mb-1">С</label>
                                           <input
                                             type="time"
-                                            value={offlineWorkSchedule[day.value]?.start || '09:00'}
+                                            value={currentOfflineSchedule[day.value]?.start || '09:00'}
                                             onChange={(e) => updateOfflineDayTime(day.value, 'start', e.target.value)}
                                             className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
                                               hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-purple-500'
@@ -2244,7 +2468,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                           <label className="block text-xs text-gray-600 mb-1">До</label>
                                           <input
                                             type="time"
-                                            value={offlineWorkSchedule[day.value]?.end || '18:00'}
+                                            value={currentOfflineSchedule[day.value]?.end || '18:00'}
                                             onChange={(e) => updateOfflineDayTime(day.value, 'end', e.target.value)}
                                             className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
                                               hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-purple-500'
@@ -2830,6 +3054,106 @@ export default function StaffManagement({ user }: StaffManagementProps) {
 
                   {/* Work Schedule with Tabs */}
                   <div className="border-2 border-gray-200 rounded-2xl overflow-hidden">
+                    {/* Rotation Mode Toggle */}
+                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 border-b-2 border-gray-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <RotateCcw className="w-5 h-5 text-indigo-600" />
+                          <div>
+                            <h4 className="font-bold text-gray-900">Тип расписания</h4>
+                            <p className="text-xs text-gray-600">Выберите постоянный или ротационный график</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 bg-white rounded-xl p-1 shadow-sm border border-gray-200">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsRotatingSchedule(false);
+                              setCurrentWeekIndex(0);
+                            }}
+                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                              !isRotatingSchedule
+                                ? 'bg-indigo-600 text-white shadow-md'
+                                : 'text-gray-600 hover:bg-gray-100'
+                            }`}
+                          >
+                            Постоянный
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsRotatingSchedule(true)}
+                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                              isRotatingSchedule
+                                ? 'bg-indigo-600 text-white shadow-md'
+                                : 'text-gray-600 hover:bg-gray-100'
+                            }`}
+                          >
+                            Ротационный
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Week count selector */}
+                      {isRotatingSchedule && (
+                        <div className="flex items-center gap-4">
+                          <label className="text-sm font-semibold text-gray-700">
+                            Количество недель в цикле:
+                          </label>
+                          <select
+                            value={rotationWeeksCount}
+                            onChange={(e) => {
+                              const newCount = parseInt(e.target.value);
+                              setRotationWeeksCount(newCount);
+                              if (currentWeekIndex >= newCount) setCurrentWeekIndex(newCount - 1);
+                              const adjustSchedules = (schedules: any[]) => {
+                                const emptyWeek = {
+                                  monday: { start: '09:00', end: '18:00', enabled: false },
+                                  tuesday: { start: '09:00', end: '18:00', enabled: false },
+                                  wednesday: { start: '09:00', end: '18:00', enabled: false },
+                                  thursday: { start: '09:00', end: '18:00', enabled: false },
+                                  friday: { start: '09:00', end: '18:00', enabled: false },
+                                  saturday: { start: '10:00', end: '14:00', enabled: false },
+                                  sunday: { start: '10:00', end: '14:00', enabled: false },
+                                };
+                                return newCount > schedules.length
+                                  ? [...schedules, ...Array(newCount - schedules.length).fill(null).map(() => ({...emptyWeek}))]
+                                  : schedules.slice(0, newCount);
+                              };
+                              setOnlineRotationSchedules(adjustSchedules(onlineRotationSchedules));
+                              setOfflineRotationSchedules(adjustSchedules(offlineRotationSchedules));
+                            }}
+                            className="px-3 py-2 rounded-lg border-2 border-gray-300 focus:border-indigo-500 focus:outline-none font-semibold text-sm"
+                          >
+                            <option value={2}>2 недели</option>
+                            <option value={3}>3 недели</option>
+                            <option value={4}>4 недели</option>
+                            <option value={5}>5 недель</option>
+                            <option value={6}>6 недель</option>
+                          </select>
+                        </div>
+                      )}
+
+                      {/* Week selector tabs */}
+                      {isRotatingSchedule && (
+                        <div className="mt-4 flex gap-2 overflow-x-auto">
+                          {Array.from({ length: rotationWeeksCount }, (_, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => setCurrentWeekIndex(i)}
+                              className={`px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap transition-all ${
+                                currentWeekIndex === i
+                                  ? 'bg-white text-indigo-600 shadow-md border-2 border-indigo-600'
+                                  : 'bg-white/50 text-gray-600 border-2 border-transparent hover:border-gray-300'
+                              }`}
+                            >
+                              📅 Неделя {i + 1}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
                     {/* Tab Switcher */}
                     <div className="flex bg-gray-50 border-b-2 border-gray-200">
                       <button
@@ -2843,11 +3167,11 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       >
                         <Video className="w-5 h-5" />
                         <span>Онлайн консультации</span>
-                        {Object.values(onlineWorkSchedule).filter(d => d.enabled).length > 0 && (
+                        {Object.values(isRotatingSchedule ? onlineRotationSchedules[currentWeekIndex] : onlineWorkSchedule).filter(d => d.enabled).length > 0 && (
                           <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
                             scheduleType === 'online' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'
                           }`}>
-                            {Object.values(onlineWorkSchedule).filter(d => d.enabled).length}
+                            {Object.values(isRotatingSchedule ? onlineRotationSchedules[currentWeekIndex] : onlineWorkSchedule).filter(d => d.enabled).length}
                           </span>
                         )}
                         {getConflictDays().length > 0 && (
@@ -2867,11 +3191,11 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       >
                         <Home className="w-5 h-5" />
                         <span>Оффлайн консультации</span>
-                        {Object.values(offlineWorkSchedule).filter(d => d.enabled).length > 0 && (
+                        {Object.values(isRotatingSchedule ? offlineRotationSchedules[currentWeekIndex] : offlineWorkSchedule).filter(d => d.enabled).length > 0 && (
                           <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
                             scheduleType === 'offline' ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-700'
                           }`}>
-                            {Object.values(offlineWorkSchedule).filter(d => d.enabled).length}
+                            {Object.values(isRotatingSchedule ? offlineRotationSchedules[currentWeekIndex] : offlineWorkSchedule).filter(d => d.enabled).length}
                           </span>
                         )}
                         {getConflictDays().length > 0 && (
@@ -2894,9 +3218,12 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                           </div>
                           <div className="space-y-3">
                             {daysOfWeek.map((day) => {
+                              const currentOnlineSchedule = isRotatingSchedule ? onlineRotationSchedules[currentWeekIndex] : onlineWorkSchedule;
+                              const currentOfflineSchedule = isRotatingSchedule ? offlineRotationSchedules[currentWeekIndex] : offlineWorkSchedule;
+
                               const hasConflict = getScheduleConflict(day.value, 'online');
-                              const offlineEnabled = offlineWorkSchedule[day.value]?.enabled;
-                              const offlineTime = offlineEnabled ? `${offlineWorkSchedule[day.value]?.start} - ${offlineWorkSchedule[day.value]?.end}` : '';
+                              const offlineEnabled = currentOfflineSchedule[day.value]?.enabled;
+                              const offlineTime = offlineEnabled ? `${currentOfflineSchedule[day.value]?.start} - ${currentOfflineSchedule[day.value]?.end}` : '';
 
                               return (
                                 <div
@@ -2904,7 +3231,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                   className={`rounded-xl border-2 p-4 transition-all ${
                                     hasConflict
                                       ? 'border-red-500 bg-red-50'
-                                      : onlineWorkSchedule[day.value]?.enabled
+                                      : currentOnlineSchedule[day.value]?.enabled
                                       ? 'border-blue-500 bg-blue-50'
                                       : 'border-gray-200 bg-white'
                                   }`}
@@ -2916,7 +3243,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                       className={`flex items-center justify-center w-12 h-12 rounded-xl border-2 transition-all font-semibold text-sm ${
                                         hasConflict
                                           ? 'border-red-500 bg-red-500 text-white'
-                                          : onlineWorkSchedule[day.value]?.enabled
+                                          : currentOnlineSchedule[day.value]?.enabled
                                           ? 'border-blue-500 bg-blue-500 text-white'
                                           : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
                                       }`}
@@ -2925,20 +3252,27 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                       {day.labelShort}
                                     </button>
                                     <div className="flex-1">
-                                      <p className="font-semibold text-gray-700">{day.labelRu}</p>
-                                      {offlineEnabled && !onlineWorkSchedule[day.value]?.enabled && (
+                                      <p className="font-semibold text-gray-700">
+                                        {day.labelRu}
+                                        {isRotatingSchedule && (
+                                          <span className="ml-2 text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                                            {getNextDateForDay(day.dayIndex)}
+                                          </span>
+                                        )}
+                                      </p>
+                                      {offlineEnabled && !currentOnlineSchedule[day.value]?.enabled && (
                                         <p className="text-xs text-purple-600 mt-1">
                                           🏠 Оффлайн: {offlineTime}
                                         </p>
                                       )}
                                     </div>
-                                    {onlineWorkSchedule[day.value]?.enabled && (
+                                    {currentOnlineSchedule[day.value]?.enabled && (
                                       <div className="flex items-center gap-3">
                                         <div>
                                           <label className="block text-xs text-gray-600 mb-1">С</label>
                                           <input
                                             type="time"
-                                            value={onlineWorkSchedule[day.value]?.start || '09:00'}
+                                            value={currentOnlineSchedule[day.value]?.start || '09:00'}
                                             onChange={(e) => updateOnlineDayTime(day.value, 'start', e.target.value)}
                                             className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
                                               hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
@@ -2950,7 +3284,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                           <label className="block text-xs text-gray-600 mb-1">До</label>
                                           <input
                                             type="time"
-                                            value={onlineWorkSchedule[day.value]?.end || '18:00'}
+                                            value={currentOnlineSchedule[day.value]?.end || '18:00'}
                                             onChange={(e) => updateOnlineDayTime(day.value, 'end', e.target.value)}
                                             className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
                                               hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
@@ -2985,9 +3319,12 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                           </div>
                           <div className="space-y-3">
                             {daysOfWeek.map((day) => {
+                              const currentOnlineSchedule = isRotatingSchedule ? onlineRotationSchedules[currentWeekIndex] : onlineWorkSchedule;
+                              const currentOfflineSchedule = isRotatingSchedule ? offlineRotationSchedules[currentWeekIndex] : offlineWorkSchedule;
+
                               const hasConflict = getScheduleConflict(day.value, 'offline');
-                              const onlineEnabled = onlineWorkSchedule[day.value]?.enabled;
-                              const onlineTime = onlineEnabled ? `${onlineWorkSchedule[day.value]?.start} - ${onlineWorkSchedule[day.value]?.end}` : '';
+                              const onlineEnabled = currentOnlineSchedule[day.value]?.enabled;
+                              const onlineTime = onlineEnabled ? `${currentOnlineSchedule[day.value]?.start} - ${currentOnlineSchedule[day.value]?.end}` : '';
 
                               return (
                                 <div
@@ -2995,7 +3332,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                   className={`rounded-xl border-2 p-4 transition-all ${
                                     hasConflict
                                       ? 'border-red-500 bg-red-50'
-                                      : offlineWorkSchedule[day.value]?.enabled
+                                      : currentOfflineSchedule[day.value]?.enabled
                                       ? 'border-purple-500 bg-purple-50'
                                       : 'border-gray-200 bg-white'
                                   }`}
@@ -3007,7 +3344,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                       className={`flex items-center justify-center w-12 h-12 rounded-xl border-2 transition-all font-semibold text-sm ${
                                         hasConflict
                                           ? 'border-red-500 bg-red-500 text-white'
-                                          : offlineWorkSchedule[day.value]?.enabled
+                                          : currentOfflineSchedule[day.value]?.enabled
                                           ? 'border-purple-500 bg-purple-500 text-white'
                                           : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
                                       }`}
@@ -3016,20 +3353,27 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                       {day.labelShort}
                                     </button>
                                     <div className="flex-1">
-                                      <p className="font-semibold text-gray-700">{day.labelRu}</p>
-                                      {onlineEnabled && !offlineWorkSchedule[day.value]?.enabled && (
+                                      <p className="font-semibold text-gray-700">
+                                        {day.labelRu}
+                                        {isRotatingSchedule && (
+                                          <span className="ml-2 text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                                            {getNextDateForDay(day.dayIndex)}
+                                          </span>
+                                        )}
+                                      </p>
+                                      {onlineEnabled && !currentOfflineSchedule[day.value]?.enabled && (
                                         <p className="text-xs text-blue-600 mt-1">
                                           📱 Онлайн: {onlineTime}
                                         </p>
                                       )}
                                     </div>
-                                    {offlineWorkSchedule[day.value]?.enabled && (
+                                    {currentOfflineSchedule[day.value]?.enabled && (
                                       <div className="flex items-center gap-3">
                                         <div>
                                           <label className="block text-xs text-gray-600 mb-1">С</label>
                                           <input
                                             type="time"
-                                            value={offlineWorkSchedule[day.value]?.start || '09:00'}
+                                            value={currentOfflineSchedule[day.value]?.start || '09:00'}
                                             onChange={(e) => updateOfflineDayTime(day.value, 'start', e.target.value)}
                                             className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
                                               hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-purple-500'
@@ -3041,7 +3385,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                           <label className="block text-xs text-gray-600 mb-1">До</label>
                                           <input
                                             type="time"
-                                            value={offlineWorkSchedule[day.value]?.end || '18:00'}
+                                            value={currentOfflineSchedule[day.value]?.end || '18:00'}
                                             onChange={(e) => updateOfflineDayTime(day.value, 'end', e.target.value)}
                                             className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
                                               hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-purple-500'
