@@ -98,6 +98,22 @@ interface StaffMember {
       enabled: boolean;
     };
   };
+  schedule_type?: 'permanent' | 'rotating';
+  rotation_weeks_count?: number | null;
+  online_rotation_schedules?: Array<{
+    [key: string]: {
+      start: string;
+      end: string;
+      enabled: boolean;
+    };
+  }> | null;
+  offline_rotation_schedules?: Array<{
+    [key: string]: {
+      start: string;
+      end: string;
+      enabled: boolean;
+    };
+  }> | null;
 }
 
 // Phone number formatter utility
@@ -983,6 +999,56 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       saturday: { start: '10:00', end: '14:00', enabled: false },
       sunday: { start: '10:00', end: '14:00', enabled: false },
     });
+
+    // Reset schedule type and rotation data
+    setIsRotatingSchedule(false);
+    setRotationWeeksCount(2);
+    setCurrentWeekIndex(0);
+    setOnlineRotationSchedules([
+      // Week 1
+      {
+        monday: { start: '09:00', end: '18:00', enabled: false },
+        tuesday: { start: '09:00', end: '18:00', enabled: false },
+        wednesday: { start: '09:00', end: '18:00', enabled: false },
+        thursday: { start: '09:00', end: '18:00', enabled: false },
+        friday: { start: '09:00', end: '18:00', enabled: false },
+        saturday: { start: '10:00', end: '14:00', enabled: false },
+        sunday: { start: '10:00', end: '14:00', enabled: false },
+      },
+      // Week 2
+      {
+        monday: { start: '09:00', end: '18:00', enabled: false },
+        tuesday: { start: '09:00', end: '18:00', enabled: false },
+        wednesday: { start: '09:00', end: '18:00', enabled: false },
+        thursday: { start: '09:00', end: '18:00', enabled: false },
+        friday: { start: '09:00', end: '18:00', enabled: false },
+        saturday: { start: '10:00', end: '14:00', enabled: false },
+        sunday: { start: '10:00', end: '14:00', enabled: false },
+      },
+    ]);
+    setOfflineRotationSchedules([
+      // Week 1
+      {
+        monday: { start: '09:00', end: '18:00', enabled: false },
+        tuesday: { start: '09:00', end: '18:00', enabled: false },
+        wednesday: { start: '09:00', end: '18:00', enabled: false },
+        thursday: { start: '09:00', end: '18:00', enabled: false },
+        friday: { start: '09:00', end: '18:00', enabled: false },
+        saturday: { start: '10:00', end: '14:00', enabled: false },
+        sunday: { start: '10:00', end: '14:00', enabled: false },
+      },
+      // Week 2
+      {
+        monday: { start: '09:00', end: '18:00', enabled: false },
+        tuesday: { start: '09:00', end: '18:00', enabled: false },
+        wednesday: { start: '09:00', end: '18:00', enabled: false },
+        thursday: { start: '09:00', end: '18:00', enabled: false },
+        friday: { start: '09:00', end: '18:00', enabled: false },
+        saturday: { start: '10:00', end: '14:00', enabled: false },
+        sunday: { start: '10:00', end: '14:00', enabled: false },
+      },
+    ]);
+
     setFormErrors({});
     setScheduleType('online');
   };
@@ -1053,8 +1119,14 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         online_consultation_price: formData.online_consultation_price ? Number(formData.online_consultation_price) : null,
         preferred_consultation_duration: formData.preferred_consultation_duration ? Number(formData.preferred_consultation_duration) : null,
         work_schedule: workSchedule,  // Keep for backward compatibility
-        online_work_schedule: onlineWorkSchedule,
-        offline_work_schedule: offlineWorkSchedule,
+        schedule_type: isRotatingSchedule ? 'rotating' : 'permanent',
+        // If rotating, send rotation schedules and null for permanent
+        online_work_schedule: isRotatingSchedule ? null : onlineWorkSchedule,
+        offline_work_schedule: isRotatingSchedule ? null : offlineWorkSchedule,
+        // If permanent, send null for rotation schedules
+        rotation_weeks_count: isRotatingSchedule ? rotationWeeksCount : null,
+        online_rotation_schedules: isRotatingSchedule ? onlineRotationSchedules : null,
+        offline_rotation_schedules: isRotatingSchedule ? offlineRotationSchedules : null,
       };
 
       const response = await api.post("/staff/", payload);
@@ -1202,6 +1274,23 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       saturday: { start: '10:00', end: '14:00', enabled: false },
       sunday: { start: '10:00', end: '14:00', enabled: false },
     });
+
+    // Load schedule type and rotation data
+    const scheduleType = member.schedule_type || 'permanent';
+    setIsRotatingSchedule(scheduleType === 'rotating');
+
+    if (scheduleType === 'rotating' && member.rotation_weeks_count) {
+      setRotationWeeksCount(member.rotation_weeks_count);
+
+      if (member.online_rotation_schedules && member.online_rotation_schedules.length > 0) {
+        setOnlineRotationSchedules(member.online_rotation_schedules);
+      }
+
+      if (member.offline_rotation_schedules && member.offline_rotation_schedules.length > 0) {
+        setOfflineRotationSchedules(member.offline_rotation_schedules);
+      }
+    }
+
     setShowEditModal(true);
   };
 
@@ -1244,8 +1333,14 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         online_consultation_price: formData.online_consultation_price ? Number(formData.online_consultation_price) : null,
         preferred_consultation_duration: formData.preferred_consultation_duration ? Number(formData.preferred_consultation_duration) : null,
         work_schedule: workSchedule,  // Keep for backward compatibility
-        online_work_schedule: onlineWorkSchedule,
-        offline_work_schedule: offlineWorkSchedule,
+        schedule_type: isRotatingSchedule ? 'rotating' : 'permanent',
+        // If rotating, send rotation schedules and null for permanent
+        online_work_schedule: isRotatingSchedule ? null : onlineWorkSchedule,
+        offline_work_schedule: isRotatingSchedule ? null : offlineWorkSchedule,
+        // If permanent, send null for rotation schedules
+        rotation_weeks_count: isRotatingSchedule ? rotationWeeksCount : null,
+        online_rotation_schedules: isRotatingSchedule ? onlineRotationSchedules : null,
+        offline_rotation_schedules: isRotatingSchedule ? offlineRotationSchedules : null,
       };
 
       // Only include password if it was changed
