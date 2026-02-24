@@ -77,12 +77,14 @@ export default function AdminLayout({
         />
 
         {/* Main Content */}
-        <main className="flex-1 bg-gray-50 p-4 sm:p-6">
+        <main className="flex-1 bg-gray-50">
           {/* Breadcrumb */}
           <AdminBreadcrumb />
 
           {/* Page Content */}
-          {children}
+          <div className="px-4 sm:px-6 pb-4 sm:pb-6">
+            {children}
+          </div>
         </main>
       </div>
     </div>

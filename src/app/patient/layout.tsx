@@ -87,12 +87,15 @@ export default function PatientLayout({
           sidebarCollapsed={sidebarCollapsed}
         />
 
-        {/* Breadcrumb */}
-        <Breadcrumb />
+        {/* Main Content */}
+        <main className="flex-1 bg-gray-50">
+          {/* Breadcrumb */}
+          <Breadcrumb />
 
-        {/* Page Content */}
-        <main className="flex-1 p-6 bg-gray-50">
-          {children}
+          {/* Page Content */}
+          <div className="px-3 pb-3">
+            {children}
+          </div>
         </main>
       </div>
     </div>

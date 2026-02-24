@@ -96,7 +96,7 @@ export const Breadcrumb = ({
 
   return (
     <nav
-      className="flex items-center px-6 py-4 relative overflow-hidden border-b border-white/10 shadow-xl"
+      className="flex items-center px-6 py-2 relative overflow-hidden border-b border-white/10 shadow-xl"
       role="navigation"
       aria-label="Навигация по разделам"
       style={{
