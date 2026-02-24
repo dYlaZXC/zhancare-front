@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { NurseSidebar } from "@/components/layout/NurseSidebar";
 import { NurseHeader } from "@/components/layout/NurseHeader";
+import { NurseBreadcrumb } from "@/components/layout/NurseBreadcrumb";
 import { PremiumLoadingScreen } from "@/components/layout/PremiumLoadingScreen";
 
 export default function NurseLayout({ children }: { children: React.ReactNode }) {
@@ -68,7 +69,13 @@ export default function NurseLayout({ children }: { children: React.ReactNode })
 
         {/* Main Content */}
         <main className="flex-1 bg-gray-50">
-          {children}
+          {/* Breadcrumb */}
+          <NurseBreadcrumb />
+
+          {/* Page Content */}
+          <div className="p-3">
+            {children}
+          </div>
         </main>
       </div>
     </div>

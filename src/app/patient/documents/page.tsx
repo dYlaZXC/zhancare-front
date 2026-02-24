@@ -17,9 +17,21 @@ import {
   faTrash,
   faFilter,
   faSpinner,
+  faSearch,
+  faDownload,
+  faTimes,
+  faFileImage,
+  faFilePdf,
+  faUpload,
+  faSortAmountDown,
+  faCalendarAlt,
+  faCheckCircle,
+  faChevronDown,
+  faChevronUp,
+  faPlus,
 } from "@fortawesome/free-solid-svg-icons";
 
-// Document categories with FontAwesome icons matching backend
+// Document categories with FontAwesomeicons matching backend
 const DOCUMENT_CATEGORIES = [
   { value: "lab_result", label: "Результат анализа", icon: faFlask, color: "#ef4444" },
   { value: "imaging", label: "Снимок/Изображение", icon: faXRay, color: "#8b5cf6" },
@@ -33,7 +45,7 @@ const DOCUMENT_CATEGORIES = [
 interface MedicalDocument {
   id: number;
   document_type: string;
-  file_name: string;
+  original_filename: string;
   file_url: string;
   file_size: number;
   uploaded_at: string;
@@ -49,9 +61,16 @@ export default function PatientDocumentsPage() {
   const [description, setDescription] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"date" | "name" | "type">("date");
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState<MedicalDocument | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [showUploadForm, setShowUploadForm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropZoneRef = useRef<HTMLDivElement>(null);
 
   // Mouse tracking for interactive effects
   useEffect(() => {
@@ -81,29 +100,65 @@ export default function PatientDocumentsPage() {
     }
   };
 
+  // Drag & Drop handlers
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget === dropZoneRef.current) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files[0]) {
+      handleFileValidation(files[0]);
+    }
+  };
+
+  const handleFileValidation = (file: File) => {
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/jpg",
+      "application/pdf",
+      "image/heic",
+      "image/heif",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Поддерживаются только изображения и PDF файлы");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Размер файла не должен превышать 10MB");
+      return;
+    }
+
+    setSelectedFile(file);
+    toast.success(`Файл "${file.name}" готов к загрузке`);
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const allowedTypes = [
-        "image/jpeg",
-        "image/png",
-        "image/jpg",
-        "application/pdf",
-        "image/heic",
-        "image/heif",
-      ];
-
-      if (!allowedTypes.includes(file.type)) {
-        toast.error("Поддерживаются только изображения и PDF файлы");
-        return;
-      }
-
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error("Размер файла не должен превышать 10MB");
-        return;
-      }
-
-      setSelectedFile(file);
+      handleFileValidation(file);
     }
   };
 
@@ -136,7 +191,7 @@ export default function PatientDocumentsPage() {
         },
       });
 
-      toast.success("Документ успешно загружен!");
+      toast.success("✅ Документ успешно загружен!");
       setDocuments([response.data, ...documents]);
 
       // Reset form
@@ -157,14 +212,11 @@ export default function PatientDocumentsPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Вы уверены, что хотите удалить этот документ?")) {
-      return;
-    }
-
     try {
       await api.delete(`/medical-documents/${id}/`);
       setDocuments(documents.filter((doc) => doc.id !== id));
-      toast.success("Документ удален");
+      toast.success("🗑️ Документ удален");
+      setDeleteConfirm(null);
     } catch (error) {
       toast.error("Не удалось удалить документ");
     }
@@ -173,6 +225,7 @@ export default function PatientDocumentsPage() {
   const handleDownload = async (doc: MedicalDocument) => {
     try {
       window.open(doc.file_url, "_blank");
+      toast.success("📥 Загрузка началась");
     } catch (error) {
       toast.error("Не удалось открыть документ");
     }
@@ -204,10 +257,24 @@ export default function PatientDocumentsPage() {
     );
   };
 
-  const filteredDocuments =
-    filterCategory === "all"
-      ? documents
-      : documents.filter((doc) => doc.document_type === filterCategory);
+  // Filter and sort documents
+  const filteredAndSortedDocuments = documents
+    .filter((doc) => {
+      const matchesCategory = filterCategory === "all" || doc.document_type === filterCategory;
+      const matchesSearch =
+        doc.original_filename.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (doc.description || "").toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    })
+    .sort((a, b) => {
+      if (sortBy === "date") {
+        return new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime();
+      } else if (sortBy === "name") {
+        return a.original_filename.localeCompare(b.original_filename);
+      } else {
+        return a.document_type.localeCompare(b.document_type);
+      }
+    });
 
   if (loading) {
     return (
@@ -230,155 +297,148 @@ export default function PatientDocumentsPage() {
   }
 
   return (
-    <div className="space-y-6 relative">
+    <div className="space-y-6 relative pb-20">
       {/* Animated Background Elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute top-20 right-20 w-96 h-96 rounded-full blur-3xl opacity-20 animate-pulse"
              style={{ background: 'radial-gradient(circle, rgba(55, 114, 255, 0.3) 0%, transparent 70%)', animationDuration: '4s' }}></div>
         <div className="absolute bottom-40 left-20 w-64 h-64 rounded-full blur-2xl opacity-20 animate-bounce"
              style={{ background: 'radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, transparent 70%)', animationDuration: '5s' }}></div>
       </div>
 
-      {/* Upload Section */}
-      <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-white/20"
-           style={{
-             background: `
-               radial-gradient(circle at ${mousePos.x}px ${mousePos.y}px, rgba(55, 114, 255, 0.15) 0%, transparent 50%),
-               linear-gradient(135deg, #1e263e 0%, #29358f 50%, #3772ff 100%)
-             `
-           }}>
-        {/* Glass overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 pointer-events-none"></div>
-
-        {/* Animated background orbs */}
-        <div className="absolute top-10 right-10 w-32 h-32 rounded-full blur-2xl animate-pulse"
-             style={{ background: 'rgba(55, 114, 255, 0.2)', animationDuration: '3s' }}></div>
-        <div className="absolute bottom-10 left-10 w-24 h-24 rounded-full blur-xl animate-bounce"
-             style={{ background: 'rgba(139, 92, 246, 0.2)', animationDuration: '4s' }}></div>
-
-        <div className="relative z-10 p-8">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg"
-                 style={{ background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.05) 100%)' }}>
-              <FontAwesomeIcon icon={faCloudUploadAlt} className="text-2xl text-white" />
+      {/* Header with Upload Button */}
+      <div className="relative z-10 rounded-2xl overflow-hidden shadow-lg border border-white/20 bg-white">
+        <div className="p-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-lg">
+              <FontAwesomeIcon icon={faCloudUploadAlt} className="text-white text-xl" />
             </div>
             <div>
-              <h2 className="text-3xl font-bold text-white">Загрузить документ</h2>
-              <p className="text-gray-300 text-sm">Безопасное хранилище медицинских документов</p>
+              <h1 className="text-2xl font-bold text-gray-900">Медицинские документы</h1>
+              <p className="text-sm text-gray-500">Управление вашими медицинскими файлами</p>
             </div>
           </div>
+          <button
+            onClick={() => setShowUploadForm(!showUploadForm)}
+            className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-300 flex items-center gap-2 shadow-lg hover:shadow-xl hover:scale-105"
+          >
+            <FontAwesomeIcon icon={showUploadForm ? faChevronUp : faPlus} />
+            {showUploadForm ? "Скрыть форму" : "Загрузить документ"}
+          </button>
+        </div>
+      </div>
 
-          {/* Category Selection */}
-          <div className="mb-6">
-            <label className="block text-sm font-semibold text-white mb-3">Тип документа</label>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      {/* Collapsible Upload Section */}
+      {showUploadForm && (
+        <div className="relative z-10 rounded-2xl overflow-hidden shadow-xl border border-gray-200 bg-gradient-to-br from-blue-50 to-indigo-50 transition-all duration-300 ease-out">
+          <div className="p-6">
+
+          {/* Category Selection - Compact */}
+          <div className="mb-4">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Тип документа
+            </label>
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
               {DOCUMENT_CATEGORIES.map((category) => (
                 <button
                   key={category.value}
                   onClick={() => setSelectedCategory(category.value)}
-                  onMouseEnter={() => setHoveredCategory(category.value)}
-                  onMouseLeave={() => setHoveredCategory(null)}
-                  className={`group relative overflow-hidden p-4 rounded-xl transition-all duration-300 ${
+                  className={`group relative overflow-hidden p-3 rounded-lg transition-all duration-200 ${
                     selectedCategory === category.value
-                      ? "scale-105 shadow-2xl"
-                      : "hover:scale-105"
+                      ? "shadow-md scale-105"
+                      : "hover:scale-102 shadow-sm"
                   }`}
                   style={selectedCategory === category.value
                     ? {
-                        background: 'rgba(55, 114, 255, 0.3)',
-                        border: '2px solid rgba(55, 114, 255, 0.6)',
-                        boxShadow: '0 0 30px rgba(55, 114, 255, 0.4)',
+                        background: 'white',
+                        border: `2px solid ${category.color}`,
                       }
                     : {
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        border: '2px solid rgba(255, 255, 255, 0.2)',
+                        background: 'white',
+                        border: '2px solid #e5e7eb',
                       }
                   }>
                   <div className="relative z-10">
-                    <div className={`w-10 h-10 mx-auto mb-2 rounded-lg flex items-center justify-center transition-all duration-300 ${
-                      selectedCategory === category.value ? 'scale-110' : 'group-hover:scale-110'
+                    <div className={`w-8 h-8 mx-auto mb-1 rounded-lg flex items-center justify-center transition-all duration-200 ${
+                      selectedCategory === category.value ? 'scale-110' : 'group-hover:scale-105'
                     }`}
-                         style={{ background: `${category.color}33` }}>
-                      <FontAwesomeIcon icon={category.icon} className="text-lg" style={{ color: category.color }} />
+                         style={{ background: `${category.color}15` }}>
+                      <FontAwesomeIcon icon={category.icon} className="text-sm" style={{ color: category.color }} />
                     </div>
-                    <div className="text-xs font-semibold text-white text-center leading-tight">
+                    <div className={`text-[10px] font-semibold text-center leading-tight ${
+                      selectedCategory === category.value ? 'text-gray-800' : 'text-gray-600'
+                    }`}>
                       {category.label}
                     </div>
                   </div>
-
-                  {/* Hover glow effect */}
-                  {hoveredCategory === category.value && (
-                    <div className="absolute inset-0 rounded-xl opacity-30 blur-lg animate-pulse"
-                         style={{ background: category.color }}></div>
-                  )}
-
-                  {/* Shimmer effect */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* File Input */}
-          <div className="mb-6">
-            <label className="block text-sm font-semibold text-white mb-3">
-              Выберите файл
-            </label>
-            <div className="relative">
-              <input
-                ref={fileInputRef}
-                type="file"
-                onChange={handleFileSelect}
-                accept="image/jpeg,image/png,image/jpg,application/pdf,image/heic,image/heif"
-                className="hidden"
-                id="file-upload"
-              />
-              <label
-                htmlFor="file-upload"
-                className="group relative flex items-center justify-center gap-3 w-full p-6 rounded-2xl cursor-pointer transition-all duration-300 hover:scale-102 border-2 border-dashed overflow-hidden"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  borderColor: selectedFile ? 'rgba(16, 185, 129, 0.6)' : 'rgba(255, 255, 255, 0.3)',
-                }}
-              >
-                <FontAwesomeIcon
-                  icon={faCloudUploadAlt}
-                  className={`text-3xl transition-all duration-300 ${selectedFile ? 'text-green-400' : 'text-white group-hover:text-blue-400'}`}
+          {/* Drag & Drop Zone - Compact */}
+          <div
+            ref={dropZoneRef}
+            onDragEnter={handleDragEnter}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`relative mb-4 border-2 border-dashed rounded-xl transition-all duration-300 ${
+              isDragging
+                ? "border-blue-500 bg-blue-50 scale-[1.02]"
+                : "border-gray-300 hover:border-blue-400 hover:bg-blue-50/50"
+            }`}
+          >
+            <div className="p-6 text-center">
+              <div className={`inline-flex items-center justify-center w-14 h-14 rounded-full mb-3 transition-all duration-300 ${
+                isDragging ? "bg-blue-600 text-white scale-110" : "bg-blue-100 text-blue-600"
+              }`}>
+                <FontAwesomeIcon icon={faUpload} className="text-xl" />
+              </div>
+              <h3 className="text-base font-bold text-gray-800 mb-2">
+                {isDragging ? "Отпустите файл" : "Перетащите файл сюда"}
+              </h3>
+              <p className="text-gray-500 text-sm mb-3">или</p>
+              <label className="inline-block">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  onChange={handleFileSelect}
+                  accept="image/*,application/pdf"
+                  className="hidden"
                 />
-                <div className="text-center">
-                  <p className="text-white font-semibold">
-                    {selectedFile ? selectedFile.name : "Нажмите или перетащите файл"}
-                  </p>
-                  <p className="text-gray-400 text-xs mt-1">
-                    {selectedFile
-                      ? `${formatFileSize(selectedFile.size)}`
-                      : "JPG, PNG, PDF, HEIC/HEIF до 10MB"
-                    }
-                  </p>
-                </div>
-
-                {/* Animated background on hover */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                     style={{ background: 'radial-gradient(circle at center, rgba(55, 114, 255, 0.1) 0%, transparent 70%)' }}></div>
+                <span className="px-5 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all duration-200 cursor-pointer inline-flex items-center gap-2 shadow-md hover:shadow-lg hover:scale-105 text-sm">
+                  <FontAwesomeIcon icon={faFileImage} />
+                  Выберите файл
+                </span>
               </label>
+              <p className="text-xs text-gray-500 mt-3">
+                JPG, PNG, PDF (макс. 10 MB)
+              </p>
             </div>
+
+            {selectedFile && (
+              <div className="absolute inset-0 bg-green-500/10 backdrop-blur-sm rounded-xl flex items-center justify-center border-2 border-green-500">
+                <div className="text-center p-4">
+                  <FontAwesomeIcon icon={faCheckCircle} className="text-4xl text-green-600 mb-2" />
+                  <p className="text-gray-900 font-semibold">{selectedFile.name}</p>
+                  <p className="text-gray-600 text-sm">{formatFileSize(selectedFile.size)}</p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Description */}
-          <div className="mb-6">
-            <label className="block text-sm font-semibold text-white mb-3">
+          <div className="mb-4">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
               Описание (необязательно)
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Например: Общий анализ крови от 15.02.2026"
-              rows={3}
-              className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none transition-all duration-300 text-white placeholder-gray-400"
-              style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                borderColor: 'rgba(255, 255, 255, 0.2)',
-              }}
+              placeholder="Добавьте краткое описание документа..."
+              className="w-full px-4 py-2 rounded-lg bg-white border-2 border-gray-200 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 resize-none text-sm"
+              rows={2}
             />
           </div>
 
@@ -386,212 +446,375 @@ export default function PatientDocumentsPage() {
           <button
             onClick={handleUpload}
             disabled={!selectedFile || uploading}
-            className="group relative w-full py-4 rounded-2xl font-bold text-white transition-all duration-300 hover:scale-105 hover:-translate-y-1 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:translate-y-0 overflow-hidden shadow-2xl"
-            style={{
-              background: uploading
-                ? 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)'
-                : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-            }}
+            className={`w-full py-3 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
+              !selectedFile || uploading
+                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                : "bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 hover:shadow-lg hover:scale-[1.02] shadow-md"
+            }`}
           >
-            <div className="relative z-10 flex items-center justify-center gap-3">
-              {uploading ? (
-                <>
-                  <FontAwesomeIcon icon={faSpinner} className="animate-spin text-xl" />
-                  <span>Загрузка... {uploadProgress}%</span>
-                </>
-              ) : (
-                <>
-                  <FontAwesomeIcon icon={faCloudUploadAlt} className="text-xl" />
-                  <span>Загрузить документ</span>
-                </>
-              )}
-            </div>
-
-            {/* Shimmer effect */}
-            {!uploading && (
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
-            )}
-
-            {/* Progress bar */}
-            {uploading && (
-              <div className="absolute bottom-0 left-0 h-1 bg-white/30 transition-all duration-300"
-                   style={{ width: `${uploadProgress}%` }}></div>
+            {uploading ? (
+              <>
+                <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                Загрузка... {uploadProgress}%
+              </>
+            ) : (
+              <>
+                <FontAwesomeIcon icon={faCloudUploadAlt} />
+                Загрузить документ
+              </>
             )}
           </button>
-        </div>
-      </div>
 
-      {/* Documents List */}
-      <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-white/20"
-           style={{
-             background: `
-               radial-gradient(circle at ${mousePos.x}px ${mousePos.y}px, rgba(55, 114, 255, 0.1) 0%, transparent 50%),
-               linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%)
-             `
-           }}>
-        <div className="relative z-10 p-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg"
-                   style={{ background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)' }}>
-                <FontAwesomeIcon icon={faFileAlt} className="text-2xl text-white" />
-              </div>
-              <div>
-                <h2 className="text-3xl font-bold text-gray-900">Мои документы</h2>
-                <p className="text-gray-600 text-sm">Всего документов: {filteredDocuments.length}</p>
-              </div>
-            </div>
-
-            {/* Filter */}
-            <div className="relative">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                <FontAwesomeIcon icon={faFilter} className="text-gray-400" />
-              </div>
-              <select
-                value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
-                className="pl-12 pr-8 py-3 rounded-xl border-2 focus:outline-none transition-all duration-300 appearance-none cursor-pointer font-medium"
-                style={{
-                  background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
-                  borderColor: '#cbd5e1',
-                }}
-              >
-                <option value="all">Все категории</option>
-                {DOCUMENT_CATEGORIES.map((cat) => (
-                  <option key={cat.value} value={cat.value}>
-                    {cat.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {filteredDocuments.length === 0 ? (
-            <div className="text-center py-20">
-              <div className="w-32 h-32 mx-auto mb-6 rounded-full flex items-center justify-center relative"
-                   style={{ background: 'linear-gradient(135deg, rgba(55, 114, 255, 0.1) 0%, rgba(55, 114, 255, 0.05) 100%)' }}>
-                <FontAwesomeIcon icon={faFileAlt} className="text-6xl text-gray-400" />
-                <div className="absolute inset-0 rounded-full blur-xl opacity-50 bg-blue-400 animate-pulse"></div>
-              </div>
-              <p className="text-xl text-gray-600 font-medium">
-                {filterCategory === "all"
-                  ? "У вас пока нет загруженных документов"
-                  : "Нет документов в этой категории"}
-              </p>
-              <p className="text-gray-500 mt-2">Загрузите свой первый документ выше</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredDocuments.map((doc, index) => {
-                const categoryInfo = getCategoryInfo(doc.document_type);
-                const isPDF = doc.file_name.toLowerCase().endsWith(".pdf");
-
-                return (
-                  <div
-                    key={doc.id}
-                    className="group relative rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2"
-                    style={{
-                      background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-                      borderColor: '#e2e8f0',
-                      animationDelay: `${index * 100}ms`,
-                    }}
-                  >
-                    {/* Category Badge */}
-                    <div className="absolute top-4 left-4 z-20">
-                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg shadow-lg backdrop-blur-md"
-                           style={{
-                             background: `${categoryInfo.color}20`,
-                             border: `1px solid ${categoryInfo.color}40`
-                           }}>
-                        <FontAwesomeIcon
-                          icon={categoryInfo.icon}
-                          className="text-sm"
-                          style={{ color: categoryInfo.color }}
-                        />
-                        <span className="text-xs font-semibold" style={{ color: categoryInfo.color }}>
-                          {categoryInfo.label}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Delete Button */}
-                    <button
-                      onClick={() => handleDelete(doc.id)}
-                      className="absolute top-4 right-4 z-20 w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-300 hover:scale-110 shadow-lg backdrop-blur-md"
-                      style={{
-                        background: 'rgba(239, 68, 68, 0.1)',
-                        border: '1px solid rgba(239, 68, 68, 0.3)',
-                      }}
-                    >
-                      <FontAwesomeIcon icon={faTrash} className="text-red-500" />
-                    </button>
-
-                    {/* File Preview */}
-                    <div className="relative pt-16 pb-6 px-6"
-                         style={{
-                           background: isPDF
-                             ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%)'
-                             : 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%)'
-                         }}>
-                      <div className="w-20 h-20 mx-auto rounded-2xl flex items-center justify-center shadow-lg"
-                           style={{
-                             background: isPDF
-                               ? 'linear-gradient(135deg, #fecaca 0%, #fca5a5 100%)'
-                               : 'linear-gradient(135deg, #93c5fd 0%, #60a5fa 100%)'
-                           }}>
-                        {isPDF ? (
-                          <span className="text-2xl font-bold text-red-700">PDF</span>
-                        ) : (
-                          <FontAwesomeIcon icon={faXRay} className="text-3xl text-blue-700" />
-                        )}
-                      </div>
-                    </div>
-
-                    {/* File Info */}
-                    <div className="px-6 pb-6 space-y-3">
-                      <h3 className="font-bold text-gray-900 truncate text-lg" title={doc.file_name}>
-                        {doc.file_name}
-                      </h3>
-                      {doc.description && (
-                        <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
-                          {doc.description}
-                        </p>
-                      )}
-                      <div className="flex justify-between text-xs text-gray-500 font-medium pt-2 border-t border-gray-200">
-                        <span>{formatFileSize(doc.file_size)}</span>
-                        <span>{formatDate(doc.uploaded_at)}</span>
-                      </div>
-
-                      {/* Open Button */}
-                      <button
-                        onClick={() => handleDownload(doc)}
-                        className="group/btn relative w-full py-3 rounded-xl font-bold text-white transition-all duration-300 hover:scale-105 active:scale-95 overflow-hidden shadow-lg mt-4"
-                        style={{
-                          background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)',
-                        }}
-                      >
-                        <div className="relative z-10 flex items-center justify-center gap-2">
-                          <FontAwesomeIcon icon={faEye} />
-                          <span>Открыть</span>
-                        </div>
-
-                        {/* Shimmer effect */}
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 transform translate-x-full group-hover/btn:translate-x-[-200%] transition-transform duration-1000"></div>
-                      </button>
-                    </div>
-
-                    {/* Card border glow on hover */}
-                    <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                         style={{
-                           boxShadow: `0 0 30px ${categoryInfo.color}40`,
-                         }}></div>
-                  </div>
-                );
-              })}
+          {/* Upload Progress Bar */}
+          {uploading && (
+            <div className="mt-3 bg-gray-200 rounded-full overflow-hidden h-2">
+              <div
+                className="bg-gradient-to-r from-green-500 to-blue-600 h-full transition-all duration-300 rounded-full"
+                style={{ width: `${uploadProgress}%` }}
+              ></div>
             </div>
           )}
         </div>
       </div>
+      )}
+
+      {/* Search and Filter Section */}
+      <div className="relative z-10 bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+          {/* Search */}
+          <div className="relative flex-1 w-full md:w-auto">
+            <FontAwesomeIcon
+              icon={faSearch}
+              className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"
+            />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Поиск по названию или описанию..."
+              className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all duration-300"
+            />
+          </div>
+
+          {/* Filter by Category */}
+          <div className="relative w-full md:w-64">
+            <FontAwesomeIcon
+              icon={faFilter}
+              className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"
+            />
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all duration-300 appearance-none bg-white cursor-pointer"
+            >
+              <option value="all">Все категории</option>
+              {DOCUMENT_CATEGORIES.map((cat) => (
+                <option key={cat.value} value={cat.value}>
+                  {cat.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sort */}
+          <div className="relative w-full md:w-48">
+            <FontAwesomeIcon
+              icon={faSortAmountDown}
+              className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"
+            />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as "date" | "name" | "type")}
+              className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all duration-300 appearance-none bg-white cursor-pointer"
+            >
+              <option value="date">По дате</option>
+              <option value="name">По названию</option>
+              <option value="type">По типу</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="mt-4 flex items-center gap-2 text-sm text-gray-600">
+          <FontAwesomeIcon icon={faFileAlt} />
+          <span>
+            Найдено документов: <strong className="text-blue-600">{filteredAndSortedDocuments.length}</strong> из {documents.length}
+          </span>
+        </div>
+      </div>
+
+      {/* Documents Grid */}
+      <div className="relative z-10">
+        {filteredAndSortedDocuments.length === 0 ? (
+          <div className="bg-white rounded-2xl shadow-lg p-12 text-center border border-gray-100">
+            <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gray-100 mb-6">
+              <FontAwesomeIcon icon={faFileAlt} className="text-5xl text-gray-400" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">
+              {searchQuery || filterCategory !== "all" ? "Документы не найдены" : "Нет документов"}
+            </h3>
+            <p className="text-gray-500 mb-6">
+              {searchQuery || filterCategory !== "all"
+                ? "Попробуйте изменить параметры поиска"
+                : "Загрузите свой первый документ выше"}
+            </p>
+            {(searchQuery || filterCategory !== "all") && (
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setFilterCategory("all");
+                }}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-300 inline-flex items-center gap-2"
+              >
+                <FontAwesomeIcon icon={faTimes} />
+                Сбросить фильтры
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {filteredAndSortedDocuments.map((doc, index) => {
+              const categoryInfo = getCategoryInfo(doc.document_type);
+              const isPDF = doc.original_filename.toLowerCase().endsWith(".pdf");
+
+              return (
+                <div
+                  key={doc.id}
+                  className="group relative rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-200 hover:-translate-y-1 border bg-white"
+                  style={{
+                    borderColor: '#e5e7eb',
+                  }}
+                >
+                  {/* Category Badge - Smaller */}
+                  <div className="absolute top-2 left-2 z-20">
+                    <div className="flex items-center gap-1 px-2 py-1 rounded-md shadow-sm backdrop-blur-sm"
+                         style={{
+                           background: `${categoryInfo.color}20`,
+                           border: `1px solid ${categoryInfo.color}40`
+                         }}>
+                      <FontAwesomeIcon
+                        icon={categoryInfo.icon}
+                        className="text-xs"
+                        style={{ color: categoryInfo.color }}
+                      />
+                      <span className="text-[10px] font-semibold" style={{ color: categoryInfo.color }}>
+                        {categoryInfo.label}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons - Smaller */}
+                  <div className="absolute top-2 right-2 z-20 flex gap-1">
+                    {/* Preview Button */}
+                    <button
+                      onClick={() => setPreviewDoc(doc)}
+                      className="w-7 h-7 rounded-md flex items-center justify-center transition-all duration-200 hover:scale-110 hover:bg-blue-50 shadow-sm backdrop-blur-sm bg-white/90 border border-gray-200"
+                      title="Просмотр"
+                    >
+                      <FontAwesomeIcon icon={faEye} className="text-xs text-blue-500 hover:text-blue-600 transition-colors" />
+                    </button>
+
+                    {/* Delete Button */}
+                    <button
+                      onClick={() => setDeleteConfirm(doc.id)}
+                      className="w-7 h-7 rounded-md flex items-center justify-center transition-all duration-200 hover:scale-110 hover:bg-red-50 shadow-sm backdrop-blur-sm bg-white/90 border border-gray-200"
+                      title="Удалить"
+                    >
+                      <FontAwesomeIcon icon={faTrash} className="text-xs text-gray-500 hover:text-red-500 transition-colors" />
+                    </button>
+                  </div>
+
+                  {/* File Preview - Smaller */}
+                  <div className="relative pt-10 pb-3 px-3"
+                       style={{
+                         background: isPDF
+                           ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%)'
+                           : 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%)'
+                       }}>
+                    <div className="w-14 h-14 mx-auto rounded-xl flex items-center justify-center shadow-md"
+                         style={{
+                           background: isPDF
+                             ? 'linear-gradient(135deg, #fecaca 0%, #fca5a5 100%)'
+                             : 'linear-gradient(135deg, #93c5fd 0%, #60a5fa 100%)'
+                         }}>
+                      {isPDF ? (
+                        <FontAwesomeIcon icon={faFilePdf} className="text-xl text-red-700" />
+                      ) : (
+                        <FontAwesomeIcon icon={faFileImage} className="text-xl text-blue-700" />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* File Info - Smaller */}
+                  <div className="px-3 pb-3 space-y-2">
+                    <h3 className="font-bold text-gray-900 truncate text-sm" title={doc.original_filename}>
+                      {doc.original_filename}
+                    </h3>
+                    {doc.description && (
+                      <p className="text-xs text-gray-600 line-clamp-1 leading-snug">
+                        {doc.description}
+                      </p>
+                    )}
+                    <div className="flex justify-between text-[10px] text-gray-500 font-medium pt-2 border-t border-gray-200">
+                      <span className="flex items-center gap-1">
+                        <FontAwesomeIcon icon={faCalendarAlt} className="text-gray-400" />
+                        <span className="truncate">{new Date(doc.uploaded_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}</span>
+                      </span>
+                      <span>{formatFileSize(doc.file_size)}</span>
+                    </div>
+
+                    {/* Download Button - Smaller */}
+                    <button
+                      onClick={() => handleDownload(doc)}
+                      className="w-full mt-2 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xs font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-200 flex items-center justify-center gap-1.5 shadow-sm hover:shadow-md"
+                    >
+                      <FontAwesomeIcon icon={faDownload} className="text-xs" />
+                      Скачать
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Preview Modal */}
+      {previewDoc && (
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setPreviewDoc(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-blue-600 to-blue-700">
+              <div className="flex items-center gap-3">
+                <FontAwesomeIcon
+                  icon={getCategoryInfo(previewDoc.document_type).icon}
+                  className="text-2xl text-white"
+                />
+                <div>
+                  <h2 className="text-xl font-bold text-white">{previewDoc.original_filename}</h2>
+                  <p className="text-sm text-white/80">{getCategoryInfo(previewDoc.document_type).label}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setPreviewDoc(null)}
+                className="w-10 h-10 rounded-lg bg-white/20 hover:bg-white/30 transition-all duration-300 flex items-center justify-center"
+              >
+                <FontAwesomeIcon icon={faTimes} className="text-white text-xl" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 max-h-[70vh] overflow-y-auto">
+              {previewDoc.description && (
+                <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-gray-700">{previewDoc.description}</p>
+                </div>
+              )}
+
+              <div className="space-y-3 mb-6">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Размер файла:</span>
+                  <span className="font-semibold text-gray-900">{formatFileSize(previewDoc.file_size)}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Дата загрузки:</span>
+                  <span className="font-semibold text-gray-900">{formatDate(previewDoc.uploaded_at)}</span>
+                </div>
+              </div>
+
+              {/* Document Preview */}
+              <div className="bg-gray-100 rounded-lg overflow-hidden">
+                {previewDoc.original_filename.toLowerCase().endsWith('.pdf') ? (
+                  <iframe
+                    src={previewDoc.file_url}
+                    className="w-full h-[600px] border-0"
+                    title={previewDoc.original_filename}
+                  />
+                ) : (
+                  <div className="p-4 flex items-center justify-center">
+                    <img
+                      src={previewDoc.file_url}
+                      alt={previewDoc.original_filename}
+                      className="max-w-full max-h-[500px] rounded-lg shadow-lg"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-gray-200 flex gap-3">
+              <button
+                onClick={() => handleDownload(previewDoc)}
+                className="flex-1 py-3 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all duration-300 flex items-center justify-center gap-2"
+              >
+                <FontAwesomeIcon icon={faDownload} />
+                Скачать
+              </button>
+              <button
+                onClick={() => {
+                  setDeleteConfirm(previewDoc.id);
+                  setPreviewDoc(null);
+                }}
+                className="flex-1 py-3 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition-all duration-300 flex items-center justify-center gap-2"
+              >
+                <FontAwesomeIcon icon={faTrash} />
+                Удалить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setDeleteConfirm(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 bg-gradient-to-r from-red-600 to-red-700">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
+                  <FontAwesomeIcon icon={faTrash} className="text-2xl text-white" />
+                </div>
+                <h2 className="text-xl font-bold text-white">Удалить документ?</h2>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <p className="text-gray-700 mb-6">
+                Вы уверены, что хотите удалить этот документ? Это действие нельзя отменить.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  className="flex-1 py-3 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition-all duration-300"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={() => handleDelete(deleteConfirm)}
+                  className="flex-1 py-3 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition-all duration-300 flex items-center justify-center gap-2"
+                >
+                  <FontAwesomeIcon icon={faTrash} />
+                  Удалить
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

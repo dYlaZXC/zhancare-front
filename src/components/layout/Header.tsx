@@ -29,7 +29,7 @@ export const Header = ({
   const [isHovered, setIsHovered] = useState(false);
 
   return (
-    <header className="flex justify-between items-center bg-white/95 backdrop-blur-lg border-b border-gray-200/50 p-4 shadow-lg sticky top-0 z-30 transition-all duration-300">
+    <header className="flex justify-between items-center bg-white/95 backdrop-blur-lg p-4 shadow-lg sticky top-0 z-30 transition-all duration-300">
       {/* Left - Mobile Menu Button & Desktop Sidebar Toggle */}
       <div className="flex items-center gap-3">
         {/* Mobile/Tablet/iPad Pro Menu Button - Active up to XL screens */}

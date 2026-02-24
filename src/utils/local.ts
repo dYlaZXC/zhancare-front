@@ -18,7 +18,7 @@ axiosInstance.interceptors.request.use(
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("access_token");
       if (token) {
-        config.headers.Authorization = `Token ${token}`;
+        config.headers.Authorization = `Bearer ${token}`;
       }
     }
     return config;
@@ -44,15 +44,15 @@ axiosInstance.interceptors.response.use(
         const refresh_token = localStorage.getItem("refresh_token");
         if (!refresh_token) throw new Error("No refresh token found.");
 
-        const { data } = await axios.post(`${baseURL}/auth/refresh/`, {
-          refresh_token,
+        const { data } = await axios.post(`${baseURL}/auth/token/refresh/`, {
+          refresh: refresh_token,
         });
 
-        const newAccessToken = data.access_token;
+        const newAccessToken = data.access;
         localStorage.setItem("access_token", newAccessToken);
 
         // Set new token on original request and retry it
-        originalRequest.headers.Authorization = `Token ${newAccessToken}`;
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return axiosInstance(originalRequest);
       } catch (refreshError) {
         console.warn("🔐 Refresh token failed. Logging out...");
