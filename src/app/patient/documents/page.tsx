@@ -81,6 +81,18 @@ export default function PatientDocumentsPage() {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
+  // Prevent background scroll when modal is open
+  useEffect(() => {
+    if (previewDoc || deleteConfirm) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [previewDoc, deleteConfirm]);
+
   // Fetch documents on mount
   useEffect(() => {
     fetchDocuments();
@@ -307,38 +319,39 @@ export default function PatientDocumentsPage() {
       </div>
 
       {/* Header with Upload Button */}
-      <div className="relative z-10 rounded-2xl overflow-hidden shadow-lg border border-white/20 bg-white">
-        <div className="p-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-lg">
-              <FontAwesomeIcon icon={faCloudUploadAlt} className="text-white text-xl" />
+      <div className="relative z-10 rounded-xl sm:rounded-2xl overflow-hidden shadow-lg border border-white/20 bg-white">
+        <div className="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-lg flex-shrink-0">
+              <FontAwesomeIcon icon={faCloudUploadAlt} className="text-white text-lg sm:text-xl" />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Медицинские документы</h1>
-              <p className="text-sm text-gray-500">Управление вашими медицинскими файлами</p>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">Медицинские документы</h1>
+              <p className="text-xs sm:text-sm text-gray-500 truncate">Управление вашими медицинскими файлами</p>
             </div>
           </div>
           <button
             onClick={() => setShowUploadForm(!showUploadForm)}
-            className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-300 flex items-center gap-2 shadow-lg hover:shadow-xl hover:scale-105"
+            className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:scale-105 text-sm sm:text-base whitespace-nowrap"
           >
             <FontAwesomeIcon icon={showUploadForm ? faChevronUp : faPlus} />
-            {showUploadForm ? "Скрыть форму" : "Загрузить документ"}
+            <span className="hidden xs:inline">{showUploadForm ? "Скрыть форму" : "Загрузить документ"}</span>
+            <span className="xs:hidden">{showUploadForm ? "Скрыть" : "Загрузить"}</span>
           </button>
         </div>
       </div>
 
       {/* Collapsible Upload Section */}
       {showUploadForm && (
-        <div className="relative z-10 rounded-2xl overflow-hidden shadow-xl border border-gray-200 bg-gradient-to-br from-blue-50 to-indigo-50 transition-all duration-300 ease-out">
-          <div className="p-6">
+        <div className="relative z-10 rounded-xl sm:rounded-2xl overflow-hidden shadow-xl border border-gray-200 bg-gradient-to-br from-blue-50 to-indigo-50 transition-all duration-300 ease-out">
+          <div className="p-4 sm:p-6">
 
-          {/* Category Selection - Compact */}
+          {/* Category Selection - Responsive */}
           <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-2">
               Тип документа
             </label>
-            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
+            <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-1.5 sm:gap-2">
               {DOCUMENT_CATEGORIES.map((category) => (
                 <button
                   key={category.value}
@@ -376,29 +389,29 @@ export default function PatientDocumentsPage() {
             </div>
           </div>
 
-          {/* Drag & Drop Zone - Compact */}
+          {/* Drag & Drop Zone - Responsive */}
           <div
             ref={dropZoneRef}
             onDragEnter={handleDragEnter}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            className={`relative mb-4 border-2 border-dashed rounded-xl transition-all duration-300 ${
+            className={`relative mb-4 border-2 border-dashed rounded-lg sm:rounded-xl transition-all duration-300 ${
               isDragging
                 ? "border-blue-500 bg-blue-50 scale-[1.02]"
                 : "border-gray-300 hover:border-blue-400 hover:bg-blue-50/50"
             }`}
           >
-            <div className="p-6 text-center">
-              <div className={`inline-flex items-center justify-center w-14 h-14 rounded-full mb-3 transition-all duration-300 ${
+            <div className="p-4 sm:p-6 text-center">
+              <div className={`inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full mb-2 sm:mb-3 transition-all duration-300 ${
                 isDragging ? "bg-blue-600 text-white scale-110" : "bg-blue-100 text-blue-600"
               }`}>
-                <FontAwesomeIcon icon={faUpload} className="text-xl" />
+                <FontAwesomeIcon icon={faUpload} className="text-lg sm:text-xl" />
               </div>
-              <h3 className="text-base font-bold text-gray-800 mb-2">
+              <h3 className="text-sm sm:text-base font-bold text-gray-800 mb-1 sm:mb-2">
                 {isDragging ? "Отпустите файл" : "Перетащите файл сюда"}
               </h3>
-              <p className="text-gray-500 text-sm mb-3">или</p>
+              <p className="text-gray-500 text-xs sm:text-sm mb-2 sm:mb-3">или</p>
               <label className="inline-block">
                 <input
                   ref={fileInputRef}
@@ -407,12 +420,12 @@ export default function PatientDocumentsPage() {
                   accept="image/*,application/pdf"
                   className="hidden"
                 />
-                <span className="px-5 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all duration-200 cursor-pointer inline-flex items-center gap-2 shadow-md hover:shadow-lg hover:scale-105 text-sm">
+                <span className="px-4 sm:px-5 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all duration-200 cursor-pointer inline-flex items-center gap-2 shadow-md hover:shadow-lg hover:scale-105 text-xs sm:text-sm">
                   <FontAwesomeIcon icon={faFileImage} />
                   Выберите файл
                 </span>
               </label>
-              <p className="text-xs text-gray-500 mt-3">
+              <p className="text-[10px] sm:text-xs text-gray-500 mt-2 sm:mt-3">
                 JPG, PNG, PDF (макс. 10 MB)
               </p>
             </div>
@@ -430,14 +443,14 @@ export default function PatientDocumentsPage() {
 
           {/* Description */}
           <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-2">
               Описание (необязательно)
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Добавьте краткое описание документа..."
-              className="w-full px-4 py-2 rounded-lg bg-white border-2 border-gray-200 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 resize-none text-sm"
+              className="w-full px-3 sm:px-4 py-2 rounded-lg bg-white border-2 border-gray-200 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 resize-none text-xs sm:text-sm"
               rows={2}
             />
           </div>
@@ -446,7 +459,7 @@ export default function PatientDocumentsPage() {
           <button
             onClick={handleUpload}
             disabled={!selectedFile || uploading}
-            className={`w-full py-3 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
+            className={`w-full py-2.5 sm:py-3 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base ${
               !selectedFile || uploading
                 ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                 : "bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 hover:shadow-lg hover:scale-[1.02] shadow-md"
@@ -454,20 +467,22 @@ export default function PatientDocumentsPage() {
           >
             {uploading ? (
               <>
-                <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
-                Загрузка... {uploadProgress}%
+                <FontAwesomeIcon icon={faSpinner} className="animate-spin text-sm sm:text-base" />
+                <span className="hidden xs:inline">Загрузка... {uploadProgress}%</span>
+                <span className="xs:hidden">{uploadProgress}%</span>
               </>
             ) : (
               <>
-                <FontAwesomeIcon icon={faCloudUploadAlt} />
-                Загрузить документ
+                <FontAwesomeIcon icon={faCloudUploadAlt} className="text-sm sm:text-base" />
+                <span className="hidden xs:inline">Загрузить документ</span>
+                <span className="xs:hidden">Загрузить</span>
               </>
             )}
           </button>
 
           {/* Upload Progress Bar */}
           {uploading && (
-            <div className="mt-3 bg-gray-200 rounded-full overflow-hidden h-2">
+            <div className="mt-2 sm:mt-3 bg-gray-200 rounded-full overflow-hidden h-1.5 sm:h-2">
               <div
                 className="bg-gradient-to-r from-green-500 to-blue-600 h-full transition-all duration-300 rounded-full"
                 style={{ width: `${uploadProgress}%` }}
@@ -479,66 +494,69 @@ export default function PatientDocumentsPage() {
       )}
 
       {/* Search and Filter Section */}
-      <div className="relative z-10 bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-          {/* Search */}
-          <div className="relative flex-1 w-full md:w-auto">
+      <div className="relative z-10 bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 border border-gray-100">
+        <div className="flex flex-col gap-3 sm:gap-4">
+          {/* Search - Full width on mobile */}
+          <div className="relative w-full">
             <FontAwesomeIcon
               icon={faSearch}
-              className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"
+              className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm sm:text-base"
             />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Поиск по названию или описанию..."
-              className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all duration-300"
+              className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all duration-300 text-sm sm:text-base"
             />
           </div>
 
-          {/* Filter by Category */}
-          <div className="relative w-full md:w-64">
-            <FontAwesomeIcon
-              icon={faFilter}
-              className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"
-            />
-            <select
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all duration-300 appearance-none bg-white cursor-pointer"
-            >
-              <option value="all">Все категории</option>
-              {DOCUMENT_CATEGORIES.map((cat) => (
-                <option key={cat.value} value={cat.value}>
-                  {cat.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Filter and Sort - Side by side on mobile */}
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 md:flex md:flex-row">
+            {/* Filter by Category */}
+            <div className="relative w-full md:w-64">
+              <FontAwesomeIcon
+                icon={faFilter}
+                className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm sm:text-base pointer-events-none z-10"
+              />
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="w-full pl-9 sm:pl-12 pr-2 sm:pr-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all duration-300 appearance-none bg-white cursor-pointer text-xs sm:text-sm"
+              >
+                <option value="all">Все</option>
+                {DOCUMENT_CATEGORIES.map((cat) => (
+                  <option key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          {/* Sort */}
-          <div className="relative w-full md:w-48">
-            <FontAwesomeIcon
-              icon={faSortAmountDown}
-              className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"
-            />
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as "date" | "name" | "type")}
-              className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all duration-300 appearance-none bg-white cursor-pointer"
-            >
-              <option value="date">По дате</option>
-              <option value="name">По названию</option>
-              <option value="type">По типу</option>
-            </select>
+            {/* Sort */}
+            <div className="relative w-full md:w-48">
+              <FontAwesomeIcon
+                icon={faSortAmountDown}
+                className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm sm:text-base pointer-events-none z-10"
+              />
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as "date" | "name" | "type")}
+                className="w-full pl-9 sm:pl-12 pr-2 sm:pr-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all duration-300 appearance-none bg-white cursor-pointer text-xs sm:text-sm"
+              >
+                <option value="date">По дате</option>
+                <option value="name">По имени</option>
+                <option value="type">По типу</option>
+              </select>
+            </div>
           </div>
         </div>
 
         {/* Stats */}
-        <div className="mt-4 flex items-center gap-2 text-sm text-gray-600">
-          <FontAwesomeIcon icon={faFileAlt} />
+        <div className="mt-3 sm:mt-4 flex items-center gap-2 text-xs sm:text-sm text-gray-600">
+          <FontAwesomeIcon icon={faFileAlt} className="text-sm sm:text-base" />
           <span>
-            Найдено документов: <strong className="text-blue-600">{filteredAndSortedDocuments.length}</strong> из {documents.length}
+            Найдено: <strong className="text-blue-600">{filteredAndSortedDocuments.length}</strong> из {documents.length}
           </span>
         </div>
       </div>
@@ -546,14 +564,14 @@ export default function PatientDocumentsPage() {
       {/* Documents Grid */}
       <div className="relative z-10">
         {filteredAndSortedDocuments.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-lg p-12 text-center border border-gray-100">
-            <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gray-100 mb-6">
-              <FontAwesomeIcon icon={faFileAlt} className="text-5xl text-gray-400" />
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-6 sm:p-12 text-center border border-gray-100">
+            <div className="inline-flex items-center justify-center w-16 h-16 sm:w-24 sm:h-24 rounded-full bg-gray-100 mb-4 sm:mb-6">
+              <FontAwesomeIcon icon={faFileAlt} className="text-3xl sm:text-5xl text-gray-400" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-800 mb-2">
+            <h3 className="text-lg sm:text-2xl font-bold text-gray-800 mb-2">
               {searchQuery || filterCategory !== "all" ? "Документы не найдены" : "Нет документов"}
             </h3>
-            <p className="text-gray-500 mb-6">
+            <p className="text-sm sm:text-base text-gray-500 mb-4 sm:mb-6">
               {searchQuery || filterCategory !== "all"
                 ? "Попробуйте изменить параметры поиска"
                 : "Загрузите свой первый документ выше"}
@@ -564,7 +582,7 @@ export default function PatientDocumentsPage() {
                   setSearchQuery("");
                   setFilterCategory("all");
                 }}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-300 inline-flex items-center gap-2"
+                className="px-4 sm:px-6 py-2.5 sm:py-3 bg-blue-600 text-white text-sm sm:text-base rounded-lg hover:bg-blue-700 transition-all duration-300 inline-flex items-center gap-2"
               >
                 <FontAwesomeIcon icon={faTimes} />
                 Сбросить фильтры
@@ -572,7 +590,7 @@ export default function PatientDocumentsPage() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
             {filteredAndSortedDocuments.map((doc, index) => {
               const categoryInfo = getCategoryInfo(doc.document_type);
               const isPDF = doc.original_filename.toLowerCase().endsWith(".pdf");
@@ -603,18 +621,8 @@ export default function PatientDocumentsPage() {
                     </div>
                   </div>
 
-                  {/* Action Buttons - Smaller */}
-                  <div className="absolute top-2 right-2 z-20 flex gap-1">
-                    {/* Preview Button */}
-                    <button
-                      onClick={() => setPreviewDoc(doc)}
-                      className="w-7 h-7 rounded-md flex items-center justify-center transition-all duration-200 hover:scale-110 hover:bg-blue-50 shadow-sm backdrop-blur-sm bg-white/90 border border-gray-200"
-                      title="Просмотр"
-                    >
-                      <FontAwesomeIcon icon={faEye} className="text-xs text-blue-500 hover:text-blue-600 transition-colors" />
-                    </button>
-
-                    {/* Delete Button */}
+                  {/* Delete Button Only */}
+                  <div className="absolute top-2 right-2 z-20">
                     <button
                       onClick={() => setDeleteConfirm(doc.id)}
                       className="w-7 h-7 rounded-md flex items-center justify-center transition-all duration-200 hover:scale-110 hover:bg-red-50 shadow-sm backdrop-blur-sm bg-white/90 border border-gray-200"
@@ -663,14 +671,26 @@ export default function PatientDocumentsPage() {
                       <span>{formatFileSize(doc.file_size)}</span>
                     </div>
 
-                    {/* Download Button - Smaller */}
-                    <button
-                      onClick={() => handleDownload(doc)}
-                      className="w-full mt-2 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xs font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-200 flex items-center justify-center gap-1.5 shadow-sm hover:shadow-md"
-                    >
-                      <FontAwesomeIcon icon={faDownload} className="text-xs" />
-                      Скачать
-                    </button>
+                    {/* Action Buttons */}
+                    <div className="mt-2 flex flex-col gap-1.5">
+                      {/* Preview Button */}
+                      <button
+                        onClick={() => setPreviewDoc(doc)}
+                        className="w-full py-2 rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-700 text-white text-xs font-semibold hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 flex items-center justify-center gap-1.5 shadow-sm hover:shadow-md"
+                      >
+                        <FontAwesomeIcon icon={faEye} className="text-xs" />
+                        Посмотреть
+                      </button>
+
+                      {/* Download Button */}
+                      <button
+                        onClick={() => handleDownload(doc)}
+                        className="w-full py-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xs font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-200 flex items-center justify-center gap-1.5 shadow-sm hover:shadow-md"
+                      >
+                        <FontAwesomeIcon icon={faDownload} className="text-xs" />
+                        Скачать
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -682,35 +702,36 @@ export default function PatientDocumentsPage() {
       {/* Preview Modal */}
       {previewDoc && (
         <div
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-2 sm:p-4"
           onClick={() => setPreviewDoc(null)}
+          style={{ margin: 0 }}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
+            className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-blue-600 to-blue-700">
-              <div className="flex items-center gap-3">
+            <div className="p-4 sm:p-6 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-blue-600 to-blue-700 flex-shrink-0">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                 <FontAwesomeIcon
                   icon={getCategoryInfo(previewDoc.document_type).icon}
-                  className="text-2xl text-white"
+                  className="text-lg sm:text-2xl text-white flex-shrink-0"
                 />
-                <div>
-                  <h2 className="text-xl font-bold text-white">{previewDoc.original_filename}</h2>
-                  <p className="text-sm text-white/80">{getCategoryInfo(previewDoc.document_type).label}</p>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-base sm:text-xl font-bold text-white truncate">{previewDoc.original_filename}</h2>
+                  <p className="text-xs sm:text-sm text-white/80 truncate">{getCategoryInfo(previewDoc.document_type).label}</p>
                 </div>
               </div>
               <button
                 onClick={() => setPreviewDoc(null)}
-                className="w-10 h-10 rounded-lg bg-white/20 hover:bg-white/30 transition-all duration-300 flex items-center justify-center"
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-white/20 hover:bg-white/30 transition-all duration-300 flex items-center justify-center flex-shrink-0 ml-2"
               >
-                <FontAwesomeIcon icon={faTimes} className="text-white text-xl" />
+                <FontAwesomeIcon icon={faTimes} className="text-white text-lg sm:text-xl" />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 max-h-[70vh] overflow-y-auto">
+            <div className="p-3 sm:p-6 max-h-[calc(95vh-180px)] sm:max-h-[70vh] overflow-y-auto flex-1">
               {previewDoc.description && (
                 <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                   <p className="text-sm text-gray-700">{previewDoc.description}</p>
@@ -733,15 +754,15 @@ export default function PatientDocumentsPage() {
                 {previewDoc.original_filename.toLowerCase().endsWith('.pdf') ? (
                   <iframe
                     src={previewDoc.file_url}
-                    className="w-full h-[600px] border-0"
+                    className="w-full h-[400px] sm:h-[500px] md:h-[600px] border-0"
                     title={previewDoc.original_filename}
                   />
                 ) : (
-                  <div className="p-4 flex items-center justify-center">
+                  <div className="p-2 sm:p-4 flex items-center justify-center">
                     <img
                       src={previewDoc.file_url}
                       alt={previewDoc.original_filename}
-                      className="max-w-full max-h-[500px] rounded-lg shadow-lg"
+                      className="max-w-full max-h-[300px] sm:max-h-[400px] md:max-h-[500px] rounded-lg shadow-lg"
                     />
                   </div>
                 )}
@@ -749,10 +770,10 @@ export default function PatientDocumentsPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-6 border-t border-gray-200 flex gap-3">
+            <div className="p-3 sm:p-6 border-t border-gray-200 flex flex-col sm:flex-row gap-2 sm:gap-3 flex-shrink-0">
               <button
                 onClick={() => handleDownload(previewDoc)}
-                className="flex-1 py-3 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all duration-300 flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 sm:py-3 rounded-lg bg-blue-600 text-white text-sm sm:text-base font-semibold hover:bg-blue-700 transition-all duration-300 flex items-center justify-center gap-2"
               >
                 <FontAwesomeIcon icon={faDownload} />
                 Скачать
@@ -762,7 +783,7 @@ export default function PatientDocumentsPage() {
                   setDeleteConfirm(previewDoc.id);
                   setPreviewDoc(null);
                 }}
-                className="flex-1 py-3 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition-all duration-300 flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 sm:py-3 rounded-lg bg-red-600 text-white text-sm sm:text-base font-semibold hover:bg-red-700 transition-all duration-300 flex items-center justify-center gap-2"
               >
                 <FontAwesomeIcon icon={faTrash} />
                 Удалить
@@ -775,37 +796,38 @@ export default function PatientDocumentsPage() {
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
         <div
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-3 sm:p-4"
           onClick={() => setDeleteConfirm(null)}
+          style={{ margin: 0 }}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+            className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6 bg-gradient-to-r from-red-600 to-red-700">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
-                  <FontAwesomeIcon icon={faTrash} className="text-2xl text-white" />
+            <div className="p-4 sm:p-6 bg-gradient-to-r from-red-600 to-red-700">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <FontAwesomeIcon icon={faTrash} className="text-lg sm:text-2xl text-white" />
                 </div>
-                <h2 className="text-xl font-bold text-white">Удалить документ?</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-white">Удалить документ?</h2>
               </div>
             </div>
 
-            <div className="p-6">
-              <p className="text-gray-700 mb-6">
+            <div className="p-4 sm:p-6">
+              <p className="text-sm sm:text-base text-gray-700 mb-4 sm:mb-6">
                 Вы уверены, что хотите удалить этот документ? Это действие нельзя отменить.
               </p>
 
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <button
                   onClick={() => setDeleteConfirm(null)}
-                  className="flex-1 py-3 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition-all duration-300"
+                  className="flex-1 py-2.5 sm:py-3 rounded-lg bg-gray-200 text-gray-700 text-sm sm:text-base font-semibold hover:bg-gray-300 transition-all duration-300"
                 >
                   Отмена
                 </button>
                 <button
                   onClick={() => handleDelete(deleteConfirm)}
-                  className="flex-1 py-3 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition-all duration-300 flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 sm:py-3 rounded-lg bg-red-600 text-white text-sm sm:text-base font-semibold hover:bg-red-700 transition-all duration-300 flex items-center justify-center gap-2"
                 >
                   <FontAwesomeIcon icon={faTrash} />
                   Удалить
