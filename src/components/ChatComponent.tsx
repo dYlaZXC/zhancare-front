@@ -10,7 +10,7 @@ import { ChatInput } from "./ChatInput";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 
-const API_KEY = "QqkMxELY0YVGkCx17Vya04Sq9nGvCahu";
+const API_KEY = "aTzSULuZc45ObRxLrRBFa50GnCanWo1M";
 const ENDPOINT = "https://api.mistral.ai/v1/chat/completions";
 
 export const ChatComponent = ({ onClose }: { onClose: () => void }) => {

@@ -1,7 +1,8 @@
 import { useState, ChangeEvent, useRef } from "react";
 import { Message, ChatHookProps } from "../types";
-
-const API_KEY = "QqkMxELY0YVGkCx17Vya04Sq9nGvCahu";
+// sZitnRrKGtYDjZo2OYNbS797yKSjRRNT
+// aTzSULuZc45ObRxLrRBFa50GnCanWo1M // Extra key
+const API_KEY = "aTzSULuZc45ObRxLrRBFa50GnCanWo1M"; 
 const ENDPOINT = "https://api.mistral.ai/v1/chat/completions";
 
 export const useChat = ({
