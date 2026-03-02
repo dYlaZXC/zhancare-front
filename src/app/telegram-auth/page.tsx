@@ -16,6 +16,7 @@ import AuthTabs from "@/components/auth/AuthTabs";
 import LoginForm, { LoginFormData } from "@/components/auth/forms/LoginForm";
 import RegisterForm, { RegisterFormData } from "@/components/auth/forms/RegisterForm";
 import ForgotPasswordForm from "@/components/auth/forms/ForgotPasswordForm";
+import heroVideo from "@/assets/hero-video.mp4";
 
 // Telegram WebApp types
 declare global {
@@ -243,20 +244,46 @@ const TelegramAuthPage = () => {
     }
   };
 
+  const videoBackground = (
+    <>
+      <div className="absolute inset-0 -z-10 overflow-hidden">
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover blur-md"
+        >
+          <source src={heroVideo} type="video/mp4" />
+        </video>
+      </div>
+      <div className="absolute inset-0 bg-black/60 -z-9" />
+      <div
+        className="absolute inset-0 -z-8"
+        style={{
+          background:
+            "radial-gradient(circle at center, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.6) 100%)",
+        }}
+      />
+    </>
+  );
+
   // Show loading while SDK loads
   if (!scriptLoaded) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="relative flex items-center justify-center min-h-screen overflow-hidden">
+        {videoBackground}
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading Telegram SDK...</p>
+          <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-white font-medium">Loading Telegram SDK...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-3 sm:px-4 py-4">
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden px-3 sm:px-4 py-4">
+      {videoBackground}
       <ToastContainer
         position="top-center"
         autoClose={3000}
