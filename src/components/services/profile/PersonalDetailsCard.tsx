@@ -605,7 +605,7 @@ export const PersonalDetailsCard = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6 h-full">
       {/* Premium Completion Progress */}
       {showCompletionProgress && (
         <div className="relative overflow-hidden p-6 rounded-2xl border backdrop-blur-xl shadow-xl"
@@ -697,7 +697,7 @@ export const PersonalDetailsCard = ({
       )}
 
       {/* Main Card */}
-      <InfoCard title="Личные данные">
+      <InfoCard title="Личные данные" className="flex-1">
         {/* Action button header */}
         <div className="flex justify-end items-center mb-4">
           {renderActionButton()}

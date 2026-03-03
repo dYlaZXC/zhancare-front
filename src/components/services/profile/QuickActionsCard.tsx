@@ -1,18 +1,13 @@
 "use client";
 
-import { 
+import {
   Calendar,
   FileText,
   FlaskConical,
   Pill,
   Phone,
   MessageCircle,
-  Clock,
   ArrowRight,
-  Stethoscope,
-  Heart,
-  Activity,
-  Bell
 } from "lucide-react";
 import { useState } from "react";
 import { InfoCard } from "./InfoCard";
@@ -37,19 +32,12 @@ interface QuickActionsCardProps {
   showNotifications?: boolean;
 }
 
-export const QuickActionsCard = ({ 
+export const QuickActionsCard = ({
   onActionClick,
-  showNotifications = true 
+  showNotifications = true,
 }: QuickActionsCardProps) => {
   const [hoveredAction, setHoveredAction] = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
-
-  // Mock notification counts
-  const notifications = {
-    appointments: 2,
-    results: 1,
-    messages: 3
-  };
 
   const quickActions: QuickAction[] = [
     {
@@ -231,59 +219,10 @@ export const QuickActionsCard = ({
     );
   };
 
-  // Quick stats for context
-  const quickStats = [
-    { icon: Stethoscope, label: 'Врачей', value: '12+', color: 'text-blue-600' },
-    { icon: Heart, label: 'Здоровье', value: '98%', color: 'text-red-500' },
-    { icon: Activity, label: 'Активность', value: 'Высокая', color: 'text-green-600' }
-  ];
-
   return (
     <InfoCard title="Быстрые действия">
-      {/* Quick Stats Header */}
-      <div className="grid grid-cols-3 gap-4 mb-6 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
-        {quickStats.map((stat, index) => (
-          <div key={index} className="text-center">
-            <div className="flex justify-center mb-1">
-              <stat.icon className={`w-4 h-4 ${stat.color}`} />
-            </div>
-            <div className="text-xs font-semibold text-gray-900">{stat.value}</div>
-            <div className="text-xs text-gray-600">{stat.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Actions Grid */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         {quickActions.map(renderActionButton)}
-      </div>
-
-      {/* Emergency Section */}
-      <div className="mt-6 pt-4 border-t border-gray-200">
-        <button className="w-full p-3 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors group">
-          <div className="flex items-center justify-center space-x-2 text-red-600">
-            <Bell className="w-4 h-4 group-hover:animate-bounce" />
-            <span className="font-medium text-sm">Экстренный вызов</span>
-            <span className="text-xs bg-red-100 px-2 py-1 rounded-full">24/7</span>
-          </div>
-          <p className="text-xs text-red-500 mt-1">Круглосуточная медицинская помощь</p>
-        </button>
-      </div>
-
-      {/* Footer Info */}
-      <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
-        <div className="flex items-center space-x-1">
-          <Clock className="w-3 h-3" />
-          <span>Обновлено: {new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</span>
-        </div>
-        {showNotifications && (notifications.appointments + notifications.results + notifications.messages) > 0 && (
-          <div className="flex items-center space-x-1 text-blue-600">
-            <Bell className="w-3 h-3" />
-            <span className="font-medium">
-              {notifications.appointments + notifications.results + notifications.messages} новых
-            </span>
-          </div>
-        )}
       </div>
     </InfoCard>
   );

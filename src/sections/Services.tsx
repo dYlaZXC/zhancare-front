@@ -14,7 +14,10 @@ import {
   faClinicMedical,
   faChartLine,
   faHouse,
-  faPlane
+  faPlane,
+  faGraduationCap,
+  faTruck,
+  faArrowUpRightFromSquare,
 } from "@fortawesome/free-solid-svg-icons";
 import { useLanguage } from "@/context/LanguageContext";
 import ru from "@/locales/ru.json";
@@ -24,7 +27,7 @@ import en from "@/locales/en.json";
 const iconMapping = {
   faVideo, faStethoscope, faNotesMedical, faBell,
   faUserMd, faHeartbeat, faPills, faClinicMedical, faChartLine,
-  faHouse, faPlane
+  faHouse, faPlane, faGraduationCap, faTruck, faArrowUpRightFromSquare,
 } as const;
 
 type IconName = keyof typeof iconMapping;
@@ -34,6 +37,7 @@ interface Service {
   title: string;
   description: string;
   details: string[];
+  href?: string;
 }
 
 export const Services = () => {
@@ -88,11 +92,68 @@ export const Services = () => {
   const staticTranslations = getStaticTranslations();
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
 
-  // Take only first 3 services
-  const services: Service[] = translations.list.slice(0, 3).map((service) => ({
+  // Take only first 3 services from translations
+  const translatedServices: Service[] = translations.list.slice(0, 3).map((service) => ({
     ...service,
     icon: service.icon as IconName,
   }));
+
+  // Static extra cards (second row)
+  const extraServices: Service[] = [
+    {
+      icon: "faGraduationCap",
+      title: language === "kz" ? "Академия" : language === "en" ? "Academy" : "Академия",
+      description:
+        language === "kz"
+          ? "Медицина мамандары мен пациенттерге арналған білім беру платформасы"
+          : language === "en"
+          ? "Educational platform for medical professionals and patients"
+          : "Образовательная платформа для медицинских специалистов и пациентов",
+      details:
+        language === "en"
+          ? ["Online courses for doctors", "Patient health education", "Certificates & CME credits", "Expert-led webinars"]
+          : language === "kz"
+          ? ["Дәрігерлерге арналған онлайн курстар", "Пациенттерге денсаулық білімі", "Сертификаттар мен кредиттер", "Сарапшы вебинарлары"]
+          : ["Онлайн-курсы для врачей", "Обучение пациентов здоровью", "Сертификаты и кредиты", "Вебинары от экспертов"],
+      href: "https://academy.zhan.care/",
+    },
+    {
+      icon: "faTruck",
+      title:
+        language === "kz" ? "Дәрі-дәрмек жеткізу" : language === "en" ? "Medicine Delivery" : "Доставка лекарств",
+      description:
+        language === "kz"
+          ? "Дәрі-дәрмекті үйге жылдам және ыңғайлы жеткізу"
+          : language === "en"
+          ? "Fast and convenient medicine delivery to your door"
+          : "Быстрая и удобная доставка лекарств прямо на дом",
+      details:
+        language === "en"
+          ? ["Prescription & OTC medicines", "Delivery within 2 hours", "Track your order in real-time", "Safe contactless delivery"]
+          : language === "kz"
+          ? ["Рецепттік және рецептсіз дәрілер", "2 сағат ішінде жеткізу", "Тапсырысты нақты уақытта қадағалау", "Қауіпсіз байланыссыз жеткізу"]
+          : ["Рецептурные и безрецептурные препараты", "Доставка в течение 2 часов", "Отслеживание заказа в реальном времени", "Безопасная бесконтактная доставка"],
+    },
+    {
+      icon: "faClinicMedical",
+      title:
+        language === "kz" ? "Клиникаларға арналған CRM/МИС" : language === "en" ? "CRM / HIS for Clinics" : "CRM / МИС для клиник",
+      description:
+        language === "kz"
+          ? "Медициналық мекемелер үшін бірыңғай басқару жүйесі"
+          : language === "en"
+          ? "Unified management system for medical institutions"
+          : "Единая система управления для медицинских учреждений",
+      details:
+        language === "en"
+          ? ["Patient records & EHR", "Appointment scheduling", "Billing & insurance management", "Analytics & reporting dashboard"]
+          : language === "kz"
+          ? ["Пациент жазбалары және ЭМЖ", "Қабылдауды жоспарлау", "Есеп-қисап және сақтандыру", "Аналитика және есептер"]
+          : ["Ведение карт и ЭМК пациентов", "Запись на приём и расписание", "Выставление счетов и страхование", "Аналитика и отчётность"],
+    },
+  ];
+
+  const services: Service[] = [...translatedServices, ...extraServices];
 
   const handleCardFlip = (index: number) => {
     setFlippedCards(prev => {
@@ -126,8 +187,8 @@ export const Services = () => {
             <p className="text-lg text-gray-600 mt-4">{translations.servicesDescription}</p>
           </motion.div>
 
-          {/* Services Cards - 3 cards in a row */}
-          <motion.div 
+          {/* Services Cards - 3 per row */}
+          <motion.div
             className="grid grid-cols-1 lg:grid-cols-3 gap-10 max-w-6xl mx-auto"
             initial="hidden"
             whileInView="visible"
@@ -154,9 +215,9 @@ export const Services = () => {
                 <motion.div
                   className="relative w-full h-96 cursor-pointer"
                   style={{ transformStyle: "preserve-3d" }}
-                  animate={{ rotateY: flippedCards.has(index) ? 180 : 0 }}
+                  animate={{ rotateY: !service.href && flippedCards.has(index) ? 180 : 0 }}
                   transition={{ duration: 0.8, ease: "easeInOut" }}
-                  onClick={() => handleCardFlip(index)}
+                  onClick={() => service.href ? window.open(service.href, "_blank", "noopener,noreferrer") : handleCardFlip(index)}
                 >
                   {/* Front of Card */}
                   <div
@@ -200,17 +261,21 @@ export const Services = () => {
                           {/* Button content */}
                           <span className="relative z-10 flex items-center space-x-2">
                             <span>{staticTranslations.learnMore}</span>
-                            <motion.span
-                              className="inline-block"
-                              animate={{ x: [0, 3, 0] }}
-                              transition={{ 
-                                duration: 1.5, 
-                                repeat: Infinity, 
-                                ease: "easeInOut" 
-                              }}
-                            >
-                              →
-                            </motion.span>
+                            {service.href ? (
+                              <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="text-xs" />
+                            ) : (
+                              <motion.span
+                                className="inline-block"
+                                animate={{ x: [0, 3, 0] }}
+                                transition={{
+                                  duration: 1.5,
+                                  repeat: Infinity,
+                                  ease: "easeInOut",
+                                }}
+                              >
+                                →
+                              </motion.span>
+                            )}
                           </span>
                           
                           {/* Shine effect */}

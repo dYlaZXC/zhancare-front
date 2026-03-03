@@ -364,7 +364,7 @@ export const CalendarCard = ({
 
   if (loading) {
     return (
-      <div className="w-full max-w-4xl mx-auto bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden animate-pulse">
+      <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden animate-pulse">
         {/* Header skeleton */}
         <div className="bg-gray-100 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
           <div className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
@@ -381,15 +381,13 @@ export const CalendarCard = ({
         </div>
         
         {/* Calendar grid skeleton */}
-        <div className="p-3 sm:p-6">
-          <div className="grid grid-cols-7 gap-1 sm:gap-2">
-            {/* Day headers */}
+        <div className="p-3 sm:p-4">
+          <div className="grid grid-cols-7 gap-0.5">
             {Array.from({ length: 7 }).map((_, i) => (
-              <div key={i} className="h-8 bg-gray-200 rounded"></div>
+              <div key={i} className="h-6 bg-gray-200 rounded"></div>
             ))}
-            {/* Calendar days */}
             {Array.from({ length: 42 }).map((_, i) => (
-              <div key={i} className="h-10 sm:h-14 bg-gray-200 rounded"></div>
+              <div key={i} className="h-8 bg-gray-200 rounded"></div>
             ))}
           </div>
         </div>
@@ -398,7 +396,7 @@ export const CalendarCard = ({
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col">
       {/* Calendar Header */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
         <div className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
@@ -439,102 +437,58 @@ export const CalendarCard = ({
       </div>
 
       {/* Calendar Content */}
-      <div className="p-3 sm:p-6">
+      <div className="p-3 sm:p-4 flex-1 flex flex-col">
         {/* Calendar Grid */}
-        <div className="grid grid-cols-7 gap-1 sm:gap-2">
+        <div className="grid grid-cols-7 gap-0.5 flex-1 auto-rows-fr">
           {/* Day headers */}
           {['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map((day, index) => (
-            <div 
-              key={day} 
-              className={`text-xs sm:text-sm font-semibold text-center py-2 sm:py-3 ${
-                index >= 5 ? 'text-red-500' : 'text-gray-600'
+            <div
+              key={day}
+              className={`text-xs font-semibold text-center py-1.5 ${
+                index >= 5 ? 'text-red-400' : 'text-gray-400'
               }`}
             >
               {day}
             </div>
           ))}
-          
+
           {/* Calendar days */}
           {getDaysInMonth.map((dayInfo, index) => (
             <button
               key={index}
               onClick={() => handleDateClick(dayInfo)}
-              className={`relative text-center py-2 sm:py-3 text-sm sm:text-base rounded-lg sm:rounded-xl transition-all duration-200 min-h-[2.5rem] sm:min-h-[3.5rem] font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 group cursor-pointer ${
+              className={`relative text-center py-1.5 text-xs rounded-lg transition-all duration-150 min-h-[2rem] font-medium focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer ${
                 !dayInfo.isCurrentMonth
-                  ? "text-gray-300 hover:text-gray-400 hover:bg-gray-50"
+                  ? 'text-gray-200'
                   : dayInfo.isSelected
-                  ? "bg-blue-600 text-white font-bold shadow-lg scale-105"
+                  ? 'bg-blue-600 text-white font-bold shadow-sm'
                   : dayInfo.isToday
-                  ? "bg-blue-100 text-blue-700 font-bold hover:bg-blue-200 border-2 border-blue-300"
+                  ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200'
                   : dayInfo.totalEvents > 0
-                  ? "text-gray-900 hover:bg-gradient-to-br hover:from-blue-50 hover:to-purple-50 font-semibold"
+                  ? 'text-gray-900 hover:bg-blue-50 font-semibold'
                   : index % 7 >= 5 && dayInfo.isCurrentMonth
-                  ? "text-red-600 hover:bg-red-50"
-                  : "text-gray-700 hover:bg-gray-50"
+                  ? 'text-red-500 hover:bg-red-50'
+                  : 'text-gray-600 hover:bg-gray-50'
               }`}
-              title={
-                dayInfo.totalEvents > 0
-                  ? `${dayInfo.totalEvents} ${dayInfo.totalEvents === 1 ? 'событие' : dayInfo.totalEvents < 5 ? 'события' : 'событий'} на ${dayInfo.date.toLocaleDateString('ru-RU')}`
-                  : dayInfo.date.toLocaleDateString('ru-RU')
-              }
+              title={dayInfo.date.toLocaleDateString('ru-RU')}
             >
               <span className="relative z-10">{dayInfo.day}</span>
               {getEventIndicator(dayInfo)}
-              
-              {/* Subtle hover effect */}
-              <div className="absolute inset-0 rounded-lg sm:rounded-xl bg-gradient-to-br from-white to-transparent opacity-0 group-hover:opacity-20 transition-opacity duration-200"></div>
             </button>
           ))}
         </div>
 
-        {/* Enhanced Legend */}
-        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-100">
-          <div className="flex items-center space-x-1.5 sm:space-x-2">
-            <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-blue-100 border-2 border-blue-300 rounded"></div>
-            <span className="text-xs sm:text-sm font-medium text-gray-600">Сегодня</span>
+        {/* Minimal legend */}
+        <div className="flex items-center justify-center gap-4 mt-3 pt-3 border-t border-gray-100">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 bg-blue-500 rounded-full" />
+            <span className="text-xs text-gray-400">Консультации</span>
           </div>
-          <div className="flex items-center space-x-1.5 sm:space-x-2">
-            <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-blue-500 rounded-full"></div>
-            <span className="text-xs sm:text-sm font-medium text-gray-600">Консультации</span>
-          </div>
-          <div className="flex items-center space-x-1.5 sm:space-x-2">
-            <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-500 rounded-full"></div>
-            <span className="text-xs sm:text-sm font-medium text-gray-600">Домашние визиты</span>
-          </div>
-          {selectedDate && (
-            <div className="flex items-center space-x-1.5 sm:space-x-2">
-              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-blue-600 rounded"></div>
-              <span className="text-xs sm:text-sm font-medium text-gray-600">Выбрано</span>
-            </div>
-          )}
-          <div className="flex items-center space-x-1.5 sm:space-x-2">
-            <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-red-100 rounded"></div>
-            <span className="text-xs sm:text-sm font-medium text-gray-600">Выходные</span>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 bg-green-500 rounded-full" />
+            <span className="text-xs text-gray-400">Визиты</span>
           </div>
         </div>
-
-        {/* Events Summary */}
-        {(appointments.length > 0 || consultations.length > 0) && (
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <div className="text-center space-y-2">
-              <p className="text-sm text-gray-600">
-                Всего событий в этом месяце: <span className="font-semibold text-purple-600">{appointments.length + consultations.length}</span>
-              </p>
-              <div className="flex justify-center gap-4 text-xs">
-                {consultations.length > 0 && (
-                  <span className="text-blue-600">
-                    <strong>{consultations.length}</strong> консультаций
-                  </span>
-                )}
-                {appointments.length > 0 && (
-                  <span className="text-green-600">
-                    <strong>{appointments.length}</strong> домашних визитов
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Day Details Popup */}
