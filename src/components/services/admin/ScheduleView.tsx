@@ -25,7 +25,8 @@ import {
   ChevronDown,
   Mail,
   Phone,
-  MapPin
+  MapPin,
+  Users
 } from "lucide-react";
 
 interface ScheduleEvent {
@@ -53,7 +54,7 @@ interface ScheduleViewProps {
 
 export default function ScheduleView({ user }: ScheduleViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<'week' | 'month'>('month');
+  const [viewMode, setViewMode] = useState<'week' | 'month' | 'doctors'>('month');
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +64,12 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<'all' | 'consultation' | 'appointment'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'scheduled' | 'in_progress' | 'completed' | 'cancelled'>('all');
+
+  // Doctors view specific state
+  const [doctorsViewDate, setDoctorsViewDate] = useState(() => {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  });
 
   useEffect(() => {
     fetchSchedule();
@@ -183,7 +190,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
     const weekDays = getWeekDays();
 
     return (
-      <div className="grid grid-cols-7 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3 md:gap-4">
         {weekDays.map((day) => {
           const dateString = toLocalDateStr(day);
           const dayEvents = getEventsForDate(dateString);
@@ -194,16 +201,16 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
               key={day.toISOString()}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`rounded-3xl p-4 border-2 min-h-[500px] ${
+              className={`rounded-2xl md:rounded-3xl p-3 md:p-4 border-2 min-h-[400px] md:min-h-[500px] ${
                 isToday ? 'border-blue-500 bg-blue-50/30' : 'border-gray-200 bg-white'
               }`}
             >
               {/* Day header */}
-              <div className="mb-4 pb-3 border-b-2 border-gray-200">
+              <div className="mb-3 md:mb-4 pb-2 md:pb-3 border-b-2 border-gray-200">
                 <div className="text-xs text-gray-500 uppercase font-semibold">
                   {getDayName(day)}
                 </div>
-                <div className={`text-2xl font-bold mt-1 ${isToday ? 'text-blue-600' : 'text-gray-900'}`}>
+                <div className={`text-xl md:text-2xl font-bold mt-1 ${isToday ? 'text-blue-600' : 'text-gray-900'}`}>
                   {day.getDate()}
                 </div>
                 <button
@@ -211,9 +218,9 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
                     setSelectedDate(dateString);
                     setShowAddModal(true);
                   }}
-                  className="mt-2 w-full py-2 rounded-xl border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50 transition-colors flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-blue-600"
+                  className="mt-2 w-full py-1.5 md:py-2 rounded-lg md:rounded-xl border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1 md:gap-2 text-xs md:text-sm text-gray-600 hover:text-blue-600"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-3 h-3 md:w-4 md:h-4" />
                   Добавить
                 </button>
               </div>
@@ -225,7 +232,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
                     <EventCard key={event.id} event={event} />
                   ))
                 ) : (
-                  <div className="text-center py-8 text-gray-400 text-sm">
+                  <div className="text-center py-6 md:py-8 text-gray-400 text-xs md:text-sm">
                     Нет записей
                   </div>
                 )}
@@ -234,6 +241,18 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
           );
         })}
       </div>
+    );
+  };
+
+  // Render Doctors Schedule View
+  const renderDoctorsView = () => {
+    return (
+      <DoctorsScheduleContent
+        selectedDate={doctorsViewDate}
+        onDateChange={setDoctorsViewDate}
+        events={events}
+        onEventAdded={fetchSchedule}
+      />
     );
   };
 
@@ -267,16 +286,25 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
     return (
       <div className="h-full flex flex-col">
         {/* Weekday headers */}
-        <div className="grid grid-cols-7 border-b-2 border-gray-300 bg-gray-50 rounded-t-3xl">
-          {['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'].map((dayName) => (
-            <div key={dayName} className="p-4 text-center text-sm font-bold text-gray-700">
-              {dayName}
+        <div className="grid grid-cols-7 border-b-2 border-gray-300 bg-gray-50 rounded-t-2xl md:rounded-t-3xl">
+          {[
+            { full: 'Понедельник', short: 'Пн' },
+            { full: 'Вторник', short: 'Вт' },
+            { full: 'Среда', short: 'Ср' },
+            { full: 'Четверг', short: 'Чт' },
+            { full: 'Пятница', short: 'Пт' },
+            { full: 'Суббота', short: 'Сб' },
+            { full: 'Воскресенье', short: 'Вс' }
+          ].map((day) => (
+            <div key={day.full} className="p-1.5 md:p-4 text-center text-[10px] md:text-sm font-bold text-gray-700">
+              <span className="hidden md:inline">{day.full}</span>
+              <span className="md:hidden">{day.short}</span>
             </div>
           ))}
         </div>
 
         {/* Calendar grid */}
-        <div className="flex-1 grid grid-rows-6 bg-white rounded-b-3xl overflow-hidden border-2 border-gray-200">
+        <div className="flex-1 grid grid-rows-6 bg-white rounded-b-2xl md:rounded-b-3xl overflow-hidden border-2 border-gray-200">
           {weeks.map((week, weekIndex) => (
             <div key={weekIndex} className="grid grid-cols-7 border-b border-gray-200 last:border-b-0">
               {week.map((date) => {
@@ -288,7 +316,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
                 return (
                   <div
                     key={date.toISOString()}
-                    className={`border-r border-gray-200 last:border-r-0 p-2 min-h-[120px] cursor-pointer hover:bg-blue-50/30 transition-colors ${
+                    className={`border-r border-gray-200 last:border-r-0 p-1 md:p-2 min-h-[80px] md:min-h-[120px] cursor-pointer hover:bg-blue-50/30 transition-colors ${
                       !isCurrentMonth ? 'bg-gray-50/50' : 'bg-white'
                     } ${isToday ? 'bg-blue-50/50' : ''}`}
                     onClick={() => {
@@ -298,9 +326,9 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
                       }
                     }}
                   >
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between mb-1 md:mb-2">
                       <span
-                        className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold ${
+                        className={`inline-flex items-center justify-center w-6 h-6 md:w-8 md:h-8 rounded-full text-xs md:text-sm font-semibold ${
                           isToday
                             ? 'bg-blue-600 text-white'
                             : isCurrentMonth
@@ -316,37 +344,37 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
                           setSelectedDate(dateString);
                           setShowAddModal(true);
                         }}
-                        className="p-1 rounded-lg hover:bg-blue-100 transition-colors"
+                        className="p-0.5 md:p-1 rounded-lg hover:bg-blue-100 transition-colors"
                         title="Добавить запись"
                       >
                         <Plus className="w-4 h-4 text-gray-500 hover:text-blue-600" />
                       </button>
                     </div>
 
-                    <div className="space-y-1">
+                    <div className="space-y-0.5 md:space-y-1">
                       {dayEvents.slice(0, 2).map((event) => (
                         <div
                           key={event.id}
-                          className="text-xs p-1.5 rounded-lg cursor-pointer hover:shadow-md transition-shadow"
+                          className="text-[10px] md:text-xs p-1 md:p-1.5 rounded-md md:rounded-lg cursor-pointer hover:shadow-md transition-shadow"
                           style={{
                             backgroundColor: event.type === 'consultation' ? '#ebf1ff' : '#f3e8ff',
                             color: event.type === 'consultation' ? '#3772ff' : '#8b5cf6'
                           }}
                         >
-                          <div className="font-semibold truncate flex items-center gap-1">
+                          <div className="font-semibold truncate flex items-center gap-0.5 md:gap-1">
                             {event.type === 'consultation' ? (
-                              <Video className="w-3 h-3 flex-shrink-0" />
+                              <Video className="w-2 h-2 md:w-3 md:h-3 flex-shrink-0" />
                             ) : (
-                              <Home className="w-3 h-3 flex-shrink-0" />
+                              <Home className="w-2 h-2 md:w-3 md:h-3 flex-shrink-0" />
                             )}
                             {event.time}
                           </div>
-                          <div className="truncate opacity-90">{event.patient_name}</div>
+                          <div className="truncate opacity-90 hidden md:block">{event.patient_name}</div>
                         </div>
                       ))}
                       {dayEvents.length > 2 && (
-                        <div className="text-xs text-gray-500 font-medium pl-1">
-                          +{dayEvents.length - 2} еще
+                        <div className="text-[10px] md:text-xs text-gray-500 font-medium pl-0.5 md:pl-1">
+                          +{dayEvents.length - 2}
                         </div>
                       )}
                     </div>
@@ -361,15 +389,15 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
   };
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="w-full h-full flex flex-col overflow-x-hidden">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold mb-2" style={{ color: '#1e263e' }}>
+      <div className="mb-4 md:mb-6 px-2 md:px-0">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 md:gap-0 mb-4 md:mb-6">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl md:text-3xl font-bold mb-1 md:mb-2 truncate" style={{ color: '#1e263e' }}>
               Расписание
             </h1>
-            <p className="text-gray-600">
+            <p className="text-xs md:text-base text-gray-600 truncate">
               Управление онлайн и оффлайн консультациями
             </p>
           </div>
@@ -381,38 +409,39 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
               setSelectedDate(null);
               setShowAddModal(true);
             }}
-            className="flex items-center gap-2 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+            className="flex items-center gap-1 md:gap-2 px-3 md:px-6 py-2 md:py-3 rounded-xl md:rounded-2xl text-white text-sm md:text-base font-semibold shadow-lg hover:shadow-xl transition-all whitespace-nowrap"
             style={{ background: 'linear-gradient(135deg, #3772ff 0%, #2c5bcc 100%)' }}
           >
-            <Plus className="w-5 h-5" />
-            Добавить Запись
+            <Plus className="w-4 h-4 md:w-5 md:h-5" />
+            <span className="hidden sm:inline">Добавить Запись</span>
+            <span className="sm:hidden">Добавить</span>
           </motion.button>
         </div>
 
         {/* Controls */}
-        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+        <div className="flex flex-col gap-3 md:gap-4">
           {/* Navigation */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3 overflow-x-auto">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={goToToday}
-              className="px-4 py-2 rounded-xl border-2 border-gray-200 hover:border-blue-300 font-medium transition-colors"
+              className="px-3 md:px-4 py-1.5 md:py-2 text-sm md:text-base rounded-lg md:rounded-xl border-2 border-gray-200 hover:border-blue-300 font-medium transition-colors whitespace-nowrap flex-shrink-0"
             >
               Сегодня
             </motion.button>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 md:gap-2 flex-1 justify-center">
               <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => navigateDate('prev')}
-                className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
+                className="p-1.5 md:p-2 rounded-lg md:rounded-xl hover:bg-gray-100 transition-colors flex-shrink-0"
               >
-                <ChevronLeft className="w-5 h-5" />
+                <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
               </motion.button>
 
-              <div className="min-w-[250px] text-center font-semibold text-lg" style={{ color: '#1e263e' }}>
+              <div className="min-w-0 text-center font-semibold text-xs md:text-lg px-2 truncate" style={{ color: '#1e263e' }}>
                 {getDateRangeString()}
               </div>
 
@@ -420,68 +449,78 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => navigateDate('next')}
-                className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
+                className="p-1.5 md:p-2 rounded-lg md:rounded-xl hover:bg-gray-100 transition-colors flex-shrink-0"
               >
-                <ChevronRight className="w-5 h-5" />
+                <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
               </motion.button>
             </div>
           </div>
 
           {/* View mode selector */}
-          <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-xl">
-            {(['week', 'month'] as const).map((mode) => (
+          <div className="flex items-center gap-1 md:gap-2 bg-gray-100 p-1 rounded-lg md:rounded-xl overflow-x-auto scrollbar-hide">
+            {(['week', 'month', 'doctors'] as const).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-sm md:text-base font-medium transition-all flex items-center gap-1 md:gap-2 whitespace-nowrap flex-shrink-0 ${
                   viewMode === mode
                     ? 'bg-white text-blue-600 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                {mode === 'week' ? 'Неделя' : 'Месяц'}
+                {mode === 'week' && 'Неделя'}
+                {mode === 'month' && 'Месяц'}
+                {mode === 'doctors' && (
+                  <>
+                    <Users className="w-3 h-3 md:w-4 md:h-4" />
+                    <span className="hidden sm:inline">График врачей</span>
+                    <span className="sm:hidden">Врачи</span>
+                  </>
+                )}
               </button>
             ))}
           </div>
         </div>
 
         {/* Search and Filters */}
-        <div className="flex flex-col md:flex-row gap-4 mt-4">
+        <div className="flex flex-col gap-2 md:gap-4 mt-3 md:mt-4">
           {/* Search */}
           <div className="flex-1 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Поиск по имени пациента или доктора..."
+              placeholder="Поиск..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+              className="w-full pl-10 md:pl-12 pr-3 md:pr-4 py-2 md:py-3 text-sm md:text-base rounded-xl md:rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
             />
           </div>
 
-          {/* Type Filter */}
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value as any)}
-            className="px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
-          >
-            <option value="all">Все типы</option>
-            <option value="consultation">Онлайн консультации</option>
-            <option value="appointment">Оффлайн консультации</option>
-          </select>
+          <div className="flex gap-2 md:gap-4">
+            {/* Type Filter */}
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value as any)}
+              className="flex-1 px-3 md:px-4 py-2 md:py-3 text-sm md:text-base rounded-xl md:rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+            >
+              <option value="all">Все типы</option>
+              <option value="consultation">Онлайн</option>
+              <option value="appointment">Оффлайн</option>
+            </select>
 
-          {/* Status Filter */}
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value as any)}
-            className="px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
-          >
-            <option value="all">Все статусы</option>
-            <option value="scheduled">Запланировано</option>
-            <option value="in_progress">В процессе</option>
-            <option value="completed">Завершено</option>
-            <option value="cancelled">Отменено</option>
-          </select>
+            {/* Status Filter */}
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value as any)}
+              className="flex-1 px-3 md:px-4 py-2 md:py-3 text-sm md:text-base rounded-xl md:rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+            >
+              <option value="all">Все статусы</option>
+              <option value="scheduled">Запланировано</option>
+              <option value="in_progress">В процессе</option>
+              <option value="completed">Завершено</option>
+              <option value="cancelled">Отменено</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -513,9 +552,10 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
 
       {/* Calendar View */}
       {!loading && (
-        <div className="flex-1">
+        <div className="flex-1 px-2 md:px-0">
           {viewMode === 'week' && renderWeekView()}
           {viewMode === 'month' && renderMonthView()}
+          {viewMode === 'doctors' && renderDoctorsView()}
         </div>
       )}
 
@@ -559,24 +599,24 @@ function EventCard({ event }: { event: ScheduleEvent }) {
   return (
     <motion.div
       whileHover={{ scale: 1.02 }}
-      className="p-3 rounded-xl border-l-4 cursor-pointer group"
+      className="p-2 md:p-3 rounded-lg md:rounded-xl border-l-4 cursor-pointer group"
       style={{
         backgroundColor: typeColor.bg,
         borderLeftColor: typeColor.text
       }}
     >
       <div className="flex items-start justify-between mb-1">
-        <div className="flex items-center gap-2 flex-1">
+        <div className="flex items-center gap-1 md:gap-2 flex-1">
           {event.type === 'consultation' ? (
-            <Video className="w-4 h-4 flex-shrink-0" style={{ color: typeColor.text }} />
+            <Video className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" style={{ color: typeColor.text }} />
           ) : (
-            <Home className="w-4 h-4 flex-shrink-0" style={{ color: typeColor.text }} />
+            <Home className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" style={{ color: typeColor.text }} />
           )}
-          <span className="text-sm font-bold" style={{ color: typeColor.text }}>
+          <span className="text-xs md:text-sm font-bold" style={{ color: typeColor.text }}>
             {event.time}
           </span>
         </div>
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1 opacity-0 md:group-hover:opacity-100 transition-opacity">
           <button className="p-1 rounded hover:bg-white/50 transition-colors" title="Редактировать">
             <Edit className="w-3 h-3 text-gray-600" />
           </button>
@@ -586,16 +626,16 @@ function EventCard({ event }: { event: ScheduleEvent }) {
         </div>
       </div>
 
-      <p className="text-sm font-semibold mb-0.5" style={{ color: '#1e263e' }}>
+      <p className="text-xs md:text-sm font-semibold mb-0.5 truncate" style={{ color: '#1e263e' }}>
         {event.patient_name}
       </p>
 
-      <p className="text-xs text-gray-700 mb-1">
+      <p className="text-[10px] md:text-xs text-gray-700 mb-1 truncate">
         {event.doctor_name || event.nurse_name}
       </p>
 
       {event.specialization && (
-        <p className="text-xs text-gray-600">{event.specialization}</p>
+        <p className="text-[10px] md:text-xs text-gray-600 truncate">{event.specialization}</p>
       )}
 
       {event.location && (
@@ -1642,5 +1682,429 @@ function DateDetailsDrawer({
         </motion.div>
       </div>
     </AnimatePresence>
+  );
+}
+
+// Doctors Schedule Content Component - Shows all doctors with their available time slots
+function DoctorsScheduleContent({
+  selectedDate,
+  onDateChange,
+  events,
+  onEventAdded
+}: {
+  selectedDate: string;
+  onDateChange: (date: string) => void;
+  events: ScheduleEvent[];
+  onEventAdded: () => void;
+}) {
+  const [doctors, setDoctors] = useState<Array<{
+    id: number;
+    first_name: string;
+    last_name: string;
+    email?: string;
+    phone?: string;
+    specialization?: string;
+    years_of_experience?: number;
+    preferred_consultation_duration?: number;
+    online_work_schedule?: any;
+  }>>([]);
+  const [loading, setLoading] = useState(false);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedDoctor, setSelectedDoctor] = useState<number | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<any>(null);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [doctorSlots, setDoctorSlots] = useState<Map<number, any[]>>(new Map());
+
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      setLoading(true);
+      try {
+        const response = await api.get('/staff/');
+        const doctorsList = response.data.filter((s: any) => s.role === 'doctor');
+        setDoctors(doctorsList);
+      } catch (err) {
+        console.error("Failed to load doctors:", err);
+        toast.error("Не удалось загрузить список врачей");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDoctors();
+  }, []);
+
+  // Fetch available slots for all doctors when date changes
+  useEffect(() => {
+    if (doctors.length === 0 || !selectedDate) return;
+
+    const fetchAllDoctorSlots = async () => {
+      setLoadingSlots(true);
+      const slotsMap = new Map<number, any[]>();
+
+      try {
+        await Promise.all(
+          doctors.map(async (doctor) => {
+            try {
+              const response = await api.get('/consultations/available-slots/', {
+                params: {
+                  doctor_id: doctor.id,
+                  date: selectedDate,
+                  duration: doctor.preferred_consultation_duration || 30
+                }
+              });
+              slotsMap.set(doctor.id, response.data.available_slots || []);
+            } catch (err) {
+              console.error(`Failed to fetch slots for doctor ${doctor.id}:`, err);
+              slotsMap.set(doctor.id, []);
+            }
+          })
+        );
+
+        setDoctorSlots(slotsMap);
+      } finally {
+        setLoadingSlots(false);
+      }
+    };
+
+    fetchAllDoctorSlots();
+  }, [doctors, selectedDate]);
+
+  const handleSlotClick = (doctorId: number, slot: any) => {
+    setSelectedDoctor(doctorId);
+    setSelectedSlot(slot);
+    setShowAssignModal(true);
+  };
+
+  const filteredDoctors = doctors.filter(doctor => {
+    const fullName = `${doctor.first_name} ${doctor.last_name}`.toLowerCase();
+    const specialization = doctor.specialization?.toLowerCase() || '';
+    const query = searchQuery.toLowerCase();
+
+    return fullName.includes(query) || specialization.includes(query);
+  });
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* Controls */}
+      <div className="mb-4 md:mb-6 p-3 md:p-4 bg-gray-50 rounded-xl md:rounded-2xl border-2 border-gray-200">
+        <div className="flex flex-col gap-3 md:gap-4">
+          {/* Date Picker */}
+          <div className="flex items-center gap-2 md:gap-3">
+            <label className="text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Дата:</label>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => onDateChange(e.target.value)}
+              className="flex-1 md:flex-none px-3 md:px-4 py-1.5 md:py-2 text-sm md:text-base rounded-lg md:rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+            />
+          </div>
+
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Поиск врача..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 md:pl-12 pr-3 md:pr-4 py-1.5 md:py-2 text-sm md:text-base rounded-lg md:rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto">
+            {loading ? (
+              <div className="flex flex-col items-center justify-center h-full">
+                <Loader2 className="w-16 h-16 animate-spin mb-4 text-blue-600" />
+                <span className="text-lg font-medium text-gray-600">Загрузка врачей...</span>
+              </div>
+            ) : filteredDoctors.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center">
+                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <Stethoscope className="w-10 h-10 text-gray-400" />
+                </div>
+                <p className="text-gray-600 text-lg font-medium">
+                  {searchQuery ? 'Врачи не найдены' : 'Нет врачей'}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+                {filteredDoctors.map((doctor) => {
+                  const slots = doctorSlots.get(doctor.id) || [];
+                  const bookedSlots = events.filter(
+                    e => e.doctor_id === doctor.id && e.date === selectedDate
+                  );
+                  const availableSlots = slots.filter(slot =>
+                    !bookedSlots.some(e => e.time === slot.start_time)
+                  );
+
+                  return (
+                    <motion.div
+                      key={doctor.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="rounded-2xl md:rounded-3xl p-3 md:p-4 border-2 border-gray-200 bg-white min-h-[400px] md:min-h-[500px] flex flex-col"
+                    >
+                      {/* Doctor header */}
+                      <div className="mb-3 md:mb-4 pb-2 md:pb-3 border-b-2 border-gray-200">
+                        <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
+                          <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm md:text-base flex-shrink-0">
+                            {doctor.first_name[0]}{doctor.last_name[0]}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-bold text-sm md:text-base truncate" style={{ color: '#1e263e' }}>
+                              {doctor.first_name} {doctor.last_name}
+                            </h3>
+                            {doctor.specialization && (
+                              <p className="text-blue-600 text-[10px] md:text-xs flex items-center gap-1">
+                                <Stethoscope className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                                <span className="truncate">{doctor.specialization}</span>
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleSlotClick(doctor.id, availableSlots[0])}
+                          disabled={availableSlots.length === 0}
+                          className="w-full py-1.5 md:py-2 rounded-lg md:rounded-xl border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1 md:gap-2 text-xs md:text-sm text-gray-600 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Plus className="w-3 h-3 md:w-4 md:h-4" />
+                          Добавить
+                        </button>
+                      </div>
+
+                      {/* Events list */}
+                      <div className="flex-1 space-y-2 overflow-y-auto">
+                        {loadingSlots ? (
+                          <div className="flex items-center justify-center py-6 md:py-8">
+                            <Loader2 className="w-5 h-5 md:w-6 md:h-6 animate-spin text-blue-600" />
+                          </div>
+                        ) : bookedSlots.length > 0 ? (
+                          <>
+                            <h4 className="text-[10px] md:text-xs font-bold text-gray-500 uppercase mb-2">
+                              Записи на {new Date(selectedDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
+                            </h4>
+                            {bookedSlots.map((event) => (
+                              <motion.div
+                                key={event.id}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="p-2 md:p-3 rounded-lg md:rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200"
+                              >
+                                <div className="flex items-start gap-1.5 md:gap-2">
+                                  <div className="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-lg bg-blue-500 text-white font-bold text-xs md:text-sm flex-shrink-0">
+                                    {event.time}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-bold text-xs md:text-sm text-gray-900 truncate mb-0.5 md:mb-1">
+                                      {event.patient_name}
+                                    </p>
+                                    <div className="flex items-center gap-1 md:gap-2 text-[10px] md:text-xs text-gray-600">
+                                      {event.type === 'consultation' ? (
+                                        <span className="flex items-center gap-0.5 md:gap-1">
+                                          <Video className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                                          <span className="hidden sm:inline">Онлайн</span>
+                                        </span>
+                                      ) : (
+                                        <span className="flex items-center gap-0.5 md:gap-1">
+                                          <Home className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                                          <span className="hidden sm:inline">Оффлайн</span>
+                                        </span>
+                                      )}
+                                      <span className="hidden sm:inline">•</span>
+                                      <span>{event.duration} мин</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            ))}
+                          </>
+                        ) : (
+                          <div className="text-center py-6 md:py-8 text-gray-400 text-xs md:text-sm">
+                            Нет записей
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Available slots footer */}
+                      <div className="mt-3 md:mt-4 pt-2 md:pt-3 border-t-2 border-gray-200">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] md:text-xs text-gray-500 font-semibold uppercase">
+                            Доступно
+                          </span>
+                          <span className={`text-base md:text-lg font-bold ${availableSlots.length > 0 ? 'text-emerald-600' : 'text-gray-400'}`}>
+                            {loadingSlots ? '...' : availableSlots.length}
+                          </span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
+      </div>
+
+      {/* Assignment Modal */}
+      {showAssignModal && selectedDoctor && selectedSlot && (
+        <AssignConsultationModal
+          isOpen={showAssignModal}
+          onClose={() => {
+            setShowAssignModal(false);
+            setSelectedDoctor(null);
+            setSelectedSlot(null);
+          }}
+          doctorId={selectedDoctor}
+          slot={selectedSlot}
+          date={selectedDate}
+          onAssigned={() => {
+            setShowAssignModal(false);
+            onEventAdded();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// Quick Assignment Modal
+function AssignConsultationModal({
+  isOpen,
+  onClose,
+  doctorId,
+  slot,
+  date,
+  onAssigned
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  doctorId: number;
+  slot: any;
+  date: string;
+  onAssigned: () => void;
+}) {
+  const [patients, setPatients] = useState<any[]>([]);
+  const [selectedPatient, setSelectedPatient] = useState('');
+  const [notes, setNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchPatients = async () => {
+      try {
+        const response = await api.get('/patients/?all=true');
+        setPatients(response.data);
+      } catch (err) {
+        console.error("Failed to load patients:", err);
+      }
+    };
+
+    fetchPatients();
+  }, [isOpen]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+
+    try {
+      await api.post('/schedule/', {
+        type: 'consultation',
+        patient_id: selectedPatient,
+        doctor_id: doctorId,
+        date: date,
+        time: slot.start_time,
+        duration: 30,
+        notes: notes
+      });
+
+      toast.success('Консультация успешно назначена!');
+      onAssigned();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Не удалось назначить консультацию');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white rounded-3xl p-6 max-w-md w-full"
+      >
+        <h3 className="text-xl font-bold mb-4" style={{ color: '#1e263e' }}>
+          Назначить консультацию
+        </h3>
+
+        <div className="mb-4 p-4 bg-blue-50 rounded-2xl">
+          <div className="flex items-center gap-2 text-blue-700 font-semibold">
+            <Clock className="w-5 h-5" />
+            {slot.start_time} - {slot.end_time}
+          </div>
+          <div className="text-sm text-blue-600 mt-1">
+            {new Date(date).toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
+              Пациент <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={selectedPatient}
+              onChange={(e) => setSelectedPatient(e.target.value)}
+              required
+              className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
+            >
+              <option value="">Выберите пациента</option>
+              {patients.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.first_name} {p.last_name} {p.email && `(${p.email})`}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
+              Примечания
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none resize-none"
+              placeholder="Дополнительная информация..."
+            />
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-6 py-3 rounded-2xl border-2 border-gray-200 font-semibold hover:bg-gray-50 transition-colors"
+            >
+              Отмена
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="flex-1 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
+              style={{ background: 'linear-gradient(135deg, #3772ff 0%, #2c5bcc 100%)' }}
+            >
+              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              {submitting ? 'Назначение...' : 'Назначить'}
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
   );
 }

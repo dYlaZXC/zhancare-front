@@ -98,22 +98,24 @@ interface StaffMember {
       enabled: boolean;
     };
   };
-  schedule_type?: 'permanent' | 'rotating';
-  rotation_weeks_count?: number | null;
-  online_rotation_schedules?: Array<{
-    [key: string]: {
-      start: string;
-      end: string;
-      enabled: boolean;
+  weekly_schedules?: {
+    [weekStartDate: string]: { // ISO date string (Monday of week)
+      online: {
+        [key: string]: {
+          start: string;
+          end: string;
+          enabled: boolean;
+        };
+      };
+      offline: {
+        [key: string]: {
+          start: string;
+          end: string;
+          enabled: boolean;
+        };
+      };
     };
-  }> | null;
-  offline_rotation_schedules?: Array<{
-    [key: string]: {
-      start: string;
-      end: string;
-      enabled: boolean;
-    };
-  }> | null;
+  };
 }
 
 // Phone number formatter utility
@@ -502,61 +504,16 @@ export default function StaffManagement({ user }: StaffManagementProps) {
   // Schedule type switcher state - 'online' or 'offline'
   const [scheduleType, setScheduleType] = useState<'online' | 'offline'>('online');
 
-  // Rotating schedule states
-  const [isRotatingSchedule, setIsRotatingSchedule] = useState(false);
-  const [rotationWeeksCount, setRotationWeeksCount] = useState(2);
+  // Weekly schedule navigation
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
 
-  // Rotating schedules - array of weekly schedules for rotation mode
-  const [onlineRotationSchedules, setOnlineRotationSchedules] = useState<Array<{
-    [key: string]: { start: string; end: string; enabled: boolean };
-  }>>([
-    // Week 1
-    {
-      monday: { start: '09:00', end: '18:00', enabled: false },
-      tuesday: { start: '09:00', end: '18:00', enabled: false },
-      wednesday: { start: '09:00', end: '18:00', enabled: false },
-      thursday: { start: '09:00', end: '18:00', enabled: false },
-      friday: { start: '09:00', end: '18:00', enabled: false },
-      saturday: { start: '10:00', end: '14:00', enabled: false },
-      sunday: { start: '10:00', end: '14:00', enabled: false },
-    },
-    // Week 2
-    {
-      monday: { start: '09:00', end: '18:00', enabled: false },
-      tuesday: { start: '09:00', end: '18:00', enabled: false },
-      wednesday: { start: '09:00', end: '18:00', enabled: false },
-      thursday: { start: '09:00', end: '18:00', enabled: false },
-      friday: { start: '09:00', end: '18:00', enabled: false },
-      saturday: { start: '10:00', end: '14:00', enabled: false },
-      sunday: { start: '10:00', end: '14:00', enabled: false },
-    },
-  ]);
-
-  const [offlineRotationSchedules, setOfflineRotationSchedules] = useState<Array<{
-    [key: string]: { start: string; end: string; enabled: boolean };
-  }>>([
-    // Week 1
-    {
-      monday: { start: '09:00', end: '18:00', enabled: false },
-      tuesday: { start: '09:00', end: '18:00', enabled: false },
-      wednesday: { start: '09:00', end: '18:00', enabled: false },
-      thursday: { start: '09:00', end: '18:00', enabled: false },
-      friday: { start: '09:00', end: '18:00', enabled: false },
-      saturday: { start: '10:00', end: '14:00', enabled: false },
-      sunday: { start: '10:00', end: '14:00', enabled: false },
-    },
-    // Week 2
-    {
-      monday: { start: '09:00', end: '18:00', enabled: false },
-      tuesday: { start: '09:00', end: '18:00', enabled: false },
-      wednesday: { start: '09:00', end: '18:00', enabled: false },
-      thursday: { start: '09:00', end: '18:00', enabled: false },
-      friday: { start: '09:00', end: '18:00', enabled: false },
-      saturday: { start: '10:00', end: '14:00', enabled: false },
-      sunday: { start: '10:00', end: '14:00', enabled: false },
-    },
-  ]);
+  // Weekly schedules - stores schedules by week start date (Monday)
+  const [weeklySchedules, setWeeklySchedules] = useState<{
+    [weekStartDate: string]: {
+      online: { [key: string]: { start: string; end: string; enabled: boolean } };
+      offline: { [key: string]: { start: string; end: string; enabled: boolean } };
+    };
+  }>({});
 
   // Days of the week
   const daysOfWeek = [
@@ -569,35 +526,52 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     { value: 'sunday', labelRu: 'Воскресенье', labelShort: 'Вс', dayIndex: 0 },
   ];
 
-  // Get next date for a day in the selected rotation week
-  const getNextDateForDay = useCallback((dayIndex: number) => {
-    if (!isRotatingSchedule) return null;
+  // Get Monday of a week given an offset from current week
+  const getWeekStartDate = useCallback((weekOffset: number): string => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Get Monday of current week
+    const currentWeekMonday = new Date(today);
+    const dayOfWeek = currentWeekMonday.getDay();
+    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    currentWeekMonday.setDate(currentWeekMonday.getDate() + daysToMonday);
+
+    // Add week offset
+    const targetMonday = new Date(currentWeekMonday);
+    targetMonday.setDate(currentWeekMonday.getDate() + (weekOffset * 7));
+
+    // Return ISO date string (YYYY-MM-DD)
+    return targetMonday.toISOString().split('T')[0];
+  }, []);
+
+  // Get date for a day in the displayed week
+  const getDateForDay = useCallback((dayIndex: number) => {
 
     const today = new Date();
-    const currentDayIndex = today.getDay(); // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+    today.setHours(0, 0, 0, 0);
 
-    // Calculate days until next Monday
-    let daysUntilMonday = (1 - currentDayIndex + 7) % 7;
-    if (daysUntilMonday === 0) daysUntilMonday = 7; // If today is Monday, go to next Monday
+    // Get the Monday of current week
+    const currentWeekMonday = new Date(today);
+    const dayOfWeek = currentWeekMonday.getDay();
+    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    currentWeekMonday.setDate(currentWeekMonday.getDate() + daysToMonday);
 
-    // Get next Monday
-    const nextMonday = new Date(today);
-    nextMonday.setDate(today.getDate() + daysUntilMonday);
+    // Calculate displayed week: current week + offset
+    const displayedWeekStart = new Date(currentWeekMonday);
+    displayedWeekStart.setDate(currentWeekMonday.getDate() + (currentWeekIndex * 7));
 
-    // Add weeks based on selected rotation week (0-indexed)
-    const targetWeekStart = new Date(nextMonday);
-    targetWeekStart.setDate(nextMonday.getDate() + (currentWeekIndex * 7));
-
-    // Get the specific day in that week
-    // Convert dayIndex to offset from Monday: Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6
+    // dayIndex: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+    // displayedWeekStart is Monday, so we just add offsets
+    const targetDate = new Date(displayedWeekStart);
+    // Convert dayIndex to offset: Mon=1->0, Tue=2->1, Wed=3->2, Thu=4->3, Fri=5->4, Sat=6->5, Sun=0->6
     const offsetFromMonday = dayIndex === 0 ? 6 : dayIndex - 1;
-    const targetDate = new Date(targetWeekStart);
-    targetDate.setDate(targetWeekStart.getDate() + offsetFromMonday);
+    targetDate.setDate(displayedWeekStart.getDate() + offsetFromMonday);
 
     const day = targetDate.getDate();
-    const month = targetDate.toLocaleDateString('ru-RU', { month: 'short' });
+    const month = targetDate.toLocaleDateString('ru-RU', { month: 'long' });
     return `${day} ${month}`;
-  }, [isRotatingSchedule, currentWeekIndex]);
+  }, [currentWeekIndex]);
 
   // Toggle day selection
   const toggleDay = useCallback((day: string) => {
@@ -623,28 +597,44 @@ export default function StaffManagement({ user }: StaffManagementProps) {
 
   // Toggle day selection for online schedule
   const toggleOnlineDay = useCallback((day: string) => {
-    if (isRotatingSchedule) {
-      setOnlineRotationSchedules(prev => {
-        const newSchedules = [...prev];
-        newSchedules[currentWeekIndex] = {
-          ...newSchedules[currentWeekIndex],
-          [day]: {
-            ...newSchedules[currentWeekIndex][day],
-            enabled: !newSchedules[currentWeekIndex][day].enabled,
-          }
-        };
-        return newSchedules;
-      });
-    } else {
-      setOnlineWorkSchedule(prev => ({
-        ...prev,
-        [day]: {
-          ...prev[day],
-          enabled: !prev[day].enabled,
+    const weekStartDate = getWeekStartDate(currentWeekIndex);
+    setWeeklySchedules(prev => {
+      const currentWeekSchedule = prev[weekStartDate] || {
+        online: {
+          monday: { start: '09:00', end: '18:00', enabled: false },
+          tuesday: { start: '09:00', end: '18:00', enabled: false },
+          wednesday: { start: '09:00', end: '18:00', enabled: false },
+          thursday: { start: '09:00', end: '18:00', enabled: false },
+          friday: { start: '09:00', end: '18:00', enabled: false },
+          saturday: { start: '10:00', end: '14:00', enabled: false },
+          sunday: { start: '10:00', end: '14:00', enabled: false },
+        },
+        offline: {
+          monday: { start: '09:00', end: '18:00', enabled: false },
+          tuesday: { start: '09:00', end: '18:00', enabled: false },
+          wednesday: { start: '09:00', end: '18:00', enabled: false },
+          thursday: { start: '09:00', end: '18:00', enabled: false },
+          friday: { start: '09:00', end: '18:00', enabled: false },
+          saturday: { start: '10:00', end: '14:00', enabled: false },
+          sunday: { start: '10:00', end: '14:00', enabled: false },
         }
-      }));
-    }
-  }, [isRotatingSchedule, currentWeekIndex]);
+      };
+
+      return {
+        ...prev,
+        [weekStartDate]: {
+          ...currentWeekSchedule,
+          online: {
+            ...currentWeekSchedule.online,
+            [day]: {
+              ...currentWeekSchedule.online[day],
+              enabled: !currentWeekSchedule.online[day].enabled,
+            }
+          }
+        }
+      };
+    });
+  }, [currentWeekIndex, getWeekStartDate]);
 
   // Update time for online schedule
   const updateOnlineDayTime = useCallback((day: string, field: 'start' | 'end', value: string) => {
@@ -674,48 +664,83 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       return { start: newStart, end: newEnd };
     };
 
-    if (isRotatingSchedule) {
-      setOnlineRotationSchedules(prev => {
-        const newSchedules = [...prev];
-        const adjusted = adjustTime(newSchedules[currentWeekIndex][day]);
-        newSchedules[currentWeekIndex] = {
-          ...newSchedules[currentWeekIndex],
-          [day]: { ...newSchedules[currentWeekIndex][day], ...adjusted }
-        };
-        return newSchedules;
-      });
-    } else {
-      setOnlineWorkSchedule(prev => {
-        const adjusted = adjustTime(prev[day]);
-        return { ...prev, [day]: { ...prev[day], ...adjusted } };
-      });
-    }
-  }, [isRotatingSchedule, currentWeekIndex]);
+    const weekStartDate = getWeekStartDate(currentWeekIndex);
+    setWeeklySchedules(prev => {
+      const currentWeekSchedule = prev[weekStartDate] || {
+        online: {
+          monday: { start: '09:00', end: '18:00', enabled: false },
+          tuesday: { start: '09:00', end: '18:00', enabled: false },
+          wednesday: { start: '09:00', end: '18:00', enabled: false },
+          thursday: { start: '09:00', end: '18:00', enabled: false },
+          friday: { start: '09:00', end: '18:00', enabled: false },
+          saturday: { start: '10:00', end: '14:00', enabled: false },
+          sunday: { start: '10:00', end: '14:00', enabled: false },
+        },
+        offline: {
+          monday: { start: '09:00', end: '18:00', enabled: false },
+          tuesday: { start: '09:00', end: '18:00', enabled: false },
+          wednesday: { start: '09:00', end: '18:00', enabled: false },
+          thursday: { start: '09:00', end: '18:00', enabled: false },
+          friday: { start: '09:00', end: '18:00', enabled: false },
+          saturday: { start: '10:00', end: '14:00', enabled: false },
+          sunday: { start: '10:00', end: '14:00', enabled: false },
+        }
+      };
+
+      const adjusted = adjustTime(currentWeekSchedule.online[day]);
+      return {
+        ...prev,
+        [weekStartDate]: {
+          ...currentWeekSchedule,
+          online: {
+            ...currentWeekSchedule.online,
+            [day]: { ...currentWeekSchedule.online[day], ...adjusted }
+          }
+        }
+      };
+    });
+  }, [currentWeekIndex, getWeekStartDate]);
 
   // Toggle day selection for offline schedule
   const toggleOfflineDay = useCallback((day: string) => {
-    if (isRotatingSchedule) {
-      setOfflineRotationSchedules(prev => {
-        const newSchedules = [...prev];
-        newSchedules[currentWeekIndex] = {
-          ...newSchedules[currentWeekIndex],
-          [day]: {
-            ...newSchedules[currentWeekIndex][day],
-            enabled: !newSchedules[currentWeekIndex][day].enabled,
-          }
-        };
-        return newSchedules;
-      });
-    } else {
-      setOfflineWorkSchedule(prev => ({
-        ...prev,
-        [day]: {
-          ...prev[day],
-          enabled: !prev[day].enabled,
+    const weekStartDate = getWeekStartDate(currentWeekIndex);
+    setWeeklySchedules(prev => {
+      const currentWeekSchedule = prev[weekStartDate] || {
+        online: {
+          monday: { start: '09:00', end: '18:00', enabled: false },
+          tuesday: { start: '09:00', end: '18:00', enabled: false },
+          wednesday: { start: '09:00', end: '18:00', enabled: false },
+          thursday: { start: '09:00', end: '18:00', enabled: false },
+          friday: { start: '09:00', end: '18:00', enabled: false },
+          saturday: { start: '10:00', end: '14:00', enabled: false },
+          sunday: { start: '10:00', end: '14:00', enabled: false },
+        },
+        offline: {
+          monday: { start: '09:00', end: '18:00', enabled: false },
+          tuesday: { start: '09:00', end: '18:00', enabled: false },
+          wednesday: { start: '09:00', end: '18:00', enabled: false },
+          thursday: { start: '09:00', end: '18:00', enabled: false },
+          friday: { start: '09:00', end: '18:00', enabled: false },
+          saturday: { start: '10:00', end: '14:00', enabled: false },
+          sunday: { start: '10:00', end: '14:00', enabled: false },
         }
-      }));
-    }
-  }, [isRotatingSchedule, currentWeekIndex]);
+      };
+
+      return {
+        ...prev,
+        [weekStartDate]: {
+          ...currentWeekSchedule,
+          offline: {
+            ...currentWeekSchedule.offline,
+            [day]: {
+              ...currentWeekSchedule.offline[day],
+              enabled: !currentWeekSchedule.offline[day].enabled,
+            }
+          }
+        }
+      };
+    });
+  }, [currentWeekIndex, getWeekStartDate]);
 
   // Update time for offline schedule
   const updateOfflineDayTime = useCallback((day: string, field: 'start' | 'end', value: string) => {
@@ -745,23 +770,42 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       return { start: newStart, end: newEnd };
     };
 
-    if (isRotatingSchedule) {
-      setOfflineRotationSchedules(prev => {
-        const newSchedules = [...prev];
-        const adjusted = adjustTime(newSchedules[currentWeekIndex][day]);
-        newSchedules[currentWeekIndex] = {
-          ...newSchedules[currentWeekIndex],
-          [day]: { ...newSchedules[currentWeekIndex][day], ...adjusted }
-        };
-        return newSchedules;
-      });
-    } else {
-      setOfflineWorkSchedule(prev => {
-        const adjusted = adjustTime(prev[day]);
-        return { ...prev, [day]: { ...prev[day], ...adjusted } };
-      });
-    }
-  }, [isRotatingSchedule, currentWeekIndex]);
+    const weekStartDate = getWeekStartDate(currentWeekIndex);
+    setWeeklySchedules(prev => {
+      const currentWeekSchedule = prev[weekStartDate] || {
+        online: {
+          monday: { start: '09:00', end: '18:00', enabled: false },
+          tuesday: { start: '09:00', end: '18:00', enabled: false },
+          wednesday: { start: '09:00', end: '18:00', enabled: false },
+          thursday: { start: '09:00', end: '18:00', enabled: false },
+          friday: { start: '09:00', end: '18:00', enabled: false },
+          saturday: { start: '10:00', end: '14:00', enabled: false },
+          sunday: { start: '10:00', end: '14:00', enabled: false },
+        },
+        offline: {
+          monday: { start: '09:00', end: '18:00', enabled: false },
+          tuesday: { start: '09:00', end: '18:00', enabled: false },
+          wednesday: { start: '09:00', end: '18:00', enabled: false },
+          thursday: { start: '09:00', end: '18:00', enabled: false },
+          friday: { start: '09:00', end: '18:00', enabled: false },
+          saturday: { start: '10:00', end: '14:00', enabled: false },
+          sunday: { start: '10:00', end: '14:00', enabled: false },
+        }
+      };
+
+      const adjusted = adjustTime(currentWeekSchedule.offline[day]);
+      return {
+        ...prev,
+        [weekStartDate]: {
+          ...currentWeekSchedule,
+          offline: {
+            ...currentWeekSchedule.offline,
+            [day]: { ...currentWeekSchedule.offline[day], ...adjusted }
+          }
+        }
+      };
+    });
+  }, [currentWeekIndex, getWeekStartDate]);
 
   // Helper function to check if two time ranges overlap
   const timeRangesOverlap = useCallback((start1: string, end1: string, start2: string, end2: string): boolean => {
@@ -788,8 +832,13 @@ export default function StaffManagement({ user }: StaffManagementProps) {
 
   // Function to check for schedule conflicts on a specific day
   const getScheduleConflict = useCallback((day: string, scheduleType: 'online' | 'offline'): boolean => {
-    const onlineSchedule = onlineWorkSchedule[day];
-    const offlineSchedule = offlineWorkSchedule[day];
+    const weekStartDate = getWeekStartDate(currentWeekIndex);
+    const weekSchedule = weeklySchedules[weekStartDate];
+
+    if (!weekSchedule) return false;
+
+    const onlineSchedule = weekSchedule.online[day];
+    const offlineSchedule = weekSchedule.offline[day];
 
     // Check if both schedules are enabled for this day
     if (onlineSchedule?.enabled && offlineSchedule?.enabled) {
@@ -803,7 +852,48 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     }
 
     return false;
-  }, [onlineWorkSchedule, offlineWorkSchedule, timeRangesOverlap]);
+  }, [weeklySchedules, currentWeekIndex, getWeekStartDate, timeRangesOverlap]);
+
+  // Get current online schedule for displayed week
+  const getCurrentOnlineSchedule = useCallback(() => {
+    const weekStartDate = getWeekStartDate(currentWeekIndex);
+    const weekSchedule = weeklySchedules[weekStartDate];
+
+    if (weekSchedule?.online) {
+      return weekSchedule.online;
+    }
+
+    // Return default schedule if no schedule exists for this week
+    return {
+      monday: { start: '09:00', end: '18:00', enabled: false },
+      tuesday: { start: '09:00', end: '18:00', enabled: false },
+      wednesday: { start: '09:00', end: '18:00', enabled: false },
+      thursday: { start: '09:00', end: '18:00', enabled: false },
+      friday: { start: '09:00', end: '18:00', enabled: false },
+      saturday: { start: '10:00', end: '14:00', enabled: false },
+      sunday: { start: '10:00', end: '14:00', enabled: false },
+    };
+  }, [weeklySchedules, currentWeekIndex, getWeekStartDate]);
+
+  const getCurrentOfflineSchedule = useCallback(() => {
+    const weekStartDate = getWeekStartDate(currentWeekIndex);
+    const weekSchedule = weeklySchedules[weekStartDate];
+
+    if (weekSchedule?.offline) {
+      return weekSchedule.offline;
+    }
+
+    // Return default schedule if no schedule exists for this week
+    return {
+      monday: { start: '09:00', end: '18:00', enabled: false },
+      tuesday: { start: '09:00', end: '18:00', enabled: false },
+      wednesday: { start: '09:00', end: '18:00', enabled: false },
+      thursday: { start: '09:00', end: '18:00', enabled: false },
+      friday: { start: '09:00', end: '18:00', enabled: false },
+      saturday: { start: '10:00', end: '14:00', enabled: false },
+      sunday: { start: '10:00', end: '14:00', enabled: false },
+    };
+  }, [weeklySchedules, currentWeekIndex, getWeekStartDate]);
 
   // Get all days with conflicts
   const getConflictDays = useCallback((): string[] => {
@@ -1000,54 +1090,9 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       sunday: { start: '10:00', end: '14:00', enabled: false },
     });
 
-    // Reset schedule type and rotation data
-    setIsRotatingSchedule(false);
-    setRotationWeeksCount(2);
+    // Reset weekly schedules and navigation
     setCurrentWeekIndex(0);
-    setOnlineRotationSchedules([
-      // Week 1
-      {
-        monday: { start: '09:00', end: '18:00', enabled: false },
-        tuesday: { start: '09:00', end: '18:00', enabled: false },
-        wednesday: { start: '09:00', end: '18:00', enabled: false },
-        thursday: { start: '09:00', end: '18:00', enabled: false },
-        friday: { start: '09:00', end: '18:00', enabled: false },
-        saturday: { start: '10:00', end: '14:00', enabled: false },
-        sunday: { start: '10:00', end: '14:00', enabled: false },
-      },
-      // Week 2
-      {
-        monday: { start: '09:00', end: '18:00', enabled: false },
-        tuesday: { start: '09:00', end: '18:00', enabled: false },
-        wednesday: { start: '09:00', end: '18:00', enabled: false },
-        thursday: { start: '09:00', end: '18:00', enabled: false },
-        friday: { start: '09:00', end: '18:00', enabled: false },
-        saturday: { start: '10:00', end: '14:00', enabled: false },
-        sunday: { start: '10:00', end: '14:00', enabled: false },
-      },
-    ]);
-    setOfflineRotationSchedules([
-      // Week 1
-      {
-        monday: { start: '09:00', end: '18:00', enabled: false },
-        tuesday: { start: '09:00', end: '18:00', enabled: false },
-        wednesday: { start: '09:00', end: '18:00', enabled: false },
-        thursday: { start: '09:00', end: '18:00', enabled: false },
-        friday: { start: '09:00', end: '18:00', enabled: false },
-        saturday: { start: '10:00', end: '14:00', enabled: false },
-        sunday: { start: '10:00', end: '14:00', enabled: false },
-      },
-      // Week 2
-      {
-        monday: { start: '09:00', end: '18:00', enabled: false },
-        tuesday: { start: '09:00', end: '18:00', enabled: false },
-        wednesday: { start: '09:00', end: '18:00', enabled: false },
-        thursday: { start: '09:00', end: '18:00', enabled: false },
-        friday: { start: '09:00', end: '18:00', enabled: false },
-        saturday: { start: '10:00', end: '14:00', enabled: false },
-        sunday: { start: '10:00', end: '14:00', enabled: false },
-      },
-    ]);
+    setWeeklySchedules({});
 
     setFormErrors({});
     setScheduleType('online');
@@ -1073,8 +1118,18 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         errors.preferredConsultationDuration = 'Укажите длительность консультации (5-180 минут)';
       }
 
-      // ✅ Validate that at least one day is enabled in the schedule
-      const hasEnabledDay = Object.values(onlineWorkSchedule).some((day: any) => day.enabled);
+      // ✅ Validate that at least one day is enabled in at least one week
+      let hasEnabledDay = false;
+
+      // Check if ANY week has at least one enabled day
+      for (const weekStartDate in weeklySchedules) {
+        const weekSchedule = weeklySchedules[weekStartDate];
+        if (weekSchedule?.online && Object.values(weekSchedule.online).some((day: any) => day.enabled)) {
+          hasEnabledDay = true;
+          break;
+        }
+      }
+
       if (!hasEnabledDay) {
         errors.schedule = 'Необходимо включить хотя бы один день в расписании работы';
       }
@@ -1119,14 +1174,9 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         online_consultation_price: formData.online_consultation_price ? Number(formData.online_consultation_price) : null,
         preferred_consultation_duration: formData.preferred_consultation_duration ? Number(formData.preferred_consultation_duration) : null,
         work_schedule: workSchedule,  // Keep for backward compatibility
-        schedule_type: isRotatingSchedule ? 'rotating' : 'permanent',
-        // If rotating, send rotation schedules and null for permanent
-        online_work_schedule: isRotatingSchedule ? null : onlineWorkSchedule,
-        offline_work_schedule: isRotatingSchedule ? null : offlineWorkSchedule,
-        // If permanent, send null for rotation schedules
-        rotation_weeks_count: isRotatingSchedule ? rotationWeeksCount : null,
-        online_rotation_schedules: isRotatingSchedule ? onlineRotationSchedules : null,
-        offline_rotation_schedules: isRotatingSchedule ? offlineRotationSchedules : null,
+        online_work_schedule: onlineWorkSchedule,  // Keep for backward compatibility
+        offline_work_schedule: offlineWorkSchedule,  // Keep for backward compatibility
+        weekly_schedules: weeklySchedules,  // Send weekly schedules
       };
 
       const response = await api.post("/staff/", payload);
@@ -1275,21 +1325,11 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       sunday: { start: '10:00', end: '14:00', enabled: false },
     });
 
-    // Load schedule type and rotation data
-    const scheduleType = member.schedule_type || 'permanent';
-    setIsRotatingSchedule(scheduleType === 'rotating');
+    // Load weekly schedules
+    setWeeklySchedules(member.weekly_schedules || {});
 
-    if (scheduleType === 'rotating' && member.rotation_weeks_count) {
-      setRotationWeeksCount(member.rotation_weeks_count);
-
-      if (member.online_rotation_schedules && member.online_rotation_schedules.length > 0) {
-        setOnlineRotationSchedules(member.online_rotation_schedules);
-      }
-
-      if (member.offline_rotation_schedules && member.offline_rotation_schedules.length > 0) {
-        setOfflineRotationSchedules(member.offline_rotation_schedules);
-      }
-    }
+    // Reset to current week
+    setCurrentWeekIndex(0);
 
     setShowEditModal(true);
   };
@@ -1333,14 +1373,9 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         online_consultation_price: formData.online_consultation_price ? Number(formData.online_consultation_price) : null,
         preferred_consultation_duration: formData.preferred_consultation_duration ? Number(formData.preferred_consultation_duration) : null,
         work_schedule: workSchedule,  // Keep for backward compatibility
-        schedule_type: isRotatingSchedule ? 'rotating' : 'permanent',
-        // If rotating, send rotation schedules and null for permanent
-        online_work_schedule: isRotatingSchedule ? null : onlineWorkSchedule,
-        offline_work_schedule: isRotatingSchedule ? null : offlineWorkSchedule,
-        // If permanent, send null for rotation schedules
-        rotation_weeks_count: isRotatingSchedule ? rotationWeeksCount : null,
-        online_rotation_schedules: isRotatingSchedule ? onlineRotationSchedules : null,
-        offline_rotation_schedules: isRotatingSchedule ? offlineRotationSchedules : null,
+        online_work_schedule: onlineWorkSchedule,  // Keep for backward compatibility
+        offline_work_schedule: offlineWorkSchedule,  // Keep for backward compatibility
+        weekly_schedules: weeklySchedules,  // Send weekly schedules
       };
 
       // Only include password if it was changed
@@ -2232,104 +2267,83 @@ export default function StaffManagement({ user }: StaffManagementProps) {
 
                   {/* Work Schedule with Tabs */}
                   <div className="border-2 border-gray-200 rounded-2xl overflow-hidden">
-                    {/* Rotation Mode Toggle */}
+                    {/* Week Navigation */}
                     <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 border-b-2 border-gray-200">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <RotateCcw className="w-5 h-5 text-indigo-600" />
-                          <div>
-                            <h4 className="font-bold text-gray-900">Тип расписания</h4>
-                            <p className="text-xs text-gray-600">Выберите постоянный или ротационный график</p>
+                      {/* Week selector slider with dates */}
+                      {(() => {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+
+                        // Get the Monday of current week
+                        const currentWeekMonday = new Date(today);
+                        const dayOfWeek = currentWeekMonday.getDay();
+                        const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+                        currentWeekMonday.setDate(currentWeekMonday.getDate() + daysToMonday);
+
+                        // Calculate displayed week: current week + offset
+                        const displayedWeekStart = new Date(currentWeekMonday);
+                        displayedWeekStart.setDate(currentWeekMonday.getDate() + (currentWeekIndex * 7));
+
+                        const displayedWeekEnd = new Date(displayedWeekStart);
+                        displayedWeekEnd.setDate(displayedWeekStart.getDate() + 6);
+                        displayedWeekEnd.setHours(23, 59, 59, 999);
+
+                        const formatDate = (date: Date) => {
+                          return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+                        };
+
+                        // Check if today falls within the displayed week range
+                        const isCurrentWeek = today >= displayedWeekStart && today <= displayedWeekEnd;
+
+                        return (
+                          <div className="bg-white rounded-xl shadow-sm border-2 border-indigo-100 p-4">
+                            <div className="flex items-center justify-between gap-4">
+                              {/* Previous week button */}
+                              <button
+                                type="button"
+                                onClick={() => setCurrentWeekIndex(currentWeekIndex - 1)}
+                                className="p-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Предыдущая неделя"
+                              >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                </svg>
+                              </button>
+
+                              {/* Current week display */}
+                              <div className="flex-1 text-center">
+                                <div className="flex flex-col items-center justify-center gap-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-2xl">📅</span>
+                                    <div>
+                                      <div className="font-bold text-lg text-gray-800">
+                                        {formatDate(displayedWeekStart)} - {formatDate(displayedWeekEnd)}
+                                      </div>
+                                    </div>
+                                    {isCurrentWeek && (
+                                      <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">
+                                        Текущая
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Next week button */}
+                              <button
+                                type="button"
+                                onClick={() => setCurrentWeekIndex(currentWeekIndex + 1)}
+                                className="p-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Следующая неделя"
+                              >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2 bg-white rounded-xl p-1 shadow-sm border border-gray-200">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsRotatingSchedule(false);
-                              setCurrentWeekIndex(0);
-                            }}
-                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-                              !isRotatingSchedule
-                                ? 'bg-indigo-600 text-white shadow-md'
-                                : 'text-gray-600 hover:bg-gray-100'
-                            }`}
-                          >
-                            Постоянный
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setIsRotatingSchedule(true)}
-                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-                              isRotatingSchedule
-                                ? 'bg-indigo-600 text-white shadow-md'
-                                : 'text-gray-600 hover:bg-gray-100'
-                            }`}
-                          >
-                            Ротационный
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Week count selector */}
-                      {isRotatingSchedule && (
-                        <div className="flex items-center gap-4">
-                          <label className="text-sm font-semibold text-gray-700">
-                            Количество недель в цикле:
-                          </label>
-                          <select
-                            value={rotationWeeksCount}
-                            onChange={(e) => {
-                              const newCount = parseInt(e.target.value);
-                              setRotationWeeksCount(newCount);
-                              if (currentWeekIndex >= newCount) setCurrentWeekIndex(newCount - 1);
-                              const adjustSchedules = (schedules: any[]) => {
-                                const emptyWeek = {
-                                  monday: { start: '09:00', end: '18:00', enabled: false },
-                                  tuesday: { start: '09:00', end: '18:00', enabled: false },
-                                  wednesday: { start: '09:00', end: '18:00', enabled: false },
-                                  thursday: { start: '09:00', end: '18:00', enabled: false },
-                                  friday: { start: '09:00', end: '18:00', enabled: false },
-                                  saturday: { start: '10:00', end: '14:00', enabled: false },
-                                  sunday: { start: '10:00', end: '14:00', enabled: false },
-                                };
-                                return newCount > schedules.length
-                                  ? [...schedules, ...Array(newCount - schedules.length).fill(null).map(() => ({...emptyWeek}))]
-                                  : schedules.slice(0, newCount);
-                              };
-                              setOnlineRotationSchedules(adjustSchedules(onlineRotationSchedules));
-                              setOfflineRotationSchedules(adjustSchedules(offlineRotationSchedules));
-                            }}
-                            className="px-3 py-2 rounded-lg border-2 border-gray-300 focus:border-indigo-500 focus:outline-none font-semibold text-sm"
-                          >
-                            <option value={2}>2 недели</option>
-                            <option value={3}>3 недели</option>
-                            <option value={4}>4 недели</option>
-                            <option value={5}>5 недель</option>
-                            <option value={6}>6 недель</option>
-                          </select>
-                        </div>
-                      )}
-
-                      {/* Week selector tabs */}
-                      {isRotatingSchedule && (
-                        <div className="mt-4 flex gap-2 overflow-x-auto">
-                          {Array.from({ length: rotationWeeksCount }, (_, i) => (
-                            <button
-                              key={i}
-                              type="button"
-                              onClick={() => setCurrentWeekIndex(i)}
-                              className={`px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap transition-all ${
-                                currentWeekIndex === i
-                                  ? 'bg-white text-indigo-600 shadow-md border-2 border-indigo-600'
-                                  : 'bg-white/50 text-gray-600 border-2 border-transparent hover:border-gray-300'
-                              }`}
-                            >
-                              📅 Неделя {i + 1}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                        );
+                      })()}
                     </div>
 
                     {/* Tab Switcher */}
@@ -2345,11 +2359,11 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       >
                         <Video className="w-5 h-5" />
                         <span>Онлайн консультации</span>
-                        {Object.values(isRotatingSchedule ? onlineRotationSchedules[currentWeekIndex] : onlineWorkSchedule).filter(d => d.enabled).length > 0 && (
+                        {Object.values(getCurrentOnlineSchedule()).filter(d => d.enabled).length > 0 && (
                           <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
                             scheduleType === 'online' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'
                           }`}>
-                            {Object.values(isRotatingSchedule ? onlineRotationSchedules[currentWeekIndex] : onlineWorkSchedule).filter(d => d.enabled).length}
+                            {Object.values(getCurrentOnlineSchedule()).filter(d => d.enabled).length}
                           </span>
                         )}
                         {getConflictDays().length > 0 && (
@@ -2369,11 +2383,11 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       >
                         <Home className="w-5 h-5" />
                         <span>Оффлайн консультации</span>
-                        {Object.values(isRotatingSchedule ? offlineRotationSchedules[currentWeekIndex] : offlineWorkSchedule).filter(d => d.enabled).length > 0 && (
+                        {Object.values(getCurrentOfflineSchedule()).filter(d => d.enabled).length > 0 && (
                           <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
                             scheduleType === 'offline' ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-700'
                           }`}>
-                            {Object.values(isRotatingSchedule ? offlineRotationSchedules[currentWeekIndex] : offlineWorkSchedule).filter(d => d.enabled).length}
+                            {Object.values(getCurrentOfflineSchedule()).filter(d => d.enabled).length}
                           </span>
                         )}
                         {getConflictDays().length > 0 && (
@@ -2396,8 +2410,8 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                           </div>
                           <div className="space-y-3">
                             {daysOfWeek.map((day) => {
-                              const currentOnlineSchedule = isRotatingSchedule ? onlineRotationSchedules[currentWeekIndex] : onlineWorkSchedule;
-                              const currentOfflineSchedule = isRotatingSchedule ? offlineRotationSchedules[currentWeekIndex] : offlineWorkSchedule;
+                              const currentOnlineSchedule = getCurrentOnlineSchedule();
+                              const currentOfflineSchedule = getCurrentOfflineSchedule();
 
                               const hasConflict = getScheduleConflict(day.value, 'online');
                               const offlineEnabled = currentOfflineSchedule[day.value]?.enabled;
@@ -2432,11 +2446,9 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                     <div className="flex-1">
                                       <p className="font-semibold text-gray-700">
                                         {day.labelRu}
-                                        {isRotatingSchedule && (
-                                          <span className="ml-2 text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                                            {getNextDateForDay(day.dayIndex)}
-                                          </span>
-                                        )}
+                                        <span className="ml-2 text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                                          {getDateForDay(day.dayIndex)}
+                                        </span>
                                       </p>
                                       {offlineEnabled && !currentOnlineSchedule[day.value]?.enabled && (
                                         <p className="text-xs text-purple-600 mt-1">
@@ -2452,6 +2464,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                             type="time"
                                             value={currentOnlineSchedule[day.value]?.start || '09:00'}
                                             onChange={(e) => updateOnlineDayTime(day.value, 'start', e.target.value)}
+                                            step="900"
                                             className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
                                               hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
                                             }`}
@@ -2464,6 +2477,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                             type="time"
                                             value={currentOnlineSchedule[day.value]?.end || '18:00'}
                                             onChange={(e) => updateOnlineDayTime(day.value, 'end', e.target.value)}
+                                            step="900"
                                             className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
                                               hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
                                             }`}
@@ -2497,8 +2511,8 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                           </div>
                           <div className="space-y-3">
                             {daysOfWeek.map((day) => {
-                              const currentOnlineSchedule = isRotatingSchedule ? onlineRotationSchedules[currentWeekIndex] : onlineWorkSchedule;
-                              const currentOfflineSchedule = isRotatingSchedule ? offlineRotationSchedules[currentWeekIndex] : offlineWorkSchedule;
+                              const currentOnlineSchedule = getCurrentOnlineSchedule();
+                              const currentOfflineSchedule = getCurrentOfflineSchedule();
 
                               const hasConflict = getScheduleConflict(day.value, 'offline');
                               const onlineEnabled = currentOnlineSchedule[day.value]?.enabled;
@@ -2533,11 +2547,9 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                     <div className="flex-1">
                                       <p className="font-semibold text-gray-700">
                                         {day.labelRu}
-                                        {isRotatingSchedule && (
-                                          <span className="ml-2 text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                                            {getNextDateForDay(day.dayIndex)}
-                                          </span>
-                                        )}
+                                        <span className="ml-2 text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                                          {getDateForDay(day.dayIndex)}
+                                        </span>
                                       </p>
                                       {onlineEnabled && !currentOfflineSchedule[day.value]?.enabled && (
                                         <p className="text-xs text-blue-600 mt-1">
@@ -2553,6 +2565,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                             type="time"
                                             value={currentOfflineSchedule[day.value]?.start || '09:00'}
                                             onChange={(e) => updateOfflineDayTime(day.value, 'start', e.target.value)}
+                                            step="900"
                                             className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
                                               hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-purple-500'
                                             }`}
@@ -2565,6 +2578,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                             type="time"
                                             value={currentOfflineSchedule[day.value]?.end || '18:00'}
                                             onChange={(e) => updateOfflineDayTime(day.value, 'end', e.target.value)}
+                                            step="900"
                                             className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
                                               hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-purple-500'
                                             }`}
@@ -3149,104 +3163,83 @@ export default function StaffManagement({ user }: StaffManagementProps) {
 
                   {/* Work Schedule with Tabs */}
                   <div className="border-2 border-gray-200 rounded-2xl overflow-hidden">
-                    {/* Rotation Mode Toggle */}
+                    {/* Week Navigation */}
                     <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 border-b-2 border-gray-200">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <RotateCcw className="w-5 h-5 text-indigo-600" />
-                          <div>
-                            <h4 className="font-bold text-gray-900">Тип расписания</h4>
-                            <p className="text-xs text-gray-600">Выберите постоянный или ротационный график</p>
+                      {/* Week selector slider with dates */}
+                      {(() => {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+
+                        // Get the Monday of current week
+                        const currentWeekMonday = new Date(today);
+                        const dayOfWeek = currentWeekMonday.getDay();
+                        const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+                        currentWeekMonday.setDate(currentWeekMonday.getDate() + daysToMonday);
+
+                        // Calculate displayed week: current week + offset
+                        const displayedWeekStart = new Date(currentWeekMonday);
+                        displayedWeekStart.setDate(currentWeekMonday.getDate() + (currentWeekIndex * 7));
+
+                        const displayedWeekEnd = new Date(displayedWeekStart);
+                        displayedWeekEnd.setDate(displayedWeekStart.getDate() + 6);
+                        displayedWeekEnd.setHours(23, 59, 59, 999);
+
+                        const formatDate = (date: Date) => {
+                          return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+                        };
+
+                        // Check if today falls within the displayed week range
+                        const isCurrentWeek = today >= displayedWeekStart && today <= displayedWeekEnd;
+
+                        return (
+                          <div className="bg-white rounded-xl shadow-sm border-2 border-indigo-100 p-4">
+                            <div className="flex items-center justify-between gap-4">
+                              {/* Previous week button */}
+                              <button
+                                type="button"
+                                onClick={() => setCurrentWeekIndex(currentWeekIndex - 1)}
+                                className="p-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Предыдущая неделя"
+                              >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                </svg>
+                              </button>
+
+                              {/* Current week display */}
+                              <div className="flex-1 text-center">
+                                <div className="flex flex-col items-center justify-center gap-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-2xl">📅</span>
+                                    <div>
+                                      <div className="font-bold text-lg text-gray-800">
+                                        {formatDate(displayedWeekStart)} - {formatDate(displayedWeekEnd)}
+                                      </div>
+                                    </div>
+                                    {isCurrentWeek && (
+                                      <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">
+                                        Текущая
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Next week button */}
+                              <button
+                                type="button"
+                                onClick={() => setCurrentWeekIndex(currentWeekIndex + 1)}
+                                className="p-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Следующая неделя"
+                              >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2 bg-white rounded-xl p-1 shadow-sm border border-gray-200">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsRotatingSchedule(false);
-                              setCurrentWeekIndex(0);
-                            }}
-                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-                              !isRotatingSchedule
-                                ? 'bg-indigo-600 text-white shadow-md'
-                                : 'text-gray-600 hover:bg-gray-100'
-                            }`}
-                          >
-                            Постоянный
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setIsRotatingSchedule(true)}
-                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-                              isRotatingSchedule
-                                ? 'bg-indigo-600 text-white shadow-md'
-                                : 'text-gray-600 hover:bg-gray-100'
-                            }`}
-                          >
-                            Ротационный
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Week count selector */}
-                      {isRotatingSchedule && (
-                        <div className="flex items-center gap-4">
-                          <label className="text-sm font-semibold text-gray-700">
-                            Количество недель в цикле:
-                          </label>
-                          <select
-                            value={rotationWeeksCount}
-                            onChange={(e) => {
-                              const newCount = parseInt(e.target.value);
-                              setRotationWeeksCount(newCount);
-                              if (currentWeekIndex >= newCount) setCurrentWeekIndex(newCount - 1);
-                              const adjustSchedules = (schedules: any[]) => {
-                                const emptyWeek = {
-                                  monday: { start: '09:00', end: '18:00', enabled: false },
-                                  tuesday: { start: '09:00', end: '18:00', enabled: false },
-                                  wednesday: { start: '09:00', end: '18:00', enabled: false },
-                                  thursday: { start: '09:00', end: '18:00', enabled: false },
-                                  friday: { start: '09:00', end: '18:00', enabled: false },
-                                  saturday: { start: '10:00', end: '14:00', enabled: false },
-                                  sunday: { start: '10:00', end: '14:00', enabled: false },
-                                };
-                                return newCount > schedules.length
-                                  ? [...schedules, ...Array(newCount - schedules.length).fill(null).map(() => ({...emptyWeek}))]
-                                  : schedules.slice(0, newCount);
-                              };
-                              setOnlineRotationSchedules(adjustSchedules(onlineRotationSchedules));
-                              setOfflineRotationSchedules(adjustSchedules(offlineRotationSchedules));
-                            }}
-                            className="px-3 py-2 rounded-lg border-2 border-gray-300 focus:border-indigo-500 focus:outline-none font-semibold text-sm"
-                          >
-                            <option value={2}>2 недели</option>
-                            <option value={3}>3 недели</option>
-                            <option value={4}>4 недели</option>
-                            <option value={5}>5 недель</option>
-                            <option value={6}>6 недель</option>
-                          </select>
-                        </div>
-                      )}
-
-                      {/* Week selector tabs */}
-                      {isRotatingSchedule && (
-                        <div className="mt-4 flex gap-2 overflow-x-auto">
-                          {Array.from({ length: rotationWeeksCount }, (_, i) => (
-                            <button
-                              key={i}
-                              type="button"
-                              onClick={() => setCurrentWeekIndex(i)}
-                              className={`px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap transition-all ${
-                                currentWeekIndex === i
-                                  ? 'bg-white text-indigo-600 shadow-md border-2 border-indigo-600'
-                                  : 'bg-white/50 text-gray-600 border-2 border-transparent hover:border-gray-300'
-                              }`}
-                            >
-                              📅 Неделя {i + 1}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                        );
+                      })()}
                     </div>
 
                     {/* Tab Switcher */}
@@ -3262,11 +3255,11 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       >
                         <Video className="w-5 h-5" />
                         <span>Онлайн консультации</span>
-                        {Object.values(isRotatingSchedule ? onlineRotationSchedules[currentWeekIndex] : onlineWorkSchedule).filter(d => d.enabled).length > 0 && (
+                        {Object.values(getCurrentOnlineSchedule()).filter(d => d.enabled).length > 0 && (
                           <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
                             scheduleType === 'online' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'
                           }`}>
-                            {Object.values(isRotatingSchedule ? onlineRotationSchedules[currentWeekIndex] : onlineWorkSchedule).filter(d => d.enabled).length}
+                            {Object.values(getCurrentOnlineSchedule()).filter(d => d.enabled).length}
                           </span>
                         )}
                         {getConflictDays().length > 0 && (
@@ -3286,11 +3279,11 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       >
                         <Home className="w-5 h-5" />
                         <span>Оффлайн консультации</span>
-                        {Object.values(isRotatingSchedule ? offlineRotationSchedules[currentWeekIndex] : offlineWorkSchedule).filter(d => d.enabled).length > 0 && (
+                        {Object.values(getCurrentOfflineSchedule()).filter(d => d.enabled).length > 0 && (
                           <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
                             scheduleType === 'offline' ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-700'
                           }`}>
-                            {Object.values(isRotatingSchedule ? offlineRotationSchedules[currentWeekIndex] : offlineWorkSchedule).filter(d => d.enabled).length}
+                            {Object.values(getCurrentOfflineSchedule()).filter(d => d.enabled).length}
                           </span>
                         )}
                         {getConflictDays().length > 0 && (
@@ -3313,8 +3306,8 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                           </div>
                           <div className="space-y-3">
                             {daysOfWeek.map((day) => {
-                              const currentOnlineSchedule = isRotatingSchedule ? onlineRotationSchedules[currentWeekIndex] : onlineWorkSchedule;
-                              const currentOfflineSchedule = isRotatingSchedule ? offlineRotationSchedules[currentWeekIndex] : offlineWorkSchedule;
+                              const currentOnlineSchedule = getCurrentOnlineSchedule();
+                              const currentOfflineSchedule = getCurrentOfflineSchedule();
 
                               const hasConflict = getScheduleConflict(day.value, 'online');
                               const offlineEnabled = currentOfflineSchedule[day.value]?.enabled;
@@ -3349,11 +3342,9 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                     <div className="flex-1">
                                       <p className="font-semibold text-gray-700">
                                         {day.labelRu}
-                                        {isRotatingSchedule && (
-                                          <span className="ml-2 text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                                            {getNextDateForDay(day.dayIndex)}
-                                          </span>
-                                        )}
+                                        <span className="ml-2 text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                                          {getDateForDay(day.dayIndex)}
+                                        </span>
                                       </p>
                                       {offlineEnabled && !currentOnlineSchedule[day.value]?.enabled && (
                                         <p className="text-xs text-purple-600 mt-1">
@@ -3369,6 +3360,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                             type="time"
                                             value={currentOnlineSchedule[day.value]?.start || '09:00'}
                                             onChange={(e) => updateOnlineDayTime(day.value, 'start', e.target.value)}
+                                            step="900"
                                             className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
                                               hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
                                             }`}
@@ -3381,6 +3373,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                             type="time"
                                             value={currentOnlineSchedule[day.value]?.end || '18:00'}
                                             onChange={(e) => updateOnlineDayTime(day.value, 'end', e.target.value)}
+                                            step="900"
                                             className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
                                               hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
                                             }`}
@@ -3414,8 +3407,8 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                           </div>
                           <div className="space-y-3">
                             {daysOfWeek.map((day) => {
-                              const currentOnlineSchedule = isRotatingSchedule ? onlineRotationSchedules[currentWeekIndex] : onlineWorkSchedule;
-                              const currentOfflineSchedule = isRotatingSchedule ? offlineRotationSchedules[currentWeekIndex] : offlineWorkSchedule;
+                              const currentOnlineSchedule = getCurrentOnlineSchedule();
+                              const currentOfflineSchedule = getCurrentOfflineSchedule();
 
                               const hasConflict = getScheduleConflict(day.value, 'offline');
                               const onlineEnabled = currentOnlineSchedule[day.value]?.enabled;
@@ -3450,11 +3443,9 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                     <div className="flex-1">
                                       <p className="font-semibold text-gray-700">
                                         {day.labelRu}
-                                        {isRotatingSchedule && (
-                                          <span className="ml-2 text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                                            {getNextDateForDay(day.dayIndex)}
-                                          </span>
-                                        )}
+                                        <span className="ml-2 text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                                          {getDateForDay(day.dayIndex)}
+                                        </span>
                                       </p>
                                       {onlineEnabled && !currentOfflineSchedule[day.value]?.enabled && (
                                         <p className="text-xs text-blue-600 mt-1">
@@ -3470,6 +3461,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                             type="time"
                                             value={currentOfflineSchedule[day.value]?.start || '09:00'}
                                             onChange={(e) => updateOfflineDayTime(day.value, 'start', e.target.value)}
+                                            step="900"
                                             className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
                                               hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-purple-500'
                                             }`}
@@ -3482,6 +3474,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                             type="time"
                                             value={currentOfflineSchedule[day.value]?.end || '18:00'}
                                             onChange={(e) => updateOfflineDayTime(day.value, 'end', e.target.value)}
+                                            step="900"
                                             className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
                                               hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-purple-500'
                                             }`}
