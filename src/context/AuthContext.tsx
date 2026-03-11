@@ -116,21 +116,34 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => window.removeEventListener('auth:logout', handleLogoutEvent as EventListener);
   }, [setAuthHeader]);
 
-  // Load user session on first load
+  // Load user session on first load and refresh from API
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedAccessToken = getAccessToken();
-      const storedUser = localStorage.getItem("user");
+    const init = async () => {
+      if (typeof window !== "undefined") {
+        const storedAccessToken = getAccessToken();
+        const storedUser = localStorage.getItem("user");
 
-      if (storedAccessToken && storedUser) {
-        setToken(storedAccessToken);
-        setUser(JSON.parse(storedUser));
-        setAuthHeader(storedAccessToken);
-      } else {
-        setAuthHeader(null);
+        if (storedAccessToken && storedUser) {
+          setToken(storedAccessToken);
+          setUser(JSON.parse(storedUser));
+          setAuthHeader(storedAccessToken);
+
+          // Refresh user data from API to pick up role/profile changes
+          try {
+            const res = await api.get("/user-profile/profile/");
+            const freshUser: User = res.data;
+            setUser(freshUser);
+            localStorage.setItem("user", JSON.stringify(freshUser));
+          } catch {
+            // If refresh fails, keep the cached user
+          }
+        } else {
+          setAuthHeader(null);
+        }
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+    init();
   }, [setAuthHeader]);
 
   // Login

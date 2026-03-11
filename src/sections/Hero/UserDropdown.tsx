@@ -45,6 +45,7 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
           doctor: "Врач",
           patient: "Пациент",
           nurse: "Медсестра",
+          admin: "Администратор",
           doctorProfileDesc: "Личная информация",
           personalInfoDesc: "Личная информация",
           nurseProfileDesc: "Личная информация",
@@ -66,6 +67,7 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
           doctor: "Дәрігер",
           patient: "Пациент",
           nurse: "Медбике",
+          admin: "Әкімші",
           doctorProfileDesc: "Жеке ақпарат",
           personalInfoDesc: "Жеке ақпарат",
           nurseProfileDesc: "Жеке ақпарат",
@@ -87,6 +89,7 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
           doctor: "Doctor",
           patient: "Patient",
           nurse: "Nurse",
+          admin: "Administrator",
           doctorProfileDesc: "Personal information",
           personalInfoDesc: "Personal information",
           nurseProfileDesc: "Personal information",
@@ -108,6 +111,7 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
           doctor: "Doctor",
           patient: "Patient",
           nurse: "Nurse",
+          admin: "Administrator",
           doctorProfileDesc: "Personal information",
           personalInfoDesc: "Personal information",
           nurseProfileDesc: "Personal information",
@@ -269,7 +273,7 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
             {user.first_name}
           </span>
           <span className="text-[10px] sm:text-xs text-white/80 truncate">
-            {user.role === "doctor" ? t.doctor : user.role === "nurse" ? t.nurse : t.patient}
+            {user.role_display ?? (user.role === "doctor" ? t.doctor : user.role === "nurse" ? t.nurse : user.role === "admin" ? t.admin : t.patient)}
           </span>
         </div>
 

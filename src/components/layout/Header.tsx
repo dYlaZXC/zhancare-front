@@ -142,7 +142,12 @@ export const Header = ({
                 {user.first_name} {user.last_name}
               </div>
               <div className="text-xs font-medium text-gray-600 leading-tight capitalize">
-                {user.role === "doctor" ? "Доктор" : user.role === "admin" ? "Администратор" : "Пациент"}
+                {user.role_display ?? (
+                  user.role === "doctor" ? "Доктор" :
+                  user.role === "admin" ? "Администратор" :
+                  user.role === "nurse" ? "Медсестра" :
+                  "Пациент"
+                )}
               </div>
             </div>
           </div>
