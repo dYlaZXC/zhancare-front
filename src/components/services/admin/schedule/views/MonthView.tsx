@@ -73,7 +73,7 @@ export default function MonthView({
             {week.map((date) => {
               const isCurrentMonth = date.getMonth() === month;
               const dateString = toLocalDateStr(date);
-              const dayEvents = getEventsForDate(dateString, filteredEvents);
+              const dayEvents = getEventsForDate(filteredEvents, dateString);
               const isTodayDate = isToday(date);
 
               return (

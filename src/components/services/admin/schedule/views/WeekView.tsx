@@ -32,7 +32,7 @@ export default function WeekView({
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3 md:gap-4">
       {weekDays.map((day) => {
         const dateString = toLocalDateStr(day);
-        const dayEvents = getEventsForDate(dateString, filteredEvents);
+        const dayEvents = getEventsForDate(filteredEvents, dateString);
         const isTodayDate = isToday(day);
 
         return (

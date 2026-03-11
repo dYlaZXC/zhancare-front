@@ -1103,6 +1103,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       offline_consultation_price: '',
       online_consultation_price: '',
       preferred_consultation_duration: '',
+      schedule_type: 'weekly',
     });
     setSpecializations(['']);
     setWorkSchedule({
@@ -1248,6 +1249,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         offline_consultation_price: '',
         online_consultation_price: '',
         preferred_consultation_duration: '',
+        schedule_type: 'weekly',
       });
       setSpecializations(['']);
       setWorkSchedule({
@@ -1583,7 +1585,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       typeof day === 'object' && day.enabled === true
     );
 
-    return hasOnlineSchedule || hasOfflineSchedule;
+    return !!(hasOnlineSchedule || hasOfflineSchedule);
   };
 
   // Filter and sort staff based on search and filters
