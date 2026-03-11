@@ -592,66 +592,77 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
 // Event Card Component
 function EventCard({ event }: { event: ScheduleEvent }) {
   const statusColor = getStatusColor(event.status);
-  const typeColor = event.type === 'consultation'
-    ? { bg: '#ebf1ff', text: '#3772ff' }
-    : { bg: '#f3e8ff', text: '#8b5cf6' };
+  const isConsultation = event.type === 'consultation';
+  const accentColor = isConsultation ? '#3772ff' : '#8b5cf6';
+  const accentBg = isConsultation ? '#ebf1ff' : '#f3e8ff';
+  const accentBorder = isConsultation ? '#c7d7ff' : '#ddd6fe';
+
+  const initials = event.patient_name
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <motion.div
-      whileHover={{ scale: 1.02 }}
-      className="p-2 md:p-3 rounded-lg md:rounded-xl border-l-4 cursor-pointer group"
-      style={{
-        backgroundColor: typeColor.bg,
-        borderLeftColor: typeColor.text
-      }}
+      whileHover={{ y: -1, shadow: 'lg' }}
+      className="rounded-xl border cursor-pointer group overflow-hidden bg-white"
+      style={{ borderColor: accentBorder }}
     >
-      <div className="flex items-start justify-between mb-1">
-        <div className="flex items-center gap-1 md:gap-2 flex-1">
-          {event.type === 'consultation' ? (
-            <Video className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" style={{ color: typeColor.text }} />
-          ) : (
-            <Home className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" style={{ color: typeColor.text }} />
-          )}
-          <span className="text-xs md:text-sm font-bold" style={{ color: typeColor.text }}>
-            {event.time}
+      {/* Colored top bar */}
+      <div className="h-1 w-full" style={{ backgroundColor: accentColor }} />
+
+      <div className="p-2.5 md:p-3">
+        {/* Time + type + actions row */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1.5">
+            <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: accentBg }}>
+              {isConsultation
+                ? <Video className="w-3 h-3" style={{ color: accentColor }} />
+                : <Home className="w-3 h-3" style={{ color: accentColor }} />}
+            </div>
+            <span className="text-xs md:text-sm font-bold" style={{ color: accentColor }}>
+              {event.time}
+            </span>
+          </div>
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button className="w-5 h-5 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors" title="Редактировать">
+              <Edit className="w-3 h-3 text-gray-400" />
+            </button>
+            <button className="w-5 h-5 flex items-center justify-center rounded-md hover:bg-red-50 transition-colors" title="Удалить">
+              <Trash2 className="w-3 h-3 text-red-400" />
+            </button>
+          </div>
+        </div>
+
+        {/* Patient row with avatar */}
+        <div className="flex items-center gap-2 mb-1.5">
+          <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0"
+            style={{ background: `linear-gradient(135deg, ${accentColor}, ${isConsultation ? '#2c5bcc' : '#7c3aed'})` }}>
+            {initials}
+          </div>
+          <p className="text-xs md:text-sm font-semibold truncate" style={{ color: '#1e263e' }}>
+            {event.patient_name}
+          </p>
+        </div>
+
+        {/* Doctor */}
+        {(event.doctor_name || event.nurse_name) && (
+          <p className="text-[10px] md:text-xs text-gray-400 truncate pl-8 mb-1.5">
+            {event.doctor_name || event.nurse_name}
+          </p>
+        )}
+
+        {/* Status badge */}
+        <div className="pl-8">
+          <span
+            className="inline-block px-2 py-0.5 rounded-md text-[10px] md:text-xs font-semibold"
+            style={{ backgroundColor: statusColor.bg, color: statusColor.text }}
+          >
+            {statusColor.label}
           </span>
         </div>
-        <div className="flex items-center gap-1 opacity-0 md:group-hover:opacity-100 transition-opacity">
-          <button className="p-1 rounded hover:bg-white/50 transition-colors" title="Редактировать">
-            <Edit className="w-3 h-3 text-gray-600" />
-          </button>
-          <button className="p-1 rounded hover:bg-white/50 transition-colors" title="Удалить">
-            <Trash2 className="w-3 h-3 text-red-600" />
-          </button>
-        </div>
-      </div>
-
-      <p className="text-xs md:text-sm font-semibold mb-0.5 truncate" style={{ color: '#1e263e' }}>
-        {event.patient_name}
-      </p>
-
-      <p className="text-[10px] md:text-xs text-gray-700 mb-1 truncate">
-        {event.doctor_name || event.nurse_name}
-      </p>
-
-      {event.specialization && (
-        <p className="text-[10px] md:text-xs text-gray-600 truncate">{event.specialization}</p>
-      )}
-
-      {event.location && (
-        <p className="text-xs text-gray-600 mt-1">📍 {event.location}</p>
-      )}
-
-      <div className="mt-2">
-        <span
-          className="inline-block px-2 py-0.5 rounded-md text-xs font-semibold"
-          style={{
-            backgroundColor: statusColor.bg,
-            color: statusColor.text
-          }}
-        >
-          {statusColor.label}
-        </span>
       </div>
     </motion.div>
   );
@@ -1706,13 +1717,14 @@ function DoctorsScheduleContent({
     specialization?: string;
     years_of_experience?: number;
     preferred_consultation_duration?: number;
-    online_work_schedule?: any;
+    online_work_schedule?: Record<string, { start: string; end: string; enabled: boolean }>;
+    weekly_schedules?: Record<string, { online?: Record<string, { start: string; end: string; enabled: boolean }>; offline?: Record<string, { start: string; end: string; enabled: boolean }> }>;
   }>>([]);
   const [loading, setLoading] = useState(false);
-  const [loadingSlots, setLoadingSlots] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDoctor, setSelectedDoctor] = useState<number | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<any>(null);
+  const [modalAvailableSlots, setModalAvailableSlots] = useState<any[]>([]);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [doctorSlots, setDoctorSlots] = useState<Map<number, any[]>>(new Map());
 
@@ -1734,45 +1746,79 @@ function DoctorsScheduleContent({
     fetchDoctors();
   }, []);
 
-  // Fetch available slots for all doctors when date changes
+  // Compute available slots from schedule data (no API calls needed)
   useEffect(() => {
     if (doctors.length === 0 || !selectedDate) return;
 
-    const fetchAllDoctorSlots = async () => {
-      setLoadingSlots(true);
-      const slotsMap = new Map<number, any[]>();
+    const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const slotsMap = new Map<number, any[]>();
 
-      try {
-        await Promise.all(
-          doctors.map(async (doctor) => {
-            try {
-              const response = await api.get('/consultations/available-slots/', {
-                params: {
-                  doctor_id: doctor.id,
-                  date: selectedDate,
-                  duration: doctor.preferred_consultation_duration || 30
-                }
-              });
-              slotsMap.set(doctor.id, response.data.available_slots || []);
-            } catch (err) {
-              console.error(`Failed to fetch slots for doctor ${doctor.id}:`, err);
-              slotsMap.set(doctor.id, []);
-            }
-          })
-        );
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const isToday = selectedDate === todayStr;
+    const nowMinutes = isToday ? now.getHours() * 60 + now.getMinutes() : -1;
 
-        setDoctorSlots(slotsMap);
-      } finally {
-        setLoadingSlots(false);
+    for (const doctor of doctors) {
+      const duration = doctor.preferred_consultation_duration || 30;
+      const targetDate = new Date(selectedDate + 'T00:00:00');
+      const dayName = DAY_NAMES[targetDate.getDay()];
+
+      // Find Monday of target week for weekly_schedules lookup
+      const dayOfWeek = targetDate.getDay();
+      const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      const weekMonday = new Date(targetDate);
+      weekMonday.setDate(targetDate.getDate() - daysFromMonday);
+      const weekKey = weekMonday.toISOString().split('T')[0];
+
+      // Resolve day schedule: weekly_schedules > online_work_schedule
+      let daySchedule: { start: string; end: string; enabled: boolean } | undefined;
+      const weekEntry = doctor.weekly_schedules?.[weekKey];
+      if (weekEntry?.online?.[dayName]) {
+        daySchedule = weekEntry.online[dayName];
+      } else if (doctor.online_work_schedule?.[dayName]) {
+        daySchedule = doctor.online_work_schedule[dayName];
       }
-    };
 
-    fetchAllDoctorSlots();
+      if (!daySchedule?.enabled) {
+        slotsMap.set(doctor.id, []);
+        continue;
+      }
+
+      const [startH, startM] = daySchedule.start.split(':').map(Number);
+      const [endH, endM] = daySchedule.end.split(':').map(Number);
+      let cur = startH * 60 + startM;
+      const end = endH * 60 + endM;
+      const slots: any[] = [];
+
+      while (cur + duration <= end) {
+        // Skip slots that have already started if viewing today
+        if (isToday && cur <= nowMinutes) {
+          cur += duration;
+          continue;
+        }
+        const s = `${String(Math.floor(cur / 60)).padStart(2, '0')}:${String(cur % 60).padStart(2, '0')}`;
+        const e = `${String(Math.floor((cur + duration) / 60)).padStart(2, '0')}:${String((cur + duration) % 60).padStart(2, '0')}`;
+        slots.push({ id: `gen_${s.replace(':', '')}`, start_time: s, end_time: e });
+        cur += duration;
+      }
+
+      slotsMap.set(doctor.id, slots);
+    }
+
+    setDoctorSlots(slotsMap);
   }, [doctors, selectedDate]);
 
   const handleSlotClick = (doctorId: number, slot: any) => {
     setSelectedDoctor(doctorId);
     setSelectedSlot(slot);
+    setModalAvailableSlots(doctorSlots.get(doctorId) || []);
+    setShowAssignModal(true);
+  };
+
+  const handleAddClick = (doctorId: number, availableSlots: any[]) => {
+    setSelectedDoctor(doctorId);
+    setSelectedSlot(null);
+    setModalAvailableSlots(availableSlots);
     setShowAssignModal(true);
   };
 
@@ -1787,30 +1833,25 @@ function DoctorsScheduleContent({
   return (
     <div className="h-full flex flex-col">
       {/* Controls */}
-      <div className="mb-4 md:mb-6 p-3 md:p-4 bg-gray-50 rounded-xl md:rounded-2xl border-2 border-gray-200">
-        <div className="flex flex-col gap-3 md:gap-4">
-          {/* Date Picker */}
-          <div className="flex items-center gap-2 md:gap-3">
-            <label className="text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Дата:</label>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => onDateChange(e.target.value)}
-              className="flex-1 md:flex-none px-3 md:px-4 py-1.5 md:py-2 text-sm md:text-base rounded-lg md:rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
-            />
-          </div>
-
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Поиск врача..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 md:pl-12 pr-3 md:pr-4 py-1.5 md:py-2 text-sm md:text-base rounded-lg md:rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
-            />
-          </div>
+      <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-gray-600 whitespace-nowrap">Дата:</label>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => onDateChange(e.target.value)}
+            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+          />
+        </div>
+        <div className="relative flex-1 w-full sm:w-auto">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Поиск врача..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+          />
         </div>
       </div>
 
@@ -1831,116 +1872,164 @@ function DoctorsScheduleContent({
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5">
                 {filteredDoctors.map((doctor) => {
                   const slots = doctorSlots.get(doctor.id) || [];
-                  const bookedSlots = events.filter(
-                    e => e.doctor_id === doctor.id && e.date === selectedDate
-                  );
-                  const availableSlots = slots.filter(slot =>
-                    !bookedSlots.some(e => e.time === slot.start_time)
-                  );
+                  const bookedSlots = events.filter(e => e.doctor_id === doctor.id && e.date === selectedDate);
+                  const availableSlots = slots.filter(s => !bookedSlots.some(e => e.time === s.start_time));
+                  const hasSchedule = bookedSlots.length > 0 || availableSlots.length > 0;
+                  const totalSlots = bookedSlots.length + availableSlots.length;
+                  const fillRatio = totalSlots > 0 ? bookedSlots.length / totalSlots : -1;
+
+                  const gradients = [
+                    ['#3772ff', '#2c5bcc'],
+                    ['#8b5cf6', '#7c3aed'],
+                    ['#f43f5e', '#e11d48'],
+                    ['#f59e0b', '#d97706'],
+                    ['#10b981', '#059669'],
+                    ['#06b6d4', '#0891b2'],
+                  ];
+                  const [g1, g2] = gradients[doctor.id % gradients.length];
+
+                  // Status: gray = no schedule, green = available, yellow = >70% booked, red = full
+                  const statusColor = !hasSchedule
+                    ? 'bg-gray-300'
+                    : fillRatio === 1
+                    ? 'bg-red-500'
+                    : fillRatio > 0.7
+                    ? 'bg-amber-400'
+                    : 'bg-emerald-500';
 
                   return (
-                    <motion.div
-                      key={doctor.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="rounded-2xl md:rounded-3xl p-3 md:p-4 border-2 border-gray-200 bg-white min-h-[400px] md:min-h-[500px] flex flex-col"
-                    >
-                      {/* Doctor header */}
-                      <div className="mb-3 md:mb-4 pb-2 md:pb-3 border-b-2 border-gray-200">
-                        <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
-                          <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm md:text-base flex-shrink-0">
-                            {doctor.first_name[0]}{doctor.last_name[0]}
+                    <div key={doctor.id} className="bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col">
+
+                      {/* Card header */}
+                      <div className="p-5 pb-4">
+                        <div className="flex items-start gap-3">
+                          {/* Avatar with status dot */}
+                          <div className="relative flex-shrink-0">
+                            <div
+                              className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-sm shadow-sm"
+                              style={{ background: `linear-gradient(135deg, ${g1}, ${g2})` }}
+                            >
+                              {doctor.first_name[0]}{doctor.last_name[0]}
+                            </div>
+                            <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${statusColor}`} />
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-bold text-sm md:text-base truncate" style={{ color: '#1e263e' }}>
+
+                          {/* Name + specialty */}
+                          <div className="flex-1 min-w-0 pt-0.5">
+                            <p className="text-sm font-bold text-gray-900 leading-tight truncate">
                               {doctor.first_name} {doctor.last_name}
-                            </h3>
-                            {doctor.specialization && (
-                              <p className="text-blue-600 text-[10px] md:text-xs flex items-center gap-1">
-                                <Stethoscope className="w-2.5 h-2.5 md:w-3 md:h-3" />
-                                <span className="truncate">{doctor.specialization}</span>
-                              </p>
-                            )}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-0.5 truncate">
+                              {doctor.specialization || 'Специализация не указана'}
+                            </p>
+                            {/* Inline stats */}
+                            <div className="flex items-center gap-3 mt-2">
+                              <span className={`flex items-center gap-1 text-xs font-semibold ${bookedSlots.length > 0 ? 'text-blue-500' : 'text-gray-300'}`}>
+                                <div className={`w-1.5 h-1.5 rounded-full ${bookedSlots.length > 0 ? 'bg-blue-500' : 'bg-gray-300'}`} />
+                                {bookedSlots.length} записей
+                              </span>
+                              <span className={`flex items-center gap-1 text-xs font-semibold ${availableSlots.length > 0 ? 'text-emerald-600' : 'text-gray-300'}`}>
+                                <div className={`w-1.5 h-1.5 rounded-full ${availableSlots.length > 0 ? 'bg-emerald-500' : 'bg-gray-300'}`} />
+                                {availableSlots.length} свободно
+                              </span>
+                            </div>
                           </div>
+
+                          {/* Add button */}
+                          <button
+                            onClick={() => handleAddClick(doctor.id, availableSlots)}
+                            disabled={availableSlots.length === 0}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-xl flex-shrink-0 shadow-sm hover:shadow-md transition-all disabled:opacity-25 disabled:cursor-not-allowed"
+                            style={{ background: `linear-gradient(135deg, ${g1}, ${g2})` }}
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            Запись
+                          </button>
                         </div>
-                        <button
-                          onClick={() => handleSlotClick(doctor.id, availableSlots[0])}
-                          disabled={availableSlots.length === 0}
-                          className="w-full py-1.5 md:py-2 rounded-lg md:rounded-xl border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1 md:gap-2 text-xs md:text-sm text-gray-600 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Plus className="w-3 h-3 md:w-4 md:h-4" />
-                          Добавить
-                        </button>
                       </div>
 
-                      {/* Events list */}
-                      <div className="flex-1 space-y-2 overflow-y-auto">
-                        {loadingSlots ? (
-                          <div className="flex items-center justify-center py-6 md:py-8">
-                            <Loader2 className="w-5 h-5 md:w-6 md:h-6 animate-spin text-blue-600" />
+                      {/* Divider */}
+                      <div className="h-px bg-gray-100 mx-5" />
+
+                      {/* Slots body */}
+                      <div className="p-5 pt-4 flex-1 space-y-4">
+                        {!hasSchedule ? (
+                          <div className="flex flex-col items-center justify-center py-6 gap-2">
+                            <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center">
+                              <CalendarIcon className="w-5 h-5 text-gray-300" />
+                            </div>
+                            <p className="text-xs text-gray-400 font-medium">Расписание не задано</p>
                           </div>
-                        ) : bookedSlots.length > 0 ? (
-                          <>
-                            <h4 className="text-[10px] md:text-xs font-bold text-gray-500 uppercase mb-2">
-                              Записи на {new Date(selectedDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
-                            </h4>
-                            {bookedSlots.map((event) => (
-                              <motion.div
-                                key={event.id}
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                className="p-2 md:p-3 rounded-lg md:rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200"
-                              >
-                                <div className="flex items-start gap-1.5 md:gap-2">
-                                  <div className="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-lg bg-blue-500 text-white font-bold text-xs md:text-sm flex-shrink-0">
-                                    {event.time}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="font-bold text-xs md:text-sm text-gray-900 truncate mb-0.5 md:mb-1">
-                                      {event.patient_name}
-                                    </p>
-                                    <div className="flex items-center gap-1 md:gap-2 text-[10px] md:text-xs text-gray-600">
-                                      {event.type === 'consultation' ? (
-                                        <span className="flex items-center gap-0.5 md:gap-1">
-                                          <Video className="w-2.5 h-2.5 md:w-3 md:h-3" />
-                                          <span className="hidden sm:inline">Онлайн</span>
-                                        </span>
-                                      ) : (
-                                        <span className="flex items-center gap-0.5 md:gap-1">
-                                          <Home className="w-2.5 h-2.5 md:w-3 md:h-3" />
-                                          <span className="hidden sm:inline">Оффлайн</span>
-                                        </span>
-                                      )}
-                                      <span className="hidden sm:inline">•</span>
-                                      <span>{event.duration} мин</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </motion.div>
-                            ))}
-                          </>
                         ) : (
-                          <div className="text-center py-6 md:py-8 text-gray-400 text-xs md:text-sm">
-                            Нет записей
-                          </div>
+                          <>
+                            {/* Booked appointments */}
+                            {bookedSlots.length > 0 && (
+                              <div>
+                                <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-2">Записи</p>
+                                <div className="flex flex-col gap-2">
+                                  {bookedSlots.map(event => (
+                                    <div key={event.id} className="flex items-center gap-3 bg-blue-50/60 border border-blue-100 rounded-xl px-3.5 py-2.5 group">
+                                      {/* Time block */}
+                                      <div
+                                        className="w-12 h-12 rounded-xl flex flex-col items-center justify-center text-white flex-shrink-0 shadow-sm"
+                                        style={{ background: 'linear-gradient(135deg, #3772ff, #2c5bcc)' }}
+                                      >
+                                        <span className="text-[11px] font-black leading-tight">{event.time}</span>
+                                        <span className="text-[8px] opacity-70 mt-0.5">{event.duration}мин</span>
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-bold text-gray-900 truncate leading-tight">{event.patient_name}</p>
+                                        <div className="flex items-center gap-1.5 mt-1">
+                                          <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${
+                                            event.type === 'consultation'
+                                              ? 'bg-blue-100 text-blue-700'
+                                              : 'bg-violet-100 text-violet-700'
+                                          }`}>
+                                            {event.type === 'consultation' ? <Video className="w-2.5 h-2.5" /> : <Home className="w-2.5 h-2.5" />}
+                                            {event.type === 'consultation' ? 'Онлайн' : 'Оффлайн'}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Available slots */}
+                            {availableSlots.length > 0 && (
+                              <div>
+                                <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-2">Свободные слоты</p>
+                                <div className="grid grid-cols-4 gap-2">
+                                  {availableSlots.slice(0, 12).map((slot: any, i: number) => (
+                                    <button
+                                      key={i}
+                                      onClick={() => handleSlotClick(doctor.id, slot)}
+                                      className="flex flex-col items-center justify-center py-2.5 bg-emerald-50 border border-emerald-200 rounded-xl hover:bg-emerald-500 hover:border-emerald-500 transition-all group"
+                                    >
+                                      <span className="text-xs font-black text-emerald-700 group-hover:text-white leading-tight">{slot.start_time}</span>
+                                      <span className="text-[9px] text-emerald-400 group-hover:text-emerald-100 mt-0.5">{slot.end_time}</span>
+                                    </button>
+                                  ))}
+                                  {availableSlots.length > 12 && (
+                                    <button
+                                      onClick={() => handleAddClick(doctor.id, availableSlots)}
+                                      className="flex flex-col items-center justify-center py-2.5 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-all"
+                                    >
+                                      <span className="text-xs font-bold text-gray-500">+{availableSlots.length - 12}</span>
+                                      <span className="text-[9px] text-gray-400 mt-0.5">ещё</span>
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
-
-                      {/* Available slots footer */}
-                      <div className="mt-3 md:mt-4 pt-2 md:pt-3 border-t-2 border-gray-200">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] md:text-xs text-gray-500 font-semibold uppercase">
-                            Доступно
-                          </span>
-                          <span className={`text-base md:text-lg font-bold ${availableSlots.length > 0 ? 'text-emerald-600' : 'text-gray-400'}`}>
-                            {loadingSlots ? '...' : availableSlots.length}
-                          </span>
-                        </div>
-                      </div>
-                    </motion.div>
+                    </div>
                   );
                 })}
               </div>
@@ -1948,19 +2037,24 @@ function DoctorsScheduleContent({
       </div>
 
       {/* Assignment Modal */}
-      {showAssignModal && selectedDoctor && selectedSlot && (
+      {showAssignModal && selectedDoctor && (
         <AssignConsultationModal
           isOpen={showAssignModal}
           onClose={() => {
             setShowAssignModal(false);
             setSelectedDoctor(null);
             setSelectedSlot(null);
+            setModalAvailableSlots([]);
           }}
           doctorId={selectedDoctor}
+          doctorName={(() => { const d = doctors.find(x => x.id === selectedDoctor); return d ? `${d.first_name} ${d.last_name}` : ''; })()}
+          doctorSpecialization={doctors.find(x => x.id === selectedDoctor)?.specialization}
           slot={selectedSlot}
+          availableSlots={modalAvailableSlots}
           date={selectedDate}
           onAssigned={() => {
             setShowAssignModal(false);
+            setModalAvailableSlots([]);
             onEventAdded();
           }}
         />
@@ -1969,29 +2063,45 @@ function DoctorsScheduleContent({
   );
 }
 
-// Quick Assignment Modal
+// Patient Booking Modal
 function AssignConsultationModal({
   isOpen,
   onClose,
   doctorId,
+  doctorName,
+  doctorSpecialization,
   slot,
+  availableSlots,
   date,
   onAssigned
 }: {
   isOpen: boolean;
   onClose: () => void;
   doctorId: number;
+  doctorName: string;
+  doctorSpecialization?: string;
   slot: any;
+  availableSlots: any[];
   date: string;
   onAssigned: () => void;
 }) {
   const [patients, setPatients] = useState<any[]>([]);
-  const [selectedPatient, setSelectedPatient] = useState('');
+  const [patientSearch, setPatientSearch] = useState('');
+  const [showPatientDropdown, setShowPatientDropdown] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<{ id: number; name: string; phone?: string } | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<any>(slot || null);
+  const [consultationType, setConsultationType] = useState<'online' | 'offline'>('online');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const patientSearchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isOpen) return;
+    setSelectedSlot(slot || null);
+    setSelectedPatient(null);
+    setPatientSearch('');
+    setNotes('');
+    setConsultationType('online');
 
     const fetchPatients = async () => {
       try {
@@ -2001,106 +2111,254 @@ function AssignConsultationModal({
         console.error("Failed to load patients:", err);
       }
     };
-
     fetchPatients();
   }, [isOpen]);
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (patientSearchRef.current && !patientSearchRef.current.contains(e.target as Node)) {
+        setShowPatientDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filteredPatients = patients.filter(p => {
+    const name = `${p.first_name} ${p.last_name}`.toLowerCase();
+    const phone = (p.phone || '').toLowerCase();
+    const q = patientSearch.toLowerCase();
+    return name.includes(q) || phone.includes(q);
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedPatient) { toast.error('Выберите пациента'); return; }
+    if (!selectedSlot) { toast.error('Выберите время приёма'); return; }
     setSubmitting(true);
 
     try {
       await api.post('/schedule/', {
         type: 'consultation',
-        patient_id: selectedPatient,
+        patient_id: selectedPatient.id,
         doctor_id: doctorId,
         date: date,
-        time: slot.start_time,
+        time: selectedSlot.start_time,
         duration: 30,
+        consultation_type: consultationType,
         notes: notes
       });
-
-      toast.success('Консультация успешно назначена!');
+      toast.success('Запись успешно создана!');
       onAssigned();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Не удалось назначить консультацию');
+      toast.error(err.response?.data?.error || 'Не удалось создать запись');
     } finally {
       setSubmitting(false);
     }
   };
 
+  const initials = doctorName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-white rounded-3xl p-6 max-w-md w-full"
+        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 10 }}
+        transition={{ duration: 0.2 }}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
       >
-        <h3 className="text-xl font-bold mb-4" style={{ color: '#1e263e' }}>
-          Назначить консультацию
-        </h3>
-
-        <div className="mb-4 p-4 bg-blue-50 rounded-2xl">
-          <div className="flex items-center gap-2 text-blue-700 font-semibold">
-            <Clock className="w-5 h-5" />
-            {slot.start_time} - {slot.end_time}
+        {/* Header */}
+        <div className="px-6 py-5 border-b border-gray-100 flex items-start justify-between">
+          <div>
+            <h3 className="text-lg font-bold" style={{ color: '#1e263e' }}>Новая запись</h3>
+            <p className="text-sm text-gray-400 mt-0.5">{formattedDate}</p>
           </div>
-          <div className="text-sm text-blue-600 mt-1">
-            {new Date(date).toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
-          </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
-              Пациент <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={selectedPatient}
-              onChange={(e) => setSelectedPatient(e.target.value)}
-              required
-              className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
-            >
-              <option value="">Выберите пациента</option>
-              {patients.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.first_name} {p.last_name} {p.email && `(${p.email})`}
-                </option>
-              ))}
-            </select>
+        <form onSubmit={handleSubmit}>
+          <div className="px-6 py-5 space-y-5">
+
+            {/* Doctor info */}
+            <div className="flex items-center gap-3 p-3.5 bg-gray-50 rounded-xl border border-gray-100">
+              <div className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-white font-bold text-sm"
+                style={{ background: 'linear-gradient(135deg, #3772ff 0%, #6c47ff 100%)' }}>
+                {initials}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-gray-900 truncate">{doctorName}</p>
+                {doctorSpecialization && <p className="text-xs text-gray-400 truncate">{doctorSpecialization}</p>}
+              </div>
+              <span className="flex-shrink-0 text-xs font-medium px-2 py-1 bg-blue-50 text-blue-600 rounded-lg">Врач</span>
+            </div>
+
+            {/* Slot picker */}
+            <div>
+              <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
+                Время приёма <span className="text-red-500">*</span>
+              </label>
+              {availableSlots.length === 0 ? (
+                <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 rounded-xl border border-amber-100 text-sm text-amber-700">
+                  <Clock className="w-4 h-4 flex-shrink-0" />
+                  Нет свободных слотов на этот день
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {availableSlots.map((s, i) => {
+                    const isSelected = selectedSlot?.start_time === s.start_time;
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setSelectedSlot(s)}
+                        className={`px-3 py-1.5 text-sm font-medium rounded-lg border transition-all ${
+                          isSelected
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                            : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:text-blue-600'
+                        }`}
+                      >
+                        {s.start_time}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {selectedSlot && (
+                <div className="mt-2 flex items-center gap-1.5 text-xs text-emerald-600">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Выбрано: {selectedSlot.start_time} – {selectedSlot.end_time}
+                </div>
+              )}
+            </div>
+
+            {/* Consultation type */}
+            <div>
+              <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
+                Тип консультации
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {([['online', 'Онлайн', Video], ['offline', 'Офлайн', Home]] as const).map(([val, label, Icon]) => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => setConsultationType(val)}
+                    className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${
+                      consultationType === val
+                        ? val === 'online'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-violet-500 bg-violet-50 text-violet-700'
+                        : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Patient search */}
+            <div ref={patientSearchRef} className="relative">
+              <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
+                Пациент <span className="text-red-500">*</span>
+              </label>
+              {selectedPatient ? (
+                <div className="flex items-center gap-3 px-4 py-3 bg-emerald-50 rounded-xl border-2 border-emerald-200">
+                  <div className="w-8 h-8 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+                    {selectedPatient.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900">{selectedPatient.name}</p>
+                    {selectedPatient.phone && <p className="text-xs text-gray-500">{selectedPatient.phone}</p>}
+                  </div>
+                  <button type="button" onClick={() => { setSelectedPatient(null); setPatientSearch(''); }}
+                    className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-emerald-200 text-emerald-600 transition-colors">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={patientSearch}
+                      onChange={e => { setPatientSearch(e.target.value); setShowPatientDropdown(true); }}
+                      onFocus={() => setShowPatientDropdown(true)}
+                      placeholder="Поиск по имени или телефону..."
+                      className="w-full pl-9 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none text-sm transition-colors"
+                    />
+                  </div>
+                  {showPatientDropdown && patientSearch.length > 0 && (
+                    <div className="absolute z-10 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden max-h-48 overflow-y-auto">
+                      {filteredPatients.length === 0 ? (
+                        <div className="px-4 py-3 text-sm text-gray-400 text-center">Пациенты не найдены</div>
+                      ) : (
+                        filteredPatients.slice(0, 8).map(p => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"
+                            onClick={() => {
+                              setSelectedPatient({ id: p.id, name: `${p.first_name} ${p.last_name}`, phone: p.phone });
+                              setPatientSearch('');
+                              setShowPatientDropdown(false);
+                            }}
+                          >
+                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-400 to-gray-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+                              {p.first_name[0]}{p.last_name[0]}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-gray-900">{p.first_name} {p.last_name}</p>
+                              {p.phone && <p className="text-xs text-gray-400">{p.phone}</p>}
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
+                Примечания
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={2}
+                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none resize-none text-sm transition-colors"
+                placeholder="Дополнительная информация о записи..."
+              />
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
-              Примечания
-            </label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-              className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none resize-none"
-              placeholder="Дополнительная информация..."
-            />
-          </div>
-
-          <div className="flex gap-3">
+          {/* Footer */}
+          <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-6 py-3 rounded-2xl border-2 border-gray-200 font-semibold hover:bg-gray-50 transition-colors"
+              className="flex-1 px-5 py-2.5 rounded-xl border-2 border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
             >
               Отмена
             </button>
             <button
               type="submit"
-              disabled={submitting}
-              className="flex-1 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
+              disabled={submitting || !selectedPatient || !selectedSlot}
+              className="flex-1 px-5 py-2.5 rounded-xl text-white text-sm font-semibold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: 'linear-gradient(135deg, #3772ff 0%, #2c5bcc 100%)' }}
             >
               {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              {submitting ? 'Назначение...' : 'Назначить'}
+              {submitting ? 'Создание...' : 'Создать запись'}
             </button>
           </div>
         </form>
