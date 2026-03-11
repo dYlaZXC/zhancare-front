@@ -18,6 +18,7 @@ type Props = {
     first_name: string;
     last_name?: string;
     role: string;
+    role_display?: string;
     email?: string;
     avatar?: string;
   };
