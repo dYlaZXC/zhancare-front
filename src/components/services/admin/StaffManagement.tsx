@@ -38,6 +38,7 @@ import {
 
 import bnClinicLogo from "@/assets/clinics_logos/bn-clinica.png";
 import ayalaClinicLogo from "@/assets/clinics_logos/ayala_clinic.png";
+import ScheduleTypeSelector from "./schedule/components/ScheduleTypeSelector";
 
 /**
  * Staff member interface representing doctors and nurses.
@@ -77,6 +78,7 @@ interface StaffMember {
   offline_consultation_price?: number;
   online_consultation_price?: number;
   preferred_consultation_duration?: number; // in minutes
+  schedule_type?: 'weekly' | 'constant'; // Type of schedule: weekly (different each day) or constant (same every day)
   work_schedule?: {
     [key: string]: { // day name as key
       start: string; // HH:MM format
@@ -452,6 +454,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     offline_consultation_price: '',
     online_consultation_price: '',
     preferred_consultation_duration: '',
+    schedule_type: 'weekly' as 'weekly' | 'constant',  // Schedule type for doctors
   });
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -597,6 +600,16 @@ export default function StaffManagement({ user }: StaffManagementProps) {
 
   // Toggle day selection for online schedule
   const toggleOnlineDay = useCallback((day: string) => {
+    // Update onlineWorkSchedule for saving
+    setOnlineWorkSchedule(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        enabled: !prev[day].enabled,
+      }
+    }));
+
+    // Also update weeklySchedules for multi-week support
     const weekStartDate = getWeekStartDate(currentWeekIndex);
     setWeeklySchedules(prev => {
       const currentWeekSchedule = prev[weekStartDate] || {
@@ -664,6 +677,16 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       return { start: newStart, end: newEnd };
     };
 
+    // Update onlineWorkSchedule for saving
+    setOnlineWorkSchedule(prev => {
+      const adjusted = adjustTime(prev[day]);
+      return {
+        ...prev,
+        [day]: { ...prev[day], ...adjusted }
+      };
+    });
+
+    // Also update weeklySchedules for multi-week support
     const weekStartDate = getWeekStartDate(currentWeekIndex);
     setWeeklySchedules(prev => {
       const currentWeekSchedule = prev[weekStartDate] || {
@@ -703,6 +726,16 @@ export default function StaffManagement({ user }: StaffManagementProps) {
 
   // Toggle day selection for offline schedule
   const toggleOfflineDay = useCallback((day: string) => {
+    // Update offlineWorkSchedule for saving
+    setOfflineWorkSchedule(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        enabled: !prev[day].enabled,
+      }
+    }));
+
+    // Also update weeklySchedules for multi-week support
     const weekStartDate = getWeekStartDate(currentWeekIndex);
     setWeeklySchedules(prev => {
       const currentWeekSchedule = prev[weekStartDate] || {
@@ -770,6 +803,16 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       return { start: newStart, end: newEnd };
     };
 
+    // Update offlineWorkSchedule for saving
+    setOfflineWorkSchedule(prev => {
+      const adjusted = adjustTime(prev[day]);
+      return {
+        ...prev,
+        [day]: { ...prev[day], ...adjusted }
+      };
+    });
+
+    // Also update weeklySchedules for multi-week support
     const weekStartDate = getWeekStartDate(currentWeekIndex);
     setWeeklySchedules(prev => {
       const currentWeekSchedule = prev[weekStartDate] || {
@@ -1295,6 +1338,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       offline_consultation_price: member.offline_consultation_price?.toString() || '',
       online_consultation_price: member.online_consultation_price?.toString() || '',
       preferred_consultation_duration: member.preferred_consultation_duration?.toString() || '',
+      schedule_type: (member.schedule_type || 'weekly') as 'weekly' | 'constant',
     });
     setSpecializations(specializationsArray);
     setWorkSchedule(member.work_schedule || {
@@ -1315,7 +1359,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       saturday: { start: '10:00', end: '14:00', enabled: false },
       sunday: { start: '10:00', end: '14:00', enabled: false },
     });
-    setOfflineWorkSchedule(member.offline_work_schedule || {
+    const loadedOfflineSchedule = member.offline_work_schedule || {
       monday: { start: '09:00', end: '18:00', enabled: false },
       tuesday: { start: '09:00', end: '18:00', enabled: false },
       wednesday: { start: '09:00', end: '18:00', enabled: false },
@@ -1323,10 +1367,37 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       friday: { start: '09:00', end: '18:00', enabled: false },
       saturday: { start: '10:00', end: '14:00', enabled: false },
       sunday: { start: '10:00', end: '14:00', enabled: false },
-    });
+    };
+    setOfflineWorkSchedule(loadedOfflineSchedule);
 
-    // Load weekly schedules
-    setWeeklySchedules(member.weekly_schedules || {});
+    // Initialize weekly schedules from online/offline work schedules
+    // This ensures the UI displays the saved schedule when editing
+    const loadedOnlineSchedule = member.online_work_schedule || member.work_schedule || {
+      monday: { start: '09:00', end: '18:00', enabled: false },
+      tuesday: { start: '09:00', end: '18:00', enabled: false },
+      wednesday: { start: '09:00', end: '18:00', enabled: false },
+      thursday: { start: '09:00', end: '18:00', enabled: false },
+      friday: { start: '09:00', end: '18:00', enabled: false },
+      saturday: { start: '10:00', end: '14:00', enabled: false },
+      sunday: { start: '10:00', end: '14:00', enabled: false },
+    };
+
+    // Get current week start date
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + mondayOffset);
+    monday.setHours(0, 0, 0, 0);
+    const weekStartDate = monday.toISOString().split('T')[0];
+
+    // Initialize weeklySchedules with current schedule data
+    setWeeklySchedules(member.weekly_schedules || {
+      [weekStartDate]: {
+        online: loadedOnlineSchedule,
+        offline: loadedOfflineSchedule
+      }
+    });
 
     // Reset to current week
     setCurrentWeekIndex(0);
@@ -1372,6 +1443,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         offline_consultation_price: formData.offline_consultation_price ? Number(formData.offline_consultation_price) : null,
         online_consultation_price: formData.online_consultation_price ? Number(formData.online_consultation_price) : null,
         preferred_consultation_duration: formData.preferred_consultation_duration ? Number(formData.preferred_consultation_duration) : null,
+        schedule_type: formData.schedule_type,  // Include schedule type
         work_schedule: workSchedule,  // Keep for backward compatibility
         online_work_schedule: onlineWorkSchedule,  // Keep for backward compatibility
         offline_work_schedule: offlineWorkSchedule,  // Keep for backward compatibility
@@ -1387,6 +1459,12 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       if (isGlobalAdmin && formData.clinic_id) {
         updateData.clinic_id = formData.clinic_id;
       }
+
+      // Debug: Log the schedule data being sent
+      console.log('=== Sending schedule data to backend ===');
+      console.log('Online schedule:', JSON.stringify(updateData.online_work_schedule, null, 2));
+      console.log('Offline schedule:', JSON.stringify(updateData.offline_work_schedule, null, 2));
+      console.log('Schedule type:', updateData.schedule_type);
 
       const response = await api.patch(`/staff/${editingMember.id}/`, updateData);
       const updatedStaff = response.data;
@@ -1492,13 +1570,20 @@ export default function StaffManagement({ user }: StaffManagementProps) {
   const hasConfiguredSchedule = (member: StaffMember): boolean => {
     if (member.role !== 'doctor' && member.role !== 'nurse') return false;
 
-    const schedule = member.online_work_schedule;
-    if (!schedule) return false;
+    // Check both online and offline schedules
+    const onlineSchedule = member.online_work_schedule;
+    const offlineSchedule = member.offline_work_schedule;
 
-    // Check if at least one day is enabled
-    return Object.values(schedule).some((day: any) =>
+    // Check if at least one day is enabled in either schedule
+    const hasOnlineSchedule = onlineSchedule && Object.values(onlineSchedule).some((day: any) =>
       typeof day === 'object' && day.enabled === true
     );
+
+    const hasOfflineSchedule = offlineSchedule && Object.values(offlineSchedule).some((day: any) =>
+      typeof day === 'object' && day.enabled === true
+    );
+
+    return hasOnlineSchedule || hasOfflineSchedule;
   };
 
   // Filter and sort staff based on search and filters
@@ -2267,10 +2352,25 @@ export default function StaffManagement({ user }: StaffManagementProps) {
 
                   {/* Work Schedule with Tabs */}
                   <div className="border-2 border-gray-200 rounded-2xl overflow-hidden">
-                    {/* Week Navigation */}
-                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 border-b-2 border-gray-200">
-                      {/* Week selector slider with dates */}
-                      {(() => {
+                    {/* Schedule Type Selector - At the top of schedule section */}
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 border-b-2 border-gray-200">
+                      <label className="block text-sm font-semibold text-gray-700 mb-3">
+                        Тип расписания <span className="text-red-500">*</span>
+                      </label>
+                      <ScheduleTypeSelector
+                        scheduleType={formData.schedule_type}
+                        onChange={(type) => setFormData({ ...formData, schedule_type: type })}
+                      />
+                      <p className="text-xs text-gray-500 mt-3">
+                        💡 <strong>Недельное:</strong> разное расписание для каждого дня недели. <strong>Постоянное:</strong> одинаковое расписание каждый день.
+                      </p>
+                    </div>
+
+                    {/* Week Navigation - Only show for weekly schedule */}
+                    {formData.schedule_type === 'weekly' && (
+                      <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 border-b-2 border-gray-200">
+                        {/* Week selector slider with dates */}
+                        {(() => {
                         const today = new Date();
                         today.setHours(0, 0, 0, 0);
 
@@ -2344,7 +2444,8 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                           </div>
                         );
                       })()}
-                    </div>
+                      </div>
+                    )}
 
                     {/* Tab Switcher */}
                     <div className="flex bg-gray-50 border-b-2 border-gray-200">
@@ -2446,9 +2547,11 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                     <div className="flex-1">
                                       <p className="font-semibold text-gray-700">
                                         {day.labelRu}
-                                        <span className="ml-2 text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                                          {getDateForDay(day.dayIndex)}
-                                        </span>
+                                        {formData.schedule_type === 'weekly' && (
+                                          <span className="ml-2 text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                                            {getDateForDay(day.dayIndex)}
+                                          </span>
+                                        )}
                                       </p>
                                       {offlineEnabled && !currentOnlineSchedule[day.value]?.enabled && (
                                         <p className="text-xs text-purple-600 mt-1">
@@ -2547,9 +2650,11 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                     <div className="flex-1">
                                       <p className="font-semibold text-gray-700">
                                         {day.labelRu}
-                                        <span className="ml-2 text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                                          {getDateForDay(day.dayIndex)}
-                                        </span>
+                                        {formData.schedule_type === 'weekly' && (
+                                          <span className="ml-2 text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                                            {getDateForDay(day.dayIndex)}
+                                          </span>
+                                        )}
                                       </p>
                                       {onlineEnabled && !currentOfflineSchedule[day.value]?.enabled && (
                                         <p className="text-xs text-blue-600 mt-1">
@@ -3163,10 +3268,25 @@ export default function StaffManagement({ user }: StaffManagementProps) {
 
                   {/* Work Schedule with Tabs */}
                   <div className="border-2 border-gray-200 rounded-2xl overflow-hidden">
-                    {/* Week Navigation */}
-                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 border-b-2 border-gray-200">
-                      {/* Week selector slider with dates */}
-                      {(() => {
+                    {/* Schedule Type Selector - At the top of schedule section */}
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 border-b-2 border-gray-200">
+                      <label className="block text-sm font-semibold text-gray-700 mb-3">
+                        Тип расписания <span className="text-red-500">*</span>
+                      </label>
+                      <ScheduleTypeSelector
+                        scheduleType={formData.schedule_type}
+                        onChange={(type) => setFormData({ ...formData, schedule_type: type })}
+                      />
+                      <p className="text-xs text-gray-500 mt-3">
+                        💡 <strong>Недельное:</strong> разное расписание для каждого дня недели. <strong>Постоянное:</strong> одинаковое расписание каждый день.
+                      </p>
+                    </div>
+
+                    {/* Week Navigation - Only show for weekly schedule */}
+                    {formData.schedule_type === 'weekly' && (
+                      <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 border-b-2 border-gray-200">
+                        {/* Week selector slider with dates */}
+                        {(() => {
                         const today = new Date();
                         today.setHours(0, 0, 0, 0);
 
@@ -3240,7 +3360,8 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                           </div>
                         );
                       })()}
-                    </div>
+                      </div>
+                    )}
 
                     {/* Tab Switcher */}
                     <div className="flex bg-gray-50 border-b-2 border-gray-200">
@@ -3342,9 +3463,11 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                     <div className="flex-1">
                                       <p className="font-semibold text-gray-700">
                                         {day.labelRu}
-                                        <span className="ml-2 text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                                          {getDateForDay(day.dayIndex)}
-                                        </span>
+                                        {formData.schedule_type === 'weekly' && (
+                                          <span className="ml-2 text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                                            {getDateForDay(day.dayIndex)}
+                                          </span>
+                                        )}
                                       </p>
                                       {offlineEnabled && !currentOnlineSchedule[day.value]?.enabled && (
                                         <p className="text-xs text-purple-600 mt-1">
@@ -3443,9 +3566,11 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                                     <div className="flex-1">
                                       <p className="font-semibold text-gray-700">
                                         {day.labelRu}
-                                        <span className="ml-2 text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                                          {getDateForDay(day.dayIndex)}
-                                        </span>
+                                        {formData.schedule_type === 'weekly' && (
+                                          <span className="ml-2 text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                                            {getDateForDay(day.dayIndex)}
+                                          </span>
+                                        )}
                                       </p>
                                       {onlineEnabled && !currentOfflineSchedule[day.value]?.enabled && (
                                         <p className="text-xs text-blue-600 mt-1">

@@ -285,7 +285,7 @@ export default function HeroMeetStyle() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 1.2, type: "spring", stiffness: 100 }}
-            className="mt-8 flex flex-wrap items-center justify-center gap-3 text-xs"
+            className="mt-8 mb-10 sm:mb-6 flex flex-wrap items-center justify-center gap-3 text-xs"
           >
             <motion.div
               className="group flex items-center gap-2 bg-white/[0.06] backdrop-blur-md px-4 py-2 rounded-full border border-white/15 hover:bg-white/[0.08] hover:border-white/20 transition-all duration-300 cursor-pointer"

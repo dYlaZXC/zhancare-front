@@ -16,6 +16,7 @@ export const useChat = ({
   messagesContainerRef
 }: ChatHookProps) => {
   const [streaming, setStreaming] = useState(false);
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const messageIdCounter = useRef(0); // Use useRef instead of useState
   const activeRequestRef = useRef<AbortController | null>(null); // Track active requests
 
@@ -166,12 +167,14 @@ export const useChat = ({
       }
 
       const showDoctorButton = fullText.includes("<show_doctor_button>true</show_doctor_button>");
-      fullText = fullText.replace("<show_doctor_button>true</show_doctor_button>", "").trim();
+      fullText = fullText.replace(/<show_doctor_button>.*?<\/show_doctor_button>/g, "").trim();
 
       // console.log("Processing text:", fullText);
 
       let index = 0;
       let animationId: NodeJS.Timeout;
+
+      setStreamingMessageId(botMessageId);
 
       const typeChar = () => {
         // Check if request was aborted
@@ -182,30 +185,29 @@ export const useChat = ({
 
         if (index <= fullText.length) {
           const currentText = fullText.slice(0, index);
-          
-          setMessages((prev) => 
-            prev.map((msg) => 
+
+          setMessages((prev) =>
+            prev.map((msg) =>
               msg.id === botMessageId && msg.sender === "bot"
                 ? { ...msg, text: currentText }
                 : msg
             )
           );
-          
+
           index++;
-          animationId = setTimeout(typeChar, 30);
+          animationId = setTimeout(typeChar, 15);
         } else {
-          // console.log("Finished typing, setting final state...");
           // Final update with doctor button
-          setMessages((prev) => 
-            prev.map((msg) => 
+          setMessages((prev) =>
+            prev.map((msg) =>
               msg.id === botMessageId && msg.sender === "bot"
                 ? { ...msg, text: fullText, showDoctorButton }
                 : msg
             )
           );
+          setStreamingMessageId(null);
           setStreaming(false);
-          activeRequestRef.current = null; // Clear active request
-          // console.log("Streaming complete!");
+          activeRequestRef.current = null;
         }
       };
 
@@ -216,13 +218,14 @@ export const useChat = ({
       
       // Only update if not aborted
       if (!abortController.signal.aborted) {
-        setMessages((prev) => 
-          prev.map((msg) => 
+        setMessages((prev) =>
+          prev.map((msg) =>
             msg.id === botMessageId && msg.sender === "bot"
               ? { ...msg, text: getErrorMessage() }
               : msg
           )
         );
+        setStreamingMessageId(null);
         setStreaming(false);
         activeRequestRef.current = null;
       }
@@ -250,6 +253,7 @@ export const useChat = ({
 
   return {
     streaming,
+    streamingMessageId,
     handleSend,
     handleImageUpload
   };

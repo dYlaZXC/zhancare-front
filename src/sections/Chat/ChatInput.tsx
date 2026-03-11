@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent } from "react";
+import { ChangeEvent, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaPaperPlane, FaImage, FaTimes } from "react-icons/fa";
 import Image from "next/image";
@@ -32,16 +32,30 @@ export default function ChatInput({
 }: ChatInputProps) {
   const getPlaceholderText = () => {
     switch (language) {
-      case "ru": return "Что вас беспокоит?";
-      case "en": return "What's bothering you?";
-      case "kz": return "Сізді не мазалайды?";
-      default: return "What's bothering you?";
+      case "ru": return "Например: температура 38 и болит горло";
+      case "en": return "E.g.: fever 38°C and sore throat";
+      case "kz": return "Мысалы: температура 38 және жұтқыншақ ауруы";
+      default: return "E.g.: fever 38°C and sore throat";
+    }
+  };
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = "auto";
+      el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto";
+      }
       onSend();
     }
   };
@@ -77,13 +91,15 @@ export default function ChatInput({
       </AnimatePresence>
 
       {/* Input Field */}
-      <div className="flex items-center space-x-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-3">
-        <input
-          type="text"
+      <div className="flex items-end space-x-3 bg-white/[0.08] backdrop-blur-sm border border-white/[0.12] rounded-2xl px-4 py-3 hover:border-white/20 transition-colors focus-within:border-[#4F7FFF]/60" style={{ transition: "border-color 0.2s, box-shadow 0.2s" }}>
+        <textarea
+          ref={textareaRef}
+          rows={1}
           placeholder={getPlaceholderText()}
-          className="flex-1 bg-transparent text-white placeholder-white/50 outline-none"
+          className="flex-1 bg-transparent text-white placeholder-white/50 outline-none resize-none leading-relaxed"
+          style={{ maxHeight: "120px" }}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={handleTextareaChange}
           onKeyDown={handleKeyDown}
           disabled={streaming}
         />
@@ -101,27 +117,33 @@ export default function ChatInput({
 
         {/* Send Button */}
         <motion.button
-          onClick={onSend}
+          onClick={() => {
+            if (textareaRef.current) textareaRef.current.style.height = "auto";
+            onSend();
+          }}
           disabled={streaming || (!input.trim() && !imagePreview)}
-          className={`p-2 rounded-lg transition ${
+          className="p-2.5 rounded-xl transition text-white flex-shrink-0"
+          style={
             streaming || (!input.trim() && !imagePreview)
-              ? "opacity-50 cursor-not-allowed text-white/40"
-              : "bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white hover:shadow-lg"
-          }`}
-          whileHover={!streaming && (input.trim() || imagePreview) ? { scale: 1.05 } : {}}
-          whileTap={!streaming && (input.trim() || imagePreview) ? { scale: 0.95 } : {}}
+              ? { background: "rgba(255,255,255,0.06)", opacity: 0.4, cursor: "not-allowed" }
+              : { background: "linear-gradient(135deg, #4F7FFF, #6AA2FF)", boxShadow: "0 4px 18px rgba(79,127,255,0.45)" }
+          }
+          whileHover={!streaming && (input.trim() || imagePreview) ? { scale: 1.08 } : {}}
+          whileTap={!streaming && (input.trim() || imagePreview) ? { scale: 0.94 } : {}}
         >
-          <FaPaperPlane size={16} />
+          <FaPaperPlane size={14} />
         </motion.button>
       </div>
 
       {/* Suggestion Chips */}
       {messages.length === 0 && (
-        <SuggestionChips
-          language={language}
-          streaming={streaming}
-          onSuggestionClick={setInput}
-        />
+        <div className="pb-2 sm:pb-0">
+          <SuggestionChips
+            language={language}
+            streaming={streaming}
+            onSuggestionClick={setInput}
+          />
+        </div>
       )}
     </div>
   );
