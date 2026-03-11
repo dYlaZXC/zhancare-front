@@ -4,6 +4,31 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 404 Page */
+.not-found-404-text {
+  background: linear-gradient(135deg, #001e80 0%, #1a2fc8 50%, #3772ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 40px rgba(55, 114, 255, 0.5));
+}
+
+.not-found-404-reflection {
+  background: linear-gradient(135deg, #001e80 0%, #1a2fc8 50%, #3772ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  -webkit-mask-image: linear-gradient(to bottom, black, transparent);
+  mask-image: linear-gradient(to bottom, black, transparent);
+}
+
+.not-found-grid-bg {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
 /* FontAwesome - Prevent FOUC (Flash of Unstyled Content) */
 svg.svg-inline--fa {
   display: inline-block;
