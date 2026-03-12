@@ -1838,20 +1838,31 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                               Не работает
                             </span>
                           )}
-                          {/* Schedule status badge for doctors */}
-                          {member.role === 'doctor' && (
-                            hasConfiguredSchedule(member) ? (
-                              <span className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
-                                <CheckCircle className="w-3 h-3" />
-                                Расписание настроено
-                              </span>
-                            ) : (
+                          {/* Schedule status badges for doctors/nurses */}
+                          {(member.role === 'doctor' || member.role === 'nurse') && (() => {
+                            const hasOnline = !!(member.online_work_schedule && Object.keys(member.online_work_schedule).length > 0);
+                            const hasOffline = !!(member.offline_work_schedule && Object.keys(member.offline_work_schedule).length > 0);
+                            if (!hasOnline && !hasOffline) return (
                               <span className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
                                 <AlertCircle className="w-3 h-3" />
                                 Нет расписания
                               </span>
-                            )
-                          )}
+                            );
+                            return (<>
+                              {hasOnline && (
+                                <span className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+                                  <CheckCircle className="w-3 h-3" />
+                                  Онлайн расписание
+                                </span>
+                              )}
+                              {hasOffline && (
+                                <span className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
+                                  <CheckCircle className="w-3 h-3" />
+                                  Офлайн расписание
+                                </span>
+                              )}
+                            </>);
+                          })()}
                         </div>
 
                         {member.specialization && (
