@@ -6,7 +6,9 @@ import {
   Video,
   Home,
   Stethoscope,
-  Loader2
+  Loader2,
+  Clock,
+  CalendarCheck
 } from "lucide-react";
 import { ScheduleEvent } from '../types/scheduleTypes';
 
@@ -29,6 +31,15 @@ interface DoctorScheduleCardProps {
   onSlotClick: (doctorId: number, slot: any) => void;
 }
 
+const AVATAR_GRADIENTS = [
+  'from-blue-500 to-indigo-600',
+  'from-emerald-500 to-teal-600',
+  'from-violet-500 to-purple-600',
+  'from-rose-500 to-pink-600',
+  'from-amber-500 to-orange-600',
+  'from-cyan-500 to-sky-600',
+];
+
 export function DoctorScheduleCard({
   doctor,
   slots,
@@ -37,108 +48,155 @@ export function DoctorScheduleCard({
   selectedDate,
   onSlotClick
 }: DoctorScheduleCardProps) {
-  const availableSlots = slots.filter(slot =>
-    !bookedSlots.some(e => e.time === slot.start_time)
-  );
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+  const isToday = selectedDate === todayStr;
+
+  const availableSlots = slots.filter(slot => {
+    if (bookedSlots.some(e => e.time === slot.start_time)) return false;
+    if (isToday) {
+      const [h, m] = slot.start_time.split(':').map(Number);
+      const slotTime = new Date();
+      slotTime.setHours(h, m, 0, 0);
+      if (slotTime <= now) return false;
+    }
+    return true;
+  });
+
+  const gradientClass = AVATAR_GRADIENTS[doctor.id % AVATAR_GRADIENTS.length];
+  const hasActivity = bookedSlots.length > 0 || availableSlots.length > 0;
 
   return (
     <motion.div
       key={doctor.id}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl md:rounded-3xl p-3 md:p-4 border-2 border-gray-200 bg-white min-h-[400px] md:min-h-[500px] flex flex-col"
+      className="rounded-2xl border border-gray-200 bg-white flex flex-col shadow-sm hover:shadow-md transition-shadow overflow-hidden"
     >
       {/* Doctor header */}
-      <div className="mb-3 md:mb-4 pb-2 md:pb-3 border-b-2 border-gray-200">
-        <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
-          <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm md:text-base flex-shrink-0">
+      <div className="px-4 pt-4 pb-3 border-b border-gray-100">
+        <div className="flex items-center gap-3 mb-3">
+          <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${gradientClass} flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm`}>
             {doctor.first_name[0]}{doctor.last_name[0]}
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-sm md:text-base truncate" style={{ color: '#1e263e' }}>
+            <h3 className="font-bold text-sm text-gray-900 truncate leading-tight">
               {doctor.first_name} {doctor.last_name}
             </h3>
-            {doctor.specialization && (
-              <p className="text-blue-600 text-[10px] md:text-xs flex items-center gap-1">
-                <Stethoscope className="w-2.5 h-2.5 md:w-3 md:h-3" />
+            {doctor.specialization ? (
+              <p className="text-blue-600 text-xs flex items-center gap-1 mt-0.5">
+                <Stethoscope className="w-3 h-3 flex-shrink-0" />
                 <span className="truncate">{doctor.specialization}</span>
               </p>
+            ) : (
+              <p className="text-gray-400 text-xs mt-0.5">Специализация не указана</p>
             )}
           </div>
         </div>
-        <button
-          onClick={() => onSlotClick(doctor.id, availableSlots[0])}
-          disabled={availableSlots.length === 0}
-          className="w-full py-1.5 md:py-2 rounded-lg md:rounded-xl border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1 md:gap-2 text-xs md:text-sm text-gray-600 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Plus className="w-3 h-3 md:w-4 md:h-4" />
-          Добавить
-        </button>
+
+        {/* Stats row */}
+        <div className="flex items-center gap-3 text-xs">
+          <span className="flex items-center gap-1 text-blue-600 font-semibold">
+            <CalendarCheck className="w-3.5 h-3.5" />
+            {loadingSlots ? '–' : bookedSlots.length} записей
+          </span>
+          <span className="text-gray-300">·</span>
+          <span className={`flex items-center gap-1 font-semibold ${availableSlots.length > 0 ? 'text-emerald-600' : 'text-gray-400'}`}>
+            <Clock className="w-3.5 h-3.5" />
+            {loadingSlots ? '–' : availableSlots.length} свободно
+          </span>
+        </div>
       </div>
 
-      {/* Events list */}
-      <div className="flex-1 space-y-2 overflow-y-auto">
+      {/* Body */}
+      <div className="flex-1 flex flex-col overflow-hidden">
         {loadingSlots ? (
-          <div className="flex items-center justify-center py-6 md:py-8">
-            <Loader2 className="w-5 h-5 md:w-6 md:h-6 animate-spin text-blue-600" />
+          <div className="flex items-center justify-center py-10">
+            <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
           </div>
-        ) : bookedSlots.length > 0 ? (
-          <>
-            <h4 className="text-[10px] md:text-xs font-bold text-gray-500 uppercase mb-2">
-              Записи на {new Date(selectedDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
-            </h4>
-            {bookedSlots.map((event) => (
-              <motion.div
-                key={event.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="p-2 md:p-3 rounded-lg md:rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200"
-              >
-                <div className="flex items-start gap-1.5 md:gap-2">
-                  <div className="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-lg bg-blue-500 text-white font-bold text-xs md:text-sm flex-shrink-0">
-                    {event.time}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-xs md:text-sm text-gray-900 truncate mb-0.5 md:mb-1">
-                      {event.patient_name}
-                    </p>
-                    <div className="flex items-center gap-1 md:gap-2 text-[10px] md:text-xs text-gray-600">
-                      {event.type === 'consultation' ? (
-                        <span className="flex items-center gap-0.5 md:gap-1">
-                          <Video className="w-2.5 h-2.5 md:w-3 md:h-3" />
-                          <span className="hidden sm:inline">Онлайн</span>
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-0.5 md:gap-1">
-                          <Home className="w-2.5 h-2.5 md:w-3 md:h-3" />
-                          <span className="hidden sm:inline">Оффлайн</span>
-                        </span>
-                      )}
-                      <span className="hidden sm:inline">•</span>
-                      <span>{event.duration} мин</span>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </>
+        ) : !hasActivity ? (
+          <div className="flex flex-col items-center justify-center py-8 px-4 text-center flex-1">
+            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-2">
+              <CalendarCheck className="w-5 h-5 text-gray-400" />
+            </div>
+            <p className="text-xs text-gray-400 font-medium">Расписание не задано</p>
+            <p className="text-[11px] text-gray-300 mt-0.5">на этот день</p>
+          </div>
         ) : (
-          <div className="text-center py-6 md:py-8 text-gray-400 text-xs md:text-sm">
-            Нет записей
+          <div className="flex flex-col divide-y divide-gray-50">
+            {/* Booked appointments */}
+            {bookedSlots.length > 0 && (
+              <div className="px-4 py-3">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+                  Записи
+                </p>
+                <div className="space-y-2">
+                  {bookedSlots.map((event) => (
+                    <motion.div
+                      key={event.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="flex items-center gap-3 p-2.5 rounded-xl bg-blue-50 border border-blue-100"
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-blue-500 text-white font-bold text-xs flex items-center justify-center flex-shrink-0 leading-tight text-center">
+                        {event.time}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-xs text-gray-900 truncate">{event.patient_name}</p>
+                        <div className="flex items-center gap-1 text-[10px] text-gray-500 mt-0.5">
+                          {event.type === 'consultation'
+                            ? <><Video className="w-3 h-3" /> Онлайн</>
+                            : <><Home className="w-3 h-3" /> Оффлайн</>}
+                          <span className="text-gray-300">·</span>
+                          <span>{event.duration} мин</span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Available slots */}
+            {availableSlots.length > 0 && (
+              <div className="px-4 py-3">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+                  Свободные слоты
+                </p>
+                <div className="flex flex-col gap-1.5">
+                  {availableSlots.map((slot: any, i: number) => (
+                    <button
+                      key={i}
+                      onClick={() => onSlotClick(doctor.id, slot)}
+                      className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-emerald-50 border border-emerald-100 hover:bg-emerald-500 hover:border-emerald-500 text-emerald-700 hover:text-white transition-all group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span className="font-bold text-sm">{slot.start_time}</span>
+                        <span className="text-xs opacity-60 group-hover:opacity-80">→ {slot.end_time}</span>
+                      </div>
+                      <span className="text-[10px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                        + Записать
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* Available slots footer */}
-      <div className="mt-3 md:mt-4 pt-2 md:pt-3 border-t-2 border-gray-200">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] md:text-xs text-gray-500 font-semibold uppercase">
-            Доступно
-          </span>
-          <span className={`text-base md:text-lg font-bold ${availableSlots.length > 0 ? 'text-emerald-600' : 'text-gray-400'}`}>
-            {loadingSlots ? '...' : availableSlots.length}
-          </span>
-        </div>
+      {/* Footer: Add booking button */}
+      <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/50">
+        <button
+          onClick={() => onSlotClick(doctor.id, availableSlots[0] ?? null)}
+          disabled={availableSlots.length === 0 && !loadingSlots}
+          className="w-full py-2 rounded-xl border-2 border-dashed border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition-colors flex items-center justify-center gap-2 text-xs text-gray-500 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed font-semibold"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Добавить запись
+        </button>
       </div>
     </motion.div>
   );

@@ -428,6 +428,9 @@ export default function StaffManagement({ user }: StaffManagementProps) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleMember, setScheduleMember] = useState<StaffMember | null>(null);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -1185,6 +1188,28 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     return Object.keys(errors).length === 0;
   };
 
+  // Convert weeklySchedules (JSON per-week format) → DoctorSchedule rows array
+  const buildSchedulesArray = () => {
+    const DAY_TO_WEEKDAY: Record<string, number> = {
+      monday: 0, tuesday: 1, wednesday: 2, thursday: 3,
+      friday: 4, saturday: 5, sunday: 6,
+    };
+    const rows: Array<{ consultation_type: string; weekday: number; start_time: string; end_time: string; is_active: boolean }> = [];
+    // Use the first (most recent) week entry as the recurring pattern
+    const firstEntry = Object.values(weeklySchedules)[0];
+    if (!firstEntry) return rows;
+    for (const type of ['online', 'offline'] as const) {
+      const dayMap = firstEntry[type];
+      if (!dayMap) continue;
+      for (const [day, cfg] of Object.entries(dayMap)) {
+        if (cfg.enabled) {
+          rows.push({ consultation_type: type, weekday: DAY_TO_WEEKDAY[day] ?? 0, start_time: cfg.start, end_time: cfg.end, is_active: true });
+        }
+      }
+    }
+    return rows;
+  };
+
   const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -1217,10 +1242,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         offline_consultation_price: formData.offline_consultation_price ? Number(formData.offline_consultation_price) : null,
         online_consultation_price: formData.online_consultation_price ? Number(formData.online_consultation_price) : null,
         preferred_consultation_duration: formData.preferred_consultation_duration ? Number(formData.preferred_consultation_duration) : null,
-        work_schedule: workSchedule,  // Keep for backward compatibility
-        online_work_schedule: onlineWorkSchedule,  // Keep for backward compatibility
-        offline_work_schedule: offlineWorkSchedule,  // Keep for backward compatibility
-        weekly_schedules: weeklySchedules,  // Send weekly schedules
+        schedules: buildSchedulesArray(),
       };
 
       const response = await api.post("/staff/", payload);
@@ -1372,19 +1394,27 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     };
     setOfflineWorkSchedule(loadedOfflineSchedule);
 
-    // Initialize weekly schedules from online/offline work schedules
-    // This ensures the UI displays the saved schedule when editing
-    const loadedOnlineSchedule = member.online_work_schedule || member.work_schedule || {
-      monday: { start: '09:00', end: '18:00', enabled: false },
-      tuesday: { start: '09:00', end: '18:00', enabled: false },
-      wednesday: { start: '09:00', end: '18:00', enabled: false },
-      thursday: { start: '09:00', end: '18:00', enabled: false },
-      friday: { start: '09:00', end: '18:00', enabled: false },
-      saturday: { start: '10:00', end: '14:00', enabled: false },
-      sunday: { start: '10:00', end: '14:00', enabled: false },
+    // Build weeklySchedules from DoctorSchedule rows (new normalized model)
+    const WEEKDAY_TO_NAME: Record<number, string> = {
+      0: 'monday', 1: 'tuesday', 2: 'wednesday', 3: 'thursday',
+      4: 'friday', 5: 'saturday', 6: 'sunday',
     };
+    const defaultDay = (start: string, end: string, enabled = false) => ({ start, end, enabled });
+    const emptyWeek = () => ({
+      online: {
+        monday: defaultDay('09:00', '18:00'), tuesday: defaultDay('09:00', '18:00'),
+        wednesday: defaultDay('09:00', '18:00'), thursday: defaultDay('09:00', '18:00'),
+        friday: defaultDay('09:00', '18:00'), saturday: defaultDay('10:00', '14:00'),
+        sunday: defaultDay('10:00', '14:00'),
+      },
+      offline: {
+        monday: defaultDay('09:00', '18:00'), tuesday: defaultDay('09:00', '18:00'),
+        wednesday: defaultDay('09:00', '18:00'), thursday: defaultDay('09:00', '18:00'),
+        friday: defaultDay('09:00', '18:00'), saturday: defaultDay('10:00', '14:00'),
+        sunday: defaultDay('10:00', '14:00'),
+      },
+    });
 
-    // Get current week start date
     const now = new Date();
     const dayOfWeek = now.getDay();
     const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
@@ -1393,18 +1423,111 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     monday.setHours(0, 0, 0, 0);
     const weekStartDate = monday.toISOString().split('T')[0];
 
-    // Initialize weeklySchedules with current schedule data
-    setWeeklySchedules(member.weekly_schedules || {
-      [weekStartDate]: {
-        online: loadedOnlineSchedule,
-        offline: loadedOfflineSchedule
+    const weekEntry = emptyWeek();
+    const scheduleRows: Array<{ consultation_type: 'online' | 'offline'; weekday: number; start_time: string; end_time: string; is_active: boolean }> = member.schedules || [];
+    for (const row of scheduleRows) {
+      const dayName = WEEKDAY_TO_NAME[row.weekday];
+      if (dayName && (row.consultation_type === 'online' || row.consultation_type === 'offline')) {
+        weekEntry[row.consultation_type][dayName] = { start: row.start_time.slice(0, 5), end: row.end_time.slice(0, 5), enabled: row.is_active };
       }
-    });
+    }
+    setWeeklySchedules({ [weekStartDate]: weekEntry });
 
     // Reset to current week
     setCurrentWeekIndex(0);
 
     setShowEditModal(true);
+  };
+
+  const buildWeeklySchedulesFromMember = (member: StaffMember) => {
+    const WEEKDAY_TO_NAME: Record<number, string> = {
+      0: 'monday', 1: 'tuesday', 2: 'wednesday', 3: 'thursday',
+      4: 'friday', 5: 'saturday', 6: 'sunday',
+    };
+    const d = (start: string, end: string, enabled = false) => ({ start, end, enabled });
+    const emptyWeek = () => ({
+      online: { monday: d('09:00','18:00'), tuesday: d('09:00','18:00'), wednesday: d('09:00','18:00'), thursday: d('09:00','18:00'), friday: d('09:00','18:00'), saturday: d('10:00','14:00'), sunday: d('10:00','14:00') },
+      offline: { monday: d('09:00','18:00'), tuesday: d('09:00','18:00'), wednesday: d('09:00','18:00'), thursday: d('09:00','18:00'), friday: d('09:00','18:00'), saturday: d('10:00','14:00'), sunday: d('10:00','14:00') },
+    });
+    const now = new Date();
+    const dow = now.getDay();
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + (dow === 0 ? -6 : 1 - dow));
+    monday.setHours(0, 0, 0, 0);
+    const weekStartDate = monday.toISOString().split('T')[0];
+    const weekEntry = emptyWeek();
+    const rows: Array<{ consultation_type: 'online' | 'offline'; weekday: number; start_time: string; end_time: string; is_active: boolean }> = (member as any).schedules || [];
+    for (const row of rows) {
+      const dayName = WEEKDAY_TO_NAME[row.weekday];
+      if (dayName && (row.consultation_type === 'online' || row.consultation_type === 'offline')) {
+        weekEntry[row.consultation_type][dayName] = { start: row.start_time.slice(0, 5), end: row.end_time.slice(0, 5), enabled: row.is_active };
+      }
+    }
+    return { [weekStartDate]: weekEntry };
+  };
+
+  const buildEmptyWeeklySchedules = () => {
+    const d = (start: string, end: string) => ({ start, end, enabled: false });
+    const now = new Date();
+    const dow = now.getDay();
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + (dow === 0 ? -6 : 1 - dow));
+    monday.setHours(0, 0, 0, 0);
+    const weekStartDate = monday.toISOString().split('T')[0];
+    return {
+      [weekStartDate]: {
+        online: { monday: d('09:00','18:00'), tuesday: d('09:00','18:00'), wednesday: d('09:00','18:00'), thursday: d('09:00','18:00'), friday: d('09:00','18:00'), saturday: d('10:00','14:00'), sunday: d('10:00','14:00') },
+        offline: { monday: d('09:00','18:00'), tuesday: d('09:00','18:00'), wednesday: d('09:00','18:00'), thursday: d('09:00','18:00'), friday: d('09:00','18:00'), saturday: d('10:00','14:00'), sunday: d('10:00','14:00') },
+      },
+    };
+  };
+
+  const openScheduleModal = async (member: StaffMember) => {
+    setScheduleMember(member);
+    setShowScheduleModal(true);
+    setScheduleLoading(true);
+    try {
+      const response = await api.get(`/staff/${member.id}/`);
+      const fresh: StaffMember = response.data;
+      setScheduleMember(fresh);
+      setFormData(prev => ({ ...prev, schedule_type: (fresh.schedule_type || 'weekly') as 'weekly' | 'constant' }));
+      setWeeklySchedules(buildWeeklySchedulesFromMember(fresh));
+    } catch {
+      // fallback to local data if fetch fails
+      setFormData(prev => ({ ...prev, schedule_type: (member.schedule_type || 'weekly') as 'weekly' | 'constant' }));
+      setWeeklySchedules(buildWeeklySchedulesFromMember(member));
+    } finally {
+      setCurrentWeekIndex(0);
+      setScheduleLoading(false);
+    }
+  };
+
+  const handleSaveSchedule = async () => {
+    if (!scheduleMember) return;
+
+    const conflictDays = getConflictDays();
+    if (conflictDays.length > 0) {
+      toast.error(`⛔ Обнаружены конфликты расписания на ${conflictDays.length} ${conflictDays.length === 1 ? 'день' : 'дней'}. Исправьте конфликты перед сохранением.`);
+      return;
+    }
+
+    setScheduleLoading(true);
+    try {
+      const response = await api.patch(`/staff/${scheduleMember.id}/`, {
+        schedules: buildSchedulesArray(),
+        schedule_type: formData.schedule_type,
+      });
+      const updatedStaff = response.data;
+      setStaff(staff.map(m => m.id === scheduleMember.id ? updatedStaff : m));
+      toast.success('Расписание успешно обновлено!');
+      setShowScheduleModal(false);
+      setScheduleMember(null);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || err.response?.data?.detail || err.message || 'Не удалось обновить расписание';
+      toast.error(errorMessage);
+    } finally {
+      setScheduleLoading(false);
+    }
   };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
@@ -1445,11 +1568,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         offline_consultation_price: formData.offline_consultation_price ? Number(formData.offline_consultation_price) : null,
         online_consultation_price: formData.online_consultation_price ? Number(formData.online_consultation_price) : null,
         preferred_consultation_duration: formData.preferred_consultation_duration ? Number(formData.preferred_consultation_duration) : null,
-        schedule_type: formData.schedule_type,  // Include schedule type
-        work_schedule: workSchedule,  // Keep for backward compatibility
-        online_work_schedule: onlineWorkSchedule,  // Keep for backward compatibility
-        offline_work_schedule: offlineWorkSchedule,  // Keep for backward compatibility
-        weekly_schedules: weeklySchedules,  // Send weekly schedules
+        schedules: buildSchedulesArray(),
       };
 
       // Only include password if it was changed
@@ -1950,6 +2069,15 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.9 }}
+                              onClick={() => openScheduleModal(member)}
+                              className="p-2.5 rounded-lg hover:bg-white transition-all group"
+                              title="Расписание"
+                            >
+                              <Calendar className="w-5 h-5 text-gray-500 group-hover:text-indigo-600 transition-colors" />
+                            </motion.button>
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
                               onClick={() => handleDeleteClick(member)}
                               className="p-2.5 rounded-lg hover:bg-white transition-all group"
                               title="Удалить сотрудника"
@@ -2363,393 +2491,6 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                     </p>
                   </div>
 
-                  {/* Work Schedule with Tabs */}
-                  <div className="border-2 border-gray-200 rounded-2xl overflow-hidden">
-                    {/* Schedule Type Selector - At the top of schedule section */}
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 border-b-2 border-gray-200">
-                      <label className="block text-sm font-semibold text-gray-700 mb-3">
-                        Тип расписания <span className="text-red-500">*</span>
-                      </label>
-                      <ScheduleTypeSelector
-                        scheduleType={formData.schedule_type}
-                        onChange={(type) => setFormData({ ...formData, schedule_type: type })}
-                      />
-                      <p className="text-xs text-gray-500 mt-3">
-                        💡 <strong>Недельное:</strong> разное расписание для каждого дня недели. <strong>Постоянное:</strong> одинаковое расписание каждый день.
-                      </p>
-                    </div>
-
-                    {/* Week Navigation - Only show for weekly schedule */}
-                    {formData.schedule_type === 'weekly' && (
-                      <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 border-b-2 border-gray-200">
-                        {/* Week selector slider with dates */}
-                        {(() => {
-                        const today = new Date();
-                        today.setHours(0, 0, 0, 0);
-
-                        // Get the Monday of current week
-                        const currentWeekMonday = new Date(today);
-                        const dayOfWeek = currentWeekMonday.getDay();
-                        const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-                        currentWeekMonday.setDate(currentWeekMonday.getDate() + daysToMonday);
-
-                        // Calculate displayed week: current week + offset
-                        const displayedWeekStart = new Date(currentWeekMonday);
-                        displayedWeekStart.setDate(currentWeekMonday.getDate() + (currentWeekIndex * 7));
-
-                        const displayedWeekEnd = new Date(displayedWeekStart);
-                        displayedWeekEnd.setDate(displayedWeekStart.getDate() + 6);
-                        displayedWeekEnd.setHours(23, 59, 59, 999);
-
-                        const formatDate = (date: Date) => {
-                          return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
-                        };
-
-                        // Check if today falls within the displayed week range
-                        const isCurrentWeek = today >= displayedWeekStart && today <= displayedWeekEnd;
-
-                        return (
-                          <div className="bg-white rounded-xl shadow-sm border-2 border-indigo-100 p-4">
-                            <div className="flex items-center justify-between gap-4">
-                              {/* Previous week button */}
-                              <button
-                                type="button"
-                                onClick={() => setCurrentWeekIndex(currentWeekIndex - 1)}
-                                className="p-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                title="Предыдущая неделя"
-                              >
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                </svg>
-                              </button>
-
-                              {/* Current week display */}
-                              <div className="flex-1 text-center">
-                                <div className="flex flex-col items-center justify-center gap-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-2xl">📅</span>
-                                    <div>
-                                      <div className="font-bold text-lg text-gray-800">
-                                        {formatDate(displayedWeekStart)} - {formatDate(displayedWeekEnd)}
-                                      </div>
-                                    </div>
-                                    {isCurrentWeek && (
-                                      <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">
-                                        Текущая
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Next week button */}
-                              <button
-                                type="button"
-                                onClick={() => setCurrentWeekIndex(currentWeekIndex + 1)}
-                                className="p-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                title="Следующая неделя"
-                              >
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                </svg>
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })()}
-                      </div>
-                    )}
-
-                    {/* Tab Switcher */}
-                    <div className="flex bg-gray-50 border-b-2 border-gray-200">
-                      <button
-                        type="button"
-                        onClick={() => setScheduleType('online')}
-                        className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 font-semibold transition-all ${
-                          scheduleType === 'online'
-                            ? 'bg-blue-500 text-white border-b-4 border-blue-600'
-                            : 'text-gray-600 hover:bg-gray-100'
-                        }`}
-                      >
-                        <Video className="w-5 h-5" />
-                        <span>Онлайн консультации</span>
-                        {Object.values(getCurrentOnlineSchedule()).filter(d => d.enabled).length > 0 && (
-                          <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
-                            scheduleType === 'online' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'
-                          }`}>
-                            {Object.values(getCurrentOnlineSchedule()).filter(d => d.enabled).length}
-                          </span>
-                        )}
-                        {getConflictDays().length > 0 && (
-                          <span className="ml-1 px-2 py-0.5 rounded-full text-xs bg-red-500 text-white font-bold">
-                            ⚠ {getConflictDays().length}
-                          </span>
-                        )}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setScheduleType('offline')}
-                        className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 font-semibold transition-all ${
-                          scheduleType === 'offline'
-                            ? 'bg-purple-500 text-white border-b-4 border-purple-600'
-                            : 'text-gray-600 hover:bg-gray-100'
-                        }`}
-                      >
-                        <Home className="w-5 h-5" />
-                        <span>Оффлайн консультации</span>
-                        {Object.values(getCurrentOfflineSchedule()).filter(d => d.enabled).length > 0 && (
-                          <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
-                            scheduleType === 'offline' ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-700'
-                          }`}>
-                            {Object.values(getCurrentOfflineSchedule()).filter(d => d.enabled).length}
-                          </span>
-                        )}
-                        {getConflictDays().length > 0 && (
-                          <span className="ml-1 px-2 py-0.5 rounded-full text-xs bg-red-500 text-white font-bold">
-                            ⚠ {getConflictDays().length}
-                          </span>
-                        )}
-                      </button>
-                    </div>
-
-                    {/* Schedule Content */}
-                    <div className={`p-5 ${scheduleType === 'online' ? 'bg-blue-50/30' : 'bg-purple-50/30'}`}>
-                      {scheduleType === 'online' ? (
-                        /* Online Schedule */
-                        <>
-                          <div className="mb-4">
-                            <p className="text-sm text-blue-700 font-medium">
-                              Настройте расписание для онлайн приемов
-                            </p>
-                          </div>
-                          <div className="space-y-3">
-                            {daysOfWeek.map((day) => {
-                              const currentOnlineSchedule = getCurrentOnlineSchedule();
-                              const currentOfflineSchedule = getCurrentOfflineSchedule();
-
-                              const hasConflict = getScheduleConflict(day.value, 'online');
-                              const offlineEnabled = currentOfflineSchedule[day.value]?.enabled;
-                              const offlineTime = offlineEnabled ? `${currentOfflineSchedule[day.value]?.start} - ${currentOfflineSchedule[day.value]?.end}` : '';
-
-                              return (
-                                <div
-                                  key={day.value}
-                                  className={`rounded-xl border-2 p-4 transition-all ${
-                                    hasConflict
-                                      ? 'border-red-500 bg-red-50'
-                                      : currentOnlineSchedule[day.value]?.enabled
-                                      ? 'border-blue-500 bg-blue-50'
-                                      : 'border-gray-200 bg-white'
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-4">
-                                    <button
-                                      type="button"
-                                      onClick={() => toggleOnlineDay(day.value)}
-                                      className={`flex items-center justify-center w-12 h-12 rounded-xl border-2 transition-all font-semibold text-sm ${
-                                        hasConflict
-                                          ? 'border-red-500 bg-red-500 text-white'
-                                          : currentOnlineSchedule[day.value]?.enabled
-                                          ? 'border-blue-500 bg-blue-500 text-white'
-                                          : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
-                                      }`}
-                                      title={day.labelRu}
-                                    >
-                                      {day.labelShort}
-                                    </button>
-                                    <div className="flex-1">
-                                      <p className="font-semibold text-gray-700">
-                                        {day.labelRu}
-                                        {formData.schedule_type === 'weekly' && (
-                                          <span className="ml-2 text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                                            {getDateForDay(day.dayIndex)}
-                                          </span>
-                                        )}
-                                      </p>
-                                      {offlineEnabled && !currentOnlineSchedule[day.value]?.enabled && (
-                                        <p className="text-xs text-purple-600 mt-1">
-                                          🏠 Оффлайн: {offlineTime}
-                                        </p>
-                                      )}
-                                    </div>
-                                    {currentOnlineSchedule[day.value]?.enabled && (
-                                      <div className="flex items-center gap-3">
-                                        <div>
-                                          <label className="block text-xs text-gray-600 mb-1">С</label>
-                                          <input
-                                            type="time"
-                                            value={currentOnlineSchedule[day.value]?.start || '09:00'}
-                                            onChange={(e) => updateOnlineDayTime(day.value, 'start', e.target.value)}
-                                            step="900"
-                                            className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
-                                              hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
-                                            }`}
-                                          />
-                                        </div>
-                                        <div className="text-gray-400 pt-5">—</div>
-                                        <div>
-                                          <label className="block text-xs text-gray-600 mb-1">До</label>
-                                          <input
-                                            type="time"
-                                            value={currentOnlineSchedule[day.value]?.end || '18:00'}
-                                            onChange={(e) => updateOnlineDayTime(day.value, 'end', e.target.value)}
-                                            step="900"
-                                            className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
-                                              hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
-                                            }`}
-                                          />
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                  {hasConflict && (
-                                    <div className="mt-3 p-3 bg-red-100 border-l-4 border-red-500 rounded">
-                                      <p className="text-xs text-red-800 font-semibold">
-                                        ⚠️ Конфликт времени! Оффлайн расписание: {offlineTime}
-                                      </p>
-                                      <p className="text-xs text-red-700 mt-1">
-                                        Измените время или отключите один из графиков
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </>
-                      ) : (
-                        /* Offline Schedule */
-                        <>
-                          <div className="mb-4">
-                            <p className="text-sm text-purple-700 font-medium">
-                              Настройте расписание для оффлайн приемов
-                            </p>
-                          </div>
-                          <div className="space-y-3">
-                            {daysOfWeek.map((day) => {
-                              const currentOnlineSchedule = getCurrentOnlineSchedule();
-                              const currentOfflineSchedule = getCurrentOfflineSchedule();
-
-                              const hasConflict = getScheduleConflict(day.value, 'offline');
-                              const onlineEnabled = currentOnlineSchedule[day.value]?.enabled;
-                              const onlineTime = onlineEnabled ? `${currentOnlineSchedule[day.value]?.start} - ${currentOnlineSchedule[day.value]?.end}` : '';
-
-                              return (
-                                <div
-                                  key={day.value}
-                                  className={`rounded-xl border-2 p-4 transition-all ${
-                                    hasConflict
-                                      ? 'border-red-500 bg-red-50'
-                                      : currentOfflineSchedule[day.value]?.enabled
-                                      ? 'border-purple-500 bg-purple-50'
-                                      : 'border-gray-200 bg-white'
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-4">
-                                    <button
-                                      type="button"
-                                      onClick={() => toggleOfflineDay(day.value)}
-                                      className={`flex items-center justify-center w-12 h-12 rounded-xl border-2 transition-all font-semibold text-sm ${
-                                        hasConflict
-                                          ? 'border-red-500 bg-red-500 text-white'
-                                          : currentOfflineSchedule[day.value]?.enabled
-                                          ? 'border-purple-500 bg-purple-500 text-white'
-                                          : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
-                                      }`}
-                                      title={day.labelRu}
-                                    >
-                                      {day.labelShort}
-                                    </button>
-                                    <div className="flex-1">
-                                      <p className="font-semibold text-gray-700">
-                                        {day.labelRu}
-                                        {formData.schedule_type === 'weekly' && (
-                                          <span className="ml-2 text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                                            {getDateForDay(day.dayIndex)}
-                                          </span>
-                                        )}
-                                      </p>
-                                      {onlineEnabled && !currentOfflineSchedule[day.value]?.enabled && (
-                                        <p className="text-xs text-blue-600 mt-1">
-                                          📱 Онлайн: {onlineTime}
-                                        </p>
-                                      )}
-                                    </div>
-                                    {currentOfflineSchedule[day.value]?.enabled && (
-                                      <div className="flex items-center gap-3">
-                                        <div>
-                                          <label className="block text-xs text-gray-600 mb-1">С</label>
-                                          <input
-                                            type="time"
-                                            value={currentOfflineSchedule[day.value]?.start || '09:00'}
-                                            onChange={(e) => updateOfflineDayTime(day.value, 'start', e.target.value)}
-                                            step="900"
-                                            className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
-                                              hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-purple-500'
-                                            }`}
-                                          />
-                                        </div>
-                                        <div className="text-gray-400 pt-5">—</div>
-                                        <div>
-                                          <label className="block text-xs text-gray-600 mb-1">До</label>
-                                          <input
-                                            type="time"
-                                            value={currentOfflineSchedule[day.value]?.end || '18:00'}
-                                            onChange={(e) => updateOfflineDayTime(day.value, 'end', e.target.value)}
-                                            step="900"
-                                            className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
-                                              hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-purple-500'
-                                            }`}
-                                          />
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                  {hasConflict && (
-                                    <div className="mt-3 p-3 bg-red-100 border-l-4 border-red-500 rounded">
-                                      <p className="text-xs text-red-800 font-semibold">
-                                        ⚠️ Конфликт времени! Онлайн расписание: {onlineTime}
-                                      </p>
-                                      <p className="text-xs text-red-700 mt-1">
-                                        Измените время или отключите один из графиков
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Warning */}
-                    <div className={`border-t-2 p-4 ${
-                      getConflictDays().length > 0
-                        ? 'bg-red-50 border-red-300'
-                        : 'bg-yellow-50 border-yellow-200'
-                    }`}>
-                      {getConflictDays().length > 0 ? (
-                        <div>
-                          <p className="text-sm text-red-800 font-bold mb-2">
-                            ⛔ Обнаружены конфликты расписания! ({getConflictDays().length} дней)
-                          </p>
-                          <p className="text-xs text-red-700">
-                            Пожалуйста, исправьте конфликты времени перед сохранением. Доктор не может проводить онлайн и оффлайн консультации одновременно.
-                          </p>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-yellow-800 font-medium">
-                          ⚠️ <strong>Важно:</strong> Если доктор занят онлайн консультацией, он не сможет проводить оффлайн в это же время (и наоборот).
-                        </p>
-                      )}
-                      {formErrors.schedule && (
-                        <p className="text-sm text-red-600 font-semibold mt-2 bg-red-50 p-3 rounded-lg">
-                          ❌ {formErrors.schedule}
-                        </p>
-                      )}
-                    </div>
-                  </div>
 
                   {/* Specialization - Multiple inputs with + and - buttons */}
                   <div>
@@ -3279,393 +3020,6 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                     </p>
                   </div>
 
-                  {/* Work Schedule with Tabs */}
-                  <div className="border-2 border-gray-200 rounded-2xl overflow-hidden">
-                    {/* Schedule Type Selector - At the top of schedule section */}
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 border-b-2 border-gray-200">
-                      <label className="block text-sm font-semibold text-gray-700 mb-3">
-                        Тип расписания <span className="text-red-500">*</span>
-                      </label>
-                      <ScheduleTypeSelector
-                        scheduleType={formData.schedule_type}
-                        onChange={(type) => setFormData({ ...formData, schedule_type: type })}
-                      />
-                      <p className="text-xs text-gray-500 mt-3">
-                        💡 <strong>Недельное:</strong> разное расписание для каждого дня недели. <strong>Постоянное:</strong> одинаковое расписание каждый день.
-                      </p>
-                    </div>
-
-                    {/* Week Navigation - Only show for weekly schedule */}
-                    {formData.schedule_type === 'weekly' && (
-                      <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 border-b-2 border-gray-200">
-                        {/* Week selector slider with dates */}
-                        {(() => {
-                        const today = new Date();
-                        today.setHours(0, 0, 0, 0);
-
-                        // Get the Monday of current week
-                        const currentWeekMonday = new Date(today);
-                        const dayOfWeek = currentWeekMonday.getDay();
-                        const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-                        currentWeekMonday.setDate(currentWeekMonday.getDate() + daysToMonday);
-
-                        // Calculate displayed week: current week + offset
-                        const displayedWeekStart = new Date(currentWeekMonday);
-                        displayedWeekStart.setDate(currentWeekMonday.getDate() + (currentWeekIndex * 7));
-
-                        const displayedWeekEnd = new Date(displayedWeekStart);
-                        displayedWeekEnd.setDate(displayedWeekStart.getDate() + 6);
-                        displayedWeekEnd.setHours(23, 59, 59, 999);
-
-                        const formatDate = (date: Date) => {
-                          return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
-                        };
-
-                        // Check if today falls within the displayed week range
-                        const isCurrentWeek = today >= displayedWeekStart && today <= displayedWeekEnd;
-
-                        return (
-                          <div className="bg-white rounded-xl shadow-sm border-2 border-indigo-100 p-4">
-                            <div className="flex items-center justify-between gap-4">
-                              {/* Previous week button */}
-                              <button
-                                type="button"
-                                onClick={() => setCurrentWeekIndex(currentWeekIndex - 1)}
-                                className="p-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                title="Предыдущая неделя"
-                              >
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                </svg>
-                              </button>
-
-                              {/* Current week display */}
-                              <div className="flex-1 text-center">
-                                <div className="flex flex-col items-center justify-center gap-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-2xl">📅</span>
-                                    <div>
-                                      <div className="font-bold text-lg text-gray-800">
-                                        {formatDate(displayedWeekStart)} - {formatDate(displayedWeekEnd)}
-                                      </div>
-                                    </div>
-                                    {isCurrentWeek && (
-                                      <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">
-                                        Текущая
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Next week button */}
-                              <button
-                                type="button"
-                                onClick={() => setCurrentWeekIndex(currentWeekIndex + 1)}
-                                className="p-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                title="Следующая неделя"
-                              >
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                </svg>
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })()}
-                      </div>
-                    )}
-
-                    {/* Tab Switcher */}
-                    <div className="flex bg-gray-50 border-b-2 border-gray-200">
-                      <button
-                        type="button"
-                        onClick={() => setScheduleType('online')}
-                        className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 font-semibold transition-all ${
-                          scheduleType === 'online'
-                            ? 'bg-blue-500 text-white border-b-4 border-blue-600'
-                            : 'text-gray-600 hover:bg-gray-100'
-                        }`}
-                      >
-                        <Video className="w-5 h-5" />
-                        <span>Онлайн консультации</span>
-                        {Object.values(getCurrentOnlineSchedule()).filter(d => d.enabled).length > 0 && (
-                          <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
-                            scheduleType === 'online' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'
-                          }`}>
-                            {Object.values(getCurrentOnlineSchedule()).filter(d => d.enabled).length}
-                          </span>
-                        )}
-                        {getConflictDays().length > 0 && (
-                          <span className="ml-1 px-2 py-0.5 rounded-full text-xs bg-red-500 text-white font-bold">
-                            ⚠ {getConflictDays().length}
-                          </span>
-                        )}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setScheduleType('offline')}
-                        className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 font-semibold transition-all ${
-                          scheduleType === 'offline'
-                            ? 'bg-purple-500 text-white border-b-4 border-purple-600'
-                            : 'text-gray-600 hover:bg-gray-100'
-                        }`}
-                      >
-                        <Home className="w-5 h-5" />
-                        <span>Оффлайн консультации</span>
-                        {Object.values(getCurrentOfflineSchedule()).filter(d => d.enabled).length > 0 && (
-                          <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
-                            scheduleType === 'offline' ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-700'
-                          }`}>
-                            {Object.values(getCurrentOfflineSchedule()).filter(d => d.enabled).length}
-                          </span>
-                        )}
-                        {getConflictDays().length > 0 && (
-                          <span className="ml-1 px-2 py-0.5 rounded-full text-xs bg-red-500 text-white font-bold">
-                            ⚠ {getConflictDays().length}
-                          </span>
-                        )}
-                      </button>
-                    </div>
-
-                    {/* Schedule Content */}
-                    <div className={`p-5 ${scheduleType === 'online' ? 'bg-blue-50/30' : 'bg-purple-50/30'}`}>
-                      {scheduleType === 'online' ? (
-                        /* Online Schedule */
-                        <>
-                          <div className="mb-4">
-                            <p className="text-sm text-blue-700 font-medium">
-                              Настройте расписание для онлайн приемов
-                            </p>
-                          </div>
-                          <div className="space-y-3">
-                            {daysOfWeek.map((day) => {
-                              const currentOnlineSchedule = getCurrentOnlineSchedule();
-                              const currentOfflineSchedule = getCurrentOfflineSchedule();
-
-                              const hasConflict = getScheduleConflict(day.value, 'online');
-                              const offlineEnabled = currentOfflineSchedule[day.value]?.enabled;
-                              const offlineTime = offlineEnabled ? `${currentOfflineSchedule[day.value]?.start} - ${currentOfflineSchedule[day.value]?.end}` : '';
-
-                              return (
-                                <div
-                                  key={day.value}
-                                  className={`rounded-xl border-2 p-4 transition-all ${
-                                    hasConflict
-                                      ? 'border-red-500 bg-red-50'
-                                      : currentOnlineSchedule[day.value]?.enabled
-                                      ? 'border-blue-500 bg-blue-50'
-                                      : 'border-gray-200 bg-white'
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-4">
-                                    <button
-                                      type="button"
-                                      onClick={() => toggleOnlineDay(day.value)}
-                                      className={`flex items-center justify-center w-12 h-12 rounded-xl border-2 transition-all font-semibold text-sm ${
-                                        hasConflict
-                                          ? 'border-red-500 bg-red-500 text-white'
-                                          : currentOnlineSchedule[day.value]?.enabled
-                                          ? 'border-blue-500 bg-blue-500 text-white'
-                                          : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
-                                      }`}
-                                      title={day.labelRu}
-                                    >
-                                      {day.labelShort}
-                                    </button>
-                                    <div className="flex-1">
-                                      <p className="font-semibold text-gray-700">
-                                        {day.labelRu}
-                                        {formData.schedule_type === 'weekly' && (
-                                          <span className="ml-2 text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                                            {getDateForDay(day.dayIndex)}
-                                          </span>
-                                        )}
-                                      </p>
-                                      {offlineEnabled && !currentOnlineSchedule[day.value]?.enabled && (
-                                        <p className="text-xs text-purple-600 mt-1">
-                                          🏠 Оффлайн: {offlineTime}
-                                        </p>
-                                      )}
-                                    </div>
-                                    {currentOnlineSchedule[day.value]?.enabled && (
-                                      <div className="flex items-center gap-3">
-                                        <div>
-                                          <label className="block text-xs text-gray-600 mb-1">С</label>
-                                          <input
-                                            type="time"
-                                            value={currentOnlineSchedule[day.value]?.start || '09:00'}
-                                            onChange={(e) => updateOnlineDayTime(day.value, 'start', e.target.value)}
-                                            step="900"
-                                            className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
-                                              hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
-                                            }`}
-                                          />
-                                        </div>
-                                        <div className="text-gray-400 pt-5">—</div>
-                                        <div>
-                                          <label className="block text-xs text-gray-600 mb-1">До</label>
-                                          <input
-                                            type="time"
-                                            value={currentOnlineSchedule[day.value]?.end || '18:00'}
-                                            onChange={(e) => updateOnlineDayTime(day.value, 'end', e.target.value)}
-                                            step="900"
-                                            className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
-                                              hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
-                                            }`}
-                                          />
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                  {hasConflict && (
-                                    <div className="mt-3 p-3 bg-red-100 border-l-4 border-red-500 rounded">
-                                      <p className="text-xs text-red-800 font-semibold">
-                                        ⚠️ Конфликт времени! Оффлайн расписание: {offlineTime}
-                                      </p>
-                                      <p className="text-xs text-red-700 mt-1">
-                                        Измените время или отключите один из графиков
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </>
-                      ) : (
-                        /* Offline Schedule */
-                        <>
-                          <div className="mb-4">
-                            <p className="text-sm text-purple-700 font-medium">
-                              Настройте расписание для оффлайн приемов
-                            </p>
-                          </div>
-                          <div className="space-y-3">
-                            {daysOfWeek.map((day) => {
-                              const currentOnlineSchedule = getCurrentOnlineSchedule();
-                              const currentOfflineSchedule = getCurrentOfflineSchedule();
-
-                              const hasConflict = getScheduleConflict(day.value, 'offline');
-                              const onlineEnabled = currentOnlineSchedule[day.value]?.enabled;
-                              const onlineTime = onlineEnabled ? `${currentOnlineSchedule[day.value]?.start} - ${currentOnlineSchedule[day.value]?.end}` : '';
-
-                              return (
-                                <div
-                                  key={day.value}
-                                  className={`rounded-xl border-2 p-4 transition-all ${
-                                    hasConflict
-                                      ? 'border-red-500 bg-red-50'
-                                      : currentOfflineSchedule[day.value]?.enabled
-                                      ? 'border-purple-500 bg-purple-50'
-                                      : 'border-gray-200 bg-white'
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-4">
-                                    <button
-                                      type="button"
-                                      onClick={() => toggleOfflineDay(day.value)}
-                                      className={`flex items-center justify-center w-12 h-12 rounded-xl border-2 transition-all font-semibold text-sm ${
-                                        hasConflict
-                                          ? 'border-red-500 bg-red-500 text-white'
-                                          : currentOfflineSchedule[day.value]?.enabled
-                                          ? 'border-purple-500 bg-purple-500 text-white'
-                                          : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
-                                      }`}
-                                      title={day.labelRu}
-                                    >
-                                      {day.labelShort}
-                                    </button>
-                                    <div className="flex-1">
-                                      <p className="font-semibold text-gray-700">
-                                        {day.labelRu}
-                                        {formData.schedule_type === 'weekly' && (
-                                          <span className="ml-2 text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                                            {getDateForDay(day.dayIndex)}
-                                          </span>
-                                        )}
-                                      </p>
-                                      {onlineEnabled && !currentOfflineSchedule[day.value]?.enabled && (
-                                        <p className="text-xs text-blue-600 mt-1">
-                                          📱 Онлайн: {onlineTime}
-                                        </p>
-                                      )}
-                                    </div>
-                                    {currentOfflineSchedule[day.value]?.enabled && (
-                                      <div className="flex items-center gap-3">
-                                        <div>
-                                          <label className="block text-xs text-gray-600 mb-1">С</label>
-                                          <input
-                                            type="time"
-                                            value={currentOfflineSchedule[day.value]?.start || '09:00'}
-                                            onChange={(e) => updateOfflineDayTime(day.value, 'start', e.target.value)}
-                                            step="900"
-                                            className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
-                                              hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-purple-500'
-                                            }`}
-                                          />
-                                        </div>
-                                        <div className="text-gray-400 pt-5">—</div>
-                                        <div>
-                                          <label className="block text-xs text-gray-600 mb-1">До</label>
-                                          <input
-                                            type="time"
-                                            value={currentOfflineSchedule[day.value]?.end || '18:00'}
-                                            onChange={(e) => updateOfflineDayTime(day.value, 'end', e.target.value)}
-                                            step="900"
-                                            className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
-                                              hasConflict ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-purple-500'
-                                            }`}
-                                          />
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                  {hasConflict && (
-                                    <div className="mt-3 p-3 bg-red-100 border-l-4 border-red-500 rounded">
-                                      <p className="text-xs text-red-800 font-semibold">
-                                        ⚠️ Конфликт времени! Онлайн расписание: {onlineTime}
-                                      </p>
-                                      <p className="text-xs text-red-700 mt-1">
-                                        Измените время или отключите один из графиков
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Warning */}
-                    <div className={`border-t-2 p-4 ${
-                      getConflictDays().length > 0
-                        ? 'bg-red-50 border-red-300'
-                        : 'bg-yellow-50 border-yellow-200'
-                    }`}>
-                      {getConflictDays().length > 0 ? (
-                        <div>
-                          <p className="text-sm text-red-800 font-bold mb-2">
-                            ⛔ Обнаружены конфликты расписания! ({getConflictDays().length} дней)
-                          </p>
-                          <p className="text-xs text-red-700">
-                            Пожалуйста, исправьте конфликты времени перед сохранением. Доктор не может проводить онлайн и оффлайн консультации одновременно.
-                          </p>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-yellow-800 font-medium">
-                          ⚠️ <strong>Важно:</strong> Если доктор занят онлайн консультацией, он не сможет проводить оффлайн в это же время (и наоборот).
-                        </p>
-                      )}
-                      {formErrors.schedule && (
-                        <p className="text-sm text-red-600 font-semibold mt-2 bg-red-50 p-3 rounded-lg">
-                          ❌ {formErrors.schedule}
-                        </p>
-                      )}
-                    </div>
-                  </div>
 
                   {/* Specialization - Multiple inputs with + and - buttons */}
                   <div>
@@ -3890,6 +3244,332 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                     )}
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Schedule Modal */}
+      <AnimatePresence>
+        {showScheduleModal && scheduleMember && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onMouseDown={(e) => setMouseDownTarget(e.target)}
+            onClick={(e) => {
+              if (e.target === e.currentTarget && mouseDownTarget === e.currentTarget) {
+                setShowScheduleModal(false);
+                setScheduleMember(null);
+              }
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-hide"
+            >
+              {/* Header */}
+              <div className="sticky top-0 z-10 bg-white border-b border-gray-100 px-8 py-6 rounded-t-3xl flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-indigo-100 rounded-xl">
+                    <Calendar className="w-6 h-6 text-indigo-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">Расписание</h2>
+                    <p className="text-sm text-gray-500">{scheduleMember.first_name} {scheduleMember.last_name}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { setShowScheduleModal(false); setScheduleMember(null); }}
+                  className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
+                >
+                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-8 space-y-6">
+                {scheduleLoading && (
+                  <div className="flex items-center justify-center py-16">
+                    <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+                  </div>
+                )}
+                {!scheduleLoading && <>
+                {/* Schedule Type */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-5 rounded-2xl border-2 border-blue-100">
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    Тип расписания <span className="text-red-500">*</span>
+                  </label>
+                  <ScheduleTypeSelector
+                    scheduleType={formData.schedule_type}
+                    onChange={(type) => {
+                      setFormData({ ...formData, schedule_type: type });
+                      // If switching to the doctor's saved type → restore their schedule
+                      // If switching to a different type → show empty (they have no schedule of that type)
+                      if (type === (scheduleMember?.schedule_type || 'weekly')) {
+                        setWeeklySchedules(buildWeeklySchedulesFromMember(scheduleMember!));
+                      } else {
+                        setWeeklySchedules(buildEmptyWeeklySchedules());
+                      }
+                      setCurrentWeekIndex(0);
+                    }}
+                  />
+                  <p className="text-xs text-gray-500 mt-3">
+                    💡 <strong>Недельное:</strong> разное расписание для каждого дня. <strong>Постоянное:</strong> одинаковое расписание каждый день.
+                  </p>
+                </div>
+
+                {/* Week Navigation - only for weekly schedule */}
+                {formData.schedule_type === 'weekly' && (
+                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-2xl border-2 border-indigo-100">
+                  {(() => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const currentWeekMonday = new Date(today);
+                    const dayOfWeek = currentWeekMonday.getDay();
+                    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+                    currentWeekMonday.setDate(currentWeekMonday.getDate() + daysToMonday);
+                    const displayedWeekStart = new Date(currentWeekMonday);
+                    displayedWeekStart.setDate(currentWeekMonday.getDate() + (currentWeekIndex * 7));
+                    const displayedWeekEnd = new Date(displayedWeekStart);
+                    displayedWeekEnd.setDate(displayedWeekStart.getDate() + 6);
+                    displayedWeekEnd.setHours(23, 59, 59, 999);
+                    const formatDate = (date: Date) => date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+                    const isCurrentWeek = today >= displayedWeekStart && today <= displayedWeekEnd;
+                    return (
+                      <div className="flex items-center justify-between gap-4">
+                        <button
+                          type="button"
+                          onClick={() => setCurrentWeekIndex(currentWeekIndex - 1)}
+                          className="p-2 rounded-lg bg-white hover:bg-indigo-100 text-indigo-600 border border-indigo-200 transition-all"
+                          title="Предыдущая неделя"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </button>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">📅</span>
+                          <span className="font-bold text-gray-800">{formatDate(displayedWeekStart)} — {formatDate(displayedWeekEnd)}</span>
+                          {isCurrentWeek && (
+                            <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded-full">Текущая</span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentWeekIndex(currentWeekIndex + 1)}
+                          className="p-2 rounded-lg bg-white hover:bg-indigo-100 text-indigo-600 border border-indigo-200 transition-all"
+                          title="Следующая неделя"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      </div>
+                    );
+                  })()}
+                </div>
+                )}
+
+                {/* Tab Switcher */}
+                <div className="flex rounded-2xl overflow-hidden border-2 border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => setScheduleType('online')}
+                    className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 font-semibold transition-all ${
+                      scheduleType === 'online'
+                        ? 'bg-blue-500 text-white'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Video className="w-5 h-5" />
+                    <span>Онлайн</span>
+                    {Object.values(getCurrentOnlineSchedule()).filter(d => d.enabled).length > 0 && (
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${scheduleType === 'online' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'}`}>
+                        {Object.values(getCurrentOnlineSchedule()).filter(d => d.enabled).length}
+                      </span>
+                    )}
+                    {getConflictDays().length > 0 && (
+                      <span className="px-2 py-0.5 rounded-full text-xs bg-red-500 text-white font-bold">⚠ {getConflictDays().length}</span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setScheduleType('offline')}
+                    className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 font-semibold transition-all ${
+                      scheduleType === 'offline'
+                        ? 'bg-purple-500 text-white'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Home className="w-5 h-5" />
+                    <span>Оффлайн</span>
+                    {Object.values(getCurrentOfflineSchedule()).filter(d => d.enabled).length > 0 && (
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${scheduleType === 'offline' ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-700'}`}>
+                        {Object.values(getCurrentOfflineSchedule()).filter(d => d.enabled).length}
+                      </span>
+                    )}
+                    {getConflictDays().length > 0 && (
+                      <span className="px-2 py-0.5 rounded-full text-xs bg-red-500 text-white font-bold">⚠ {getConflictDays().length}</span>
+                    )}
+                  </button>
+                </div>
+
+                {/* Schedule Days */}
+                <div className={`space-y-3 p-4 rounded-2xl ${scheduleType === 'online' ? 'bg-blue-50/40' : 'bg-purple-50/40'}`}>
+                  {scheduleType === 'online' ? (
+                    <p className="text-sm text-blue-700 font-medium mb-2">Настройте расписание для онлайн приемов</p>
+                  ) : (
+                    <p className="text-sm text-purple-700 font-medium mb-2">Настройте расписание для оффлайн приемов</p>
+                  )}
+                  {daysOfWeek.map((day) => {
+                    const currentOnlineSchedule = getCurrentOnlineSchedule();
+                    const currentOfflineSchedule = getCurrentOfflineSchedule();
+                    const hasConflict = getScheduleConflict(day.value, scheduleType);
+                    const isOnline = scheduleType === 'online';
+                    const currentDaySchedule = isOnline ? currentOnlineSchedule : currentOfflineSchedule;
+                    const otherSchedule = isOnline ? currentOfflineSchedule : currentOnlineSchedule;
+                    const otherEnabled = otherSchedule[day.value]?.enabled;
+                    const otherTime = otherEnabled ? `${otherSchedule[day.value]?.start} - ${otherSchedule[day.value]?.end}` : '';
+
+                    return (
+                      <div
+                        key={day.value}
+                        className={`rounded-xl border-2 p-4 transition-all bg-white ${
+                          hasConflict
+                            ? 'border-red-500 bg-red-50'
+                            : currentDaySchedule[day.value]?.enabled
+                            ? isOnline ? 'border-blue-500 bg-blue-50' : 'border-purple-500 bg-purple-50'
+                            : 'border-gray-200'
+                        }`}
+                      >
+                        <div className="flex items-center gap-4">
+                          <button
+                            type="button"
+                            onClick={() => isOnline ? toggleOnlineDay(day.value) : toggleOfflineDay(day.value)}
+                            className={`flex items-center justify-center w-12 h-12 rounded-xl border-2 transition-all font-semibold text-sm ${
+                              hasConflict
+                                ? 'border-red-500 bg-red-500 text-white'
+                                : currentDaySchedule[day.value]?.enabled
+                                ? isOnline ? 'border-blue-500 bg-blue-500 text-white' : 'border-purple-500 bg-purple-500 text-white'
+                                : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
+                            }`}
+                            title={day.labelRu}
+                          >
+                            {day.labelShort}
+                          </button>
+                          <div className="flex-1">
+                            <p className="font-semibold text-gray-700">
+                              {day.labelRu}
+                              {formData.schedule_type === 'weekly' && (
+                                <span className="ml-2 text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                                  {getDateForDay(day.dayIndex)}
+                                </span>
+                              )}
+                            </p>
+                            {otherEnabled && !currentDaySchedule[day.value]?.enabled && (
+                              <p className={`text-xs mt-1 ${isOnline ? 'text-purple-600' : 'text-blue-600'}`}>
+                                {isOnline ? '🏠 Оффлайн:' : '📱 Онлайн:'} {otherTime}
+                              </p>
+                            )}
+                          </div>
+                          {currentDaySchedule[day.value]?.enabled && (
+                            <div className="flex items-center gap-3">
+                              <div>
+                                <label className="block text-xs text-gray-600 mb-1">С</label>
+                                <input
+                                  type="time"
+                                  value={currentDaySchedule[day.value]?.start || '09:00'}
+                                  onChange={(e) => isOnline
+                                    ? updateOnlineDayTime(day.value, 'start', e.target.value)
+                                    : updateOfflineDayTime(day.value, 'start', e.target.value)
+                                  }
+                                  step="900"
+                                  className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
+                                    hasConflict
+                                      ? 'border-red-300 focus:border-red-500'
+                                      : isOnline ? 'border-gray-300 focus:border-blue-500' : 'border-gray-300 focus:border-purple-500'
+                                  }`}
+                                />
+                              </div>
+                              <div className="text-gray-400 pt-5">—</div>
+                              <div>
+                                <label className="block text-xs text-gray-600 mb-1">До</label>
+                                <input
+                                  type="time"
+                                  value={currentDaySchedule[day.value]?.end || '18:00'}
+                                  onChange={(e) => isOnline
+                                    ? updateOnlineDayTime(day.value, 'end', e.target.value)
+                                    : updateOfflineDayTime(day.value, 'end', e.target.value)
+                                  }
+                                  step="900"
+                                  className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
+                                    hasConflict
+                                      ? 'border-red-300 focus:border-red-500'
+                                      : isOnline ? 'border-gray-300 focus:border-blue-500' : 'border-gray-300 focus:border-purple-500'
+                                  }`}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        {hasConflict && (
+                          <div className="mt-3 p-3 bg-red-100 border-l-4 border-red-500 rounded">
+                            <p className="text-xs text-red-800 font-semibold">
+                              ⚠️ Конфликт времени! {isOnline ? 'Оффлайн' : 'Онлайн'} расписание: {otherTime}
+                            </p>
+                            <p className="text-xs text-red-700 mt-1">Измените время или отключите один из графиков</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Conflict warning */}
+                {getConflictDays().length > 0 && (
+                  <div className="p-4 bg-red-50 border-2 border-red-200 rounded-2xl">
+                    <p className="text-sm text-red-800 font-bold">⛔ Обнаружены конфликты расписания! ({getConflictDays().length} дней)</p>
+                    <p className="text-xs text-red-700 mt-1">Исправьте конфликты перед сохранением.</p>
+                  </div>
+                )}
+                </>}
+              </div>
+
+              {/* Footer */}
+              <div className="sticky bottom-0 bg-white border-t border-gray-100 px-8 py-5 rounded-b-3xl flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => { setShowScheduleModal(false); setScheduleMember(null); }}
+                  disabled={scheduleLoading}
+                  className="flex-1 px-6 py-3 rounded-2xl border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveSchedule}
+                  disabled={scheduleLoading || getConflictDays().length > 0}
+                  className="flex-1 px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {scheduleLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Сохранение...
+                    </>
+                  ) : (
+                    <>
+                      <Calendar className="w-5 h-5" />
+                      Сохранить расписание
+                    </>
+                  )}
+                </button>
               </div>
             </motion.div>
           </motion.div>

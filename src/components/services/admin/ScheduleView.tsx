@@ -992,13 +992,7 @@ function AddEventModal({
 
   // Helper function to check if doctor has a valid schedule configured
   const doctorHasSchedule = (doctor: typeof doctors[0]) => {
-    const schedule = doctor.online_work_schedule;
-    if (!schedule) return false;
-
-    // Check if at least one day is enabled
-    return Object.values(schedule).some((day: any) =>
-      typeof day === 'object' && day.enabled === true
-    );
+    return Array.isArray((doctor as any).schedules) && (doctor as any).schedules.some((s: any) => s.is_active);
   };
 
   // Count doctors without schedules
@@ -1746,11 +1740,10 @@ function DoctorsScheduleContent({
     fetchDoctors();
   }, []);
 
-  // Compute available slots from schedule data (no API calls needed)
+  // Compute available slots from normalized DoctorSchedule rows (no API calls)
   useEffect(() => {
     if (doctors.length === 0 || !selectedDate) return;
 
-    const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const slotsMap = new Map<number, any[]>();
 
     const now = new Date();
@@ -1761,41 +1754,29 @@ function DoctorsScheduleContent({
     for (const doctor of doctors) {
       const duration = doctor.preferred_consultation_duration || 30;
       const targetDate = new Date(selectedDate + 'T00:00:00');
-      const dayName = DAY_NAMES[targetDate.getDay()];
 
-      // Find Monday of target week for weekly_schedules lookup
-      const dayOfWeek = targetDate.getDay();
-      const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-      const weekMonday = new Date(targetDate);
-      weekMonday.setDate(targetDate.getDate() - daysFromMonday);
-      const weekKey = weekMonday.toISOString().split('T')[0];
+      // weekday: JS getDay() is 0=Sunday..6=Saturday, backend is 0=Monday..6=Sunday
+      const jsDay = targetDate.getDay();
+      const weekday = jsDay === 0 ? 6 : jsDay - 1;
 
-      // Resolve day schedule: weekly_schedules > online_work_schedule
-      let daySchedule: { start: string; end: string; enabled: boolean } | undefined;
-      const weekEntry = doctor.weekly_schedules?.[weekKey];
-      if (weekEntry?.online?.[dayName]) {
-        daySchedule = weekEntry.online[dayName];
-      } else if (doctor.online_work_schedule?.[dayName]) {
-        daySchedule = doctor.online_work_schedule[dayName];
-      }
+      // Find matching schedule row for this weekday (online type, active)
+      const scheduleRow = (doctor.schedules || []).find(
+        (s: any) => s.weekday === weekday && s.consultation_type === 'online' && s.is_active
+      );
 
-      if (!daySchedule?.enabled) {
+      if (!scheduleRow) {
         slotsMap.set(doctor.id, []);
         continue;
       }
 
-      const [startH, startM] = daySchedule.start.split(':').map(Number);
-      const [endH, endM] = daySchedule.end.split(':').map(Number);
+      const [startH, startM] = scheduleRow.start_time.slice(0, 5).split(':').map(Number);
+      const [endH, endM] = scheduleRow.end_time.slice(0, 5).split(':').map(Number);
       let cur = startH * 60 + startM;
       const end = endH * 60 + endM;
       const slots: any[] = [];
 
       while (cur + duration <= end) {
-        // Skip slots that have already started if viewing today
-        if (isToday && cur <= nowMinutes) {
-          cur += duration;
-          continue;
-        }
+        if (isToday && cur <= nowMinutes) { cur += duration; continue; }
         const s = `${String(Math.floor(cur / 60)).padStart(2, '0')}:${String(cur % 60).padStart(2, '0')}`;
         const e = `${String(Math.floor((cur + duration) / 60)).padStart(2, '0')}:${String((cur + duration) % 60).padStart(2, '0')}`;
         slots.push({ id: `gen_${s.replace(':', '')}`, start_time: s, end_time: e });
