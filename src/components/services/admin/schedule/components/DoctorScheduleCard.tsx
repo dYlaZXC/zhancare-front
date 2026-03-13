@@ -22,6 +22,7 @@ interface DoctorScheduleCardProps {
     specialization?: string;
     years_of_experience?: number;
     preferred_consultation_duration?: number;
+    room_number?: string | null;
     online_work_schedule?: any;
   };
   slots: any[];
@@ -90,6 +91,9 @@ export function DoctorScheduleCard({
               </p>
             ) : (
               <p className="text-gray-400 text-xs mt-0.5">Специализация не указана</p>
+            )}
+            {doctor.room_number && (
+              <p className="text-gray-500 text-xs mt-0.5">Кабинет {doctor.room_number}</p>
             )}
           </div>
         </div>

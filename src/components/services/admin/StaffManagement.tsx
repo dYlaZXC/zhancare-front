@@ -78,6 +78,7 @@ interface StaffMember {
   offline_consultation_price?: number;
   online_consultation_price?: number;
   preferred_consultation_duration?: number; // in minutes
+  room_number?: string | null;
   schedule_type?: 'weekly' | 'constant'; // Type of schedule: weekly (different each day) or constant (same every day)
   work_schedule?: {
     [key: string]: { // day name as key
@@ -118,6 +119,14 @@ interface StaffMember {
       };
     };
   };
+  schedules?: Array<{
+    id?: number;
+    consultation_type: 'online' | 'offline';
+    weekday: number;
+    start_time: string;
+    end_time: string;
+    is_active: boolean;
+  }>;
 }
 
 // Phone number formatter utility
@@ -457,6 +466,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     offline_consultation_price: '',
     online_consultation_price: '',
     preferred_consultation_duration: '',
+    room_number: '',
     schedule_type: 'weekly' as 'weekly' | 'constant',  // Schedule type for doctors
   });
 
@@ -1106,6 +1116,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       offline_consultation_price: '',
       online_consultation_price: '',
       preferred_consultation_duration: '',
+      room_number: '',
       schedule_type: 'weekly',
     });
     setSpecializations(['']);
@@ -1242,6 +1253,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         offline_consultation_price: formData.offline_consultation_price ? Number(formData.offline_consultation_price) : null,
         online_consultation_price: formData.online_consultation_price ? Number(formData.online_consultation_price) : null,
         preferred_consultation_duration: formData.preferred_consultation_duration ? Number(formData.preferred_consultation_duration) : null,
+        room_number: formData.room_number || null,
         schedules: buildSchedulesArray(),
       };
 
@@ -1271,6 +1283,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         offline_consultation_price: '',
         online_consultation_price: '',
         preferred_consultation_duration: '',
+        room_number: '',
         schedule_type: 'weekly',
       });
       setSpecializations(['']);
@@ -1362,6 +1375,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       offline_consultation_price: member.offline_consultation_price?.toString() || '',
       online_consultation_price: member.online_consultation_price?.toString() || '',
       preferred_consultation_duration: member.preferred_consultation_duration?.toString() || '',
+      room_number: member.room_number || '',
       schedule_type: (member.schedule_type || 'weekly') as 'weekly' | 'constant',
     });
     setSpecializations(specializationsArray);
@@ -1428,7 +1442,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     for (const row of scheduleRows) {
       const dayName = WEEKDAY_TO_NAME[row.weekday];
       if (dayName && (row.consultation_type === 'online' || row.consultation_type === 'offline')) {
-        weekEntry[row.consultation_type][dayName] = { start: row.start_time.slice(0, 5), end: row.end_time.slice(0, 5), enabled: row.is_active };
+        (weekEntry[row.consultation_type] as Record<string, { start: string; end: string; enabled: boolean }>)[dayName] = { start: row.start_time.slice(0, 5), end: row.end_time.slice(0, 5), enabled: row.is_active };
       }
     }
     setWeeklySchedules({ [weekStartDate]: weekEntry });
@@ -1456,11 +1470,11 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     monday.setHours(0, 0, 0, 0);
     const weekStartDate = monday.toISOString().split('T')[0];
     const weekEntry = emptyWeek();
-    const rows: Array<{ consultation_type: 'online' | 'offline'; weekday: number; start_time: string; end_time: string; is_active: boolean }> = (member as any).schedules || [];
+    const rows: Array<{ consultation_type: 'online' | 'offline'; weekday: number; start_time: string; end_time: string; is_active: boolean }> = member.schedules || [];
     for (const row of rows) {
       const dayName = WEEKDAY_TO_NAME[row.weekday];
       if (dayName && (row.consultation_type === 'online' || row.consultation_type === 'offline')) {
-        weekEntry[row.consultation_type][dayName] = { start: row.start_time.slice(0, 5), end: row.end_time.slice(0, 5), enabled: row.is_active };
+        (weekEntry[row.consultation_type] as Record<string, { start: string; end: string; enabled: boolean }>)[dayName] = { start: row.start_time.slice(0, 5), end: row.end_time.slice(0, 5), enabled: row.is_active };
       }
     }
     return { [weekStartDate]: weekEntry };
@@ -1535,13 +1549,6 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     if (!editingMember) return;
     if (!validateForm()) return;
 
-    // Check for schedule conflicts
-    const conflictDays = getConflictDays();
-    if (conflictDays.length > 0) {
-      toast.error(`⛔ Невозможно сохранить! Обнаружены конфликты расписания на ${conflictDays.length} ${conflictDays.length === 1 ? 'день' : 'дней'}. Пожалуйста, исправьте конфликты времени перед сохранением.`);
-      return;
-    }
-
     setEditLoading(true);
 
     try {
@@ -1568,6 +1575,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         offline_consultation_price: formData.offline_consultation_price ? Number(formData.offline_consultation_price) : null,
         online_consultation_price: formData.online_consultation_price ? Number(formData.online_consultation_price) : null,
         preferred_consultation_duration: formData.preferred_consultation_duration ? Number(formData.preferred_consultation_duration) : null,
+        room_number: formData.room_number || null,
         schedules: buildSchedulesArray(),
       };
 
@@ -1959,8 +1967,9 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                           )}
                           {/* Schedule status badges for doctors/nurses */}
                           {(member.role === 'doctor' || member.role === 'nurse') && (() => {
-                            const hasOnline = !!(member.online_work_schedule && Object.keys(member.online_work_schedule).length > 0);
-                            const hasOffline = !!(member.offline_work_schedule && Object.keys(member.offline_work_schedule).length > 0);
+                            const activeSchedules = (member.schedules || []).filter((s: any) => s.is_active);
+                            const hasOnline = activeSchedules.some((s: any) => s.consultation_type === 'online');
+                            const hasOffline = activeSchedules.some((s: any) => s.consultation_type === 'offline');
                             if (!hasOnline && !hasOffline) return (
                               <span className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
                                 <AlertCircle className="w-3 h-3" />
@@ -2491,6 +2500,20 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                     </p>
                   </div>
 
+                  {/* Room Number */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Номер кабинета
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.room_number}
+                      onChange={(e) => setFormData({ ...formData, room_number: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                      placeholder="Например: 7B, 700, 7F-D"
+                      maxLength={20}
+                    />
+                  </div>
 
                   {/* Specialization - Multiple inputs with + and - buttons */}
                   <div>
@@ -3020,6 +3043,20 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                     </p>
                   </div>
 
+                  {/* Room Number */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Номер кабинета
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.room_number}
+                      onChange={(e) => setFormData({ ...formData, room_number: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                      placeholder="Например: 7B, 700, 7F-D"
+                      maxLength={20}
+                    />
+                  </div>
 
                   {/* Specialization - Multiple inputs with + and - buttons */}
                   <div>

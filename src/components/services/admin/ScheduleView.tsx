@@ -1728,8 +1728,10 @@ function DoctorsScheduleContent({
     specialization?: string;
     years_of_experience?: number;
     preferred_consultation_duration?: number;
+    room_number?: string | null;
     online_work_schedule?: Record<string, { start: string; end: string; enabled: boolean }>;
     weekly_schedules?: Record<string, { online?: Record<string, { start: string; end: string; enabled: boolean }>; offline?: Record<string, { start: string; end: string; enabled: boolean }> }>;
+    schedules?: Array<{ id: number; consultation_type: string; weekday: number; start_time: string; end_time: string; is_active: boolean }>;
   }>>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -1828,20 +1830,54 @@ function DoctorsScheduleContent({
     return fullName.includes(query) || specialization.includes(query);
   });
 
+  // Build week days for the strip
+  const getWeekStrip = () => {
+    const d = new Date(selectedDate + 'T00:00:00');
+    const jsDay = d.getDay(); // 0=Sun..6=Sat
+    const mondayOffset = jsDay === 0 ? -6 : 1 - jsDay;
+    const monday = new Date(d);
+    monday.setDate(d.getDate() + mondayOffset);
+    return Array.from({ length: 7 }, (_, i) => {
+      const day = new Date(monday);
+      day.setDate(monday.getDate() + i);
+      return day;
+    });
+  };
+
+  const DAY_NAMES = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+  const todayStr = (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; })();
+  const weekDays = getWeekStrip();
+
   return (
     <div className="h-full flex flex-col">
-      {/* Controls */}
-      <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-gray-600 whitespace-nowrap">Дата:</label>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => onDateChange(e.target.value)}
-            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
-          />
+      {/* Week strip */}
+      <div className="mb-4 flex flex-col gap-3">
+        <div className="flex items-center gap-1.5">
+          {weekDays.map((day, i) => {
+            const ds = `${day.getFullYear()}-${String(day.getMonth()+1).padStart(2,'0')}-${String(day.getDate()).padStart(2,'0')}`;
+            const isSelected = ds === selectedDate;
+            const isToday = ds === todayStr;
+            return (
+              <button
+                key={ds}
+                onClick={() => onDateChange(ds)}
+                className={`flex-1 flex flex-col items-center py-2.5 px-1 rounded-xl text-xs font-semibold transition-all border ${
+                  isSelected
+                    ? 'text-white shadow-md border-transparent'
+                    : isToday
+                    ? 'bg-blue-50 text-blue-600 border-blue-300'
+                    : 'bg-white text-gray-600 hover:bg-gray-50 border-gray-200'
+                }`}
+                style={isSelected ? { background: 'linear-gradient(135deg, #3772ff 0%, #2c5bcc 100%)' } : undefined}
+              >
+                <span className="text-[10px] font-medium mb-0.5 opacity-80">{DAY_NAMES[i]}</span>
+                <span className="text-sm font-bold">{day.getDate()}</span>
+                {isToday && <span className={`text-[9px] font-semibold mt-0.5 ${isSelected ? 'text-blue-100' : 'text-blue-500'}`}>Сегодня</span>}
+              </button>
+            );
+          })}
         </div>
-        <div className="relative flex-1 w-full sm:w-auto">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
@@ -1923,6 +1959,9 @@ function DoctorsScheduleContent({
                             <p className="text-xs text-gray-400 mt-0.5 truncate">
                               {doctor.specialization || 'Специализация не указана'}
                             </p>
+                            {doctor.room_number && (
+                              <p className="text-xs text-gray-500 mt-0.5">Номер кабинета: {doctor.room_number}</p>
+                            )}
                             {/* Inline stats */}
                             <div className="flex items-center gap-3 mt-2">
                               <span className={`flex items-center gap-1 text-xs font-semibold ${bookedSlots.length > 0 ? 'text-blue-500' : 'text-gray-300'}`}>

@@ -32,6 +32,7 @@ export function DoctorsScheduleContent({
     specialization?: string;
     years_of_experience?: number;
     preferred_consultation_duration?: number;
+    room_number?: string | null;
     online_work_schedule?: any;
   }>>([]);
   const [loading, setLoading] = useState(false);
