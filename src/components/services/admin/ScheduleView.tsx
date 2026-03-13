@@ -180,9 +180,17 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
     if (viewMode === 'week') {
       const weekDays = getWeekDays();
       return `${formatDate(weekDays[0])} - ${formatDate(weekDays[6])}`;
+    } else if (viewMode === 'doctors') {
+      return new Date(doctorsViewDate + 'T00:00:00').toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     } else {
       return currentDate.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
     }
+  };
+
+  const navigateDoctorsDay = (direction: 'prev' | 'next') => {
+    const d = new Date(doctorsViewDate + 'T00:00:00');
+    d.setDate(d.getDate() + (direction === 'next' ? 1 : -1));
+    setDoctorsViewDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
   };
 
   // Render Week View
@@ -425,33 +433,42 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={goToToday}
-              className="px-3 md:px-4 py-1.5 md:py-2 text-sm md:text-base rounded-lg md:rounded-xl border-2 border-gray-200 hover:border-blue-300 font-medium transition-colors whitespace-nowrap flex-shrink-0"
+              onClick={() => {
+                if (viewMode === 'doctors') {
+                  const today = new Date();
+                  setDoctorsViewDate(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`);
+                } else {
+                  goToToday();
+                }
+              }}
+              className="px-4 py-2 text-sm font-semibold rounded-xl text-white whitespace-nowrap flex-shrink-0 transition-all"
+              style={{ backgroundColor: '#3772ff' }}
             >
               Сегодня
             </motion.button>
 
-            <div className="flex items-center gap-1 md:gap-2 flex-1 justify-center">
+            <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden bg-white">
               <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => navigateDate('prev')}
-                className="p-1.5 md:p-2 rounded-lg md:rounded-xl hover:bg-gray-100 transition-colors flex-shrink-0"
+                whileHover={{ backgroundColor: '#f3f4f6' }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => viewMode === 'doctors' ? navigateDoctorsDay('prev') : navigateDate('prev')}
+                className="p-2 transition-colors flex-shrink-0"
               >
-                <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
+                <ChevronLeft className="w-4 h-4 text-gray-600" />
               </motion.button>
 
-              <div className="min-w-0 text-center font-semibold text-xs md:text-lg px-2 truncate" style={{ color: '#1e263e' }}>
-                {getDateRangeString()}
+              <div className="flex items-center gap-2 px-3 py-2 whitespace-nowrap font-semibold text-sm border-x border-gray-200" style={{ color: '#1e263e' }}>
+                <CalendarIcon className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                <span className="capitalize">{getDateRangeString()}</span>
               </div>
 
               <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => navigateDate('next')}
-                className="p-1.5 md:p-2 rounded-lg md:rounded-xl hover:bg-gray-100 transition-colors flex-shrink-0"
+                whileHover={{ backgroundColor: '#f3f4f6' }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => viewMode === 'doctors' ? navigateDoctorsDay('next') : navigateDate('next')}
+                className="p-2 transition-colors flex-shrink-0"
               >
-                <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
+                <ChevronRight className="w-4 h-4 text-gray-600" />
               </motion.button>
             </div>
           </div>
