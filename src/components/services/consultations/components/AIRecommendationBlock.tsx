@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, AlertCircle, CheckCircle2, Clock } from "lucide-react";
-import clsx from "clsx";
+import { Bot, AlertCircle, CheckCircle2, Clock, ChevronDown, ChevronUp } from "lucide-react";
 import type { RecommendedDoctor, AIErrorData } from "../types/doctor";
 
 interface AIRecommendationBlockProps {
@@ -12,220 +11,150 @@ interface AIRecommendationBlockProps {
   fallbackUsed?: boolean;
 }
 
+const URGENCY_CONFIG = {
+  urgent: {
+    bg: 'bg-red-100',
+    text: 'text-red-700',
+    border: 'border-red-200',
+    dot: 'bg-red-500',
+    label: '🔴 Срочно',
+    sub: 'Нужна немедленная консультация',
+  },
+  moderate: {
+    bg: 'bg-amber-50',
+    text: 'text-amber-700',
+    border: 'border-amber-200',
+    dot: 'bg-amber-400',
+    label: '🟠 Желательно сегодня',
+    sub: 'Обратитесь в ближайшее время',
+  },
+  non_urgent: {
+    bg: 'bg-green-50',
+    text: 'text-green-700',
+    border: 'border-green-200',
+    dot: 'bg-green-500',
+    label: '🟢 Не срочно',
+    sub: 'Плановая консультация',
+  },
+};
+
 const AIRecommendationBlock: React.FC<AIRecommendationBlockProps> = ({
   recommendedDoctor,
   aiErrorData,
   fallbackUsed = false,
 }) => {
-  const showAIBlock = recommendedDoctor || aiErrorData;
+  const [showAll, setShowAll] = useState(false);
 
-  // Format AI reasoning text with proper paragraphs and structure
-  const formatAIReasoning = (text: string): Array<{type: 'warning' | 'recommendation' | 'text', content: string}> => {
+  // Split reason into clean bullet points (sentences)
+  const bulletPoints = useMemo(() => {
+    const text = recommendedDoctor?.reason || aiErrorData?.reason || '';
     if (!text) return [];
+    return text
+      .split(/[.!?]+/)
+      .map(s => s.trim())
+      .filter(s => s.length > 10);
+  }, [recommendedDoctor?.reason, aiErrorData?.reason]);
 
-    const sentences = text.split(/\.(?=\s+[А-Я])/);
-    const paragraphs: Array<{type: 'warning' | 'recommendation' | 'text', content: string}> = [];
-    let currentParagraph = "";
+  const visiblePoints = showAll ? bulletPoints : bulletPoints.slice(0, 2);
+  const hiddenCount = bulletPoints.length - 2;
 
-    sentences.forEach((sentence, index) => {
-      const trimmed = sentence.trim();
-      if (!trimmed) return;
+  const urgency = recommendedDoctor?.urgency || 'non_urgent';
+  const urgencyCfg = URGENCY_CONFIG[urgency as keyof typeof URGENCY_CONFIG] || URGENCY_CONFIG.non_urgent;
 
-      currentParagraph += (currentParagraph ? '. ' : '') + trimmed;
-
-      const shouldBreak = (
-        /рекомендуется|следует|необходимо|важно|можете|попробуйте/i.test(trimmed) ||
-        /указывает|свидетельствует|характерно|типично|проявляется/i.test(trimmed) ||
-        currentParagraph.split('.').length >= 3 ||
-        /немедленно|срочно|опасно|внимание/i.test(sentences[index + 1] || "")
-      );
-
-      if (shouldBreak || index === sentences.length - 1) {
-        if (currentParagraph.trim()) {
-          if (/немедленно|срочно|опасно|внимание|вызовите скорую/i.test(currentParagraph)) {
-            paragraphs.push({
-              type: 'warning',
-              content: currentParagraph.trim() + '.'
-            });
-          } else if (/рекомендуется|следует|можете попробовать|советуем/i.test(currentParagraph)) {
-            paragraphs.push({
-              type: 'recommendation',
-              content: currentParagraph.trim() + '.'
-            });
-          } else {
-            paragraphs.push({
-              type: 'text',
-              content: currentParagraph.trim() + '.'
-            });
-          }
-        }
-        currentParagraph = "";
-      }
-    });
-
-    return paragraphs;
-  };
-
-  const getUrgencyIndicator = (urgency: string) => {
-    const urgencyConfig = {
-      urgent: {
-        color: "bg-red-500",
-        icon: AlertCircle,
-        text: "Срочно",
-        description: "Немедленная консультация"
-      },
-      non_urgent: {
-        color: "bg-green-500",
-        icon: CheckCircle2,
-        text: "Не срочно",
-        description: "Плановая консультация"
-      },
-      moderate: {
-        color: "bg-yellow-500",
-        icon: Clock,
-        text: "Умеренно",
-        description: "В ближайшее время"
-      }
-    };
-
-    const config = urgencyConfig[urgency as keyof typeof urgencyConfig] || urgencyConfig.non_urgent;
-    const Icon = config.icon;
-
-    return (
-      <div className="flex items-center justify-between">
-        <div className={`flex items-center gap-1.5 ${config.color} text-white px-2.5 py-1 rounded-full text-xs font-medium`}>
-          <Icon size={10} />
-          {config.text}
-        </div>
-        <span className="text-xs text-gray-500">{config.description}</span>
-      </div>
-    );
-  };
-
-  if (!showAIBlock) return null;
+  if (!recommendedDoctor && !aiErrorData) return null;
 
   return (
     <AnimatePresence>
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -10 }}
-        className={clsx(
-          "rounded-xl border-2 overflow-hidden",
-          fallbackUsed
-            ? "bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200"
-            : recommendedDoctor
-            ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200"
-            : "bg-gradient-to-r from-red-50 to-pink-50 border-red-200"
-        )}
+        exit={{ opacity: 0, y: -8 }}
+        className="rounded-2xl border overflow-hidden"
+        style={{ background: '#F5F8FF', borderColor: '#D8E2FF' }}
       >
-        {/* Header */}
-        <div className="p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className={clsx(
-              "p-2 rounded-lg flex-shrink-0",
-              fallbackUsed ? "bg-yellow-500" : recommendedDoctor ? "bg-blue-500" : "bg-red-500"
-            )}>
-              <Bot className="text-white" size={16} />
-            </div>
-            <div className="min-w-0">
-              <h4 className={clsx(
-                "font-bold text-base",
-                fallbackUsed ? "text-yellow-800" : recommendedDoctor ? "text-blue-800" : "text-red-800"
-              )}>
-                Рекомендация ИИ
-              </h4>
-              <p className={clsx(
-                "text-xs",
-                fallbackUsed ? "text-yellow-600" : recommendedDoctor ? "text-blue-600" : "text-red-600"
-              )}>
-                {fallbackUsed ? "Назначен доступный врач" : "На основе ваших симптомов"}
-              </p>
-            </div>
+        <div className="p-4 flex items-start gap-3">
+
+          {/* AI icon */}
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm"
+            style={{ background: 'linear-gradient(135deg, #3772ff, #6366f1)' }}
+          >
+            <Bot className="text-white" size={18} />
           </div>
-        </div>
 
-        {recommendedDoctor && (
-          <div className="px-4 pb-4">
-            {/* Doctor info */}
-            <div className="bg-white rounded-lg p-3 border border-gray-200 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                  {recommendedDoctor?.name?.charAt(0) || '?'}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs text-gray-600 mb-0.5">
-                    {fallbackUsed ? "📋 Назначен" : "✨ Рекомендуется"}
-                  </p>
-                  <h5 className="font-bold text-gray-900 text-sm leading-tight">{recommendedDoctor?.name || 'Не указано'}</h5>
-                  <p className="text-blue-600 font-semibold text-xs">{recommendedDoctor?.doctor_type || 'Специальность не указана'}</p>
-                </div>
-                {recommendedDoctor?.confidence && (
-                  <div className="text-center flex-shrink-0">
-                    <div className={clsx(
-                      "inline-flex items-center justify-center w-8 h-8 rounded-full text-white font-bold text-xs",
-                      recommendedDoctor.confidence >= 80 ? "bg-green-500" :
-                      recommendedDoctor.confidence >= 60 ? "bg-yellow-500" : "bg-orange-500"
-                    )}>
-                      {recommendedDoctor?.confidence}%
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Recommendation details */}
-            <div className="space-y-4">
-              <div>
-                <h6 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
-                  💭 Медицинское обоснование
-                </h6>
-                <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-blue-400 space-y-3">
-                  {formatAIReasoning(recommendedDoctor?.reason || '').map((block, index) => {
-                    if (block.type === 'warning') {
-                      return (
-                        <div key={index} className="bg-red-50 border border-red-200 rounded-lg p-3">
-                          <p className="text-red-800 text-sm font-medium flex items-start gap-2 leading-relaxed">
-                            <span className="text-red-500 mt-0.5 flex-shrink-0">⚠️</span>
-                            <span>{block.content}</span>
-                          </p>
-                        </div>
-                      );
-                    }
-
-                    if (block.type === 'recommendation') {
-                      return (
-                        <div key={index} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                          <p className="text-blue-800 text-sm leading-relaxed flex items-start gap-2">
-                            <span className="text-blue-500 mt-0.5 flex-shrink-0">💡</span>
-                            <span>{block.content}</span>
-                          </p>
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <p key={index} className="text-gray-700 text-sm leading-relaxed">
-                        {block.content}
-                      </p>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {recommendedDoctor?.urgency && (
-                <div>
-                  <h6 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
-                    ⚡ Уровень срочности
-                  </h6>
-                  <div className="bg-white rounded-lg p-3 border border-gray-200">
-                    {getUrgencyIndicator(recommendedDoctor?.urgency || 'non_urgent')}
-                  </div>
-                </div>
+          {/* Main content */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <span className="text-[11px] font-bold text-blue-600 uppercase tracking-widest">
+                AI рекомендует
+              </span>
+              {recommendedDoctor?.confidence && (
+                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                  recommendedDoctor.confidence >= 80
+                    ? 'bg-green-50 text-green-700 border-green-200'
+                    : recommendedDoctor.confidence >= 60
+                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                    : 'bg-orange-50 text-orange-700 border-orange-200'
+                }`}>
+                  Уверен на {recommendedDoctor.confidence}%
+                </span>
+              )}
+              {fallbackUsed && (
+                <span className="text-[11px] font-medium text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                  Назначен автоматически
+                </span>
               )}
             </div>
+
+            {recommendedDoctor && (
+              <div className="flex items-center gap-2 mb-2">
+                <p className="text-sm font-bold text-gray-900 leading-tight">{recommendedDoctor.name}</p>
+                <span className="text-xs font-medium text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full flex-shrink-0">
+                  {recommendedDoctor.doctor_type}
+                </span>
+              </div>
+            )}
+
+            {/* Bullet reasons */}
+            {visiblePoints.length > 0 && (
+              <div className="space-y-1">
+                {visiblePoints.map((point, i) => (
+                  <div key={i} className="flex items-start gap-1.5">
+                    <span className="text-blue-400 flex-shrink-0 mt-0.5 text-xs">•</span>
+                    <span className="text-xs text-gray-600 leading-relaxed">{point}</span>
+                  </div>
+                ))}
+                {hiddenCount > 0 && (
+                  <button
+                    onClick={() => setShowAll(v => !v)}
+                    className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700 font-medium mt-1 transition-colors"
+                  >
+                    {showAll ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    {showAll ? 'Свернуть' : `Подробнее (ещё ${hiddenCount})`}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {aiErrorData && !recommendedDoctor && (
+              <p className="text-xs text-gray-500 italic mt-1">
+                Специальность: {aiErrorData.specialty}
+              </p>
+            )}
           </div>
-        )}
+
+          {/* Right: urgency badge */}
+          <div className="flex-shrink-0">
+            <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-semibold ${urgencyCfg.bg} ${urgencyCfg.text} ${urgencyCfg.border}`}>
+              {urgencyCfg.label}
+            </div>
+            {recommendedDoctor && (
+              <p className="text-[10px] text-gray-400 mt-1 text-right leading-tight max-w-[120px]">
+                {urgencyCfg.sub}
+              </p>
+            )}
+          </div>
+        </div>
       </motion.div>
     </AnimatePresence>
   );

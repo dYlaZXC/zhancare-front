@@ -1707,7 +1707,7 @@ function DateDetailsDrawer({
   );
 }
 
-// Doctors Schedule Content Component - Shows all doctors with their available time slots
+// Doctors Schedule Content Component - Shows all staff with their available time slots
 function DoctorsScheduleContent({
   selectedDate,
   onDateChange,
@@ -1719,114 +1719,89 @@ function DoctorsScheduleContent({
   events: ScheduleEvent[];
   onEventAdded: () => void;
 }) {
-  const [doctors, setDoctors] = useState<Array<{
+  interface StaffDay {
     id: number;
     first_name: string;
     last_name: string;
-    email?: string;
-    phone?: string;
+    role: 'doctor' | 'nurse';
     specialization?: string;
-    years_of_experience?: number;
     preferred_consultation_duration?: number;
     room_number?: string | null;
-    online_work_schedule?: Record<string, { start: string; end: string; enabled: boolean }>;
-    weekly_schedules?: Record<string, { online?: Record<string, { start: string; end: string; enabled: boolean }>; offline?: Record<string, { start: string; end: string; enabled: boolean }> }>;
-    schedules?: Array<{ id: number; consultation_type: string; weekday: number; start_time: string; end_time: string; is_active: boolean }>;
-  }>>([]);
+    schedule: { source: string; start_time: string; end_time: string } | null;
+    next_available: { date: string; start_time: string; end_time: string; source: string } | null;
+  }
+  const [staffDay, setStaffDay] = useState<StaffDay[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDoctor, setSelectedDoctor] = useState<number | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<any>(null);
   const [modalAvailableSlots, setModalAvailableSlots] = useState<any[]>([]);
   const [showAssignModal, setShowAssignModal] = useState(false);
-  const [doctorSlots, setDoctorSlots] = useState<Map<number, any[]>>(new Map());
+  const [consultationType, setConsultationType] = useState<'online' | 'offline'>('online');
 
   useEffect(() => {
-    const fetchDoctors = async () => {
+    if (!selectedDate) return;
+    const fetchStaffDay = async () => {
       setLoading(true);
       try {
-        const response = await api.get('/staff/');
-        const doctorsList = response.data.filter((s: any) => s.role === 'doctor');
-        setDoctors(doctorsList);
+        const response = await api.get('/staff/doctors-day/', {
+          params: { date: selectedDate, consultation_type: consultationType }
+        });
+        setStaffDay(response.data);
       } catch (err) {
-        console.error("Failed to load doctors:", err);
-        toast.error("Не удалось загрузить список врачей");
+        console.error("Failed to load staff day:", err);
+        toast.error("Не удалось загрузить расписание на дату");
       } finally {
         setLoading(false);
       }
     };
+    fetchStaffDay();
+  }, [selectedDate, consultationType]);
 
-    fetchDoctors();
-  }, []);
-
-  // Compute available slots from normalized DoctorSchedule rows (no API calls)
-  useEffect(() => {
-    if (doctors.length === 0 || !selectedDate) return;
-
-    const slotsMap = new Map<number, any[]>();
+  // Generate time slots from start_time / end_time
+  const generateSlots = (member: StaffDay): any[] => {
+    if (!member.schedule) return [];
+    const { start_time, end_time } = member.schedule;
+    if (!start_time || !end_time) return [];
+    const duration = member.preferred_consultation_duration || 30;
+    const [startH, startM] = start_time.split(':').map(Number);
+    const [endH, endM] = end_time.split(':').map(Number);
+    let cur = startH * 60 + startM;
+    const end = endH * 60 + endM;
 
     const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const isToday = selectedDate === todayStr;
+    const isToday = selectedDate === now.toLocaleDateString('sv-SE');
     const nowMinutes = isToday ? now.getHours() * 60 + now.getMinutes() : -1;
 
-    for (const doctor of doctors) {
-      const duration = doctor.preferred_consultation_duration || 30;
-      const targetDate = new Date(selectedDate + 'T00:00:00');
-
-      // weekday: JS getDay() is 0=Sunday..6=Saturday, backend is 0=Monday..6=Sunday
-      const jsDay = targetDate.getDay();
-      const weekday = jsDay === 0 ? 6 : jsDay - 1;
-
-      // Find matching schedule row for this weekday (online type, active)
-      const scheduleRow = (doctor.schedules || []).find(
-        (s: any) => s.weekday === weekday && s.consultation_type === 'online' && s.is_active
-      );
-
-      if (!scheduleRow) {
-        slotsMap.set(doctor.id, []);
-        continue;
-      }
-
-      const [startH, startM] = scheduleRow.start_time.slice(0, 5).split(':').map(Number);
-      const [endH, endM] = scheduleRow.end_time.slice(0, 5).split(':').map(Number);
-      let cur = startH * 60 + startM;
-      const end = endH * 60 + endM;
-      const slots: any[] = [];
-
-      while (cur + duration <= end) {
-        if (isToday && cur <= nowMinutes) { cur += duration; continue; }
-        const s = `${String(Math.floor(cur / 60)).padStart(2, '0')}:${String(cur % 60).padStart(2, '0')}`;
-        const e = `${String(Math.floor((cur + duration) / 60)).padStart(2, '0')}:${String((cur + duration) % 60).padStart(2, '0')}`;
-        slots.push({ id: `gen_${s.replace(':', '')}`, start_time: s, end_time: e });
-        cur += duration;
-      }
-
-      slotsMap.set(doctor.id, slots);
+    const slots: any[] = [];
+    while (cur + duration <= end) {
+      if (isToday && cur <= nowMinutes) { cur += duration; continue; }
+      const s = `${String(Math.floor(cur / 60)).padStart(2, '0')}:${String(cur % 60).padStart(2, '0')}`;
+      const e = `${String(Math.floor((cur + duration) / 60)).padStart(2, '0')}:${String((cur + duration) % 60).padStart(2, '0')}`;
+      slots.push({ id: `gen_${s.replace(':', '')}`, start_time: s, end_time: e });
+      cur += duration;
     }
+    return slots;
+  };
 
-    setDoctorSlots(slotsMap);
-  }, [doctors, selectedDate]);
-
-  const handleSlotClick = (doctorId: number, slot: any) => {
-    setSelectedDoctor(doctorId);
+  const handleSlotClick = (staffId: number, slot: any, allSlots: any[]) => {
+    setSelectedDoctor(staffId);
     setSelectedSlot(slot);
-    setModalAvailableSlots(doctorSlots.get(doctorId) || []);
+    setModalAvailableSlots(allSlots);
     setShowAssignModal(true);
   };
 
-  const handleAddClick = (doctorId: number, availableSlots: any[]) => {
-    setSelectedDoctor(doctorId);
+  const handleAddClick = (staffId: number, allSlots: any[]) => {
+    setSelectedDoctor(staffId);
     setSelectedSlot(null);
-    setModalAvailableSlots(availableSlots);
+    setModalAvailableSlots(allSlots);
     setShowAssignModal(true);
   };
 
-  const filteredDoctors = doctors.filter(doctor => {
-    const fullName = `${doctor.first_name} ${doctor.last_name}`.toLowerCase();
-    const specialization = doctor.specialization?.toLowerCase() || '';
+  const filteredStaff = staffDay.filter(member => {
+    const fullName = `${member.first_name} ${member.last_name}`.toLowerCase();
+    const specialization = member.specialization?.toLowerCase() || '';
     const query = searchQuery.toLowerCase();
-
     return fullName.includes(query) || specialization.includes(query);
   });
 
@@ -1845,7 +1820,7 @@ function DoctorsScheduleContent({
   };
 
   const DAY_NAMES = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-  const todayStr = (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; })();
+  const todayStr = new Date().toLocaleDateString('sv-SE');
   const weekDays = getWeekStrip();
 
   return (
@@ -1877,15 +1852,34 @@ function DoctorsScheduleContent({
             );
           })}
         </div>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Поиск врача..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
-          />
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Поиск сотрудника..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+            />
+          </div>
+          {/* Consultation type toggle */}
+          <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg text-xs font-semibold flex-shrink-0">
+            <button
+              onClick={() => setConsultationType('online')}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-all ${consultationType === 'online' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500'}`}
+            >
+              <Video className="w-3 h-3" />
+              Онлайн
+            </button>
+            <button
+              onClick={() => setConsultationType('offline')}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-all ${consultationType === 'offline' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500'}`}
+            >
+              <Home className="w-3 h-3" />
+              Оффлайн
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1894,26 +1888,48 @@ function DoctorsScheduleContent({
             {loading ? (
               <div className="flex flex-col items-center justify-center h-full">
                 <Loader2 className="w-16 h-16 animate-spin mb-4 text-blue-600" />
-                <span className="text-lg font-medium text-gray-600">Загрузка врачей...</span>
+                <span className="text-lg font-medium text-gray-600">Загрузка расписания...</span>
               </div>
-            ) : filteredDoctors.length === 0 ? (
+            ) : filteredStaff.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center">
                 <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                   <Stethoscope className="w-10 h-10 text-gray-400" />
                 </div>
                 <p className="text-gray-600 text-lg font-medium">
-                  {searchQuery ? 'Врачи не найдены' : 'Нет врачей'}
+                  {searchQuery ? 'Сотрудники не найдены' : 'Нет сотрудников'}
                 </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5">
-                {filteredDoctors.map((doctor) => {
-                  const slots = doctorSlots.get(doctor.id) || [];
-                  const bookedSlots = events.filter(e => e.doctor_id === doctor.id && e.date === selectedDate);
+                {filteredStaff.map((member) => {
+                  const slots = generateSlots(member);
+                  const allSlots = generateSlots({ ...member, schedule: member.schedule ? { ...member.schedule } : null });
+                  const bookedSlots = events.filter(e => e.doctor_id === member.id && e.date === selectedDate);
                   const availableSlots = slots.filter(s => !bookedSlots.some(e => e.time === s.start_time));
-                  const hasSchedule = bookedSlots.length > 0 || availableSlots.length > 0;
+                  // nearest = first unbooked slot from all slots (ignoring past filter for button)
+                  const allAvailableSlots = (() => {
+                    if (!member.schedule) return [];
+                    const { start_time, end_time } = member.schedule;
+                    if (!start_time || !end_time) return [];
+                    const duration = member.preferred_consultation_duration || 30;
+                    const [sh, sm] = start_time.split(':').map(Number);
+                    const [eh, em] = end_time.split(':').map(Number);
+                    let c = sh * 60 + sm;
+                    const e = eh * 60 + em;
+                    const result: any[] = [];
+                    while (c + duration <= e) {
+                      const s = `${String(Math.floor(c/60)).padStart(2,'0')}:${String(c%60).padStart(2,'0')}`;
+                      const en = `${String(Math.floor((c+duration)/60)).padStart(2,'0')}:${String((c+duration)%60).padStart(2,'0')}`;
+                      if (!bookedSlots.some(ev => ev.time === s)) result.push({ id: `gen_${s.replace(':','')}`, start_time: s, end_time: en });
+                      c += duration;
+                    }
+                    return result;
+                  })();
+                  const nearestSlot = availableSlots[0] || allAvailableSlots[0] || null;
+                  const hasSchedule = member.schedule !== null;
                   const totalSlots = bookedSlots.length + availableSlots.length;
                   const fillRatio = totalSlots > 0 ? bookedSlots.length / totalSlots : -1;
+                  const isNurse = member.role === 'nurse';
 
                   const gradients = [
                     ['#3772ff', '#2c5bcc'],
@@ -1923,9 +1939,9 @@ function DoctorsScheduleContent({
                     ['#10b981', '#059669'],
                     ['#06b6d4', '#0891b2'],
                   ];
-                  const [g1, g2] = gradients[doctor.id % gradients.length];
+                  const [g1, g2] = gradients[member.id % gradients.length];
 
-                  // Status: gray = no schedule, green = available, yellow = >70% booked, red = full
+                  // Status dot: gray = no schedule, green = available, yellow = >70% booked, red = full
                   const statusColor = !hasSchedule
                     ? 'bg-gray-300'
                     : fillRatio === 1
@@ -1935,7 +1951,7 @@ function DoctorsScheduleContent({
                     : 'bg-emerald-500';
 
                   return (
-                    <div key={doctor.id} className="bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col">
+                    <div key={member.id} className="bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col">
 
                       {/* Card header */}
                       <div className="p-5 pb-4">
@@ -1946,21 +1962,36 @@ function DoctorsScheduleContent({
                               className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-sm shadow-sm"
                               style={{ background: `linear-gradient(135deg, ${g1}, ${g2})` }}
                             >
-                              {doctor.first_name[0]}{doctor.last_name[0]}
+                              {member.first_name[0]}{member.last_name[0]}
                             </div>
                             <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${statusColor}`} />
                           </div>
 
                           {/* Name + specialty */}
                           <div className="flex-1 min-w-0 pt-0.5">
-                            <p className="text-sm font-bold text-gray-900 leading-tight truncate">
-                              {doctor.first_name} {doctor.last_name}
-                            </p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-sm font-bold text-gray-900 leading-tight truncate">
+                                {member.first_name} {member.last_name}
+                              </p>
+                              {isNurse && (
+                                <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-600 flex-shrink-0">Медсестра</span>
+                              )}
+                            </div>
                             <p className="text-xs text-gray-400 mt-0.5 truncate">
-                              {doctor.specialization || 'Специализация не указана'}
+                              {member.specialization || 'Специализация не указана'}
                             </p>
-                            {doctor.room_number && (
-                              <p className="text-xs text-gray-500 mt-0.5">Номер кабинета: {doctor.room_number}</p>
+                            {member.room_number && (
+                              <p className="text-xs text-gray-500 mt-0.5">Кабинет: {member.room_number}</p>
+                            )}
+                            {/* Schedule source badge */}
+                            {hasSchedule && (
+                              <span className={`inline-block mt-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-md ${
+                                member.schedule!.source === 'availability'
+                                  ? 'bg-blue-100 text-blue-600'
+                                  : 'bg-gray-100 text-gray-500'
+                              }`}>
+                                {member.schedule!.source === 'availability' ? 'По датам' : 'Шаблон'} · {member.schedule!.start_time}–{member.schedule!.end_time}
+                              </span>
                             )}
                             {/* Inline stats */}
                             <div className="flex items-center gap-3 mt-2">
@@ -1977,7 +2008,7 @@ function DoctorsScheduleContent({
 
                           {/* Add button */}
                           <button
-                            onClick={() => handleAddClick(doctor.id, availableSlots)}
+                            onClick={() => handleAddClick(member.id, availableSlots)}
                             disabled={availableSlots.length === 0}
                             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-xl flex-shrink-0 shadow-sm hover:shadow-md transition-all disabled:opacity-25 disabled:cursor-not-allowed"
                             style={{ background: `linear-gradient(135deg, ${g1}, ${g2})` }}
@@ -1994,12 +2025,43 @@ function DoctorsScheduleContent({
                       {/* Slots body */}
                       <div className="p-5 pt-4 flex-1 space-y-4">
                         {!hasSchedule ? (
+                          member.next_available ? (
+                            <button
+                              onClick={() => {
+                                onDateChange(member.next_available!.date);
+                              }}
+                              className="w-full flex flex-col items-center justify-center py-6 gap-2 rounded-xl border-2 border-dashed border-amber-200 bg-amber-50 hover:bg-amber-500 hover:border-amber-500 group transition-all"
+                            >
+                              <div className="w-12 h-12 rounded-xl bg-white group-hover:bg-amber-400 flex items-center justify-center shadow-sm transition-all">
+                                <CalendarIcon className="w-6 h-6 text-amber-500 group-hover:text-white transition-colors" />
+                              </div>
+                              <p className="text-sm font-bold text-amber-700 group-hover:text-white transition-colors">
+                                {(() => {
+                                  const d = new Date(member.next_available!.date + 'T00:00:00');
+                                  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+                                })()}, {member.next_available!.start_time}
+                              </p>
+                              <p className="text-xs text-amber-400 group-hover:text-amber-100 transition-colors">Ближайший · Нажмите для перехода</p>
+                            </button>
+                          ) : (
                           <div className="flex flex-col items-center justify-center py-6 gap-2">
                             <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center">
                               <CalendarIcon className="w-5 h-5 text-gray-300" />
                             </div>
                             <p className="text-xs text-gray-400 font-medium">Расписание не задано</p>
                           </div>
+                          )
+                        ) : bookedSlots.length === 0 && availableSlots.length === 0 && nearestSlot ? (
+                          <button
+                            onClick={() => handleSlotClick(member.id, nearestSlot, allAvailableSlots)}
+                            className="w-full flex flex-col items-center justify-center py-6 gap-2 rounded-xl border-2 border-dashed border-emerald-200 bg-emerald-50 hover:bg-emerald-500 hover:border-emerald-500 group transition-all"
+                          >
+                            <div className="w-12 h-12 rounded-xl bg-white group-hover:bg-emerald-400 flex items-center justify-center shadow-sm transition-all">
+                              <Clock className="w-6 h-6 text-emerald-500 group-hover:text-white transition-colors" />
+                            </div>
+                            <p className="text-sm font-bold text-emerald-700 group-hover:text-white transition-colors">Ближайший слот: {nearestSlot.start_time}</p>
+                            <p className="text-xs text-emerald-400 group-hover:text-emerald-100 transition-colors">Нажмите для записи</p>
+                          </button>
                         ) : (
                           <>
                             {/* Booked appointments */}
@@ -2009,7 +2071,6 @@ function DoctorsScheduleContent({
                                 <div className="flex flex-col gap-2">
                                   {bookedSlots.map(event => (
                                     <div key={event.id} className="flex items-center gap-3 bg-blue-50/60 border border-blue-100 rounded-xl px-3.5 py-2.5 group">
-                                      {/* Time block */}
                                       <div
                                         className="w-12 h-12 rounded-xl flex flex-col items-center justify-center text-white flex-shrink-0 shadow-sm"
                                         style={{ background: 'linear-gradient(135deg, #3772ff, #2c5bcc)' }}
@@ -2044,7 +2105,7 @@ function DoctorsScheduleContent({
                                   {availableSlots.slice(0, 12).map((slot: any, i: number) => (
                                     <button
                                       key={i}
-                                      onClick={() => handleSlotClick(doctor.id, slot)}
+                                      onClick={() => handleSlotClick(member.id, slot, availableSlots)}
                                       className="flex flex-col items-center justify-center py-2.5 bg-emerald-50 border border-emerald-200 rounded-xl hover:bg-emerald-500 hover:border-emerald-500 transition-all group"
                                     >
                                       <span className="text-xs font-black text-emerald-700 group-hover:text-white leading-tight">{slot.start_time}</span>
@@ -2053,7 +2114,7 @@ function DoctorsScheduleContent({
                                   ))}
                                   {availableSlots.length > 12 && (
                                     <button
-                                      onClick={() => handleAddClick(doctor.id, availableSlots)}
+                                      onClick={() => handleAddClick(member.id, availableSlots)}
                                       className="flex flex-col items-center justify-center py-2.5 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-all"
                                     >
                                       <span className="text-xs font-bold text-gray-500">+{availableSlots.length - 12}</span>
@@ -2084,8 +2145,8 @@ function DoctorsScheduleContent({
             setModalAvailableSlots([]);
           }}
           doctorId={selectedDoctor}
-          doctorName={(() => { const d = doctors.find(x => x.id === selectedDoctor); return d ? `${d.first_name} ${d.last_name}` : ''; })()}
-          doctorSpecialization={doctors.find(x => x.id === selectedDoctor)?.specialization}
+          doctorName={(() => { const d = staffDay.find(x => x.id === selectedDoctor); return d ? `${d.first_name} ${d.last_name}` : ''; })()}
+          doctorSpecialization={staffDay.find(x => x.id === selectedDoctor)?.specialization}
           slot={selectedSlot}
           availableSlots={modalAvailableSlots}
           date={selectedDate}
@@ -2246,31 +2307,60 @@ function AssignConsultationModal({
                   Нет свободных слотов на этот день
                 </div>
               ) : (
-                <div className="flex flex-wrap gap-1.5">
-                  {availableSlots.map((s, i) => {
-                    const isSelected = selectedSlot?.start_time === s.start_time;
+                <>
+                  {/* Nearest slot — big featured button */}
+                  {(() => {
+                    const nearest = selectedSlot || availableSlots[0];
                     return (
                       <button
-                        key={i}
                         type="button"
-                        onClick={() => setSelectedSlot(s)}
-                        className={`px-3 py-1.5 text-sm font-medium rounded-lg border transition-all ${
-                          isSelected
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:text-blue-600'
+                        onClick={() => setSelectedSlot(nearest)}
+                        className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl border-2 mb-3 transition-all ${
+                          selectedSlot?.start_time === nearest.start_time
+                            ? 'bg-emerald-500 border-emerald-500 text-white shadow-md'
+                            : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-500 hover:border-emerald-500 hover:text-white group'
                         }`}
                       >
-                        {s.start_time}
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                          selectedSlot?.start_time === nearest.start_time ? 'bg-white/20' : 'bg-white shadow-sm'
+                        }`}>
+                          <Clock className={`w-6 h-6 ${selectedSlot?.start_time === nearest.start_time ? 'text-white' : 'text-emerald-500'}`} />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-base font-bold leading-tight">Ближайший: {nearest.start_time}</p>
+                          <p className={`text-xs mt-0.5 ${selectedSlot?.start_time === nearest.start_time ? 'text-emerald-100' : 'text-emerald-400'}`}>
+                            до {nearest.end_time}
+                          </p>
+                        </div>
+                        {selectedSlot?.start_time === nearest.start_time && (
+                          <Check className="w-5 h-5 ml-auto text-white" />
+                        )}
                       </button>
                     );
-                  })}
-                </div>
-              )}
-              {selectedSlot && (
-                <div className="mt-2 flex items-center gap-1.5 text-xs text-emerald-600">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  Выбрано: {selectedSlot.start_time} – {selectedSlot.end_time}
-                </div>
+                  })()}
+                  {/* Full slot grid */}
+                  {availableSlots.length > 1 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {availableSlots.map((s, i) => {
+                        const isSelected = selectedSlot?.start_time === s.start_time;
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => setSelectedSlot(s)}
+                            className={`px-3 py-1.5 text-sm font-medium rounded-lg border transition-all ${
+                              isSelected
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:text-blue-600'
+                            }`}
+                          >
+                            {s.start_time}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
               )}
             </div>
 

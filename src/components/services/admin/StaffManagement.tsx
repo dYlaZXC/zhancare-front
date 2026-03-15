@@ -33,7 +33,10 @@ import {
   RotateCcw,
   Video,
   Home,
-  ChevronDown
+  ChevronDown,
+  Clock,
+  Ban,
+  History
 } from "lucide-react";
 
 import bnClinicLogo from "@/assets/clinics_logos/bn-clinica.png";
@@ -440,6 +443,19 @@ export default function StaffManagement({ user }: StaffManagementProps) {
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [scheduleMember, setScheduleMember] = useState<StaffMember | null>(null);
   const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [scheduleModalTab, setScheduleModalTab] = useState<'schedule' | 'template' | 'history'>('schedule');
+  const [scheduleHistory, setScheduleHistory] = useState<any[]>([]);
+  // Week planner state
+  const [plannerWeekStart, setPlannerWeekStart] = useState<string>(''); // ISO date of Monday
+  const [plannerConsultationType, setPlannerConsultationType] = useState<'online' | 'offline'>('online');
+  const [plannerDays, setPlannerDays] = useState<any[]>([]); // 7-day array from API
+  const [plannerLoading, setPlannerLoading] = useState(false);
+  const [plannerSaving, setPlannerSaving] = useState(false);
+  const [plannerDirty, setPlannerDirty] = useState(false); // unsaved changes in current week
+  // Overrides kept for legacy tab (renamed to template)
+  const [overrides, setOverrides] = useState<any[]>([]);
+  const [overrideForm, setOverrideForm] = useState({ date: '', consultation_type: 'online', is_day_off: false, start_time: '09:00', end_time: '18:00', note: '' });
+  const [overrideSaving, setOverrideSaving] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -558,7 +574,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     targetMonday.setDate(currentWeekMonday.getDate() + (weekOffset * 7));
 
     // Return ISO date string (YYYY-MM-DD)
-    return targetMonday.toISOString().split('T')[0];
+    return targetMonday.toLocaleDateString('sv-SE');
   }, []);
 
   // Get date for a day in the displayed week
@@ -1005,6 +1021,13 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     }
   };
 
+  const refreshStaffMember = async (memberId: number) => {
+    try {
+      const { data } = await api.get(`/staff/${memberId}/`);
+      setStaff(prev => prev.map(m => m.id === memberId ? { ...m, ...data } : m));
+    } catch { /* silent */ }
+  };
+
   const fetchStaff = async (deleted = false) => {
     setLoading(true);
     setError(null);
@@ -1205,20 +1228,27 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       monday: 0, tuesday: 1, wednesday: 2, thursday: 3,
       friday: 4, saturday: 5, sunday: 6,
     };
-    const rows: Array<{ consultation_type: string; weekday: number; start_time: string; end_time: string; is_active: boolean }> = [];
-    // Use the first (most recent) week entry as the recurring pattern
-    const firstEntry = Object.values(weeklySchedules)[0];
-    if (!firstEntry) return rows;
-    for (const type of ['online', 'offline'] as const) {
-      const dayMap = firstEntry[type];
-      if (!dayMap) continue;
-      for (const [day, cfg] of Object.entries(dayMap)) {
-        if (cfg.enabled) {
-          rows.push({ consultation_type: type, weekday: DAY_TO_WEEKDAY[day] ?? 0, start_time: cfg.start, end_time: cfg.end, is_active: true });
+    // Merge all configured weeks — sort by week start date so later weeks override earlier ones
+    // for the SAME day when explicitly enabled. Disabled days in a later week never remove
+    // a day that was enabled in an earlier week (additive merge).
+    const merged = new Map<string, { consultation_type: string; weekday: number; start_time: string; end_time: string; is_active: boolean }>();
+    const sortedEntries = Object.entries(weeklySchedules).sort(([a], [b]) => a.localeCompare(b));
+    for (const [, weekEntry] of sortedEntries) {
+      for (const type of ['online', 'offline'] as const) {
+        const dayMap = weekEntry[type];
+        if (!dayMap) continue;
+        for (const [day, cfg] of Object.entries(dayMap)) {
+          const weekday = DAY_TO_WEEKDAY[day] ?? 0;
+          const key = `${type}-${weekday}`;
+          if (cfg.enabled) {
+            // Later weeks override time settings for the same day
+            merged.set(key, { consultation_type: type, weekday, start_time: cfg.start, end_time: cfg.end, is_active: true });
+          }
+          // Disabled in a later week does NOT remove a day enabled in an earlier week
         }
       }
     }
-    return rows;
+    return Array.from(merged.values());
   };
 
   const handleAddStaff = async (e: React.FormEvent) => {
@@ -1435,7 +1465,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     const monday = new Date(now);
     monday.setDate(now.getDate() + mondayOffset);
     monday.setHours(0, 0, 0, 0);
-    const weekStartDate = monday.toISOString().split('T')[0];
+    const weekStartDate = monday.toLocaleDateString('sv-SE');
 
     const weekEntry = emptyWeek();
     const scheduleRows: Array<{ consultation_type: 'online' | 'offline'; weekday: number; start_time: string; end_time: string; is_active: boolean }> = member.schedules || [];
@@ -1468,7 +1498,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     const monday = new Date(now);
     monday.setDate(now.getDate() + (dow === 0 ? -6 : 1 - dow));
     monday.setHours(0, 0, 0, 0);
-    const weekStartDate = monday.toISOString().split('T')[0];
+    const weekStartDate = monday.toLocaleDateString('sv-SE');
     const weekEntry = emptyWeek();
     const rows: Array<{ consultation_type: 'online' | 'offline'; weekday: number; start_time: string; end_time: string; is_active: boolean }> = member.schedules || [];
     for (const row of rows) {
@@ -1487,7 +1517,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     const monday = new Date(now);
     monday.setDate(now.getDate() + (dow === 0 ? -6 : 1 - dow));
     monday.setHours(0, 0, 0, 0);
-    const weekStartDate = monday.toISOString().split('T')[0];
+    const weekStartDate = monday.toLocaleDateString('sv-SE');
     return {
       [weekStartDate]: {
         online: { monday: d('09:00','18:00'), tuesday: d('09:00','18:00'), wednesday: d('09:00','18:00'), thursday: d('09:00','18:00'), friday: d('09:00','18:00'), saturday: d('10:00','14:00'), sunday: d('10:00','14:00') },
@@ -1499,6 +1529,10 @@ export default function StaffManagement({ user }: StaffManagementProps) {
   const openScheduleModal = async (member: StaffMember) => {
     setScheduleMember(member);
     setShowScheduleModal(true);
+    setScheduleModalTab('schedule');
+    setOverrides([]);
+    setScheduleHistory([]);
+    setOverrideForm({ date: '', consultation_type: 'online', is_day_off: false, start_time: '09:00', end_time: '18:00', note: '' });
     setScheduleLoading(true);
     try {
       const response = await api.get(`/staff/${member.id}/`);
@@ -1507,13 +1541,261 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       setFormData(prev => ({ ...prev, schedule_type: (fresh.schedule_type || 'weekly') as 'weekly' | 'constant' }));
       setWeeklySchedules(buildWeeklySchedulesFromMember(fresh));
     } catch {
-      // fallback to local data if fetch fails
       setFormData(prev => ({ ...prev, schedule_type: (member.schedule_type || 'weekly') as 'weekly' | 'constant' }));
       setWeeklySchedules(buildWeeklySchedulesFromMember(member));
     } finally {
       setCurrentWeekIndex(0);
       setScheduleLoading(false);
+      setScheduleModalTab('schedule');
+      // Init planner at current week
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const day = today.getDay();
+      const diff = day === 0 ? -6 : 1 - day;
+      today.setDate(today.getDate() + diff);
+      const monday = today.toLocaleDateString('sv-SE');
+      setPlannerWeekStart(monday);
+      setPlannerConsultationType('online');
+      fetchPlannerWeek(member.id, monday, 'online');
+      fetchOverrides(member.id);
+      fetchScheduleHistory(member.id);
     }
+  };
+
+  const fetchOverrides = async (memberId: number) => {
+    try {
+      const { data } = await api.get(`/staff/${memberId}/schedule-overrides/`);
+      setOverrides(data);
+    } catch { setOverrides([]); }
+  };
+
+  const fetchScheduleHistory = async (memberId: number) => {
+    try {
+      const { data } = await api.get(`/staff/${memberId}/schedule-history/`);
+      setScheduleHistory(data);
+    } catch { setScheduleHistory([]); }
+  };
+
+  const handleSaveOverride = async () => {
+    if (!scheduleMember) return;
+    if (!overrideForm.date) { alert('Выберите дату'); return; }
+    if (!overrideForm.is_day_off && (!overrideForm.start_time || !overrideForm.end_time)) { alert('Укажите время'); return; }
+    setOverrideSaving(true);
+    try {
+      await api.post(`/staff/${scheduleMember.id}/schedule-overrides/`, {
+        ...overrideForm,
+        start_time: overrideForm.is_day_off ? null : overrideForm.start_time,
+        end_time: overrideForm.is_day_off ? null : overrideForm.end_time,
+      });
+      await fetchOverrides(scheduleMember.id);
+      await fetchScheduleHistory(scheduleMember.id);
+      setOverrideForm({ date: '', consultation_type: 'online', is_day_off: false, start_time: '09:00', end_time: '18:00', note: '' });
+    } catch (e: any) {
+      alert(e?.response?.data?.error || 'Ошибка сохранения');
+    } finally { setOverrideSaving(false); }
+  };
+
+  const handleDeleteOverride = async (overrideId: number) => {
+    if (!scheduleMember) return;
+    try {
+      await api.delete(`/staff/${scheduleMember.id}/schedule-overrides/${overrideId}/`);
+      setOverrides(prev => prev.filter(o => o.id !== overrideId));
+      await fetchScheduleHistory(scheduleMember.id);
+    } catch { alert('Ошибка удаления'); }
+  };
+
+  // ---- Week planner helpers ----
+  const getMondayOf = (dateStr: string): string => {
+    const d = new Date(dateStr + 'T00:00:00');
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    return d.toLocaleDateString('sv-SE');
+  };
+
+  const addDays = (dateStr: string, n: number): string => {
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + n);
+    return d.toLocaleDateString('sv-SE');
+  };
+
+  const formatWeekLabel = (mondayStr: string): string => {
+    const start = new Date(mondayStr + 'T00:00:00');
+    const end = new Date(mondayStr + 'T00:00:00');
+    end.setDate(end.getDate() + 6);
+    const fmt = (d: Date) => d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+    return `${fmt(start)} — ${fmt(end)}`;
+  };
+
+  const isCurrentWeekPlanner = (mondayStr: string): boolean => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const monday = new Date(mondayStr + 'T00:00:00');
+    const sunday = new Date(mondayStr + 'T00:00:00');
+    sunday.setDate(sunday.getDate() + 6);
+    return today >= monday && today <= sunday;
+  };
+
+  const buildDefaultWeek = (weekStart: string): any[] => {
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(weekStart + 'T00:00:00');
+      d.setDate(d.getDate() + i);
+      const dow = d.getDay(); // 0=Sun, 6=Sat
+      const isWeekend = dow === 0 || dow === 6;
+      return {
+        date: d.toLocaleDateString('sv-SE'),
+        avail_id: null,
+        is_day_off: isWeekend,
+        start_time: isWeekend ? null : '09:00',
+        end_time: isWeekend ? null : '18:00',
+        note: '',
+        source: 'empty',
+      };
+    });
+  };
+
+  const fetchPlannerWeek = async (memberId: number, weekStart: string, cType: string) => {
+    setPlannerLoading(true);
+    try {
+      const { data } = await api.get(`/staff/${memberId}/availability/`, {
+        params: { week_start: weekStart, consultation_type: cType },
+      });
+      setPlannerDays(data.length > 0 ? data : buildDefaultWeek(weekStart));
+      setPlannerDirty(false);
+    } catch { setPlannerDays(buildDefaultWeek(weekStart)); setPlannerDirty(false); }
+    finally { setPlannerLoading(false); }
+  };
+
+  const handlePlannerWeekNav = async (offset: number) => {
+    if (!scheduleMember) return;
+    // Auto-save current week if it has unsaved changes
+    if (plannerDirty && plannerDays.length > 0) {
+      try {
+        await Promise.all(plannerDays.map(day =>
+          api.post(`/staff/${scheduleMember.id}/availability/`, {
+            date: day.date,
+            consultation_type: plannerConsultationType,
+            is_day_off: day.is_day_off,
+            start_time: day.is_day_off ? null : (day.start_time || '09:00'),
+            end_time: day.is_day_off ? null : (day.end_time || '18:00'),
+            note: day.note || '',
+          })
+        ));
+        toast.success('Неделя сохранена автоматически');
+      } catch { /* silent — user can retry on destination week */ }
+    }
+    const newWeek = addDays(plannerWeekStart, offset * 7);
+    setPlannerWeekStart(newWeek);
+    fetchPlannerWeek(scheduleMember.id, newWeek, plannerConsultationType);
+  };
+
+  const handlePlannerTypeChange = async (cType: 'online' | 'offline') => {
+    if (!scheduleMember) return;
+    if (plannerDirty && plannerDays.length > 0) {
+      try {
+        await Promise.all(plannerDays.map(day =>
+          api.post(`/staff/${scheduleMember.id}/availability/`, {
+            date: day.date,
+            consultation_type: plannerConsultationType,
+            is_day_off: day.is_day_off,
+            start_time: day.is_day_off ? null : (day.start_time || '09:00'),
+            end_time: day.is_day_off ? null : (day.end_time || '18:00'),
+            note: day.note || '',
+          })
+        ));
+      } catch { /* silent */ }
+    }
+    setPlannerConsultationType(cType);
+    fetchPlannerWeek(scheduleMember.id, plannerWeekStart, cType);
+  };
+
+  const updatePlannerDay = (index: number, changes: Partial<any>) => {
+    setPlannerDays(prev => prev.map((d, i) => i === index ? { ...d, ...changes } : d));
+    setPlannerDirty(true);
+  };
+
+  const handleSavePlannerDay = async (day: any) => {
+    if (!scheduleMember) return;
+    try {
+      if (day.is_day_off) {
+        await api.post(`/staff/${scheduleMember.id}/availability/`, {
+          date: day.date,
+          consultation_type: plannerConsultationType,
+          is_day_off: true,
+          note: day.note || '',
+        });
+      } else {
+        await api.post(`/staff/${scheduleMember.id}/availability/`, {
+          date: day.date,
+          consultation_type: plannerConsultationType,
+          is_day_off: false,
+          start_time: day.start_time || '09:00',
+          end_time: day.end_time || '18:00',
+          note: day.note || '',
+        });
+      }
+      await fetchPlannerWeek(scheduleMember.id, plannerWeekStart, plannerConsultationType);
+      await fetchScheduleHistory(scheduleMember.id);
+      refreshStaffMember(scheduleMember.id);
+      toast.success('Сохранено');
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || 'Ошибка сохранения');
+    }
+  };
+
+  const handleDeletePlannerDay = async (day: any) => {
+    if (!scheduleMember || !day.avail_id) return;
+    try {
+      await api.delete(`/staff/${scheduleMember.id}/availability/${day.avail_id}/`);
+      await fetchPlannerWeek(scheduleMember.id, plannerWeekStart, plannerConsultationType);
+      toast.success('Сброшено к шаблону');
+    } catch { toast.error('Ошибка'); }
+  };
+
+  const handleCopyWeek = async () => {
+    if (!scheduleMember) return;
+    const nextWeek = addDays(plannerWeekStart, 7);
+    if (!confirm(`Скопировать расписание на неделю ${formatWeekLabel(nextWeek)}?`)) return;
+    try {
+      await api.post(`/staff/${scheduleMember.id}/availability/copy-week/`, {
+        src_week_start: plannerWeekStart,
+        dst_week_start: nextWeek,
+        consultation_type: plannerConsultationType,
+      });
+      toast.success('Неделя скопирована');
+    } catch { toast.error('Ошибка копирования'); }
+  };
+
+  const handleSaveEntireWeek = async () => {
+    if (!scheduleMember) return;
+    setPlannerSaving(true);
+    try {
+      await Promise.all(plannerDays.map(day =>
+        api.post(`/staff/${scheduleMember.id}/availability/`, {
+          date: day.date,
+          consultation_type: plannerConsultationType,
+          is_day_off: day.is_day_off,
+          start_time: day.is_day_off ? null : (day.start_time || '09:00'),
+          end_time: day.is_day_off ? null : (day.end_time || '18:00'),
+          note: day.note || '',
+        })
+      ));
+      await fetchPlannerWeek(scheduleMember.id, plannerWeekStart, plannerConsultationType);
+      await fetchScheduleHistory(scheduleMember.id);
+      setPlannerDirty(false);
+      if (scheduleMember) refreshStaffMember(scheduleMember.id);
+      toast.success('Неделя сохранена');
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || 'Ошибка сохранения');
+    } finally { setPlannerSaving(false); }
+  };
+
+  const getPlannerWeekStatus = (): 'planned' | 'partial' | 'empty' => {
+    if (plannerDays.length === 0) return 'empty';
+    const withAvail = plannerDays.filter(d => d.source === 'availability');
+    if (withAvail.length === 0) return 'empty';
+    if (withAvail.length === plannerDays.length) return 'planned';
+    return 'partial';
   };
 
   const handleSaveSchedule = async () => {
@@ -1970,10 +2252,11 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                             const activeSchedules = (member.schedules || []).filter((s: any) => s.is_active);
                             const hasOnline = activeSchedules.some((s: any) => s.consultation_type === 'online');
                             const hasOffline = activeSchedules.some((s: any) => s.consultation_type === 'offline');
-                            if (!hasOnline && !hasOffline) return (
+                            const hasAvailability = (member as any).has_availability;
+                            if (!hasOnline && !hasOffline && !hasAvailability) return (
                               <span className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
                                 <AlertCircle className="w-3 h-3" />
-                                Нет расписания
+                                Нет расписания на эту неделю
                               </span>
                             );
                             return (<>
@@ -3316,7 +3599,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                     <Calendar className="w-6 h-6 text-indigo-600" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900">Расписание</h2>
+                    <h2 className="text-xl font-bold text-gray-900">{scheduleModalTab === "template" ? "Постоянное расписание" : "Расписание"}</h2>
                     <p className="text-sm text-gray-500">{scheduleMember.first_name} {scheduleMember.last_name}</p>
                   </div>
                 </div>
@@ -3330,14 +3613,151 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                 </button>
               </div>
 
+              {/* Tab Switcher */}
+              <div className="sticky top-[81px] z-10 bg-white flex border-b border-gray-100">
+                {[
+                  { key: 'schedule', label: 'По датам', icon: <Calendar className="w-4 h-4" /> },
+                  { key: 'template', label: 'Постоянное', icon: <RotateCcw className="w-4 h-4" /> },
+                  { key: 'history', label: 'История', icon: <History className="w-4 h-4" /> },
+                ].map(tab => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setScheduleModalTab(tab.key as any)}
+                    className={`flex items-center gap-2 px-5 py-4 text-sm font-semibold border-b-2 transition-all ${
+                      scheduleModalTab === tab.key
+                        ? 'border-indigo-600 text-indigo-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
+                    }`}
+                  >
+                    {tab.icon}
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
               {/* Body */}
-              <div className="p-8 space-y-6">
-                {scheduleLoading && (
+              <div className="p-6 space-y-4">
+
+                {/* ── PLANNER TAB (hidden) ── */}
+                {scheduleModalTab === 'schedule' && (
+                  <div className="space-y-4">
+                    {/* Consultation type toggle */}
+                    <div className="flex rounded-2xl overflow-hidden border-2 border-gray-200">
+                      <button type="button" onClick={() => handlePlannerTypeChange('online')}
+                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 font-semibold text-sm transition-all ${plannerConsultationType === 'online' ? 'bg-blue-500 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>
+                        <Video className="w-4 h-4" /> Онлайн
+                      </button>
+                      <button type="button" onClick={() => handlePlannerTypeChange('offline')}
+                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 font-semibold text-sm transition-all ${plannerConsultationType === 'offline' ? 'bg-purple-500 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>
+                        <Home className="w-4 h-4" /> Оффлайн
+                      </button>
+                    </div>
+
+                    {/* Week nav */}
+                    <div className="flex items-center justify-between bg-indigo-50 border-2 border-indigo-100 rounded-2xl px-4 py-3">
+                      <button type="button" onClick={() => handlePlannerWeekNav(-1)}
+                        className="p-2 rounded-lg bg-white hover:bg-indigo-100 text-indigo-600 border border-indigo-200 transition-all">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                      </button>
+                      <div className="flex items-center gap-2 text-sm font-bold text-gray-800">
+                        <span className="text-base">📅</span>
+                        {plannerWeekStart ? formatWeekLabel(plannerWeekStart) : '...'}
+                        {plannerWeekStart && isCurrentWeekPlanner(plannerWeekStart) && (
+                          <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded-full">Текущая</span>
+                        )}
+                      </div>
+                      <button type="button" onClick={() => handlePlannerWeekNav(1)}
+                        className="p-2 rounded-lg bg-white hover:bg-indigo-100 text-indigo-600 border border-indigo-200 transition-all">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                      </button>
+                    </div>
+
+                    {/* Days */}
+                    {plannerLoading ? (
+                      <div className="flex justify-center py-10"><Loader2 className="w-7 h-7 animate-spin text-indigo-400" /></div>
+                    ) : (
+                      <div className="space-y-2">
+                        {plannerDays.map((day, i) => {
+                          const d = new Date(day.date + 'T00:00:00');
+                          const dayNames = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+                          const fullNames = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+                          const dateLabel = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+                          const isFromAvail = day.source === 'availability';
+                          const isOff = day.is_day_off;
+                          return (
+                            <div key={day.date} className={`rounded-xl border-2 p-3 transition-all ${
+                              isOff ? 'border-gray-200 bg-gray-50' :
+                              (plannerConsultationType === 'online' ? 'border-blue-400 bg-blue-50' : 'border-purple-400 bg-purple-50')
+                            }`}>
+                              <div className="flex items-center gap-3">
+                                {/* Day toggle */}
+                                <button type="button"
+                                  onClick={() => {
+                                    const nowOff = !isOff;
+                                    updatePlannerDay(i, {
+                                      is_day_off: nowOff,
+                                      ...(nowOff ? {} : {
+                                        start_time: day.start_time || '09:00',
+                                        end_time: day.end_time || '18:00',
+                                      }),
+                                    });
+                                  }}
+                                  className={`flex-shrink-0 w-11 h-11 rounded-xl border-2 font-semibold text-xs transition-all ${
+                                    isOff ? 'border-gray-300 bg-white text-gray-400' :
+                                    isFromAvail ? (plannerConsultationType === 'online' ? 'border-blue-500 bg-blue-500 text-white' : 'border-purple-500 bg-purple-500 text-white') :
+                                    'border-gray-300 bg-white text-gray-500'
+                                  }`}>
+                                  {dayNames[d.getDay()]}
+                                </button>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-semibold text-gray-800">{fullNames[d.getDay()]}</span>
+                                    <span className="text-xs text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded-full">{dateLabel}</span>
+                                    {day.source === 'template' && <span className="text-xs text-gray-300 italic">из шаблона</span>}
+                                  </div>
+                                  {isOff && <p className="text-xs text-gray-400 mt-0.5">Выходной</p>}
+                                </div>
+                                {!isOff && (
+                                  <div className="flex items-center gap-2">
+                                    <input type="time" value={day.start_time || '09:00'} step="900"
+                                      onChange={e => updatePlannerDay(i, { start_time: e.target.value })}
+                                      className="w-28 px-2 py-1.5 rounded-lg border-2 border-gray-200 focus:border-indigo-400 focus:outline-none text-sm" />
+                                    <span className="text-gray-300">—</span>
+                                    <input type="time" value={day.end_time || '18:00'} step="900"
+                                      onChange={e => updatePlannerDay(i, { end_time: e.target.value })}
+                                      className="w-28 px-2 py-1.5 rounded-lg border-2 border-gray-200 focus:border-indigo-400 focus:outline-none text-sm" />
+                                  </div>
+                                )}
+                                {/* Action buttons */}
+                                <div className="flex gap-1">
+                                  <button type="button" onClick={() => handleSavePlannerDay(day)}
+                                    className="p-1.5 rounded-lg bg-indigo-100 hover:bg-indigo-200 text-indigo-600 transition-colors" title="Сохранить">
+                                    <CheckCircle className="w-4 h-4" />
+                                  </button>
+                                  {isFromAvail && (
+                                    <button type="button" onClick={() => handleDeletePlannerDay(day)}
+                                      className="p-1.5 rounded-lg bg-gray-100 hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors" title="Сброс к шаблону">
+                                      <RotateCcw className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ── TEMPLATE TAB (old weekday pattern) ── */}
+                {scheduleLoading && scheduleModalTab === 'template' && (
                   <div className="flex items-center justify-center py-16">
                     <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
                   </div>
                 )}
-                {!scheduleLoading && <>
+                {!scheduleLoading && scheduleModalTab === 'template' && <>
                 {/* Schedule Type */}
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-5 rounded-2xl border-2 border-blue-100">
                   <label className="block text-sm font-semibold text-gray-700 mb-3">
@@ -3577,6 +3997,185 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                   </div>
                 )}
                 </>}
+
+                {/* Overrides Tab */}
+                {false && (
+                  <div className="space-y-6">
+                    {/* Add Override Form */}
+                    <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-5 space-y-4">
+                      <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                        <Plus className="w-4 h-4 text-amber-600" />
+                        Добавить исключение
+                      </h3>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Дата</label>
+                          <input
+                            type="date"
+                            value={overrideForm.date}
+                            onChange={e => setOverrideForm(f => ({ ...f, date: e.target.value }))}
+                            className="w-full px-3 py-2 rounded-lg border-2 border-gray-300 focus:border-amber-500 focus:outline-none text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Тип</label>
+                          <select
+                            value={overrideForm.consultation_type}
+                            onChange={e => setOverrideForm(f => ({ ...f, consultation_type: e.target.value }))}
+                            className="w-full px-3 py-2 rounded-lg border-2 border-gray-300 focus:border-amber-500 focus:outline-none text-sm"
+                          >
+                            <option value="online">Онлайн</option>
+                            <option value="offline">Оффлайн</option>
+                          </select>
+                        </div>
+                      </div>
+                      <label className="flex items-center gap-3 cursor-pointer select-none">
+                        <div
+                          onClick={() => setOverrideForm(f => ({ ...f, is_day_off: !f.is_day_off }))}
+                          className={`w-10 h-6 rounded-full transition-colors relative ${overrideForm.is_day_off ? 'bg-red-500' : 'bg-gray-300'}`}
+                        >
+                          <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${overrideForm.is_day_off ? 'left-5' : 'left-1'}`} />
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">Выходной день</span>
+                      </label>
+                      {!overrideForm.is_day_off && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Начало</label>
+                            <input
+                              type="time"
+                              value={overrideForm.start_time}
+                              onChange={e => setOverrideForm(f => ({ ...f, start_time: e.target.value }))}
+                              step="900"
+                              className="w-full px-3 py-2 rounded-lg border-2 border-gray-300 focus:border-amber-500 focus:outline-none text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Конец</label>
+                            <input
+                              type="time"
+                              value={overrideForm.end_time}
+                              onChange={e => setOverrideForm(f => ({ ...f, end_time: e.target.value }))}
+                              step="900"
+                              className="w-full px-3 py-2 rounded-lg border-2 border-gray-300 focus:border-amber-500 focus:outline-none text-sm"
+                            />
+                          </div>
+                        </div>
+                      )}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Примечание (необязательно)</label>
+                        <input
+                          type="text"
+                          value={overrideForm.note}
+                          onChange={e => setOverrideForm(f => ({ ...f, note: e.target.value }))}
+                          placeholder="Например: командировка, отпуск..."
+                          className="w-full px-3 py-2 rounded-lg border-2 border-gray-300 focus:border-amber-500 focus:outline-none text-sm"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleSaveOverride}
+                        disabled={overrideSaving || !overrideForm.date}
+                        className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {overrideSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                        Сохранить исключение
+                      </button>
+                    </div>
+
+                    {/* Existing Overrides List */}
+                    {overrides.length === 0 ? (
+                      <div className="text-center py-8 text-gray-400">
+                        <Ban className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                        <p className="text-sm">Исключений нет</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Существующие исключения</p>
+                        {overrides.map(ov => (
+                          <div key={ov.id} className={`flex items-center justify-between p-4 rounded-xl border-2 ${ov.is_day_off ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-amber-50'}`}>
+                            <div className="flex items-center gap-3">
+                              {ov.is_day_off
+                                ? <Ban className="w-4 h-4 text-red-500" />
+                                : <Clock className="w-4 h-4 text-amber-600" />
+                              }
+                              <div>
+                                <p className="text-sm font-semibold text-gray-800">
+                                  {new Date(ov.date + 'T00:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                  <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${ov.consultation_type === 'online' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
+                                    {ov.consultation_type === 'online' ? 'Онлайн' : 'Оффлайн'}
+                                  </span>
+                                </p>
+                                <p className={`text-xs mt-0.5 ${ov.is_day_off ? 'text-red-600' : 'text-amber-700'}`}>
+                                  {ov.is_day_off ? 'Выходной' : `${ov.start_time?.slice(0, 5)} — ${ov.end_time?.slice(0, 5)}`}
+                                  {ov.note && <span className="ml-2 text-gray-500">· {ov.note}</span>}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteOverride(ov.id)}
+                              className="p-2 rounded-lg hover:bg-red-100 text-red-400 hover:text-red-600 transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* History Tab */}
+                {!scheduleLoading && scheduleModalTab === 'history' && (
+                  <div className="space-y-3">
+                    {scheduleHistory.length === 0 ? (
+                      <div className="text-center py-8 text-gray-400">
+                        <History className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                        <p className="text-sm">История изменений пуста</p>
+                      </div>
+                    ) : (
+                      scheduleHistory.map((entry: any) => {
+                        const actionColor = entry.action === 'create' ? 'text-green-600 bg-green-50 border-green-200' : entry.action === 'delete' ? 'text-red-600 bg-red-50 border-red-200' : 'text-blue-600 bg-blue-50 border-blue-200';
+                        const actionLabel = entry.action === 'create' ? 'Создано' : entry.action === 'delete' ? 'Удалено' : 'Изменено';
+                        const entityLabel = entry.entity_type === 'base' ? 'Базовое расписание' : 'Исключение';
+                        const changedAt = new Date(entry.changed_at).toLocaleString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                        return (
+                          <div key={entry.id} className={`p-4 rounded-xl border-2 ${actionColor}`}>
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-2">
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${actionColor}`}>{actionLabel}</span>
+                                <span className="text-xs text-gray-500">{entityLabel}</span>
+                              </div>
+                              <span className="text-xs text-gray-400">{changedAt}</span>
+                            </div>
+                            {entry.changed_by_name && (
+                              <p className="text-xs text-gray-500 mb-2">Изменил: {entry.changed_by_name}</p>
+                            )}
+                            <div className="grid grid-cols-2 gap-2 mt-2">
+                              {entry.before && (
+                                <div className="bg-white/60 rounded-lg p-2">
+                                  <p className="text-xs font-semibold text-gray-500 mb-1">До</p>
+                                  {Object.entries(entry.before).filter(([k]) => ['start_time','end_time','is_day_off','is_active','weekday','date'].includes(k)).map(([k, v]) => (
+                                    <p key={k} className="text-xs text-gray-700"><span className="text-gray-400">{k}:</span> {String(v)}</p>
+                                  ))}
+                                </div>
+                              )}
+                              {entry.after && (
+                                <div className="bg-white/60 rounded-lg p-2">
+                                  <p className="text-xs font-semibold text-gray-500 mb-1">После</p>
+                                  {Object.entries(entry.after).filter(([k]) => ['start_time','end_time','is_day_off','is_active','weekday','date'].includes(k)).map(([k, v]) => (
+                                    <p key={k} className="text-xs text-gray-700"><span className="text-gray-400">{k}:</span> {String(v)}</p>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Footer */}
@@ -3587,26 +4186,28 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                   disabled={scheduleLoading}
                   className="flex-1 px-6 py-3 rounded-2xl border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
                 >
-                  Отмена
+                  Закрыть
                 </button>
-                <button
-                  type="button"
-                  onClick={handleSaveSchedule}
-                  disabled={scheduleLoading || getConflictDays().length > 0}
-                  className="flex-1 px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {scheduleLoading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Сохранение...
-                    </>
-                  ) : (
-                    <>
-                      <Calendar className="w-5 h-5" />
-                      Сохранить расписание
-                    </>
-                  )}
-                </button>
+                {scheduleModalTab === 'template' && (
+                  <button type="button" onClick={handleSaveSchedule}
+                    disabled={scheduleLoading || getConflictDays().length > 0}
+                    className="flex-1 px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                    {scheduleLoading ? <><Loader2 className="w-5 h-5 animate-spin" />Сохранение...</> : <><Calendar className="w-5 h-5" />Сохранить постоянное</>}
+                  </button>
+                )}
+                {scheduleModalTab === 'schedule' && (
+                  <>
+                    <button type="button" onClick={handleCopyWeek}
+                      className="px-4 py-3 rounded-2xl border-2 border-indigo-200 text-indigo-600 font-semibold hover:bg-indigo-50 transition-colors text-sm flex items-center gap-2">
+                      <RotateCcw className="w-4 h-4" />
+                      Копировать
+                    </button>
+                    <button type="button" onClick={handleSaveEntireWeek} disabled={plannerSaving || plannerLoading}
+                      className={`flex-1 px-6 py-3 rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 ${plannerDirty ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-600 hover:bg-indigo-700'} text-white`}>
+                      {plannerSaving ? <><Loader2 className="w-5 h-5 animate-spin" />Сохранение...</> : <><Calendar className="w-5 h-5" />{plannerDirty ? 'Сохранить' : 'Сохранить'}</>}
+                    </button>
+                  </>
+                )}
               </div>
             </motion.div>
           </motion.div>

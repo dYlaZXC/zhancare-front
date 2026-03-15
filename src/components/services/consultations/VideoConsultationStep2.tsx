@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, User, Sparkles, RefreshCw } from "lucide-react";
+import { Clock, User, Sparkles, RefreshCw, ArrowLeft, ArrowRight, CheckCircle2, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
 import { api } from "@/utils/api";
 
 // Import our new components
 import DoctorSearchAndFilters from "./components/DoctorSearchAndFilters";
-import NavigationButtons from "./components/NavigationButtons";
 import AIRecommendationBlock from "./components/AIRecommendationBlock";
 import DoctorCard from "./components/DoctorCard";
 import AISymptomInput from "./components/AISymptomInput";
 
 // Import types and utilities
-import type { Doctor, TimeSlot, RecommendedDoctor, AIErrorData, Language, WorkScheduleDay } from "./types/doctor";
+import type { Doctor, TimeSlot, RecommendedDoctor, AIErrorData, Language } from "./types/doctor";
 import { useDoctorFiltering } from "./hooks/useDoctorFiltering";
 import { getSpecializationName } from "./utils/doctorUtils";
 
@@ -67,14 +66,18 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
 
   // Timeslot states - will be moved to separate component later
   const [doctorTimeslots, setDoctorTimeslots] = useState<Record<number, TimeSlot[]>>({});
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [showFullCalendar, setShowFullCalendar] = useState<Record<number, boolean>>({});
-  const [doctorTimeslotsByDate, setDoctorTimeslotsByDate] = useState<Record<number, Record<string, TimeSlot[]>>>({});
   const [bookingLoading, setBookingLoading] = useState(false);
 
   // Real-time updates
   const [lastUpdateTime, setLastUpdateTime] = useState<Record<number, number>>({});
   const [isPolling, setIsPolling] = useState(false);
+
+  // Local date helper (avoids UTC offset issue with toISOString)
+  const toLocalDate = (d: Date = new Date()) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  // Global date navigation
+  const [selectedDate, setSelectedDate] = useState(() => toLocalDate());
 
   // Confirmation modal state
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -95,219 +98,75 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
   // const isUrgent = recommendedDoctor?.urgency === 'urgent';
   const isUrgent = false; // Always false now - all consultations use time slots
 
-  // Track which doctors we've already fetched timeslots for
-  const [fetchedDoctorIds, setFetchedDoctorIds] = useState<Set<number>>(new Set());
+  const fetchedDatesRef = React.useRef<Set<string>>(new Set());
 
-  // Fetch timeslots for all consultations (ONLY ONCE per doctor!)
-  useEffect(() => {
-    if (doctors.length > 0) {
-      const newDoctorIds: number[] = [];
-
-      doctors.forEach(doctor => {
-        // Only fetch if we haven't already fetched for this doctor
-        if (!fetchedDoctorIds.has(doctor.id)) {
-          fetchDoctorTimeslots(doctor.id);
-          newDoctorIds.push(doctor.id);
-        }
-      });
-
-      // Batch update state once instead of multiple times
-      if (newDoctorIds.length > 0) {
-        setFetchedDoctorIds(prev => {
-          const next = new Set(prev);
-          newDoctorIds.forEach(id => next.add(id));
-          return next;
-        });
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doctors.length]); // Only depend on length, not the entire array
-
-
-  // Minimal fallback polling for timeslot updates (WebSocket handles real-time updates)
-  useEffect(() => {
-    // Always poll for all consultations now (removed isUrgent check)
-    if (doctors.length > 0) {
-      setIsPolling(true);
-
-      // Minimal fallback polling - WebSocket should handle most real-time updates
-      const pollInterval = setInterval(() => {
-        doctors.forEach(doctor => {
-          const lastUpdate = lastUpdateTime[doctor.id] || 0;
-          const now = Date.now();
-          const minInterval = 5 * 60 * 1000; // 5 minutes - much less aggressive
-
-          // Only update if enough time has passed
-          if (now - lastUpdate > minInterval) {
-            fetchDoctorTimeslots(doctor.id, true); // Silent update
-          }
-        });
-      }, 5 * 60 * 1000); // Check every 5 minutes instead of 15 seconds
-
-      return () => {
-        clearInterval(pollInterval);
-        setIsPolling(false);
-      };
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doctors, lastUpdateTime]);
-
-  const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-
-  const generateDynamicTimeslots = (doctorId: number, bookedSlots: string[] = [], workSchedule?: Record<string, WorkScheduleDay> | null) => {
-    // No schedule set — return empty (card will show "Пока что не указано")
-    if (!workSchedule) return [];
-
-    const slots: TimeSlot[] = [];
-    const now = new Date();
-
-    // Generate slots for next 14 days
-    for (let day = 0; day < 14; day++) {
-      const baseDate = new Date();
-      baseDate.setDate(baseDate.getDate() + day);
-
-      const startOfDay = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), 0, 0, 0, 0);
-      const isToday = day === 0;
-
-      // Determine working hours for this day from work_schedule
-      const dayName = DAY_NAMES[baseDate.getDay()];
-      const daySchedule = workSchedule?.[dayName];
-
-      // If schedule exists but this day is disabled, skip entirely
-      if (workSchedule && daySchedule && !daySchedule.enabled) continue;
-
-      // Parse working hours (fall back to 0-24 if no schedule)
-      let startHour = 0, startMinute = 0, endHour = 24, endMinute = 0;
-      if (workSchedule && daySchedule && daySchedule.enabled) {
-        const [sh, sm] = daySchedule.start.split(':').map(Number);
-        const [eh, em] = daySchedule.end.split(':').map(Number);
-        startHour = sh; startMinute = sm;
-        endHour = eh; endMinute = em;
-      }
-
-      for (let hour = startHour; hour <= endHour; hour++) {
-        const minuteStart = hour === startHour ? startMinute : 0;
-        const minuteEnd = hour === endHour ? endMinute : 60;
-
-        for (let minute = minuteStart; minute < minuteEnd; minute += 15) {
-          const slotStart = new Date(startOfDay);
-          slotStart.setHours(hour, minute, 0, 0);
-
-          // Skip past times for today
-          if (isToday && slotStart <= now) continue;
-
-          const slotEnd = new Date(slotStart.getTime() + 15 * 60 * 1000);
-
-          // Don't create a slot if it extends past end of working hours
-          if (workSchedule && daySchedule && daySchedule.enabled) {
-            if (slotEnd.getHours() > endHour || (slotEnd.getHours() === endHour && slotEnd.getMinutes() > endMinute)) continue;
-          }
-
-          const slotId = Date.parse(slotStart.toISOString()) + doctorId;
-          const slotTimeString = slotStart.toISOString();
-
-          let isBooked = bookedSlots.includes(slotTimeString);
-          if (!isBooked) {
-            const slotTime = slotStart.getTime();
-            isBooked = bookedSlots.some(bookedSlot => {
-              try {
-                const bookedTime = new Date(bookedSlot).getTime();
-                return Math.abs(slotTime - bookedTime) < 60000;
-              } catch {
-                return false;
-              }
-            });
-          }
-
-          slots.push({
-            id: slotId,
-            start_time: slotStart.toISOString(),
-            end_time: slotEnd.toISOString(),
-            available_spots: isBooked ? 0 : 1,
-            max_consultations: 1,
-            is_booked: isBooked
-          });
-        }
-      }
-    }
-
-    return slots;
-  };
-
-  const fetchDoctorTimeslots = async (doctorId: number, silent = false) => {
+  // Fetch slots for a specific date for ALL doctors from the backend
+  const fetchSlotsForDate = async (date: string, silent = false) => {
     try {
-      // Instead of fetching pre-created slots, fetch only BOOKED consultations
-      const apiUrl = `/consultations/doctor/${doctorId}/booked-slots/`;
-      const startDate = new Date().toISOString().split('T')[0];
-      const endDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-      // console.log(`🔍 Fetching booked slots: ${apiUrl}?start_date=${startDate}&end_date=${endDate}`);
-
-      const { data } = await api.get(apiUrl, {
-        params: {
-          start_date: startDate,
-          end_date: endDate
-        }
+      const { data } = await api.get('/schedule/day/', {
+        params: { date, consultation_type: 'online' }
       });
 
-      // console.log(`📨 Backend response:`, data);
+      const now = new Date();
+      const doctorRows: Array<{
+        doctor_id: number;
+        slots: Array<{ start: string; end: string; status: string }>;
+      }> = data.doctors || [];
 
-      const bookedSlots = data.booked_slots || [];
-      // console.log(`📅 Booked slots array:`, bookedSlots);
+      setDoctorTimeslots(prev => {
+        const next = { ...prev };
+        doctorRows.forEach(({ doctor_id, slots }) => {
+          const newSlots: TimeSlot[] = slots
+            .map(slot => {
+              const startDt = new Date(`${date}T${slot.start}:00`);
+              const endDt = new Date(`${date}T${slot.end}:00`);
+              return {
+                id: startDt.getTime() + doctor_id,
+                start_time: startDt.toISOString(),
+                end_time: endDt.toISOString(),
+                available_spots: slot.status === 'free' ? 1 : 0,
+                max_consultations: 1,
+                is_booked: slot.status === 'booked',
+              } as TimeSlot;
+            })
+            .filter(slot => new Date(slot.start_time) > now);
 
-      if (!silent) {
-        // console.log(`Doctor ${doctorId}: Found ${bookedSlots.length} booked slots`);
-      }
-
-      // Generate dynamic available slots (excluding booked ones, respecting work schedule)
-      const doctor = doctors.find(d => d.id === doctorId);
-      const availableSlots = generateDynamicTimeslots(doctorId, bookedSlots, doctor?.work_schedule);
-
-      // Check if slots actually changed before updating state
-      const currentSlots = doctorTimeslots[doctorId] || [];
-      const slotsChanged = availableSlots.length !== currentSlots.length ||
-        !availableSlots.every(slot => currentSlots.some(current => current.id === slot.id));
-
-      if (slotsChanged) {
-        setDoctorTimeslots(prev => ({
-          ...prev,
-          [doctorId]: availableSlots
-        }));
-
-        if (!silent) {
-          // console.log(`Generated ${availableSlots.length} available slots for doctor ${doctorId}`);
-          if (availableSlots.length > 0) {
-            // console.log(`First slot: ${availableSlots[0].start_time}, Last slot: ${availableSlots[availableSlots.length - 1].start_time}`);
-          }
-        } else {
-          // console.log(`🔄 Real-time update: Doctor ${doctorId} slots changed (${availableSlots.length} available)`);
-        }
-      }
-
-      // Update last fetch time
-      setLastUpdateTime(prev => ({
-        ...prev,
-        [doctorId]: Date.now()
-      }));
-
+          const existing = (prev[doctor_id] || []).filter(s => !s.start_time.startsWith(date));
+          next[doctor_id] = [...existing, ...newSlots];
+        });
+        return next;
+      });
     } catch (error) {
-      if (!silent) {
-        console.error('Error fetching booked slots for doctor', doctorId, error);
-
-        // Fallback: Generate slots with schedule but assume none are booked
-        const fallbackDoctor = doctors.find(d => d.id === doctorId);
-        const availableSlots = generateDynamicTimeslots(doctorId, [], fallbackDoctor?.work_schedule);
-
-        setDoctorTimeslots(prev => ({
-          ...prev,
-          [doctorId]: availableSlots
-        }));
-
-        // console.log(`Fallback: Generated ${availableSlots.length} slots for doctor ${doctorId}`);
-      }
-      // Silent errors in polling - don't update state to avoid overriding good data
+      if (!silent) console.error('Error fetching slots for date', date, error);
     }
   };
+
+  // Initial load: fetch next 7 days for all doctors
+  useEffect(() => {
+    if (doctors.length === 0) return;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      const dateStr = toLocalDate(d);
+      if (!fetchedDatesRef.current.has(dateStr)) {
+        fetchedDatesRef.current.add(dateStr);
+        fetchSlotsForDate(dateStr);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doctors.length]);
+
+  // Refresh today's slots every 5 minutes
+  useEffect(() => {
+    if (doctors.length === 0) return;
+    setIsPolling(true);
+    const pollInterval = setInterval(() => {
+      const today = toLocalDate();
+      fetchSlotsForDate(today, true);
+    }, 5 * 60 * 1000);
+    return () => { clearInterval(pollInterval); setIsPolling(false); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doctors.length]);
 
   const handleDoctorSelect = async (doctorId: number) => {
     onSelect(doctorId);
@@ -420,33 +279,57 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
     setSelectedDoctorForBooking(null);
   };
 
-  const toggleCalendarView = (doctorId: number) => {
-    setShowFullCalendar(prev => ({
-      ...prev,
-      [doctorId]: !prev[doctorId]
-    }));
+  // Week date helpers
+  const MONTHS_RU = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+  const WEEKDAYS_RU = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+  const DAY_NAMES = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+
+  // Always show Mon–Sun of the week containing selectedDate
+  const getMondayOfWeek = (dateStr: string) => {
+    const d = new Date(dateStr + 'T00:00:00');
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    return d;
   };
 
-  const handleDateSelect = (date: string) => {
-    setSelectedDate(date);
-  };
+  const weekDates = (() => {
+    const monday = getMondayOfWeek(selectedDate);
+    const today = new Date();
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      return { date: dateStr, dayName: DAY_NAMES[d.getDay()], dayNumber: d.getDate(), month: d.getMonth(), year: d.getFullYear(), isToday: d.toDateString() === today.toDateString() };
+    });
+  })();
 
-  // Cache handlers per doctor ID to avoid creating new functions
-  // Use a ref to store handlers so they're stable across renders
-  const doctorHandlersRef = React.useRef<Record<number, {
-    onToggle: () => void;
-    onSelect: () => void;
-  }>>({});
+  const selectedDateObj = new Date(selectedDate + 'T00:00:00');
+  const headerDateLabel = `${WEEKDAYS_RU[selectedDateObj.getDay()]}, ${selectedDateObj.getDate()} ${MONTHS_RU[selectedDateObj.getMonth()]} ${selectedDateObj.getFullYear()} г.`;
 
-  // Create handlers only for doctors that don't have them yet
-  filteredDoctors.forEach(doctor => {
-    if (!doctorHandlersRef.current[doctor.id]) {
-      doctorHandlersRef.current[doctor.id] = {
-        onToggle: () => toggleCalendarView(doctor.id),
-        onSelect: () => handleDoctorSelect(doctor.id),
-      };
+  const handleDayChange = (offset: number) => {
+    const d = new Date(selectedDate + 'T00:00:00');
+    d.setDate(d.getDate() + offset);
+    const newDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    setSelectedDate(newDate);
+    // Fetch the whole new week if needed
+    const monday = getMondayOfWeek(newDate);
+    for (let i = 0; i < 7; i++) {
+      const fd = new Date(monday);
+      fd.setDate(monday.getDate() + i);
+      const dateStr = `${fd.getFullYear()}-${String(fd.getMonth() + 1).padStart(2, '0')}-${String(fd.getDate()).padStart(2, '0')}`;
+      if (!fetchedDatesRef.current.has(dateStr)) {
+        fetchedDatesRef.current.add(dateStr);
+        fetchSlotsForDate(dateStr);
+      }
     }
-  });
+  };
+
+  const todayStr = toLocalDate();
+
+  const goToToday = () => {
+    setSelectedDate(todayStr);
+  };
 
   return (
     <motion.div
@@ -636,123 +519,275 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
             </p>
           </div>
         ) : (
-          <div className="space-y-3 w-full">
-            {filteredDoctors.map((doctor) => {
-              const handlers = doctorHandlersRef.current[doctor.id];
-              if (!handlers) return null;
+          <div className="space-y-3">
+            {/* Global date navigation */}
+            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-3 space-y-2">
+              {/* Nav bar — exact admin style */}
+              <div className="flex items-center gap-2 md:gap-3 overflow-x-auto">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={goToToday}
+                  className="px-4 py-2 text-sm font-semibold rounded-xl text-white whitespace-nowrap flex-shrink-0 transition-all"
+                  style={{ backgroundColor: '#3772ff' }}
+                >
+                  Сегодня
+                </motion.button>
 
-              const lastUpdate = lastUpdateTime[doctor.id];
-              const lastUpdateDisplay = lastUpdate
-                ? new Date(lastUpdate).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
-                : null;
+                <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden bg-white">
+                  <motion.button
+                    whileHover={{ backgroundColor: '#f3f4f6' }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleDayChange(-1)}
+                    disabled={selectedDate <= todayStr}
+                    className="p-2 transition-colors flex-shrink-0 disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="w-4 h-4 text-gray-600" />
+                  </motion.button>
 
-              return (
+                  <div className="flex items-center gap-2 px-3 py-2 whitespace-nowrap font-semibold text-sm border-x border-gray-200" style={{ color: '#1e263e' }}>
+                    <CalendarIcon className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                    <span className="capitalize">{headerDateLabel}</span>
+                  </div>
+
+                  <motion.button
+                    whileHover={{ backgroundColor: '#f3f4f6' }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleDayChange(1)}
+                    className="p-2 transition-colors flex-shrink-0"
+                  >
+                    <ChevronRight className="w-4 h-4 text-gray-600" />
+                  </motion.button>
+                </div>
+              </div>
+              {/* 7-day strip */}
+              <div className="grid grid-cols-7 gap-1">
+                {weekDates.map((dateItem) => {
+                  const isDateSelected = selectedDate === dateItem.date;
+                  const hasAnyFreeSlots = Object.values(doctorTimeslots).some(slots =>
+                    slots.some(s => {
+                      const d = new Date(s.start_time);
+                      return d.getFullYear() === dateItem.year && d.getMonth() === dateItem.month && d.getDate() === dateItem.dayNumber && !s.is_booked && s.available_spots > 0;
+                    })
+                  );
+                  return (
+                    <button
+                      key={dateItem.date}
+                      onClick={() => setSelectedDate(dateItem.date)}
+                      className={`flex flex-col items-center py-2 rounded-xl text-[9px] font-semibold transition-all border ${
+                        isDateSelected
+                          ? 'bg-blue-600 text-white border-transparent shadow-sm'
+                          : dateItem.isToday
+                          ? 'bg-blue-50 text-blue-600 border-blue-200'
+                          : hasAnyFreeSlots
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100'
+                          : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-gray-100'
+                      }`}
+                    >
+                      <span className="opacity-80">{dateItem.dayName}</span>
+                      <span className="font-bold text-[12px] leading-tight mt-0.5">{dateItem.dayNumber}</span>
+                      {dateItem.isToday && <span className={`text-[7px] mt-0.5 ${isDateSelected ? 'text-white/70' : 'text-blue-400'}`}>сег</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Doctor cards */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 w-full pb-4">
+              {filteredDoctors.map((doctor) => (
                 <DoctorCard
                   key={doctor.id}
                   doctor={doctor}
                   isRecommended={recommendedDoctor?.id === doctor.id}
                   isSelected={selectedDoctorId === doctor.id}
                   language={language}
-                  isUrgent={isUrgent}
                   timeslots={doctorTimeslots[doctor.id] || []}
                   selectedDate={selectedDate}
-                  showFullCalendar={showFullCalendar[doctor.id] || false}
-                  doctorTimeslotsByDate={doctorTimeslotsByDate[doctor.id]}
-                  lastUpdateTime={lastUpdateDisplay}
-                  onDateSelect={handleDateSelect}
                   onTimeslotSelect={handleTimeslotSelect}
-                  onToggleCalendar={handlers.onToggle}
-                  onClick={handlers.onSelect}
+                  onDateSelect={setSelectedDate}
                 />
-              );
-            })}
+              ))}
+            </div>
           </div>
         )}
       </div>
 
-      {/* Navigation */}
-      <NavigationButtons
-        onBack={onBack}
-        onNext={onNext}
-        canProceed={!!selectedDoctorId}
-        disabled={bookingLoading}
-      />
+      {/* Sticky bottom CTA */}
+      <div className="sticky bottom-0 -mx-1 px-1 pt-3 pb-3 bg-white/95 backdrop-blur-sm border-t border-gray-100 shadow-[0_-4px_24px_rgba(0,0,0,0.07)] z-20">
+        <div className="flex items-center justify-between gap-3">
+          {/* Back */}
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 transition-all flex-shrink-0 text-sm"
+          >
+            <ArrowLeft size={15} />
+            Назад
+          </button>
+
+          {/* Combined doctor info + CTA button */}
+          {(() => {
+            const doc = selectedDoctorId ? doctors.find(d => d.id === selectedDoctorId) : null;
+            const GRADS = [['#3772ff','#2c5bcc'],['#8b5cf6','#7c3aed'],['#f43f5e','#e11d48'],['#f59e0b','#d97706'],['#10b981','#059669'],['#06b6d4','#0891b2']];
+            const [g1, g2] = doc ? GRADS[doc.id % GRADS.length] : ['#3772ff', '#2c5bcc'];
+            const earliestSlot = doc ? (doctorTimeslots[doc.id] || []).find(sl => !sl.is_booked && sl.available_spots > 0) : null;
+            const earliestLabel = earliestSlot ? (() => {
+              const d = new Date(earliestSlot.start_time);
+              const time = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+              return d.toDateString() === new Date().toDateString() ? `Сегодня ${time}` : time;
+            })() : null;
+
+            const handleCtaClick = () => {
+              if (!doc) return;
+              if (earliestSlot) {
+                handleTimeslotSelect(earliestSlot);
+              } else {
+                onNext();
+              }
+            };
+
+            return (
+              <button
+                onClick={handleCtaClick}
+                disabled={!selectedDoctorId || bookingLoading}
+                className="flex items-center gap-3 px-4 py-2 rounded-xl font-semibold text-sm transition-all shadow-sm hover:shadow-md disabled:opacity-40 disabled:cursor-not-allowed"
+                style={doc ? { background: `linear-gradient(135deg, ${g1}, ${g2})`, color: 'white' } : { background: '#e5e7eb', color: '#9ca3af' }}
+              >
+                {doc && (
+                  <>
+                    <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                      {doc.name.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="text-left min-w-0">
+                      <p className="text-xs font-bold leading-tight truncate">{doc.name}</p>
+                      <p className="text-[10px] opacity-80 truncate">
+                        {earliestLabel ? `⚡ ${earliestLabel}` : getSpecializationName(doc, language)}
+                      </p>
+                    </div>
+                    <div className="w-px h-7 bg-white/30 flex-shrink-0" />
+                  </>
+                )}
+                Записаться к врачу
+                <ArrowRight size={15} />
+              </button>
+            );
+          })()}
+        </div>
+      </div>
+
 
       {/* Timeslot Confirmation Modal */}
-      {showConfirmModal && selectedTimeslot && selectedDoctorForBooking && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
-          >
-            <div className="text-center space-y-4">
-              {/* Header */}
-              <div className="p-3 rounded-full bg-blue-100 w-16 h-16 mx-auto flex items-center justify-center">
-                <div className="text-2xl">📅</div>
-              </div>
+      {showConfirmModal && selectedTimeslot && selectedDoctorForBooking && (() => {
+        const doc = selectedDoctorForBooking;
+        const GRADS = [['#3772ff','#2c5bcc'],['#8b5cf6','#7c3aed'],['#f43f5e','#e11d48'],['#f59e0b','#d97706'],['#10b981','#059669'],['#06b6d4','#0891b2']];
+        const [g1, g2] = GRADS[doc.id % GRADS.length];
+        const slotDate = new Date(selectedTimeslot.start_time);
+        const dateStr = slotDate.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        const timeStr = slotDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        const endTime = selectedTimeslot.end_time
+          ? new Date(selectedTimeslot.end_time).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+          : null;
+        return (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+            <motion.div
+              initial={{ y: 60, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 60, opacity: 0 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+              className="bg-white w-full sm:max-w-sm rounded-t-3xl sm:rounded-2xl overflow-hidden shadow-2xl"
+            >
+              {/* Top accent bar */}
+              <div className="h-1 w-full" style={{ background: `linear-gradient(90deg, ${g1}, ${g2})` }} />
 
-              <h3 className="text-xl font-bold text-gray-900">
-                Подтвердите запись
-              </h3>
+              {/* Drag handle (mobile) */}
+              <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 sm:hidden" />
 
-              {/* Doctor Info */}
-              <div className="bg-gray-50 rounded-lg p-4 text-left">
-                <div className="font-semibold text-gray-900">
-                  {selectedDoctorForBooking.name}
+              <div className="px-5 pt-4 pb-6 space-y-4">
+                {/* Header */}
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+                    style={{ background: `linear-gradient(135deg, ${g1}, ${g2})` }}>
+                    {doc.name.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-gray-900 text-sm leading-tight truncate">{doc.name}</p>
+                    <p className="text-xs text-blue-600 font-medium truncate">{getSpecializationName(doc, language)}</p>
+                  </div>
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-blue-50">
+                    <CalendarIcon className="w-4 h-4 text-blue-500" />
+                  </div>
                 </div>
-                <div className="text-sm text-gray-600 mt-1">
-                  {getSpecializationName(selectedDoctorForBooking, language)}
-                </div>
-                <div className="text-sm text-gray-500 mt-2 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  {new Date(selectedTimeslot.start_time).toLocaleDateString('ru-RU', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                </div>
-                <div className="text-lg font-bold text-blue-600 mt-1">
-                  {new Date(selectedTimeslot.start_time).toLocaleTimeString('ru-RU', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
-                </div>
-              </div>
 
-              <p className="text-gray-600 text-sm">
-                Вы записываетесь на консультацию в указанное время. Подтвердите, если всё верно.
-              </p>
+                <h3 className="text-lg font-bold text-gray-900">Подтвердите запись</h3>
 
-              {/* Buttons */}
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={cancelTimeslotBooking}
-                  disabled={bookingLoading}
-                  className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
-                >
-                  Отмена
-                </button>
-                <button
-                  onClick={confirmTimeslotBooking}
-                  disabled={bookingLoading}
-                  className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg font-medium hover:from-blue-600 hover:to-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {bookingLoading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Записываем...
-                    </>
-                  ) : (
-                    'Подтвердить запись'
+                {/* Details card */}
+                <div className="rounded-xl border border-gray-100 bg-gray-50 divide-y divide-gray-100">
+                  {/* Date & time */}
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <CalendarIcon className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs text-gray-500 capitalize">{dateStr}</p>
+                      <p className="text-base font-black text-blue-600">
+                        {timeStr}{endTime ? ` — ${endTime}` : ''}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Price */}
+                  {doc.online_consultation_price && (
+                    <div className="flex items-center justify-between px-4 py-3">
+                      <span className="text-sm text-gray-500">Стоимость консультации</span>
+                      <span className="text-sm font-black text-emerald-600">
+                        {Number(doc.online_consultation_price).toLocaleString('ru-RU', { minimumFractionDigits: 0 })} ₸
+                      </span>
+                    </div>
                   )}
-                </button>
+
+                  {/* Clinic */}
+                  {doc.clinic && (
+                    <div className="flex items-center justify-between px-4 py-3">
+                      <span className="text-sm text-gray-500">Клиника</span>
+                      <span className="text-sm font-semibold text-gray-700">{doc.clinic.name}</span>
+                    </div>
+                  )}
+
+                  {/* Format */}
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <span className="text-sm text-gray-500">Формат</span>
+                    <span className="text-sm font-semibold text-violet-600">Онлайн · Видео</span>
+                  </div>
+                </div>
+
+                {/* Buttons */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={cancelTimeslotBooking}
+                    disabled={bookingLoading}
+                    className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
+                  >
+                    Отмена
+                  </button>
+                  <button
+                    onClick={confirmTimeslotBooking}
+                    disabled={bookingLoading}
+                    className="flex-1 px-4 py-3 text-white rounded-xl font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-md"
+                    style={{ background: `linear-gradient(135deg, ${g1}, ${g2})` }}
+                  >
+                    {bookingLoading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Записываем...
+                      </>
+                    ) : (
+                      'Подтвердить запись'
+                    )}
+                  </button>
+                </div>
               </div>
-            </div>
-          </motion.div>
-        </div>
-      )}
+            </motion.div>
+          </div>
+        );
+      })()}
     </motion.div>
   );
 };

@@ -25,7 +25,7 @@ const DoctorListContent: React.FC<{
   renderDoctorCard: (doctor: Doctor, isRecommended: boolean, isSelected: boolean) => React.ReactNode;
 }> = ({ filteredDoctors, selectedDoctorId, recommendedDoctor, renderDoctorCard }) => {
   return (
-    <div className="space-y-3 w-full max-w-full">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 w-full">
       {filteredDoctors.map((doctor) => (
         <div key={doctor.id}>
           {renderDoctorCard(
