@@ -229,13 +229,19 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
             </span>
           </div>
           <div className="flex-shrink-0">
-            {doctor.online_consultation_price ? (
-              <div className="flex items-baseline gap-0.5 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg">
-                <span className="text-sm font-black text-emerald-600">
-                  {Number(doctor.online_consultation_price).toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ₸
-                </span>
-              </div>
-            ) : (
+            {doctor.online_consultation_price ? (() => {
+              const price = Number(doctor.online_consultation_price);
+              const duration = doctor.preferred_consultation_duration || 30;
+              const perMin = Math.round(price / duration);
+              return (
+                <div className="flex flex-col items-end gap-1 bg-emerald-50 border border-emerald-200 px-2.5 py-2 rounded-lg">
+                  <span className="text-sm font-black text-emerald-600 leading-none">
+                    {price.toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ₸
+                  </span>
+                  <span className="text-[10px] text-emerald-700 font-semibold leading-none">за {duration} мин · ≈{perMin.toLocaleString('ru-RU')} ₸/мин</span>
+                </div>
+              );
+            })() : (
               <div className="text-xs text-gray-400 italic px-2 py-1">—</div>
             )}
           </div>
