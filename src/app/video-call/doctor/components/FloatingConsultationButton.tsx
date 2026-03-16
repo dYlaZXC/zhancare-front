@@ -150,7 +150,7 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
   const aiChatRef = useRef<HTMLDivElement>(null);
 
   // Mistral AI configuration
-  const API_KEY = "QqkMxELY0YVGkCx17Vya04Sq9nGvCahu";
+  const API_KEY = "aTzSULuZc45ObRxLrRBFa50GnCanWo1M";
   const ENDPOINT = "https://api.mistral.ai/v1/chat/completions";
 
   // Send message to AI
