@@ -6,6 +6,7 @@ import { useState } from "react";
 type Props = {
   currentLanguage: string;
   setLanguage: (lang: "ru" | "en" | "kz") => void;
+  variant?: "dark" | "light";
 };
 
 interface Language {
@@ -36,13 +37,18 @@ function Flag({ lang }: { lang: Language }) {
   );
 }
 
-export default function LanguageSwitcher({ currentLanguage, setLanguage }: Props) {
+export default function LanguageSwitcher({ currentLanguage, setLanguage, variant = "dark" }: Props) {
   const activeIndex = languages.findIndex(l => l.code === currentLanguage);
+  const isLight = variant === "light";
 
   return (
     <div
       data-language-dropdown="true"
-      className="relative flex items-center rounded-xl p-0.5 bg-white/[0.08] border border-white/15 backdrop-blur-md"
+      className={`relative flex items-center rounded-xl p-0.5 backdrop-blur-md ${
+        isLight
+          ? "bg-[#ebf1ff] border border-[#d0dcf7]"
+          : "bg-white/[0.08] border border-white/15"
+      }`}
       style={{ gap: 0 }}
     >
       {/* Sliding highlight */}
@@ -65,7 +71,11 @@ export default function LanguageSwitcher({ currentLanguage, setLanguage }: Props
             <Flag lang={lang} />
             <span
               className="text-[11px] font-semibold tracking-wider transition-colors duration-200"
-              style={{ color: isActive ? "#fff" : "rgba(255,255,255,0.5)" }}
+              style={{
+                color: isActive
+                  ? "#fff"
+                  : isLight ? "#7a96d4" : "rgba(255,255,255,0.5)",
+              }}
             >
               {lang.label}
             </span>

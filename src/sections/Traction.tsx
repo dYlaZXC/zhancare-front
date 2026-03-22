@@ -26,10 +26,12 @@ interface Milestone {
   icon: IconDefinition;
 }
 
-const data: Record<"ru" | "en" | "kz", { heading: string; sub: string; milestones: Milestone[] }> = {
+const data: Record<"ru" | "en" | "kz", { heading: string; sub: string; quote: string; quoteTranslation: string; milestones: Milestone[] }> = {
   ru: {
     heading: "Наш путь",
     sub: "От идеи — до продукта в 3 клиниках Казахстана",
+    quote: "Per aspera ad astra",
+    quoteTranslation: "Через тернии — к звёздам",
     milestones: [
       {
         date: "Июнь 2023",
@@ -108,6 +110,8 @@ const data: Record<"ru" | "en" | "kz", { heading: string; sub: string; milestone
   en: {
     heading: "Our Journey",
     sub: "From idea to a live product in 3 clinics across Kazakhstan",
+    quote: "Per aspera ad astra",
+    quoteTranslation: "Through hardships to the stars",
     milestones: [
       {
         date: "June 2023",
@@ -186,6 +190,8 @@ const data: Record<"ru" | "en" | "kz", { heading: string; sub: string; milestone
   kz: {
     heading: "Біздің жол",
     sub: "Идеядан Қазақстанның 3 клиникасындағы өнімге дейін",
+    quote: "Per aspera ad astra",
+    quoteTranslation: "Қиындықтар арқылы — жұлдыздарға",
     milestones: [
       {
         date: "Маусым 2023",
@@ -334,6 +340,24 @@ export function Traction() {
             {t.heading}
           </h2>
           <p className="text-gray-400 text-lg max-w-xl mx-auto">{t.sub}</p>
+        </motion.div>
+
+        {/* Quote */}
+        <motion.div
+          className="text-center mb-16"
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+        >
+          <div className="inline-flex flex-col items-center gap-2 px-8 py-5 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm">
+            <span className="text-xl md:text-2xl font-bold tracking-widest text-white/90 italic">
+              {t.quote}
+            </span>
+            <span className="text-sm text-[#3772ff] font-medium tracking-wide">
+              — {t.quoteTranslation}
+            </span>
+          </div>
         </motion.div>
 
         {/* Timeline */}

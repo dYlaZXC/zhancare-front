@@ -19,7 +19,10 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
+import Image from "next/image";
+import Logo from "@/assets/logosaas.png";
 import BookingModal from "@/sections/Chat/BookingModal";
+import LanguageSwitcher from "@/sections/Hero/LanguageSwitcher";
 
 interface TimeSlot {
   id: string;
@@ -98,9 +101,50 @@ const formatAIMessage = (content: string) => {
   );
 };
 
+const UI = {
+  ru: {
+    back: "Назад",
+    title: "ИИ Медицинский Ассистент",
+    subtitle: "Диагностика симптомов",
+    online: "Онлайн",
+    welcomeTitle: "Добро пожаловать в ZhanCare AI",
+    welcomeDesc: "Я проведу предварительную диагностику ваших симптомов и помогу подобрать подходящего специалиста. Все данные конфиденциальны и защищены.",
+    aiLabel: "ИИ Ассистент",
+    placeholder: "Опишите ваши симптомы...",
+    enterHint: "Enter - отправка",
+    shiftHint: "Shift+Enter - строка",
+  },
+  en: {
+    back: "Back",
+    title: "AI Medical Assistant",
+    subtitle: "Symptom Diagnostics",
+    online: "Online",
+    welcomeTitle: "Welcome to ZhanCare AI",
+    welcomeDesc: "I will conduct a preliminary diagnosis of your symptoms and help you find the right specialist. All data is confidential and secure.",
+    aiLabel: "AI Assistant",
+    placeholder: "Describe your symptoms...",
+    enterHint: "Enter - send",
+    shiftHint: "Shift+Enter - new line",
+  },
+  kz: {
+    back: "Артқа",
+    title: "ЖИ Медициналық Көмекші",
+    subtitle: "Симптомдарды диагностикалау",
+    online: "Онлайн",
+    welcomeTitle: "ZhanCare AI-ға қош келдіңіз",
+    welcomeDesc: "Мен симптомдарыңыздың алдын ала диагностикасын жүргіземін және сізге тиісті маманды таңдауға көмектесемін. Барлық деректер құпия және қорғалған.",
+    aiLabel: "ЖИ Көмекші",
+    placeholder: "Симптомдарыңызды сипаттаңыз...",
+    enterHint: "Enter - жіберу",
+    shiftHint: "Shift+Enter - жол",
+  },
+};
+
 export default function AISymptomsChecker() {
   const router = useRouter();
-  const { language } = useLanguage();
+  const { language, setLanguage } = useLanguage();
+
+  const ui = UI[language as keyof typeof UI] ?? UI.ru;
 
   // Get initial welcome message based on language
   const getWelcomeMessage = () => {
@@ -578,54 +622,64 @@ export default function AISymptomsChecker() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "linear-gradient(135deg, #ebf1ff 0%, #ffffff 50%, #ebf1ff 100%)" }}>
-      {/* Header */}
-      <header className="bg-white border-b shadow-sm" style={{ borderColor: "#e1eaff" }}>
+      {/* Header — matches landing page scrolled style */}
+      <header className="bg-[#1D1D2F]/95 backdrop-blur-xl shadow-xl border-b border-white/[0.07]">
         <div className="container mx-auto max-w-5xl px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between gap-2">
-            {/* Back Button */}
-            <button
-              onClick={() => router.back()}
-              className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg sm:rounded-xl transition-all hover:scale-105 text-sm sm:text-base"
-              style={{
-                color: "#2956bf",
-                background: "#ebf1ff"
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = "#e1eaff"}
-              onMouseLeave={(e) => e.currentTarget.style.background = "#ebf1ff"}
-            >
-              <FontAwesomeIcon icon={faArrowLeft} className="text-xs sm:text-sm" />
-              <span className="hidden sm:inline font-medium">Назад</span>
-            </button>
+            {/* Left — Back + Logo + Bot identity */}
+            <div className="flex items-center gap-2 sm:gap-4">
+              <button
+                onClick={() => router.back()}
+                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-lg sm:rounded-xl transition-all hover:scale-105 hover:bg-white/10 text-sm sm:text-base text-white/80 hover:text-white"
+              >
+                <FontAwesomeIcon icon={faArrowLeft} className="text-xs sm:text-sm" />
+                <span className="hidden sm:inline font-medium">{ui.back}</span>
+              </button>
 
-            {/* Center - AI Assistant Info */}
-            <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 flex-1 justify-center">
-              <div className="relative">
-                <motion.div
-                  animate={{ scale: [1, 1.1, 1] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="absolute inset-0 rounded-xl sm:rounded-2xl blur-lg opacity-40"
-                  style={{ background: "#3772ff" }}
-                />
-                <div
-                  className="relative w-9 h-9 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center"
-                  style={{ background: "linear-gradient(135deg, #3772ff 0%, #2956bf 100%)" }}
-                >
-                  <FontAwesomeIcon icon={faRobot} className="text-white text-sm sm:text-base lg:text-xl" />
+              <div className="w-px h-6 bg-white/15 hidden sm:block" />
+
+              <Image
+                src={Logo}
+                alt="ZhanCare logo"
+                height={32}
+                className="h-6 sm:h-8 w-auto"
+              />
+
+              <div className="w-px h-6 bg-white/15 hidden md:block" />
+
+              {/* Bot identity */}
+              <div className="hidden md:flex items-center gap-2 sm:gap-3">
+                <div className="relative">
+                  <motion.div
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="absolute inset-0 rounded-xl blur-lg opacity-40"
+                    style={{ background: "#3772ff" }}
+                  />
+                  <div
+                    className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center"
+                    style={{ background: "linear-gradient(135deg, #3772ff 0%, #2956bf 100%)" }}
+                  >
+                    <FontAwesomeIcon icon={faRobot} className="text-white text-xs sm:text-sm" />
+                  </div>
                 </div>
-              </div>
-              <div className="hidden sm:block">
-                <h1 className="font-bold text-sm sm:text-base lg:text-lg" style={{ color: "#283353" }}>ИИ Медицинский Ассистент</h1>
-                <p className="text-xs sm:text-sm flex items-center gap-1 sm:gap-2" style={{ color: "#3772ff" }}>
-                  <FontAwesomeIcon icon={faHeartPulse} className="text-xs" />
-                  <span>Диагностика симптомов</span>
-                </p>
+                <div>
+                  <p className="font-bold text-sm text-white leading-tight">{ui.title}</p>
+                  <p className="text-[11px] flex items-center gap-1 text-[#6aa2ff] leading-tight">
+                    <FontAwesomeIcon icon={faHeartPulse} className="text-[10px]" />
+                    {ui.subtitle}
+                  </p>
+                </div>
               </div>
             </div>
 
-            {/* Online Badge */}
-            <div className="flex justify-end">
-              <div className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-semibold whitespace-nowrap" style={{ background: "#ebf1ff", color: "#2956bf" }}>
-                Онлайн
+            {/* Right side — language switcher + online badge */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              <LanguageSwitcher currentLanguage={language} setLanguage={setLanguage} variant="dark" />
+
+              {/* Online Badge */}
+              <div className="hidden sm:block px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-semibold whitespace-nowrap text-white/80 border border-white/20 bg-white/10">
+                {ui.online}
               </div>
             </div>
           </div>
@@ -650,10 +704,9 @@ export default function AISymptomsChecker() {
                 <FontAwesomeIcon icon={faCircleCheck} className="text-white text-base sm:text-xl" />
               </div>
               <div className="text-white">
-                <h3 className="font-bold text-base sm:text-lg lg:text-xl mb-1 sm:mb-2">Добро пожаловать в ZhanCare AI</h3>
+                <h3 className="font-bold text-base sm:text-lg lg:text-xl mb-1 sm:mb-2">{ui.welcomeTitle}</h3>
                 <p className="text-xs sm:text-sm leading-relaxed opacity-90">
-                  Я проведу предварительную диагностику ваших симптомов и помогу подобрать подходящего специалиста.
-                  Все данные конфиденциальны и защищены.
+                  {ui.welcomeDesc}
                 </p>
               </div>
             </div>
@@ -679,7 +732,7 @@ export default function AISymptomsChecker() {
                     </div>
                     <div>
                       <div className="px-2 py-1 rounded-lg mb-2 inline-block" style={{ background: "#ebf1ff" }}>
-                        <span className="text-xs font-semibold" style={{ color: "#2956bf" }}>ИИ Ассистент</span>
+                        <span className="text-xs font-semibold" style={{ color: "#2956bf" }}>{ui.aiLabel}</span>
                       </div>
                       <div
                         className="rounded-2xl sm:rounded-3xl px-4 py-3 sm:px-6 sm:py-4 shadow-lg border"
@@ -1221,7 +1274,7 @@ export default function AISymptomsChecker() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyPress}
-                  placeholder="Опишите ваши симптомы..."
+                  placeholder={ui.placeholder}
                   disabled={isLoading}
                   rows={1}
                   className="flex-1 px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 rounded-3xl focus:outline-none focus:ring-0 focus:border-0 disabled:opacity-50 disabled:cursor-not-allowed transition-all bg-transparent text-xs sm:text-sm lg:text-base resize-none overflow-hidden break-words border-0"
@@ -1322,9 +1375,9 @@ export default function AISymptomsChecker() {
 
           {/* Helper Text */}
           <div className="mt-2 sm:mt-3 flex items-center justify-center gap-0.5 xs:gap-1 sm:gap-1.5 text-[8px] xs:text-[9px] sm:text-xs px-2" style={{ color: "#3772ff" }}>
-            <span className="font-medium whitespace-nowrap">Enter - отправка</span>
+            <span className="font-medium whitespace-nowrap">{ui.enterHint}</span>
             <span className="whitespace-nowrap" style={{ color: "#bcc0ca" }}>•</span>
-            <span className="font-medium whitespace-nowrap">Shift+Enter - строка</span>
+            <span className="font-medium whitespace-nowrap">{ui.shiftHint}</span>
           </div>
         </div>
       </div>
