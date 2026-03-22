@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useLanguage } from "@/context/LanguageContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
+import en from "@/locales/en.json";
 
 const statsItemAnimation = {
   hidden: { opacity: 0, y: 30 },
@@ -12,7 +13,7 @@ const statsItemAnimation = {
 
 export default function HeroStats() {
   const { language } = useLanguage();
-  const translations = language === "ru" ? ru.hero : kz.hero;
+  const translations = language === "ru" ? ru.hero : language === "en" ? en.hero : kz.hero;
 
   return (
     <motion.div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">

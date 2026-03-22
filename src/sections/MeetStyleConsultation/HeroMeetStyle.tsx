@@ -11,13 +11,26 @@ import {
   faCheckCircle,
 } from "@fortawesome/free-solid-svg-icons";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import heroVideo from "@/assets/hero-video.mp4";
 import Header from "@/sections/Hero/Header";
+import { useLanguage } from "@/context/LanguageContext";
+import ru from "@/locales/ru.json";
+import en from "@/locales/en.json";
+import kz from "@/locales/kz.json";
 
 export default function HeroMeetStyle() {
   const router = useRouter();
+  const { language } = useLanguage();
   const [isStarting, setIsStarting] = useState(false);
+
+  const t = useMemo(() => {
+    switch (language) {
+      case "en": return en.heroMeetStyle;
+      case "kz": return kz.heroMeetStyle;
+      default: return ru.heroMeetStyle;
+    }
+  }, [language]);
 
   const handleStartConsultation = () => {
     setIsStarting(true);
@@ -98,10 +111,10 @@ export default function HeroMeetStyle() {
             transition={{ duration: 0.8, delay: 0.2, type: "spring", stiffness: 100 }}
             className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight text-white drop-shadow-2xl"
           >
-            Консультация врача
+            {t.heading}
             <br />
             <span className="bg-gradient-to-r from-[#c1d3ff] via-[#3772ff] to-[#2956bf] bg-clip-text text-transparent drop-shadow-[0_2px_20px_rgba(55,114,255,0.5)]">
-              за 5 минут
+              {t.headingHighlight}
             </span>
           </motion.h1>
 
@@ -112,7 +125,7 @@ export default function HeroMeetStyle() {
             transition={{ duration: 0.8, delay: 0.4, type: "spring", stiffness: 100 }}
             className="text-xl md:text-2xl text-gray-200 mb-12 max-w-3xl mx-auto font-medium drop-shadow-lg"
           >
-            Опишите симптомы → ИИ подберет врача → Оплата → Видео консультация
+            {t.subtitle}
           </motion.p>
 
           {/* Main Action Buttons - Premium Upgrade */}
@@ -143,7 +156,7 @@ export default function HeroMeetStyle() {
                   icon={faVideo}
                   className={`text-xl ${isStarting ? 'animate-pulse' : ''}`}
                 />
-                <span>{isStarting ? 'Запуск...' : 'Начать консультацию'}</span>
+                <span>{isStarting ? t.startingButton : t.startButton}</span>
                 <motion.svg
                   className="w-5 h-5"
                   fill="none"
@@ -174,7 +187,7 @@ export default function HeroMeetStyle() {
 
               <span className="relative z-10 flex items-center justify-center gap-3">
                 <FontAwesomeIcon icon={faCalendarPlus} className="text-xl" />
-                <span>Запланировать встречу</span>
+                <span>{t.scheduleButton}</span>
               </span>
             </motion.button>
           </motion.div>
@@ -207,10 +220,10 @@ export default function HeroMeetStyle() {
                 <FontAwesomeIcon icon={faClock} className="text-white text-2xl" />
               </motion.div>
               <h3 className="text-xl font-bold text-white mb-3 text-center group-hover:text-[#c1d3ff] transition-colors">
-                Быстро
+                {t.features[0].title}
               </h3>
               <p className="text-gray-300 text-sm text-center leading-relaxed group-hover:text-gray-200 transition-colors">
-                Консультация начнется через 5 минут после оплаты
+                {t.features[0].description}
               </p>
 
               {/* Premium Hover Gradient Overlay */}
@@ -238,10 +251,10 @@ export default function HeroMeetStyle() {
                 <FontAwesomeIcon icon={faUserMd} className="text-white text-2xl" />
               </motion.div>
               <h3 className="text-xl font-bold text-white mb-3 text-center group-hover:text-[#c1d3ff] transition-colors">
-                Умный подбор
+                {t.features[1].title}
               </h3>
               <p className="text-gray-300 text-sm text-center leading-relaxed group-hover:text-gray-200 transition-colors">
-                ИИ автоматически подберет подходящего врача
+                {t.features[1].description}
               </p>
 
               {/* Premium Hover Gradient Overlay */}
@@ -269,10 +282,10 @@ export default function HeroMeetStyle() {
                 <FontAwesomeIcon icon={faShieldAlt} className="text-white text-2xl" />
               </motion.div>
               <h3 className="text-xl font-bold text-white mb-3 text-center group-hover:text-[#c1d3ff] transition-colors">
-                Безопасно
+                {t.features[2].title}
               </h3>
               <p className="text-gray-300 text-sm text-center leading-relaxed group-hover:text-gray-200 transition-colors">
-                Все данные защищены и конфиденциальны
+                {t.features[2].description}
               </p>
 
               {/* Premium Hover Gradient Overlay */}
@@ -299,7 +312,7 @@ export default function HeroMeetStyle() {
                 <FontAwesomeIcon icon={faCheckCircle} className="text-[#3772ff] text-sm opacity-80" />
               </motion.div>
               <span className="text-gray-300 font-medium group-hover:text-gray-200 transition-colors opacity-90">
-                Лицензированные врачи
+                {t.trust[0]}
               </span>
             </motion.div>
             <motion.div
@@ -314,7 +327,7 @@ export default function HeroMeetStyle() {
                 <FontAwesomeIcon icon={faCheckCircle} className="text-[#3772ff] text-sm opacity-80" />
               </motion.div>
               <span className="text-gray-300 font-medium group-hover:text-gray-200 transition-colors opacity-90">
-                Более 500+ консультаций
+                {t.trust[1]}
               </span>
             </motion.div>
             <motion.div
@@ -329,7 +342,7 @@ export default function HeroMeetStyle() {
                 <FontAwesomeIcon icon={faCheckCircle} className="text-[#3772ff] text-sm opacity-80" />
               </motion.div>
               <span className="text-gray-300 font-medium group-hover:text-gray-200 transition-colors opacity-90">
-                Рейтинг 4.9/5
+                {t.trust[2]}
               </span>
             </motion.div>
           </motion.div>

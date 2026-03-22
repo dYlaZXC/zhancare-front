@@ -223,7 +223,7 @@
       "contact": {
         "title": "Contact",
         "address": "",
-        "email": "marzipan9256@gmail.com",
+        "email": "zhancare.group@yandex.kz",
         "contactUs": "Contact us"
       },
       "map": {
@@ -265,7 +265,22 @@
       "genericError": "An error occurred. Please try again.",
       "gameResponse": "Great idea! Let's play a medical quiz! 🎮"
     },
-    
+
+    "heroMeetStyle": {
+      "heading": "Doctor consultation",
+      "headingHighlight": "in 5 minutes",
+      "subtitle": "Describe symptoms → AI selects a doctor → Payment → Video consultation",
+      "startButton": "Start consultation",
+      "startingButton": "Starting...",
+      "scheduleButton": "Schedule a meeting",
+      "features": [
+        { "title": "Fast", "description": "Consultation starts within 5 minutes after payment" },
+        { "title": "Smart matching", "description": "AI automatically selects the right doctor" },
+        { "title": "Secure", "description": "All data is protected and confidential" }
+      ],
+      "trust": ["Licensed doctors", "500+ consultations", "Rating 4.9/5"]
+    },
+
     "impactSection": {
     "title": "Why choose ZhanCare.AI?",
     "description": "We scale smart healthcare with AI.",

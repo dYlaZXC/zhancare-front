@@ -213,7 +213,7 @@ export const Services = () => {
                 style={{ perspective: "1000px" }}
               >
                 <motion.div
-                  className="relative w-full h-96 cursor-pointer"
+                  className="relative w-full h-[440px] cursor-pointer"
                   style={{ transformStyle: "preserve-3d" }}
                   animate={{ rotateY: !service.href && flippedCards.has(index) ? 180 : 0 }}
                   transition={{ duration: 0.8, ease: "easeInOut" }}
@@ -293,7 +293,7 @@ export const Services = () => {
 
                   {/* Back of Card */}
                   <div
-                    className="absolute inset-0 w-full h-full bg-gradient-to-br from-[#001E80] to-[#3A50FF] shadow-lg rounded-2xl p-8 text-white"
+                    className="absolute inset-0 w-full h-full bg-gradient-to-br from-[#001E80] to-[#3A50FF] shadow-lg rounded-2xl p-6 text-white overflow-hidden"
                     style={{ 
                       backfaceVisibility: "hidden",
                       transform: "rotateY(180deg)"
@@ -301,20 +301,20 @@ export const Services = () => {
                   >
                     <div className="h-full flex flex-col">
                       {/* Header */}
-                      <div className="text-center mb-6">
-                        <div className="inline-flex p-4 bg-white/20 text-white rounded-xl shadow-lg mb-4 backdrop-blur-sm">
-                          <FontAwesomeIcon icon={iconMapping[service.icon]} className="text-2xl" />
+                      <div className="text-center mb-4">
+                        <div className="inline-flex p-3 bg-white/20 text-white rounded-xl shadow-lg mb-3 backdrop-blur-sm">
+                          <FontAwesomeIcon icon={iconMapping[service.icon]} className="text-xl" />
                         </div>
-                        <h5 className="text-xl font-bold mb-2">{service.title}</h5>
+                        <h5 className="text-lg font-bold mb-2">{service.title}</h5>
                         <div className="w-16 h-0.5 bg-white/30 mx-auto"></div>
                       </div>
                       
                       {/* Details List */}
                       <div className="flex-1">
-                        <h6 className="text-sm font-semibold text-white/80 uppercase tracking-wider mb-4">
+                        <h6 className="text-xs font-semibold text-white/80 uppercase tracking-wider mb-3">
                           {staticTranslations.whatIncluded}
                         </h6>
-                        <ul className="space-y-3">
+                        <ul className="space-y-2">
                           {service.details.map((detail, i) => (
                             <motion.li
                               key={i}
@@ -334,16 +334,17 @@ export const Services = () => {
                       </div>
                       
                       {/* Back to front button */}
-                      <div className="text-center pt-4 border-t border-white/20">
+                      <div className="text-center pt-3 mt-2 border-t border-white/20 flex-shrink-0">
                         <motion.button
                           className="
-                            px-4 py-2 bg-white/20 backdrop-blur-sm text-white 
+                            px-4 py-2 bg-white/20 backdrop-blur-sm text-white
                             rounded-full text-sm font-medium transition-all duration-300
-                            hover:bg-white/30 hover:scale-105 focus:outline-none 
+                            hover:bg-white/30 hover:scale-105 focus:outline-none
                             focus:ring-2 focus:ring-white/50
                           "
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
+                          onClick={(e) => { e.stopPropagation(); handleCardFlip(index); }}
                         >
                           {staticTranslations.back}
                         </motion.button>

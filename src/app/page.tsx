@@ -18,6 +18,7 @@ import { DoctorsCarousel } from "@/sections/DoctorsCarousel";
 import { ChatSection } from "@/sections/ChatSection";
 import { MobileApp } from "@/sections/MobileApp";
 import  Hero404  from "@/sections/Hero404";
+import { Traction } from "@/sections/Traction";
 
 
 export default function Home() {
@@ -144,6 +145,9 @@ export default function Home() {
       {/* Impact Section */}
       <ImpactSection />
       
+      {/* Traction / Timeline Section */}
+      <Traction />
+
       {/* Product Showcase Section */}
       <ProductShowcase />
 

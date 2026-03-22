@@ -46,7 +46,7 @@ export const CallToAction = () => {
   const translateY = useTransform(scrollYProgress, [0, 1], [150, -150]);
 
   const handleEmailRedirect = () => {
-    window.location.href = "mailto:marzipan9256@gmail.com";
+    window.location.href = "mailto:zhancare.group@yandex.kz";
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

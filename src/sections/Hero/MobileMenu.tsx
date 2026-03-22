@@ -347,7 +347,9 @@ export default function MobileMenu({ isOpen, onClose, onScrollToSection }: Props
                   >
                     <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
                       <FontAwesomeIcon icon={faGlobe} className="text-white/60 text-sm" />
-                      <span className="text-xs sm:text-sm font-medium text-white/80">Language</span>
+                      <span className="text-xs sm:text-sm font-medium text-white/80">
+                        {language === "ru" ? "Язык" : language === "kz" ? "Тіл" : "Language"}
+                      </span>
                     </div>
                     <LanguageSwitcher
                       currentLanguage={language}
