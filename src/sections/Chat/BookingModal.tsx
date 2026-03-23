@@ -36,6 +36,7 @@ interface BookingModalProps {
     isGuest?: boolean;
   }) => void;
   language: string;
+  preselectedDoctor?: Doctor | null;
 }
 
 interface GuestInfo {
@@ -44,7 +45,7 @@ interface GuestInfo {
   email?: string;
 }
 
-type BookingStep = "doctors" | "timeslots" | "guestinfo" | "confirmation";
+type BookingStep = "doctors" | "timeslots" | "guestinfo" | "emailcollect" | "confirmation";
 
 const formatTime = (timeString: string): string => {
   return new Date(timeString).toLocaleTimeString("ru-RU", {
@@ -107,7 +108,7 @@ const translations = {
     tryLater: "Попробуйте позже",
     guestName: "Ваше имя",
     guestPhone: "Номер телефона",
-    guestEmail: "Email (необязательно)",
+    guestEmail: "Email *",
     guestNamePlaceholder: "Введите ваше имя",
     guestPhonePlaceholder: "+7 (___) ___-__-__",
     guestEmailPlaceholder: "example@mail.com",
@@ -116,7 +117,14 @@ const translations = {
     loginToBook: "Войти",
     requiredField: "Обязательное поле",
     invalidPhone: "Неверный формат телефона",
+    invalidEmail: "Неверный формат email",
     patient: "Пациент",
+    emailStep: "Ваш email",
+    emailLabel: "Email для ссылки на консультацию *",
+    emailHint: "Мы отправим ссылку для подключения к онлайн-консультации на этот адрес.",
+    emailContinue: "Продолжить",
+    consultationEmail: "Email для связи",
+    consultationPhone: "Телефон",
   },
   en: {
     title: "Book Appointment",
@@ -142,7 +150,7 @@ const translations = {
     tryLater: "Try again later",
     guestName: "Your Name",
     guestPhone: "Phone Number",
-    guestEmail: "Email (optional)",
+    guestEmail: "Email *",
     guestNamePlaceholder: "Enter your name",
     guestPhonePlaceholder: "+7 (___) ___-__-__",
     guestEmailPlaceholder: "example@mail.com",
@@ -151,7 +159,14 @@ const translations = {
     loginToBook: "Login",
     requiredField: "Required field",
     invalidPhone: "Invalid phone format",
+    invalidEmail: "Invalid email format",
     patient: "Patient",
+    emailStep: "Your email",
+    emailLabel: "Email for consultation link *",
+    emailHint: "We will send you a link to join the online consultation at this address.",
+    emailContinue: "Continue",
+    consultationEmail: "Email",
+    consultationPhone: "Phone",
   },
   kz: {
     title: "Дәрігерге жазылу",
@@ -177,7 +192,7 @@ const translations = {
     tryLater: "Кейінірек көріңіз",
     guestName: "Сіздің атыңыз",
     guestPhone: "Телефон нөмірі",
-    guestEmail: "Email (міндетті емес)",
+    guestEmail: "Email *",
     guestNamePlaceholder: "Атыңызды енгізіңіз",
     guestPhonePlaceholder: "+7 (___) ___-__-__",
     guestEmailPlaceholder: "example@mail.com",
@@ -186,7 +201,14 @@ const translations = {
     loginToBook: "Кіру",
     requiredField: "Міндетті өріс",
     invalidPhone: "Телефон форматы қате",
+    invalidEmail: "Email форматы қате",
     patient: "Пациент",
+    emailStep: "Сіздің email",
+    emailLabel: "Кеңеске сілтеме үшін email *",
+    emailHint: "Онлайн-кеңеске қосылу сілтемесін осы мекенжайға жібереміз.",
+    emailContinue: "Жалғастыру",
+    consultationEmail: "Email",
+    consultationPhone: "Телефон",
   },
 };
 
@@ -195,6 +217,7 @@ export default function BookingModal({
   onClose,
   onBookingComplete,
   language,
+  preselectedDoctor,
 }: BookingModalProps) {
   const { token, user, setIsAuthOpen } = useAuth();
   const t = translations[language as keyof typeof translations] || translations.ru;
@@ -219,15 +242,28 @@ export default function BookingModal({
   });
   const [guestErrors, setGuestErrors] = useState<Partial<GuestInfo>>({});
 
+  // Email + phone for consultation link (used for logged-in users; guests use guestInfo.*)
+  const [consultationEmail, setConsultationEmail] = useState("");
+  const [consultationPhone, setConsultationPhone] = useState("");
+  const [emailError, setEmailError] = useState("");
+
   const calendarDates = generateCalendarDates(14);
   const isLoggedIn = !!token && !!user;
 
-  // Fetch doctors on mount (works for guests too)
+  // When modal opens, either jump to timeslots (preselected) or fetch doctors list
   useEffect(() => {
     if (isOpen) {
-      fetchDoctors();
+      // Pre-fill contact details from logged-in user's account
+      if (user?.email) setConsultationEmail(user.email);
+      if (user?.phone) setConsultationPhone(user.phone);
+      if (preselectedDoctor) {
+        setSelectedDoctor(preselectedDoctor);
+        setStep("timeslots");
+      } else {
+        fetchDoctors();
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, preselectedDoctor]);
 
   // Fetch timeslots when doctor is selected (works for guests too)
   useEffect(() => {
@@ -245,6 +281,9 @@ export default function BookingModal({
       setTimeslots([]);
       setGuestInfo({ name: "", phone: "", email: "" });
       setGuestErrors({});
+      setConsultationEmail("");
+      setConsultationPhone("");
+      setEmailError("");
     }
   }, [isOpen]);
 
@@ -362,13 +401,26 @@ export default function BookingModal({
 
   const handleTimeslotSelect = (timeslot: TimeSlot) => {
     setSelectedTimeslot(timeslot);
-    // If user is logged in, go directly to confirmation
-    // If guest, collect their info first
+    // Logged-in users go to email collection, guests fill in their info first
     if (isLoggedIn) {
-      setStep("confirmation");
+      setStep("emailcollect");
     } else {
       setStep("guestinfo");
     }
+  };
+
+  const handleEmailSubmit = () => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!consultationEmail.trim()) {
+      setEmailError(t.requiredField);
+      return;
+    }
+    if (!emailRegex.test(consultationEmail.trim())) {
+      setEmailError(t.invalidEmail);
+      return;
+    }
+    setEmailError("");
+    setStep("confirmation");
   };
 
   const validateGuestInfo = (): boolean => {
@@ -382,6 +434,12 @@ export default function BookingModal({
       errors.phone = t.requiredField;
     } else if (!/^\+?[0-9]{10,15}$/.test(guestInfo.phone.replace(/[\s()-]/g, ""))) {
       errors.phone = t.invalidPhone;
+    }
+
+    if (!guestInfo.email?.trim()) {
+      errors.email = t.requiredField;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestInfo.email.trim())) {
+      errors.email = t.invalidEmail;
     }
 
     setGuestErrors(errors);
@@ -419,10 +477,14 @@ export default function BookingModal({
       if (!isLoggedIn) {
         bookingData.guest_name = guestInfo.name;
         bookingData.guest_phone = guestInfo.phone;
-        if (guestInfo.email) {
-          bookingData.guest_email = guestInfo.email;
-        }
+        bookingData.guest_email = guestInfo.email;
         bookingData.is_guest = true;
+      } else {
+        // For logged-in users, pass the contact details they confirmed
+        bookingData.consultation_email = consultationEmail;
+        if (consultationPhone.trim()) {
+          bookingData.consultation_phone = consultationPhone.trim();
+        }
       }
 
       const headers: Record<string, string> = {};
@@ -459,17 +521,24 @@ export default function BookingModal({
 
   const handleBack = () => {
     if (step === "timeslots") {
-      setStep("doctors");
-      setSelectedDoctor(null);
+      if (preselectedDoctor) {
+        onClose();
+      } else {
+        setStep("doctors");
+        setSelectedDoctor(null);
+      }
     } else if (step === "guestinfo") {
       setStep("timeslots");
+      setSelectedTimeslot(null);
+    } else if (step === "emailcollect") {
+      setStep("timeslots");
+      setSelectedTimeslot(null);
     } else if (step === "confirmation") {
       if (isLoggedIn) {
-        setStep("timeslots");
+        setStep("emailcollect");
       } else {
         setStep("guestinfo");
       }
-      setSelectedTimeslot(null);
     }
   };
 
@@ -530,6 +599,7 @@ export default function BookingModal({
                     {step === "doctors" && t.selectDoctor}
                     {step === "timeslots" && t.selectTime}
                     {step === "guestinfo" && t.yourInfo}
+                    {step === "emailcollect" && t.emailStep}
                     {step === "confirmation" && t.confirmation}
                   </p>
                 </div>
@@ -545,7 +615,7 @@ export default function BookingModal({
             {/* Progress Indicator - different for logged in vs guest */}
             <div className="flex gap-2 mt-4">
               {(isLoggedIn
-                ? ["doctors", "timeslots", "confirmation"]
+                ? ["doctors", "timeslots", "emailcollect", "confirmation"]
                 : ["doctors", "timeslots", "guestinfo", "confirmation"]
               ).map((s, i, arr) => (
                 <div
@@ -822,9 +892,15 @@ export default function BookingModal({
                               setGuestInfo({ ...guestInfo, email: e.target.value })
                             }
                             placeholder={t.guestEmailPlaceholder}
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                            className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${
+                              guestErrors.email ? "border-red-300 bg-red-50" : "border-gray-300"
+                            }`}
                           />
                         </div>
+                        {guestErrors.email && (
+                          <p className="text-red-500 text-xs mt-1">{guestErrors.email}</p>
+                        )}
+                        <p className="text-xs text-gray-500 mt-1">Мы отправим ссылку для подключения к онлайн-консультации на этот адрес.</p>
                       </div>
                     </div>
 
@@ -848,6 +924,63 @@ export default function BookingModal({
                         {t.loginToBook}
                       </button>
                     </div>
+                  </div>
+                )}
+
+                {/* Step: Email Collect (logged-in users only) */}
+                {step === "emailcollect" && selectedDoctor && selectedTimeslot && (
+                  <div className="space-y-5">
+                    {/* Icon + title */}
+                    <div className="text-center py-2">
+                      <div className="w-14 h-14 mx-auto bg-blue-100 rounded-full flex items-center justify-center mb-3">
+                        <Mail className="w-7 h-7 text-blue-600" />
+                      </div>
+                      <h3 className="text-lg font-bold text-gray-900">{t.emailLabel}</h3>
+                      <p className="text-sm text-gray-500 mt-1 max-w-xs mx-auto">{t.emailHint}</p>
+                    </div>
+
+                    {/* Appointment summary */}
+                    <div className="p-3 bg-blue-50 rounded-xl border border-blue-200">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm">
+                          {selectedDoctor.name.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="font-bold text-gray-900 text-sm">{selectedDoctor.name}</p>
+                          <p className="text-xs text-blue-600">{selectedDoctor.doctor_type}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-gray-600">
+                        <Clock size={12} className="text-blue-600" />
+                        <span>{formatDate(selectedTimeslot.start_time, language)}, {formatTime(selectedTimeslot.start_time)}</span>
+                      </div>
+                    </div>
+
+                    {/* Email field */}
+                    <div>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                        <input
+                          type="email"
+                          value={consultationEmail}
+                          onChange={(e) => { setConsultationEmail(e.target.value); setEmailError(""); }}
+                          placeholder="example@mail.com"
+                          autoFocus
+                          className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${
+                            emailError ? "border-red-300 bg-red-50" : "border-gray-300"
+                          }`}
+                        />
+                      </div>
+                      {emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}
+                    </div>
+
+                    <button
+                      onClick={handleEmailSubmit}
+                      className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-lg hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                    >
+                      {t.emailContinue}
+                      <ChevronRight size={20} />
+                    </button>
                   </div>
                 )}
 
@@ -924,6 +1057,32 @@ export default function BookingModal({
                             </p>
                           </div>
                         </div>
+
+                        {/* Email where link will be sent */}
+                        {(isLoggedIn ? consultationEmail : guestInfo.email) && (
+                          <div className="border-t border-gray-200 pt-3 flex items-center gap-3">
+                            <Mail className="w-5 h-5 text-blue-600" />
+                            <div>
+                              <p className="text-sm text-gray-500">{t.consultationEmail}</p>
+                              <p className="font-medium text-gray-900">
+                                {isLoggedIn ? consultationEmail : guestInfo.email}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Phone number */}
+                        {(isLoggedIn ? consultationPhone : guestInfo.phone) && (
+                          <div className="border-t border-gray-200 pt-3 flex items-center gap-3">
+                            <Phone className="w-5 h-5 text-blue-600" />
+                            <div>
+                              <p className="text-sm text-gray-500">{t.consultationPhone}</p>
+                              <p className="font-medium text-gray-900">
+                                {isLoggedIn ? consultationPhone : guestInfo.phone}
+                              </p>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Confirm Button */}

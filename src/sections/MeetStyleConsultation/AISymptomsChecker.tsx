@@ -16,6 +16,10 @@ import {
   faImage,
   faTimes,
   faClock,
+  faCalendarDays,
+  faVideo,
+  faBell,
+  faEnvelope,
 } from "@fortawesome/free-solid-svg-icons";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
@@ -23,6 +27,7 @@ import Image from "next/image";
 import Logo from "@/assets/logosaas.png";
 import BookingModal from "@/sections/Chat/BookingModal";
 import LanguageSwitcher from "@/sections/Hero/LanguageSwitcher";
+import type { Doctor } from "@/components/services/consultations/types/doctor";
 
 interface TimeSlot {
   id: string;
@@ -54,15 +59,24 @@ interface DoctorRecommendation {
   timeSlots?: TimeSlot[];
 }
 
+interface BookingConfirmationData {
+  doctorName: string;
+  doctorType: string;
+  formattedDate: string;
+  formattedTime: string;
+}
+
 interface Message {
-  role: "user" | "assistant" | "doctor-card" | "doctors-list" | "time-slots";
+  role: "user" | "assistant" | "doctor-card" | "doctors-list" | "time-slots" | "booking-confirmation";
   content: string;
   doctor?: DoctorRecommendation;
   doctors?: DoctorRecommendation[];
+  otherDoctors?: DoctorRecommendation[];
   timeSlots?: TimeSlot[];
   doctorId?: number;
   doctorName?: string;
   imageUrl?: string;
+  bookingConfirmation?: BookingConfirmationData;
 }
 
 // Helper function to format AI message content with better structure
@@ -170,6 +184,7 @@ export default function AISymptomsChecker() {
   const [isRecording, setIsRecording] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [preselectedDoctor, setPreselectedDoctor] = useState<Doctor | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -281,24 +296,27 @@ export default function AISymptomsChecker() {
       const allUserMessages = [...messages.filter(m => m.role === "user").map(m => m.content), userMessage];
       const fullSymptoms = allUserMessages.join(". ");
 
-      // Call AI recommendation API
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/consultations/ai-recommend/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          symptoms: fullSymptoms,
-          language: "ru"
+      // Call AI recommendation API and fetch alternative doctors in parallel
+      const [response, altDoctorsResponse] = await Promise.all([
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/consultations/ai-recommend/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ symptoms: fullSymptoms, language: "ru" }),
         }),
-      });
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/consultations/get-random-doctors/`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        }),
+      ]);
 
       if (!response.ok) {
         throw new Error("Failed to get AI recommendation");
       }
 
       const data = await response.json();
+      const altDoctorsData = altDoctorsResponse.ok ? await altDoctorsResponse.json() : null;
       console.log("AI API Response:", data);
       console.log("Messages length:", messages.length);
       console.log("Data success:", data.success);
@@ -399,13 +417,21 @@ export default function AISymptomsChecker() {
             cardContent = alternativeMessages[responseLang as keyof typeof alternativeMessages] || alternativeMessages.ru;
           }
 
+          // Prepare 2 alternative doctors (exclude the recommended one)
+          const altDoctors: DoctorRecommendation[] = altDoctorsData?.success && altDoctorsData?.doctors
+            ? altDoctorsData.doctors
+                .filter((d: DoctorRecommendation) => d.id !== data.recommended_doctor.id)
+                .slice(0, 2)
+            : [];
+
           setMessages((prev) => [
             ...prev,
             { role: "assistant", content: aiResponse },
             {
               role: "doctor-card",
               content: cardContent,
-              doctor: data.recommended_doctor
+              doctor: data.recommended_doctor,
+              otherDoctors: altDoctors
             }
           ]);
           setIsLoading(false);
@@ -468,8 +494,27 @@ export default function AISymptomsChecker() {
     // Implement voice recording logic here
   };
 
-  const handleBookAppointment = async (doctorId: number, doctorName: string) => {
-    // Open the booking modal instead of inline time slots
+  const handleBookAppointment = async (doctorId: number, doctorName: string, doctorRec?: DoctorRecommendation) => {
+    if (doctorRec) {
+      // Map DoctorRecommendation → Doctor so the modal can skip the doctor-selection step
+      const mapped: Doctor = {
+        id: doctorRec.id,
+        name: doctorRec.name,
+        email: doctorRec.email || "",
+        doctor_type: doctorRec.specialization
+          ? doctorRec.specialization[language as keyof typeof doctorRec.specialization] || doctorRec.doctor_type || ""
+          : doctorRec.doctor_type || "",
+        years_of_experience: doctorRec.years_of_experience,
+        clinic: doctorRec.clinic
+          ? { id: 0, name: doctorRec.clinic.name, address: doctorRec.clinic.address, city: doctorRec.clinic.city ?? undefined }
+          : null,
+        availability_status: "available",
+        language: doctorRec.language ?? null,
+      };
+      setPreselectedDoctor(mapped);
+    } else {
+      setPreselectedDoctor(null);
+    }
     setIsBookingModalOpen(true);
   };
 
@@ -479,34 +524,22 @@ export default function AISymptomsChecker() {
     scheduledTime: string;
     isGuest?: boolean;
   }) => {
-    // Add a confirmation message to the chat
     const date = new Date(bookingDetails.scheduledTime);
-    const formattedDate = date.toLocaleDateString(
-      language === "kz" ? "kk-KZ" : language === "en" ? "en-US" : "ru-RU",
-      { weekday: "long", year: "numeric", month: "long", day: "numeric" }
-    );
-    const formattedTime = date.toLocaleTimeString(
-      language === "kz" ? "kk-KZ" : language === "en" ? "en-US" : "ru-RU",
-      { hour: "2-digit", minute: "2-digit" }
-    );
-
-    let confirmationText = "";
-    switch (language) {
-      case "en":
-        confirmationText = `✅ Appointment Confirmed!\n\nYou have successfully booked an appointment with ${bookingDetails.doctorName} (${bookingDetails.doctorType}).\n\n📅 Date: ${formattedDate}\n🕐 Time: ${formattedTime}\n💻 Type: Online video consultation\n\nYou will receive a reminder before your appointment.`;
-        break;
-      case "kz":
-        confirmationText = `✅ Жазылу расталды!\n\n${bookingDetails.doctorName} (${bookingDetails.doctorType}) дәрігеріне сәтті жазылдыңыз.\n\n📅 Күні: ${formattedDate}\n🕐 Уақыты: ${formattedTime}\n💻 Түрі: Онлайн бейне кеңес\n\nКеңес алдында еске салу аласыз.`;
-        break;
-      default:
-        confirmationText = `✅ Запись подтверждена!\n\nВы успешно записались к врачу ${bookingDetails.doctorName} (${bookingDetails.doctorType}).\n\n📅 Дата: ${formattedDate}\n🕐 Время: ${formattedTime}\n💻 Тип: Онлайн видеоконсультация\n\nВы получите напоминание перед консультацией.`;
-    }
+    const locale = language === "kz" ? "kk-KZ" : language === "en" ? "en-US" : "ru-RU";
+    const formattedDate = date.toLocaleDateString(locale, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+    const formattedTime = date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
 
     setMessages((prev) => [
       ...prev,
       {
-        role: "assistant",
-        content: confirmationText
+        role: "booking-confirmation",
+        content: "",
+        bookingConfirmation: {
+          doctorName: bookingDetails.doctorName,
+          doctorType: bookingDetails.doctorType,
+          formattedDate,
+          formattedTime,
+        },
       }
     ]);
   }, [language]);
@@ -747,7 +780,97 @@ export default function AISymptomsChecker() {
                       </div>
                     </div>
                   </div>
-                ) : message.role === "doctor-card" && message.doctor ? (() => {
+                ) : message.role === "booking-confirmation" && message.bookingConfirmation ? (() => {
+                  const bc = message.bookingConfirmation;
+                  const labels = {
+                    title:   { en: "Appointment Confirmed!", ru: "Запись подтверждена!", kz: "Жазылу расталды!" },
+                    booked:  { en: `You have successfully booked an appointment with`, ru: `Вы успешно записались к врачу`, kz: `Дәрігерге сәтті жазылдыңыз:` },
+                    date:    { en: "Date", ru: "Дата", kz: "Күні" },
+                    time:    { en: "Time", ru: "Время", kz: "Уақыты" },
+                    type:    { en: "Online video consultation", ru: "Онлайн видеоконсультация", kz: "Онлайн бейне кеңес" },
+                    remind:  { en: "You will receive a reminder before your appointment.", ru: "Вы получите напоминание перед консультацией.", kz: "Кеңес алдында еске салу аласыз." },
+                  };
+                  const l = language as "en" | "ru" | "kz";
+                  return (
+                    <div className="max-w-[90%] sm:max-w-[85%] flex gap-2 sm:gap-3">
+                      <div
+                        className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 mt-1"
+                        style={{ background: "linear-gradient(135deg, #3772ff 0%, #2956bf 100%)" }}
+                      >
+                        <FontAwesomeIcon icon={faRobot} className="text-white text-xs sm:text-sm" />
+                      </div>
+                      <div className="flex-1">
+                        <div
+                          className="rounded-2xl sm:rounded-3xl overflow-hidden shadow-lg border"
+                          style={{ background: "white", borderColor: "#e1eaff" }}
+                        >
+                          {/* Green header */}
+                          <div className="px-5 py-4 flex items-center gap-3" style={{ background: "linear-gradient(135deg, #10b981 0%, #059669 100%)" }}>
+                            <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
+                              <FontAwesomeIcon icon={faCircleCheck} className="text-white text-lg" />
+                            </div>
+                            <p className="text-white font-bold text-sm sm:text-base">{labels.title[l]}</p>
+                          </div>
+
+                          {/* Body */}
+                          <div className="px-5 py-4 space-y-3">
+                            {/* Doctor row */}
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "#ebf1ff" }}>
+                                <FontAwesomeIcon icon={faUserMd} className="text-sm" style={{ color: "#2956bf" }} />
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500">{labels.booked[l]}</p>
+                                <p className="font-bold text-gray-900 text-sm">{bc.doctorName}</p>
+                                <p className="text-xs" style={{ color: "#3772ff" }}>{bc.doctorType}</p>
+                              </div>
+                            </div>
+
+                            <div className="border-t border-gray-100" />
+
+                            {/* Date row */}
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "#ebf1ff" }}>
+                                <FontAwesomeIcon icon={faCalendarDays} className="text-sm" style={{ color: "#2956bf" }} />
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500">{labels.date[l]}</p>
+                                <p className="font-bold text-gray-900 text-sm">{bc.formattedDate}</p>
+                              </div>
+                            </div>
+
+                            {/* Time row */}
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "#ebf1ff" }}>
+                                <FontAwesomeIcon icon={faClock} className="text-sm" style={{ color: "#2956bf" }} />
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500">{labels.time[l]}</p>
+                                <p className="font-bold text-gray-900 text-sm">{bc.formattedTime}</p>
+                              </div>
+                            </div>
+
+                            <div className="border-t border-gray-100" />
+
+                            {/* Type row */}
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "#ebf1ff" }}>
+                                <FontAwesomeIcon icon={faVideo} className="text-sm" style={{ color: "#2956bf" }} />
+                              </div>
+                              <p className="text-sm font-medium text-gray-700">{labels.type[l]}</p>
+                            </div>
+
+                            {/* Reminder note */}
+                            <div className="flex items-start gap-3 rounded-xl px-3 py-2.5" style={{ background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
+                              <FontAwesomeIcon icon={faBell} className="text-xs mt-0.5 flex-shrink-0" style={{ color: "#10b981" }} />
+                              <p className="text-xs text-green-800">{labels.remind[l]}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })() : message.role === "doctor-card" && message.doctor ? (() => {
                   // Detect language for doctor card labels
                   const detectLang = () => {
                     const lastAssistant = messages.filter(m => m.role === "assistant").pop();
@@ -775,6 +898,13 @@ export default function AISymptomsChecker() {
                     ? message.doctor.specialization[lang as keyof typeof message.doctor.specialization]
                     : message.doctor.doctor_type || "Doctor";
 
+                  const otherDoctorLabels = {
+                    bestMatch: { en: "Best Match", ru: "Лучший выбор", kz: "Ең жақсы таңдау" },
+                    alsoAvailable: { en: "Also available:", ru: "Также доступны:", kz: "Сонымен қатар қолжетімді:" },
+                    viewAll: { en: "View all doctors →", ru: "Показать всех врачей →", kz: "Барлық дәрігерлерді көрсету →" },
+                    book: { en: "Book", ru: "Записаться", kz: "Жазылу" },
+                  };
+
                   return (
                   <div className="max-w-[90%] sm:max-w-[85%] flex gap-2 sm:gap-3">
                     <div
@@ -787,15 +917,17 @@ export default function AISymptomsChecker() {
                       <div className="px-2 py-1 rounded-lg mb-2 inline-block" style={{ background: "#ebf1ff" }}>
                         <span className="text-xs font-semibold" style={{ color: "#2956bf" }}>{labels.doctorRecommendation[lang as keyof typeof labels.doctorRecommendation]}</span>
                       </div>
+
+                      {/* ── BEST MATCH card ── */}
                       <div
-                        className="rounded-3xl sm:rounded-[2rem] overflow-hidden shadow-2xl border-2 relative"
+                        className="rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border-2 relative mb-3"
                         style={{
                           background: "linear-gradient(135deg, #2563eb 0%, #1e40af 50%, #1e3a8a 100%)",
                           borderColor: "#60a5fa",
                           boxShadow: "0 20px 60px rgba(37, 99, 235, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1) inset"
                         }}
                       >
-                        {/* Premium Badge for Urgent Cases */}
+                        {/* Urgent badge */}
                         {message.doctor.urgency === "urgent" && (
                           <div className="absolute top-0 right-0 px-4 py-2 rounded-bl-2xl" style={{ background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)" }}>
                             <div className="flex items-center gap-1.5">
@@ -805,131 +937,163 @@ export default function AISymptomsChecker() {
                           </div>
                         )}
 
-                        {/* Decorative Background Elements */}
+                        {/* Decorative glows */}
                         <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #60a5fa 0%, transparent 70%)", filter: "blur(40px)" }}></div>
                         <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #93c5fd 0%, transparent 70%)", filter: "blur(30px)" }}></div>
 
-                        <div className="relative px-5 py-5 sm:px-7 sm:py-6">
-                          {/* Doctor Header */}
-                          <div className="flex items-start gap-4 sm:gap-5 mb-5">
-                            {/* Enhanced Avatar */}
+                        <div className="relative px-5 py-5 sm:px-6 sm:py-5">
+                          {/* Best match pill */}
+                          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full mb-4 text-xs font-bold" style={{ background: "rgba(251,191,36,0.2)", border: "1px solid rgba(251,191,36,0.4)" }}>
+                            <span>⭐</span>
+                            <span className="text-amber-200">{otherDoctorLabels.bestMatch[lang as keyof typeof otherDoctorLabels.bestMatch]}</span>
+                          </div>
+
+                          {/* Doctor header */}
+                          <div className="flex items-start gap-4 mb-4">
                             <div className="relative flex-shrink-0">
                               <div
-                                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center relative overflow-hidden"
+                                className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center relative overflow-hidden"
                                 style={{
-                                  background: "linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%)",
+                                  background: "linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.15) 100%)",
                                   backdropFilter: "blur(10px)",
-                                  boxShadow: "0 8px 32px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(255, 255, 255, 0.3)"
+                                  boxShadow: "0 8px 32px rgba(0,0,0,0.2), inset 0 0 0 1px rgba(255,255,255,0.3)"
                                 }}
                               >
-                                <FontAwesomeIcon icon={faUserMd} className="text-white text-2xl sm:text-3xl" />
-                                {/* Shine effect */}
+                                <FontAwesomeIcon icon={faUserMd} className="text-white text-xl sm:text-2xl" />
                                 <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-50"></div>
                               </div>
-                              {/* Status indicator */}
-                              <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-blue-900 animate-pulse" style={{ background: "#10b981" }}></div>
+                              <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-blue-900 animate-pulse" style={{ background: "#10b981" }}></div>
                             </div>
-
-                            {/* Doctor Info */}
-                            <div className="flex-1 pt-1">
-                              <h3 className="text-white font-bold text-lg sm:text-xl mb-1.5 leading-tight" style={{ textShadow: "0 2px 8px rgba(0, 0, 0, 0.3)" }}>
-                                {/* {message.doctor.name} */}
-                                Нажмите записаться на прием и ваберите врача в сплывающем окне
-                              </h3>
-                              {/* <p className="text-blue-100 text-sm sm:text-base mb-2 font-medium">{doctorSpecialization}</p> */}
-                              {message.doctor.years_of_experience && (
-                                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold" style={{ background: "rgba(255, 255, 255, 0.15)", backdropFilter: "blur(10px)" }}>
-                                  <span className="text-blue-100">✨</span>
-                                  <span className="text-white">{message.doctor.years_of_experience} {labels.experience[lang as keyof typeof labels.experience]}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Clinic Information Card */}
-                          {/* {message.doctor.clinic && (
-                            <div
-                              className="rounded-xl p-4 mb-5 relative overflow-hidden"
-                              style={{
-                                background: "rgba(255, 255, 255, 0.12)",
-                                backdropFilter: "blur(20px)",
-                                border: "1px solid rgba(255, 255, 255, 0.2)",
-                                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.1)"
-                              }}
-                            >
-                              <div className="flex items-start gap-3">
-                                <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(255, 255, 255, 0.2)" }}>
-                                  <span className="text-base">🏥</span>
-                                </div>
-                                <div className="flex-1">
-                                  <p className="text-blue-100/80 text-xs font-semibold mb-1 uppercase tracking-wide">{labels.clinic[lang as keyof typeof labels.clinic]}</p>
-                                  <p className="text-white text-sm sm:text-base font-bold mb-2 leading-tight">{message.doctor.clinic.name}</p>
-
-                                  <div className="space-y-1.5">
-                                    {message.doctor.clinic.address && (
-                                      <div className="flex items-start gap-2">
-                                        <span className="text-blue-200 text-xs mt-0.5">📍</span>
-                                        <p className="text-blue-100 text-xs leading-relaxed flex-1">{message.doctor.clinic.address}</p>
-                                      </div>
-                                    )}
-                                    {message.doctor.clinic.city && (
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-blue-200 text-xs">🌆</span>
-                                        <p className="text-blue-100 text-xs">{message.doctor.clinic.city}</p>
-                                      </div>
-                                    )}
-                                    {message.doctor.clinic.rating && (
-                                      <div className="flex items-center gap-2 mt-2">
-                                        <div className="flex items-center gap-1 px-2.5 py-1 rounded-full" style={{ background: "rgba(251, 191, 36, 0.15)" }}>
-                                          <span className="text-sm">⭐</span>
-                                          <span className="text-amber-200 text-xs font-bold">{message.doctor.clinic.rating.toFixed(1)}</span>
-                                        </div>
-                                      </div>
-                                    )}
+                            <div className="flex-1 pt-0.5">
+                              <h3 className="text-white font-bold text-base sm:text-lg mb-1 leading-tight">{message.doctor.name}</h3>
+                              <p className="text-blue-200 text-xs sm:text-sm mb-2">{doctorSpecialization}</p>
+                              <div className="flex flex-wrap gap-2">
+                                {message.doctor.years_of_experience && (
+                                  <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold" style={{ background: "rgba(255,255,255,0.15)", backdropFilter: "blur(10px)" }}>
+                                    <span>✨</span>
+                                    <span className="text-white">{message.doctor.years_of_experience} {labels.experience[lang as keyof typeof labels.experience]}</span>
                                   </div>
-                                </div>
+                                )}
+                                {message.doctor.clinic?.rating && (
+                                  <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold" style={{ background: "rgba(251,191,36,0.15)" }}>
+                                    <span>⭐</span>
+                                    <span className="text-amber-200">{message.doctor.clinic.rating.toFixed(1)}</span>
+                                  </div>
+                                )}
                               </div>
                             </div>
-                          )} */}
-
-                          {/* Premium Action Buttons */}
-                          <div className="space-y-3">
-                            {/* Primary CTA Button */}
-                            <button
-                              onClick={() => handleBookAppointment(message.doctor!.id, message.doctor!.name)}
-                              disabled={isLoading}
-                              className="w-full py-4 sm:py-5 font-bold rounded-xl sm:rounded-2xl transition-all relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
-                              style={{
-                                background: "linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)",
-                                color: "#1e40af",
-                                boxShadow: "0 10px 30px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.1)"
-                              }}
-                            >
-                              {/* Hover effect overlay */}
-                              <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-white opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                              <span className="relative flex items-center justify-center gap-2 text-sm sm:text-base">
-                                <span>{labels.bookAppointment[lang as keyof typeof labels.bookAppointment]}</span>
-                                <span className="group-hover:translate-x-1 transition-transform">→</span>
-                              </span>
-                            </button>
-
-                            {/* Secondary Button */}
-                            <button
-                              onClick={handleShowOtherDoctors}
-                              disabled={isLoading}
-                              className="w-full py-3 sm:py-3.5 font-semibold rounded-xl transition-all relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
-                              style={{
-                                background: "rgba(255, 255, 255, 0.15)",
-                                color: "white",
-                                border: "1px solid rgba(255, 255, 255, 0.3)",
-                                backdropFilter: "blur(10px)"
-                              }}
-                            >
-                              <span className="relative text-xs sm:text-sm">{labels.showOtherDoctors[lang as keyof typeof labels.showOtherDoctors]}</span>
-                            </button>
                           </div>
+
+                          {/* Clinic row */}
+                          {message.doctor.clinic && (
+                            <div className="flex items-center gap-2 mb-4 text-xs text-blue-200">
+                              <span>🏥</span>
+                              <span className="font-medium text-white">{message.doctor.clinic.name}</span>
+                              {message.doctor.clinic.city && <><span>·</span><span>📍 {message.doctor.clinic.city}</span></>}
+                            </div>
+                          )}
+
+                          {/* Primary CTA */}
+                          <button
+                            onClick={() => handleBookAppointment(message.doctor!.id, message.doctor!.name, message.doctor!)}
+                            disabled={isLoading}
+                            className="w-full py-3.5 font-bold rounded-xl transition-all relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
+                            style={{
+                              background: "linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)",
+                              color: "#1e40af",
+                              boxShadow: "0 8px 24px rgba(0,0,0,0.2)"
+                            }}
+                          >
+                            <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-white opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            <span className="relative flex items-center justify-center gap-2 text-sm sm:text-base">
+                              <span>{labels.bookAppointment[lang as keyof typeof labels.bookAppointment]}</span>
+                              <span className="group-hover:translate-x-1 transition-transform">→</span>
+                            </span>
+                          </button>
                         </div>
                       </div>
+
+                      {/* ── OTHER DOCTORS (2 compact cards) ── */}
+                      {message.otherDoctors && message.otherDoctors.length > 0 && (
+                        <div className="mb-2">
+                          <p className="text-xs font-semibold mb-2 px-1" style={{ color: "#6b7280" }}>
+                            {otherDoctorLabels.alsoAvailable[lang as keyof typeof otherDoctorLabels.alsoAvailable]}
+                          </p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {message.otherDoctors.map((doc, idx) => {
+                              const docSpec = doc.specialization
+                                ? doc.specialization[lang as keyof typeof doc.specialization]
+                                : doc.doctor_type || "Doctor";
+                              return (
+                                <div
+                                  key={doc.id || idx}
+                                  className="rounded-2xl overflow-hidden border relative"
+                                  style={{
+                                    background: "linear-gradient(135deg, #2563eb 0%, #1e40af 100%)",
+                                    borderColor: "#93c5fd",
+                                    boxShadow: "0 6px 20px rgba(37,99,235,0.25)"
+                                  }}
+                                >
+                                  <div className="px-3 py-3">
+                                    {/* Avatar + status */}
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <div className="relative flex-shrink-0">
+                                        <div
+                                          className="w-9 h-9 rounded-xl flex items-center justify-center"
+                                          style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(8px)" }}
+                                        >
+                                          <FontAwesomeIcon icon={faUserMd} className="text-white text-sm" />
+                                        </div>
+                                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-blue-900" style={{ background: "#10b981" }}></div>
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-white font-bold text-xs leading-tight truncate">{doc.name}</p>
+                                        <p className="text-blue-200 text-[10px] truncate">{docSpec}</p>
+                                      </div>
+                                    </div>
+
+                                    {/* Experience */}
+                                    {doc.years_of_experience && (
+                                      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] mb-2.5" style={{ background: "rgba(255,255,255,0.15)" }}>
+                                        <span>✨</span>
+                                        <span className="text-white font-medium">{doc.years_of_experience} {labels.experience[lang as keyof typeof labels.experience]}</span>
+                                      </div>
+                                    )}
+
+                                    {/* Book button */}
+                                    <button
+                                      onClick={() => handleBookAppointment(doc.id, doc.name, doc)}
+                                      disabled={isLoading}
+                                      className="w-full py-2 font-bold rounded-lg text-xs transition-all disabled:opacity-50"
+                                      style={{
+                                        background: "linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)",
+                                        color: "#1e40af",
+                                        boxShadow: "0 3px 8px rgba(0,0,0,0.15)"
+                                      }}
+                                    >
+                                      {otherDoctorLabels.book[lang as keyof typeof otherDoctorLabels.book]} →
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* View all doctors link */}
+                      <button
+                        onClick={handleShowOtherDoctors}
+                        disabled={isLoading}
+                        className="w-full py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all disabled:opacity-50"
+                        style={{
+                          background: "rgba(37,99,235,0.08)",
+                          color: "#2563eb",
+                          border: "1px solid rgba(37,99,235,0.2)"
+                        }}
+                      >
+                        {otherDoctorLabels.viewAll[lang as keyof typeof otherDoctorLabels.viewAll]}
+                      </button>
                     </div>
                   </div>
                   );
@@ -1044,7 +1208,7 @@ export default function AISymptomsChecker() {
 
                                 {/* Book Button */}
                                 <button
-                                  onClick={() => handleBookAppointment(doctor.id, doctor.name)}
+                                  onClick={() => handleBookAppointment(doctor.id, doctor.name, doctor)}
                                   disabled={isLoading}
                                   className="w-full py-2.5 sm:py-3 font-bold rounded-lg sm:rounded-xl transition-all relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
                                   style={{
@@ -1385,9 +1549,10 @@ export default function AISymptomsChecker() {
       {/* Booking Modal */}
       <BookingModal
         isOpen={isBookingModalOpen}
-        onClose={() => setIsBookingModalOpen(false)}
+        onClose={() => { setIsBookingModalOpen(false); setPreselectedDoctor(null); }}
         onBookingComplete={handleBookingComplete}
         language={language}
+        preselectedDoctor={preselectedDoctor}
       />
     </div>
   );
