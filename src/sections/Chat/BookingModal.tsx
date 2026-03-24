@@ -265,12 +265,19 @@ export default function BookingModal({
     }
   }, [isOpen, preselectedDoctor]);
 
-  // Fetch timeslots when doctor is selected (works for guests too)
+  // Fetch timeslots when doctor is selected
   useEffect(() => {
     if (selectedDoctor) {
-      fetchTimeslots(selectedDoctor.id);
+      fetchTimeslots(selectedDoctor.id, selectedDate);
     }
-  }, [selectedDoctor]);
+  }, [selectedDoctor]); // eslint-disable-line
+
+  // Re-fetch when date changes (real per-day schedule)
+  useEffect(() => {
+    if (selectedDoctor && step === "timeslots") {
+      fetchTimeslots(selectedDoctor.id, selectedDate);
+    }
+  }, [selectedDate]); // eslint-disable-line
 
   // Reset state when modal closes
   useEffect(() => {
@@ -313,82 +320,41 @@ export default function BookingModal({
     }
   };
 
-  const generateDynamicTimeslots = (doctorId: number, bookedSlots: string[] = []) => {
-    const slots: TimeSlot[] = [];
-    const now = new Date();
-
-    for (let day = 0; day < 14; day++) {
-      const baseDate = new Date();
-      baseDate.setDate(baseDate.getDate() + day);
-      const startOfDay = new Date(
-        baseDate.getFullYear(),
-        baseDate.getMonth(),
-        baseDate.getDate(),
-        0,
-        0,
-        0,
-        0
-      );
-      const isToday = day === 0;
-
-      for (let hour = 8; hour < 20; hour++) {
-        for (let minute = 0; minute < 60; minute += 15) {
-          const slotStart = new Date(startOfDay);
-          slotStart.setHours(hour, minute, 0, 0);
-
-          if (isToday && slotStart <= now) continue;
-
-          const slotEnd = new Date(slotStart.getTime() + 15 * 60 * 1000);
-          const slotId = Date.parse(slotStart.toISOString()) + doctorId;
-          const slotTimeString = slotStart.toISOString();
-
-          let isBooked = bookedSlots.includes(slotTimeString);
-          if (!isBooked) {
-            const slotTime = slotStart.getTime();
-            isBooked = bookedSlots.some((bookedSlot) => {
-              try {
-                const bookedTime = new Date(bookedSlot).getTime();
-                return Math.abs(slotTime - bookedTime) < 60000;
-              } catch {
-                return false;
-              }
-            });
-          }
-
-          slots.push({
-            id: slotId,
-            start_time: slotStart.toISOString(),
-            end_time: slotEnd.toISOString(),
-            available_spots: isBooked ? 0 : 1,
-            max_consultations: 1,
-            is_booked: isBooked,
-          });
-        }
-      }
-    }
-
-    return slots;
-  };
-
-  const fetchTimeslots = async (doctorId: number) => {
+  const fetchTimeslots = async (doctorId: number, date?: string) => {
+    const targetDate = date || selectedDate;
     setLoading(true);
+    setTimeslots([]);
     try {
-      const startDate = new Date().toISOString().split("T")[0];
-      const endDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split("T")[0];
-
-      const { data } = await api.get(`/consultations/doctor/${doctorId}/booked-slots/`, {
-        params: { start_date: startDate, end_date: endDate },
+      const { data } = await api.get("/schedule/day/", {
+        params: { date: targetDate, consultation_type: "online", doctor_id: doctorId },
       });
 
-      const bookedSlots = data.booked_slots || [];
-      const availableSlots = generateDynamicTimeslots(doctorId, bookedSlots);
-      setTimeslots(availableSlots);
-    } catch (error) {
-      console.error("Error fetching timeslots:", error);
-      const fallbackSlots = generateDynamicTimeslots(doctorId, []);
-      setTimeslots(fallbackSlots);
+      const doctorData = (data.doctors || []).find(
+        (d: { doctor_id: number }) => d.doctor_id === doctorId
+      );
+
+      if (doctorData?.slots?.length) {
+        const converted: TimeSlot[] = doctorData.slots.map(
+          (slot: { start: string; end: string; status: string }) => {
+            const startISO = new Date(`${targetDate}T${slot.start}:00`).toISOString();
+            const endISO = new Date(`${targetDate}T${slot.end}:00`).toISOString();
+            const isBooked = slot.status === "booked";
+            return {
+              id: Date.parse(startISO) + doctorId,
+              start_time: startISO,
+              end_time: endISO,
+              available_spots: isBooked ? 0 : 1,
+              max_consultations: 1,
+              is_booked: isBooked,
+            };
+          }
+        );
+        setTimeslots(converted);
+      } else {
+        setTimeslots([]);
+      }
+    } catch {
+      setTimeslots([]);
     } finally {
       setLoading(false);
     }

@@ -57,6 +57,11 @@ interface DoctorRecommendation {
   language?: string;
   urgency: string;
   timeSlots?: TimeSlot[];
+  nearest_slot?: {
+    date: string;
+    time: string;
+    label: string;
+  };
 }
 
 interface BookingConfirmationData {
@@ -996,6 +1001,21 @@ export default function AISymptomsChecker() {
                             </div>
                           )}
 
+                          {/* Nearest available slot */}
+                          {message.doctor.nearest_slot && (
+                            <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl text-xs font-medium" style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)" }}>
+                              <span>🕐</span>
+                              <span className="text-white opacity-90">
+                                {{
+                                  ru: "Ближайший слот:",
+                                  en: "Nearest slot:",
+                                  kz: "Жақын слот:",
+                                }[lang as "ru" | "en" | "kz"] ?? "Ближайший слот:"}
+                              </span>
+                              <span className="text-white font-bold">{message.doctor.nearest_slot.label}</span>
+                            </div>
+                          )}
+
                           {/* Primary CTA */}
                           <button
                             onClick={() => handleBookAppointment(message.doctor!.id, message.doctor!.name, message.doctor!)}
@@ -1206,6 +1226,14 @@ export default function AISymptomsChecker() {
                                         </div>
                                       )}
                                     </div>
+                                  </div>
+                                )}
+
+                                {/* Nearest slot for alternative doctor */}
+                                {doctor.nearest_slot && (
+                                  <div className="flex items-center gap-1.5 mb-2.5 px-2.5 py-1.5 rounded-lg text-xs" style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)" }}>
+                                    <span>🕐</span>
+                                    <span className="text-white font-semibold">{doctor.nearest_slot.label}</span>
                                   </div>
                                 )}
 
