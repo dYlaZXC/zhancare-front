@@ -8,6 +8,7 @@ import {
   faChevronRight,
   faUserMd,
   faCalendar,
+  faCalendarAlt,
   faNotesMedical,
   faVideo,
   faStethoscope,
@@ -57,6 +58,12 @@ export const DoctorBreadcrumb = ({
       title: "Аналитика",
       icon: <FontAwesomeIcon icon={faChartLine} className="w-4 h-4" />,
       href: "/doctor/analytics",
+    },
+    schedule: {
+      key: "schedule",
+      title: "Мое расписание",
+      icon: <FontAwesomeIcon icon={faCalendarAlt} className="w-4 h-4" />,
+      href: "/doctor/schedule",
     },
     consultations: {
       key: "consultations",

@@ -81,8 +81,8 @@ interface Message {
 
 // Helper function to format AI message content with better structure
 const formatAIMessage = (content: string) => {
-  // Split by newlines and process each paragraph
-  const paragraphs = content.split('\n\n').filter(p => p.trim());
+  if (!content) return null;
+  const paragraphs = (content ?? "").split('\n\n').filter(p => p.trim());
 
   return (
     <div className="space-y-3">
@@ -417,12 +417,15 @@ export default function AISymptomsChecker() {
             cardContent = alternativeMessages[responseLang as keyof typeof alternativeMessages] || alternativeMessages.ru;
           }
 
-          // Prepare 2 alternative doctors (exclude the recommended one)
-          const altDoctors: DoctorRecommendation[] = altDoctorsData?.success && altDoctorsData?.doctors
-            ? altDoctorsData.doctors
-                .filter((d: DoctorRecommendation) => d.id !== data.recommended_doctor.id)
-                .slice(0, 2)
-            : [];
+          // Use alternative_doctors from ai-recommend response (already scored & deduped)
+          // Fall back to the separate get-random-doctors call if not present
+          const altDoctors: DoctorRecommendation[] = data.alternative_doctors?.length
+            ? data.alternative_doctors
+            : altDoctorsData?.success && altDoctorsData?.doctors
+              ? altDoctorsData.doctors
+                  .filter((d: DoctorRecommendation) => d.id !== data.recommended_doctor.id)
+                  .slice(0, 3)
+              : [];
 
           setMessages((prev) => [
             ...prev,
@@ -1019,7 +1022,7 @@ export default function AISymptomsChecker() {
                           <p className="text-xs font-semibold mb-2 px-1" style={{ color: "#6b7280" }}>
                             {otherDoctorLabels.alsoAvailable[lang as keyof typeof otherDoctorLabels.alsoAvailable]}
                           </p>
-                          <div className="grid grid-cols-2 gap-2">
+                          <div className={`grid gap-2 ${message.otherDoctors.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
                             {message.otherDoctors.map((doc, idx) => {
                               const docSpec = doc.specialization
                                 ? doc.specialization[lang as keyof typeof doc.specialization]

@@ -5,6 +5,7 @@ import Logo from "@/assets/logosaas.png";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCalendar,
+  faCalendarAlt,
   faNotesMedical,
   faVideo,
   faSignOutAlt,
@@ -52,6 +53,7 @@ export const DoctorSidebar = ({
   const doctorMenu = [
     { id: "profile", icon: faUser, title: "Профиль", color: "#1e40af", href: "/doctor/profile" },
     { id: "analytics", icon: faChartLine, title: "Аналитика", color: "#8b5cf6", href: "/doctor/analytics" },
+    { id: "schedule", icon: faCalendarAlt, title: "Мое расписание", color: "#059669", href: "/doctor/schedule" },
     { id: "consultations", icon: faVideo, title: "Консультация", color: "#295bbf", href: "/doctor/consultations" },
     { id: "appointments", icon: faCalendar, title: "Мои вызовы на дом", color: "#3772ff", href: "/doctor/appointments" },
     { id: "patients", icon: faNotesMedical, title: "История Пациентов", color: "#3267e6", href: "/doctor/patients" },

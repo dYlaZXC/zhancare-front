@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 
 type Language = "ru" | "en" | "kz";
 
@@ -12,22 +12,16 @@ interface LanguageContextType {
 const STORAGE_KEY = "zhancare_language";
 
 function detectLanguage(): Language {
-  // 1. User already chose a language — respect it
-  if (typeof window !== "undefined") {
-    const saved = localStorage.getItem(STORAGE_KEY) as Language | null;
-    if (saved === "ru" || saved === "en" || saved === "kz") return saved;
-  }
+  const saved = localStorage.getItem(STORAGE_KEY) as Language | null;
+  if (saved === "ru" || saved === "en" || saved === "kz") return saved;
 
-  // 2. Detect from browser
   const browserLang = (
-    typeof navigator !== "undefined"
-      ? navigator.language || (navigator as any).userLanguage || ""
-      : ""
+    navigator.language || (navigator as any).userLanguage || ""
   ).toLowerCase();
 
   if (browserLang.startsWith("kk") || browserLang.startsWith("kz")) return "kz";
   if (browserLang.startsWith("en")) return "en";
-  return "ru"; // default
+  return "ru";
 }
 
 const LanguageContext = createContext<LanguageContextType>({
@@ -36,13 +30,17 @@ const LanguageContext = createContext<LanguageContextType>({
 });
 
 export const LanguageProvider = ({ children }: { children: React.ReactNode }) => {
-  const [language, setLanguageState] = useState<Language>(detectLanguage);
+  // Always start with "ru" on SSR — avoids hydration mismatch
+  const [language, setLanguageState] = useState<Language>("ru");
+
+  useEffect(() => {
+    // Runs only on client after hydration
+    setLanguageState(detectLanguage());
+  }, []);
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
-    if (typeof window !== "undefined") {
-      localStorage.setItem(STORAGE_KEY, lang);
-    }
+    localStorage.setItem(STORAGE_KEY, lang);
   };
 
   return (
