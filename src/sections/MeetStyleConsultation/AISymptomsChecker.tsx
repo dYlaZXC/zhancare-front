@@ -661,6 +661,11 @@ export default function AISymptomsChecker() {
     }
   };
 
+  const isSlotFuture = (slot?: { date: string; time: string }) => {
+    if (!slot) return false;
+    return new Date(`${slot.date}T${slot.time}:00`) > new Date();
+  };
+
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "linear-gradient(135deg, #ebf1ff 0%, #ffffff 50%, #ebf1ff 100%)" }}>
       {/* Header — matches landing page scrolled style */}
@@ -892,11 +897,6 @@ export default function AISymptomsChecker() {
                   };
                   const lang = detectLang();
 
-                  // Guard: don't show a nearest slot that is already in the past (client local time)
-                  const isSlotFuture = (slot?: { date: string; time: string }) => {
-                    if (!slot) return false;
-                    return new Date(`${slot.date}T${slot.time}:00`) > new Date();
-                  };
 
                   const labels = {
                     doctorRecommendation: { en: "Doctor Recommendation", ru: "Рекомендация врача", kz: "Дәрігер ұсынысы" },
