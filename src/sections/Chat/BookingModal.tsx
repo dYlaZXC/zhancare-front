@@ -512,6 +512,7 @@ export default function BookingModal({
     }
   };
 
+  const now = new Date();
   const filteredTimeslots = timeslots.filter((slot) => {
     const slotDate = new Date(slot.start_time);
     const selectedDateObj = new Date(selectedDate + "T00:00:00");
@@ -525,7 +526,7 @@ export default function BookingModal({
       selectedDateObj.getMonth(),
       selectedDateObj.getDate()
     );
-    return slotLocalDate.getTime() === targetLocalDate.getTime();
+    return slotLocalDate.getTime() === targetLocalDate.getTime() && slotDate > now;
   });
 
   const availableTimeslots = filteredTimeslots.filter(

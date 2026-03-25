@@ -83,7 +83,8 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
     return `${date}, ${time}`;
   })();
 
-  // Slots for the globally selected date
+  // Slots for the globally selected date, excluding past times
+  const now = new Date();
   const slotsForDate = selectedDate
     ? timeslots
         .filter(s => {
@@ -91,6 +92,7 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
           const t = new Date(selectedDate + 'T00:00:00');
           return d.getFullYear() === t.getFullYear() && d.getMonth() === t.getMonth() && d.getDate() === t.getDate();
         })
+        .filter(s => new Date(s.start_time) > now)
         .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
     : [];
 
