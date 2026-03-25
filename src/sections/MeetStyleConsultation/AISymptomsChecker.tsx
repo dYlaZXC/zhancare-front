@@ -1018,7 +1018,7 @@ export default function AISymptomsChecker() {
                                   kz: "Жақын слот:",
                                 }[lang as "ru" | "en" | "kz"] ?? "Ближайший слот:"}
                               </span>
-                              <span className="text-white font-bold">{message.doctor.nearest_slot.label}</span>
+                              <span className="text-white font-bold">{message.doctor.nearest_slot?.label}</span>
                             </div>
                           )}
 
@@ -1239,7 +1239,7 @@ export default function AISymptomsChecker() {
                                 {isSlotFuture(doctor.nearest_slot) && (
                                   <div className="flex items-center gap-1.5 mb-2.5 px-2.5 py-1.5 rounded-lg text-xs" style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)" }}>
                                     <span>🕐</span>
-                                    <span className="text-white font-semibold">{doctor.nearest_slot.label}</span>
+                                    <span className="text-white font-semibold">{doctor.nearest_slot?.label}</span>
                                   </div>
                                 )}
 
