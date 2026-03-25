@@ -892,6 +892,12 @@ export default function AISymptomsChecker() {
                   };
                   const lang = detectLang();
 
+                  // Guard: don't show a nearest slot that is already in the past (client local time)
+                  const isSlotFuture = (slot?: { date: string; time: string }) => {
+                    if (!slot) return false;
+                    return new Date(`${slot.date}T${slot.time}:00`) > new Date();
+                  };
+
                   const labels = {
                     doctorRecommendation: { en: "Doctor Recommendation", ru: "Рекомендация врача", kz: "Дәрігер ұсынысы" },
                     bookAppointment: { en: "Book Appointment", ru: "Записаться на прием", kz: "Жазылу" },
@@ -1002,7 +1008,7 @@ export default function AISymptomsChecker() {
                           )}
 
                           {/* Nearest available slot */}
-                          {message.doctor.nearest_slot && (
+                          {isSlotFuture(message.doctor.nearest_slot) && (
                             <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl text-xs font-medium" style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)" }}>
                               <span>🕐</span>
                               <span className="text-white opacity-90">
@@ -1230,7 +1236,7 @@ export default function AISymptomsChecker() {
                                 )}
 
                                 {/* Nearest slot for alternative doctor */}
-                                {doctor.nearest_slot && (
+                                {isSlotFuture(doctor.nearest_slot) && (
                                   <div className="flex items-center gap-1.5 mb-2.5 px-2.5 py-1.5 rounded-lg text-xs" style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)" }}>
                                     <span>🕐</span>
                                     <span className="text-white font-semibold">{doctor.nearest_slot.label}</span>

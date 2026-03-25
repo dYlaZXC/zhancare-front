@@ -118,12 +118,13 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
         doctorRows.forEach(({ doctor_id, slots }) => {
           const newSlots: TimeSlot[] = slots
             .map(slot => {
-              const startDt = new Date(`${date}T${slot.start}:00`);
-              const endDt = new Date(`${date}T${slot.end}:00`);
+              // Keep as local datetime string — toISOString() would shift to UTC
+              const startLocal = `${date}T${slot.start}:00`;
+              const endLocal = `${date}T${slot.end}:00`;
               return {
-                id: startDt.getTime() + doctor_id,
-                start_time: startDt.toISOString(),
-                end_time: endDt.toISOString(),
+                id: new Date(startLocal).getTime() + doctor_id,
+                start_time: startLocal,
+                end_time: endLocal,
                 available_spots: slot.status === 'free' ? 1 : 0,
                 max_consultations: 1,
                 is_booked: slot.status === 'booked',
@@ -252,9 +253,12 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
 
       // Create consultation data for Step 3
       // ✅ ai_recommendation_id is optional - only include if available
+      // start_time is "YYYY-MM-DDTHH:MM:00" (local) — split into date + time for the API
+      const [schedDate, schedTimePart] = selectedTimeslot.start_time.split("T");
       const consultationData: any = {
         scheduled_at: selectedTimeslot.start_time,
-        scheduled_time: selectedTimeslot.start_time,
+        scheduled_time: schedTimePart.slice(0, 5), // "HH:MM"
+        scheduled_date: schedDate,
         doctor_id: bookingDoctorId,
       };
 

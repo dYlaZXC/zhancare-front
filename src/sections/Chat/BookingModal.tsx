@@ -334,21 +334,23 @@ export default function BookingModal({
       );
 
       if (doctorData?.slots?.length) {
-        const converted: TimeSlot[] = doctorData.slots.map(
-          (slot: { start: string; end: string; status: string }) => {
-            const startISO = new Date(`${targetDate}T${slot.start}:00`).toISOString();
-            const endISO = new Date(`${targetDate}T${slot.end}:00`).toISOString();
+        const now = new Date();
+        const converted: TimeSlot[] = doctorData.slots
+          .map((slot: { start: string; end: string; status: string }) => {
+            // Keep as local datetime string — do NOT convert to UTC via toISOString()
+            const startLocal = `${targetDate}T${slot.start}:00`;
+            const endLocal = `${targetDate}T${slot.end}:00`;
             const isBooked = slot.status === "booked";
             return {
-              id: Date.parse(startISO) + doctorId,
-              start_time: startISO,
-              end_time: endISO,
+              id: new Date(startLocal).getTime() + doctorId,
+              start_time: startLocal,
+              end_time: endLocal,
               available_spots: isBooked ? 0 : 1,
               max_consultations: 1,
               is_booked: isBooked,
             };
-          }
-        );
+          })
+          .filter((slot: TimeSlot) => new Date(slot.start_time) > now);
         setTimeslots(converted);
       } else {
         setTimeslots([]);
@@ -434,9 +436,13 @@ export default function BookingModal({
 
     setBookingLoading(true);
     try {
+      // start_time is stored as "YYYY-MM-DDTHH:MM:00" (local) — extract date and time parts
+      const [scheduledDate, scheduledTimePart] = selectedTimeslot.start_time.split("T");
+      const scheduledTime = scheduledTimePart.slice(0, 5); // "HH:MM"
       const bookingData: any = {
         doctor_id: selectedDoctor.id,
-        scheduled_time: selectedTimeslot.start_time,
+        scheduled_date: scheduledDate,
+        scheduled_time: scheduledTime,
       };
 
       // Add guest info if not logged in
