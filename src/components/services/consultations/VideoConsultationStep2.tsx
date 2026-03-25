@@ -253,12 +253,11 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
 
       // Create consultation data for Step 3
       // ✅ ai_recommendation_id is optional - only include if available
-      // start_time is "YYYY-MM-DDTHH:MM:00" (local) — split into date + time for the API
-      const [schedDate, schedTimePart] = selectedTimeslot.start_time.split("T");
+      // start_time is "YYYY-MM-DDTHH:MM:00" (local) — convert to UTC ISO for correct backend storage
+      const localDate = new Date(selectedTimeslot.start_time);
       const consultationData: any = {
         scheduled_at: selectedTimeslot.start_time,
-        scheduled_time: schedTimePart.slice(0, 5), // "HH:MM"
-        scheduled_date: schedDate,
+        scheduled_time: localDate.toISOString(),
         doctor_id: bookingDoctorId,
       };
 

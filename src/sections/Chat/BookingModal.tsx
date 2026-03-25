@@ -436,13 +436,11 @@ export default function BookingModal({
 
     setBookingLoading(true);
     try {
-      // start_time is stored as "YYYY-MM-DDTHH:MM:00" (local) — extract date and time parts
-      const [scheduledDate, scheduledTimePart] = selectedTimeslot.start_time.split("T");
-      const scheduledTime = scheduledTimePart.slice(0, 5); // "HH:MM"
+      // start_time is "YYYY-MM-DDTHH:MM:00" (local) — convert to UTC ISO for correct backend storage
+      const localDate = new Date(selectedTimeslot.start_time);
       const bookingData: any = {
         doctor_id: selectedDoctor.id,
-        scheduled_date: scheduledDate,
-        scheduled_time: scheduledTime,
+        scheduled_time: localDate.toISOString(),
       };
 
       // Add guest info if not logged in
