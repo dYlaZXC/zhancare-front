@@ -10,7 +10,7 @@ interface AuthRedirectProps {
 }
 
 export default function AuthRedirect({ children }: AuthRedirectProps) {
-  const { user, loading, setIsAuthOpen } = useAuth();
+  const { user, loading, setIsAuthOpen, isDoctor } = useAuth();
   const router = useRouter();
   const [hasShownLoadingScreen, setHasShownLoadingScreen] = useState(false);
   const [showLoading, setShowLoading] = useState(false);
@@ -46,7 +46,7 @@ export default function AuthRedirect({ children }: AuthRedirectProps) {
       return;
     }
     
-    if (!loading && user?.role === "doctor") {
+    if (!loading && isDoctor) {
       router.replace("/doctor-profile");
     }
 
@@ -54,7 +54,7 @@ export default function AuthRedirect({ children }: AuthRedirectProps) {
     if (!loading && minTimeElapsed && showLoading) {
       setShowLoading(false);
     }
-  }, [loading, user, router, setIsAuthOpen, minTimeElapsed, showLoading]);
+  }, [loading, user, isDoctor, router, setIsAuthOpen, minTimeElapsed, showLoading]);
 
   // Show loading screen only on first CRM entry
   if (showLoading && !minTimeElapsed) {

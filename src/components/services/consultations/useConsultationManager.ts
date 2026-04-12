@@ -6,19 +6,17 @@ import { useAuth } from "@/context/AuthContext";
 export const useConsultationManager = () => {
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [newConsultation, setNewConsultation] = useState<Consultation | null>(null);
-  const { user } = useAuth();
+  const { user, isDoctor, isPatient } = useAuth();
 
   const seenIds = useRef<Set<number>>(new Set());
   const dismissedIds = useRef<Set<number>>(new Set());
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Check if current user is a doctor
-  const isDoctor = user?.role === 'doctor';
-
   const fetchConsultations = useCallback(async (status?: string) => {
     try {
       // Different endpoints based on user role
-      const baseUrl = user?.role === 'patient'
+      const baseUrl = isPatient
         ? '/consultations/my-consultations/'
         : '/consultations/doctor-consultations/';
 

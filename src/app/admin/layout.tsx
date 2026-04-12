@@ -14,7 +14,7 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading, setIsAuthOpen } = useAuth();
+  const { user, loading, setIsAuthOpen, isAdmin, isDoctor, isNurse, isPatient } = useAuth();
   const router = useRouter();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -22,16 +22,14 @@ export default function AdminLayout({
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
-    // Don't redirect if we're in the process of logging out
     if (isLoggingOut) return;
 
-    if (!loading && user && user.role !== "admin") {
-      // Redirect to appropriate profile based on role
-      if (user.role === 'doctor') {
+    if (!loading && user && !isAdmin) {
+      if (isDoctor) {
         router.replace('/doctor-profile');
-      } else if (user.role === 'nurse') {
+      } else if (isNurse) {
         router.replace('/nurse-profile');
-      } else if (user.role === 'patient') {
+      } else if (isPatient) {
         router.replace('/patient/profile');
       } else {
         router.replace("/");
@@ -40,7 +38,7 @@ export default function AdminLayout({
       setIsAuthOpen(true);
       router.replace("/");
     }
-  }, [loading, user, router, isLoggingOut, setIsAuthOpen]);
+  }, [loading, user, isAdmin, isDoctor, isNurse, isPatient, router, isLoggingOut, setIsAuthOpen]);
 
   const handleToggleSidebar = () => {
     setSidebarCollapsed(!sidebarCollapsed);
@@ -50,7 +48,7 @@ export default function AdminLayout({
     return <PremiumLoadingScreen message="Проверка авторизации" />;
   }
 
-  if (!user || user.role !== "admin") {
+  if (!user || !isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-lg text-gray-600">Перенаправление на страницу профиля администратора...</div>

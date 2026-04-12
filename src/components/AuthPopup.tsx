@@ -169,13 +169,15 @@ const AuthPopup = () => {
       // Wait for Telegram notification to send (topic 3 = Login)
       await sendTelegramNotification(loginMessage, 3);
 
-      // Redirect based on role
+      // Redirect based on roles array (with fallback to role string)
+      const userRoles: string[] = responseData.user.roles ?? [];
+      const userRole: string = responseData.user.role ?? "";
       let redirectUrl = "/profile"; // default for patients
-      if (responseData.user.role === "doctor") {
+      if (userRoles.includes("doctor") || userRole === "doctor") {
         redirectUrl = "/doctor-profile";
-      } else if (responseData.user.role === "nurse") {
+      } else if (userRoles.includes("nurse") || userRole === "nurse") {
         redirectUrl = "/nurse-profile";
-      } else if (responseData.user.role === "admin") {
+      } else if (userRoles.includes("admin") || userRole === "admin") {
         redirectUrl = "/admin-profile";
       }
 

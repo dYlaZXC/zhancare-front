@@ -4,14 +4,16 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 import { toast } from "react-toastify";
 import { api, setTokens, clearTokens, getAccessToken } from "@/utils/api";
 
-interface User {
+export interface User {
   id: number;
   email: string;
   first_name: string;
   last_name: string;
   phone?: string;
-  role: "patient" | "doctor" | "admin" | "nurse";
+  role: "patient" | "doctor" | "admin" | "nurse" | "teacher" | "student";
   role_display?: string;
+  roles?: string[];
+  profiles?: Record<string, Record<string, unknown>>;
 
   // Personal details
   birth_date?: string;
@@ -63,6 +65,11 @@ interface AuthContextProps {
   fetchSessions: () => Promise<void>;
   revokeSession: (sessionId: number) => Promise<void>;
   revokeAllOtherSessions: () => Promise<void>;
+  // Role helpers — prefer these over user.role for multi-role support
+  isDoctor: boolean;
+  isNurse: boolean;
+  isAdmin: boolean;
+  isPatient: boolean;
 }
 
 const defaultAuthContext: AuthContextProps = {
@@ -78,6 +85,10 @@ const defaultAuthContext: AuthContextProps = {
   fetchSessions: async () => {},
   revokeSession: async () => {},
   revokeAllOtherSessions: async () => {},
+  isDoctor: false,
+  isNurse: false,
+  isAdmin: false,
+  isPatient: false,
 };
 
 const AuthContext = createContext<AuthContextProps>(defaultAuthContext);
@@ -225,6 +236,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         fetchSessions,
         revokeSession,
         revokeAllOtherSessions,
+        isDoctor: !!user?.roles?.includes("doctor"),
+        isNurse: !!user?.roles?.includes("nurse"),
+        isAdmin: !!user?.roles?.includes("admin"),
+        isPatient: !!user?.roles?.includes("patient"),
       }}
     >
       {children}

@@ -16,7 +16,7 @@ import DoctorProfileInfo from "@/components/doctor/DoctorProfileInfo";
 import DoctorAnalytics from "@/components/doctor/DoctorAnalytics";
 
 export default function DoctorProfile() {
-  const { user, logoutUser, loading } = useAuth();
+  const { user, logoutUser, loading, isDoctor, isAdmin, isNurse, isPatient } = useAuth();
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState("consultations");
@@ -24,13 +24,12 @@ export default function DoctorProfile() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
-    if (!loading && user && user.role !== "doctor") {
-      // Redirect to appropriate profile based on role
-      if (user.role === 'admin') {
+    if (!loading && user && !isDoctor) {
+      if (isAdmin) {
         router.replace('/admin-profile');
-      } else if (user.role === 'nurse') {
+      } else if (isNurse) {
         router.replace('/nurse-profile');
-      } else if (user.role === 'patient') {
+      } else if (isPatient) {
         router.replace('/profile');
       } else {
         router.replace("/");
@@ -38,7 +37,7 @@ export default function DoctorProfile() {
     } else if (!loading && !user) {
       router.replace("/");
     }
-  }, [loading, user, router]);
+  }, [loading, user, isDoctor, isAdmin, isNurse, isPatient, router]);
 
   if (loading) {
     return (
@@ -48,7 +47,7 @@ export default function DoctorProfile() {
     );
   }
 
-  if (!user || user.role !== "doctor") {
+  if (!user || !isDoctor) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-lg text-gray-600">Перенаправление на страницу профиля врача...</div>

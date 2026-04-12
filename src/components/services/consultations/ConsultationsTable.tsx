@@ -46,7 +46,7 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
   onReject,
   onStatusChange
 }) => {
-  const { user } = useAuth();
+  const { user, isDoctor } = useAuth();
   const { consultations: hookConsultations, fetchConsultations } = useConsultationManager();
   const consultations = useMemo(() => propConsultations || hookConsultations || [], [propConsultations, hookConsultations]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -57,9 +57,6 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
   const [showStatusDropdown, setShowStatusDropdown] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const itemsPerPage = 10;
-
-  // Check if user is doctor
-  const isDoctor = user?.role === 'doctor';
 
   // Real-time updates for scheduled consultations
   useEffect(() => {

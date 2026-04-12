@@ -28,7 +28,7 @@ interface IncomingConsultation {
 }
 
 const DoctorDashboard: React.FC = () => {
-  const { token, user } = useAuth();
+  const { token, user, isDoctor } = useAuth();
   const [consultations, setConsultations] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +50,7 @@ const DoctorDashboard: React.FC = () => {
     fetchConsultations();
 
     // ✅ Setup WebSocket listeners for real-time notifications
-    if (user?.role === 'doctor') {
+    if (isDoctor) {
       // console.log('🔌 Setting up WebSocket listeners for doctor dashboard');
 
       // Connect to WebSocket with token

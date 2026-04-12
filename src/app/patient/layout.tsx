@@ -13,7 +13,7 @@ export default function PatientLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading, setIsAuthOpen } = useAuth();
+  const { user, loading, setIsAuthOpen, isDoctor, isAdmin, isNurse } = useAuth();
   const { userProfile, loading: profileLoading, error: profileError } = useUserProfile();
   const router = useRouter();
 
@@ -39,21 +39,21 @@ export default function PatientLayout({
       return;
     }
 
-    if (!loading && user?.role === "doctor") {
+    if (!loading && isDoctor) {
       router.replace("/doctor-profile");
       return;
     }
 
-    if (!loading && user?.role === "admin") {
+    if (!loading && isAdmin) {
       router.replace("/admin-profile");
       return;
     }
 
-    if (!loading && user?.role === "nurse") {
+    if (!loading && isNurse) {
       router.replace("/nurse-profile");
       return;
     }
-  }, [loading, user, router, setIsAuthOpen]);
+  }, [loading, user, isDoctor, isAdmin, isNurse, router, setIsAuthOpen]);
 
   if (loading || profileLoading) {
     return null; // Don't show loading screen, let auth popup handle it

@@ -47,7 +47,7 @@ export const OptimizedConsultationProvider: React.FC<{ children: React.ReactNode
 
   // Get user context
   const { user, token } = useAuth();
-  const isDoctor = user?.role === 'doctor';
+  const isDoctor = !!user?.roles?.includes('doctor');
 
   // ==========================================
   // WebSocket Event Handlers

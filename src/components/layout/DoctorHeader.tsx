@@ -30,7 +30,7 @@ export const DoctorHeader = ({
   sidebarCollapsed = false, 
   onToggleSidebar 
 }: DoctorHeaderProps) => {
-  const { user } = useAuth();
+  const { user, isDoctor } = useAuth();
   const [isHovered, setIsHovered] = useState(false);
   const [showAvailabilityDropdown, setShowAvailabilityDropdown] = useState(false);
   const [availabilityStatus, setAvailabilityStatus] = useState<'available' | 'busy' | 'offline' | 'break'>('offline');
@@ -39,7 +39,7 @@ export const DoctorHeader = ({
   // Fetch current doctor availability status on mount
   useEffect(() => {
     const fetchCurrentStatus = async () => {
-      if (!user || user.role !== 'doctor') {
+      if (!user || !isDoctor) {
         setIsLoadingStatus(false);
         return;
       }
@@ -65,7 +65,7 @@ export const DoctorHeader = ({
 
   // Listen for WebSocket availability changes
   useEffect(() => {
-    if (!user || user.role !== 'doctor') return;
+    if (!user || !isDoctor) return;
 
     const handleAvailabilityChange = (data: any) => {
       // Check if the change is for the current user

@@ -26,7 +26,7 @@ interface ChartDataPoint {
 }
 
 export const useProfileData = () => {
-  const { user } = useAuth();
+  const { user, isPatient } = useAuth();
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [appointments, setAppointments] = useState<HomeAppointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,7 +35,7 @@ export const useProfileData = () => {
     const fetchData = async () => {
       try {
         // Use role-based endpoints
-        const consultationEndpoint = user?.role === 'patient' 
+        const consultationEndpoint = isPatient
           ? '/consultations/my-consultations/'
           : '/consultations/';
 

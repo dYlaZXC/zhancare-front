@@ -5,30 +5,27 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 export default function ProfilePage() {
-  const { user, loading } = useAuth();
+  const { user, loading, isDoctor, isNurse, isAdmin } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (loading) return;
 
     if (!user) {
-      // Redirect to home if not authenticated
       router.replace('/');
       return;
     }
 
-    // Redirect to appropriate profile based on role
-    if (user.role === 'doctor') {
+    if (isDoctor) {
       router.replace('/doctor-profile');
-    } else if (user.role === 'nurse') {
+    } else if (isNurse) {
       router.replace('/nurse-profile');
-    } else if (user.role === 'admin') {
+    } else if (isAdmin) {
       router.replace('/admin-profile');
     } else {
-      // Default to patient dashboard
       router.replace('/patient/profile');
     }
-  }, [user, loading, router]);
+  }, [user, loading, isDoctor, isNurse, isAdmin, router]);
 
   return (
     <div className="flex items-center justify-center min-h-screen">

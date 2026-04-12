@@ -14,7 +14,7 @@ interface TabLayoutProps {
 }
 
 const TabLayout = ({ children }: TabLayoutProps) => {
-  const { user, loading } = useAuth();
+  const { user, loading, isDoctor } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -49,10 +49,10 @@ const TabLayout = ({ children }: TabLayoutProps) => {
   };
 
   useEffect(() => {
-    if (!loading && user?.role === "doctor") {
+    if (!loading && isDoctor) {
       router.replace("/doctor-profile");
     }
-  }, [loading, user, router]);
+  }, [loading, user, isDoctor, router]);
 
   if (loading) {
     return null; // Don't show loading screen
