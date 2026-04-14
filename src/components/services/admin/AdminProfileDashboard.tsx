@@ -50,7 +50,8 @@ interface User {
   email: string;
   first_name: string;
   last_name: string;
-  role: string;
+  role?: string;
+  roles?: string[];
   clinic?: {
     id: number;
     name: string;
