@@ -7,8 +7,6 @@ export interface User {
   role?: string;
   roles?: string[];
   profiles?: Record<string, Record<string, unknown>>;
-  /** @deprecated Removed from API */
-  role_display?: string;
 
   // Personal details
   birth_date?: string;

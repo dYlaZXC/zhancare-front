@@ -20,7 +20,6 @@ type Props = {
     last_name?: string;
     role?: string;
     roles?: string[];
-    role_display?: string;
     email?: string;
     avatar?: string;
   };

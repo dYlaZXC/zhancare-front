@@ -102,8 +102,8 @@ const DoctorAvailabilityTest: React.FC = () => {
     }
   };
 
-  const isCurrentUserDoctor = isDoctor;
-  const currentUserAsDoctor = isCurrentUserDoctor ? {
+  const isCurrentUserDoctor = isDoctor && !!user;
+  const currentUserAsDoctor = isCurrentUserDoctor && user ? {
     id: user.id,
     name: `${user.first_name} ${user.last_name}`,
     email: user.email,

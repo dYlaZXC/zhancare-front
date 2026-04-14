@@ -30,8 +30,6 @@ export interface User {
   phone?: string;
   /** @deprecated Computed from roles[] — do not read from API response directly */
   role?: string;
-  /** @deprecated Removed from API — use ROLE_DISPLAY_MAP[computeRole(user.roles)] */
-  role_display?: string;
   roles?: string[];
   profiles?: Record<string, Record<string, unknown>>;
 
@@ -158,6 +156,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setToken(storedAccessToken);
           setUser(JSON.parse(storedUser));
           setAuthHeader(storedAccessToken);
+          // Ensure auth cookie is present (may have been lost on browser restart)
+          document.cookie = `zha_auth=1; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
 
           // Refresh user data from API to pick up role/profile changes
           try {
@@ -185,6 +185,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setTokens(accessToken, refreshToken);
     localStorage.setItem("user", JSON.stringify(enriched));
     setAuthHeader(accessToken);
+    // Set auth presence cookie for middleware SSR guard
+    document.cookie = `zha_auth=1; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
   }, [setAuthHeader]);
 
   // Logout
@@ -194,6 +196,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setToken(null);
     setSessions([]);
     setAuthHeader(null);
+    // Clear auth cookie
+    document.cookie = "zha_auth=; path=/; max-age=0";
 
     if (showMessage) {
       toast.warning("⏳ Ваша сессия истекла. Пожалуйста, войдите снова.");

@@ -13,8 +13,6 @@ export interface FullUserProfile {
   role?: string;
   roles?: string[];
   profiles?: Record<string, Record<string, unknown>>;
-  /** @deprecated Removed from API */
-  role_display?: string;
 
   // Personal details
   birth_date?: string;
@@ -129,7 +127,6 @@ export const useUserProfile = () => {
     phone: fullUserProfile.phone || user?.phone || "",
     role: fullUserProfile.role || computeRole(user?.roles),
     roles: fullUserProfile.roles ?? user?.roles,
-    role_display: "",
 
     // Personal details
     birth_date: fullUserProfile.birth_date || "",
