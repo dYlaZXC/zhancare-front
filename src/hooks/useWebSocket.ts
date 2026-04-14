@@ -16,7 +16,7 @@ interface UseWebSocketOptions {
 }
 
 export const useWebSocket = (options: UseWebSocketOptions = {}) => {
-  const { token, user, isDoctor } = useAuth();
+  const { token, user, isDoctor, isNurse } = useAuth();
   const ws = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -58,7 +58,7 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
           type: 'authenticate',
           token: token,
           user_id: user.id,
-          user_role: isDoctor ? 'doctor' : (user.role)
+          user_role: isDoctor ? 'doctor' : isNurse ? 'nurse' : 'patient'
         }));
       };
 

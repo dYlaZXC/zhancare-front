@@ -12,12 +12,13 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/context/LanguageContext";
+import { ROLE_DISPLAY_MAP, computeRole } from "@/context/AuthContext";
 
 type Props = {
   user: {
     first_name: string;
     last_name?: string;
-    role: string;
+    role?: string;
     roles?: string[];
     role_display?: string;
     email?: string;
@@ -277,7 +278,7 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
             {user.first_name}
           </span>
           <span className="text-[10px] sm:text-xs text-white/80 truncate">
-            {user.role_display ?? (user.role === "doctor" ? t.doctor : user.role === "nurse" ? t.nurse : user.role === "admin" ? t.admin : t.patient)}
+            {ROLE_DISPLAY_MAP[computeRole(user.roles ?? (user.role ? [user.role] : []))] ?? t.patient}
           </span>
         </div>
 

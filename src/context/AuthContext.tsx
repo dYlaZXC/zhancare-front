@@ -4,13 +4,33 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 import { toast } from "react-toastify";
 import { api, setTokens, clearTokens, getAccessToken } from "@/utils/api";
 
+const _ROLE_PRIORITY = ["admin", "academy_admin", "doctor", "nurse", "teacher", "patient"] as const;
+
+export const ROLE_DISPLAY_MAP: Record<string, string> = {
+  admin: "Администратор",
+  academy_admin: "Администратор академии",
+  doctor: "Доктор",
+  nurse: "Медсестра",
+  teacher: "Преподаватель",
+  patient: "Пациент",
+  student: "Студент",
+};
+
+/** Compute the highest-priority display role from roles[]. */
+export function computeRole(roles?: string[]): string {
+  if (!roles?.length) return "patient";
+  return _ROLE_PRIORITY.find((r) => roles.includes(r)) ?? roles[0] ?? "patient";
+}
+
 export interface User {
   id: number;
   email: string;
   first_name: string;
   last_name: string;
   phone?: string;
-  role: "patient" | "doctor" | "admin" | "nurse" | "teacher" | "student";
+  /** @deprecated Computed from roles[] — do not read from API response directly */
+  role?: string;
+  /** @deprecated Removed from API — use ROLE_DISPLAY_MAP[computeRole(user.roles)] */
   role_display?: string;
   roles?: string[];
   profiles?: Record<string, Record<string, unknown>>;
@@ -142,7 +162,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           // Refresh user data from API to pick up role/profile changes
           try {
             const res = await api.get("/user-profile/profile/");
-            const freshUser: User = res.data;
+            const freshUser: User = { ...res.data, role: computeRole(res.data.roles) };
             setUser(freshUser);
             localStorage.setItem("user", JSON.stringify(freshUser));
           } catch {
@@ -159,10 +179,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Login
   const loginUser = useCallback((accessToken: string, refreshToken: string, userData: User) => {
+    const enriched: User = { ...userData, role: computeRole(userData.roles) };
     setToken(accessToken);
-    setUser(userData);
+    setUser(enriched);
     setTokens(accessToken, refreshToken);
-    localStorage.setItem("user", JSON.stringify(userData));
+    localStorage.setItem("user", JSON.stringify(enriched));
     setAuthHeader(accessToken);
   }, [setAuthHeader]);
 

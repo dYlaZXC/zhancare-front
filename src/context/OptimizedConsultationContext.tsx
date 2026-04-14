@@ -158,7 +158,7 @@ export const OptimizedConsultationProvider: React.FC<{ children: React.ReactNode
     onConnect: handleWebSocketConnect,
     onDisconnect: handleWebSocketDisconnect,
     onError: handleWebSocketError,
-    userRole: user?.role as 'doctor' | 'patient',
+    userRole: user?.roles?.includes('doctor') ? 'doctor' : 'patient',
     userId: user?.id
   });
 

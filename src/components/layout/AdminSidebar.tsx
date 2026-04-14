@@ -19,7 +19,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useState, useEffect } from "react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth, computeRole, ROLE_DISPLAY_MAP } from "@/context/AuthContext";
 import { usePathname } from "next/navigation";
 import { toast } from "react-toastify";
 import Link from "next/link";
@@ -36,6 +36,7 @@ export const AdminSidebar = ({
   isCollapsed = false,
 }: AdminSidebarProps) => {
   const { user, logoutUser, setIsAuthOpen } = useAuth();
+  const userRole = computeRole(user?.roles);
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -281,8 +282,8 @@ export const AdminSidebar = ({
           <div className="relative group mb-4 flex justify-center">
             <div className={`relative ${isCollapsed ? 'w-10 h-10' : 'w-16 h-16 xs:w-18 xs:h-18 sm:w-20 sm:h-20'} rounded-xl xs:rounded-2xl flex items-center justify-center ${isCollapsed ? 'text-sm' : 'text-xl xs:text-2xl sm:text-2xl'} font-bold shadow-2xl transform group-hover:scale-110 transition-all duration-300 border-2 backdrop-blur-sm`}
                  style={{
-                   background: getRoleGradient(user.role).bg,
-                   borderColor: getRoleGradient(user.role).border
+                   background: getRoleGradient(userRole).bg,
+                   borderColor: getRoleGradient(userRole).border
                  }}>
               <span className="relative z-10 text-white drop-shadow-lg">
                 {user.first_name.charAt(0)}
@@ -301,10 +302,10 @@ export const AdminSidebar = ({
           <div className="block xl:hidden">
             <div className={`inline-flex items-center gap-1.5 xs:gap-2 px-2 py-1 xs:px-3 xs:py-1.5 rounded-lg xs:rounded-xl shadow-lg border backdrop-blur-sm mb-2 xs:mb-3 text-xs font-bold uppercase tracking-wide`}
                  style={{
-                   background: getRoleGradient(user.role).bg,
-                   borderColor: getRoleGradient(user.role).border
+                   background: getRoleGradient(userRole).bg,
+                   borderColor: getRoleGradient(userRole).border
                  }}>
-              <FontAwesomeIcon icon={getRoleIcon(user.role)} className="text-xs" />
+              <FontAwesomeIcon icon={getRoleIcon(userRole)} className="text-xs" />
               <span>Администратор</span>
             </div>
 
@@ -320,10 +321,10 @@ export const AdminSidebar = ({
               <>
                 <div className={`inline-flex items-center gap-1.5 xs:gap-2 px-2 py-1 xs:px-3 xs:py-1.5 rounded-lg xs:rounded-xl shadow-lg border backdrop-blur-sm mb-2 xs:mb-3 text-xs font-bold uppercase tracking-wide`}
                      style={{
-                       background: getRoleGradient(user.role).bg,
-                       borderColor: getRoleGradient(user.role).border
+                       background: getRoleGradient(userRole).bg,
+                       borderColor: getRoleGradient(userRole).border
                      }}>
-                  <FontAwesomeIcon icon={getRoleIcon(user.role)} className="text-xs" />
+                  <FontAwesomeIcon icon={getRoleIcon(userRole)} className="text-xs" />
                   <span>Администратор</span>
                 </div>
 
@@ -564,8 +565,8 @@ export const AdminSidebar = ({
           <div className="relative group mb-4 flex justify-center">
             <div className={`relative ${isCollapsed ? 'w-10 h-10' : 'w-20 h-20'} rounded-2xl flex items-center justify-center ${isCollapsed ? 'text-sm' : 'text-2xl'} font-bold shadow-2xl transform group-hover:scale-110 transition-all duration-300 border-2 backdrop-blur-sm`}
                  style={{
-                   background: getRoleGradient(user.role).bg,
-                   borderColor: getRoleGradient(user.role).border
+                   background: getRoleGradient(userRole).bg,
+                   borderColor: getRoleGradient(userRole).border
                  }}>
               <span className="relative z-10 text-white drop-shadow-lg">
                 {user.first_name.charAt(0)}
@@ -585,10 +586,10 @@ export const AdminSidebar = ({
             <>
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl shadow-lg border backdrop-blur-sm mb-3 text-xs font-bold uppercase tracking-wide"
                    style={{
-                     background: getRoleGradient(user.role).bg,
-                     borderColor: getRoleGradient(user.role).border
+                     background: getRoleGradient(userRole).bg,
+                     borderColor: getRoleGradient(userRole).border
                    }}>
-                <FontAwesomeIcon icon={getRoleIcon(user.role)} className="text-xs" />
+                <FontAwesomeIcon icon={getRoleIcon(userRole)} className="text-xs" />
                 <span>Администратор</span>
               </div>
 
