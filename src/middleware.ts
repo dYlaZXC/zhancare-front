@@ -13,7 +13,6 @@ const PROTECTED_PREFIXES = [
   "/admin-profile",
   "/video-call",
   "/appointments",
-  "/consultation",
   "/documents",
   "/history",
   "/chat",
