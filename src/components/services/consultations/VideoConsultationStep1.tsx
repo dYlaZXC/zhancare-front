@@ -140,72 +140,57 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-100">
-      <motion.div
-        className="p-4 md:p-6 space-y-6"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-      >
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="text-center space-y-3"
-        >
-          <h3 className="text-2xl md:text-3xl font-bold text-gray-900">
-            Консультации
-          </h3>
-          <p className="text-gray-600 text-sm md:text-base">
-            Онлайн, оффлайн и диагностика — всё в одном месте
-          </p>
-        </motion.div>
+    <div className="relative bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
+      {/* Background ambient */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-0 left-1/4 w-96 h-64 bg-blue-500/5 rounded-full blur-[100px]" />
+        <div className="absolute top-0 right-1/4 w-80 h-64 bg-indigo-500/4 rounded-full blur-[100px]" />
+      </div>
 
-        {/* Action Buttons */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
-          className="flex justify-center gap-4 flex-wrap"
-        >
-          {/* Онлайн консультация — active */}
+      <div className="relative flex items-center justify-between gap-4 px-6 py-4 flex-wrap">
+        {/* Title */}
+        <div className="flex items-center gap-3">
+          <h3 className="text-lg font-bold text-gray-900 tracking-tight">Консультации</h3>
+          <span className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 bg-blue-50 border border-blue-200 rounded-full text-xs font-medium text-blue-600">
+            <Sparkles className="w-3 h-3" />
+            Медицинские услуги
+          </span>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex items-center gap-2 flex-wrap">
           <motion.button
             onClick={onNext}
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            className="px-6 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-base shadow-xl hover:shadow-2xl hover:shadow-blue-500/30 transition-all flex items-center justify-center gap-3"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold text-sm shadow-md shadow-blue-500/20 hover:shadow-blue-500/30 transition-all"
           >
-            <Video size={22} />
+            <Video size={15} />
             Онлайн консультация
-            <ArrowRight size={18} />
+            <ArrowRight size={14} />
           </motion.button>
 
-          {/* Оффлайн консультация — disabled */}
-          <button
-            disabled
-            className="px-6 py-4 rounded-2xl bg-gray-100 border-2 border-dashed border-gray-300 text-gray-400 font-bold text-base cursor-not-allowed flex items-center justify-center gap-3"
-          >
-            <Home size={22} />
-            Оффлайн консультация
+          <button disabled className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-50 border border-dashed border-gray-200 text-gray-400 font-medium text-sm cursor-not-allowed">
+            <Home size={15} />
+            Оффлайн
           </button>
 
-          {/* Диагностика — disabled */}
-          <button
-            disabled
-            className="px-6 py-4 rounded-2xl bg-gray-100 border-2 border-dashed border-gray-300 text-gray-400 font-bold text-base cursor-not-allowed flex items-center justify-center gap-3"
-          >
-            <Stethoscope size={22} />
+          <button disabled className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-50 border border-dashed border-gray-200 text-gray-400 font-medium text-sm cursor-not-allowed">
+            <Stethoscope size={15} />
             Диагностика
           </button>
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div className="relative mx-6 h-px bg-gray-100" />
 
       {/* Patient Consultations Table */}
-      <PatientConsultationsTable />
+      <div className="relative py-6">
+        <PatientConsultationsTable />
+      </div>
 
-      {/* Extended Bottom Spacing */}
-      <div className="pb-8 md:pb-12"></div>
+      <div className="pb-4" />
     </div>
   );
 };
