@@ -116,6 +116,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => window.removeEventListener('auth:logout', handleLogoutEvent as EventListener);
   }, [setAuthHeader]);
 
+  // Keep token React state in sync when api interceptor silently refreshes the token
+  useEffect(() => {
+    const handleTokenRefreshed = (event: CustomEvent) => {
+      const newAccess = event.detail?.access;
+      if (newAccess) {
+        setToken(newAccess);
+        setAuthHeader(newAccess);
+      }
+    };
+    window.addEventListener('auth:token-refreshed', handleTokenRefreshed as EventListener);
+    return () => window.removeEventListener('auth:token-refreshed', handleTokenRefreshed as EventListener);
+  }, [setAuthHeader]);
+
   // Load user session on first load and refresh from API
   useEffect(() => {
     const init = async () => {
