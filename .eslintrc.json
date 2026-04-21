@@ -1,3 +1,12 @@
 {
-  "extends": "next/core-web-vitals"
+  "extends": "next/core-web-vitals",
+  "rules": {
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "MemberExpression[object.name='user'][property.name='role']:not([parent.type='AssignmentExpression'])",
+        "message": "Use computeRole(user.roles) from @/context/AuthContext instead of user.role. The 'role' field is deprecated and no longer returned by the API."
+      }
+    ]
+  }
 }

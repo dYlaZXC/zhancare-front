@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/api";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth, computeRole } from "@/context/AuthContext";
 
 export interface FullUserProfile {
   id: number;
@@ -10,8 +10,9 @@ export interface FullUserProfile {
   last_name: string;
   email: string;
   phone?: string;
-  role: "patient" | "doctor" | "admin";
-  role_display?: string;
+  role?: string;
+  roles?: string[];
+  profiles?: Record<string, Record<string, unknown>>;
 
   // Personal details
   birth_date?: string;
@@ -95,7 +96,8 @@ export const useUserProfile = () => {
           last_name: user.last_name,
           email: user.email,
           phone: user.phone,
-          role: user.role || "patient",
+          role: computeRole(user.roles),
+          roles: user.roles,
         } as FullUserProfile);
       }
     } finally {
@@ -123,8 +125,8 @@ export const useUserProfile = () => {
     last_name: fullUserProfile.last_name || user?.last_name || "",
     email: fullUserProfile.email || user?.email || "",
     phone: fullUserProfile.phone || user?.phone || "",
-    role: fullUserProfile.role || user?.role || "patient",
-    role_display: fullUserProfile.role_display || "",
+    role: fullUserProfile.role || computeRole(user?.roles),
+    roles: fullUserProfile.roles ?? user?.roles,
 
     // Personal details
     birth_date: fullUserProfile.birth_date || "",

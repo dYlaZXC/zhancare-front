@@ -157,7 +157,7 @@ export default function ActivityView({ user }: ActivityViewProps) {
   // Check if user has seen the tour
   useEffect(() => {
     const hasSeenTour = localStorage.getItem('activityViewTourCompleted');
-    if (!hasSeenTour && user?.role === 'admin') {
+    if (!hasSeenTour && user?.roles?.includes('admin')) {
       // Delay tour start to ensure DOM is ready
       setTimeout(() => setRunTour(true), 1000);
     }

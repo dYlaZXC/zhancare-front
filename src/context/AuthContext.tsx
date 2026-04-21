@@ -4,14 +4,34 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 import { toast } from "react-toastify";
 import { api, setTokens, clearTokens, getAccessToken } from "@/utils/api";
 
-interface User {
+const _ROLE_PRIORITY = ["admin", "academy_admin", "doctor", "nurse", "teacher", "patient"] as const;
+
+export const ROLE_DISPLAY_MAP: Record<string, string> = {
+  admin: "Администратор",
+  academy_admin: "Администратор академии",
+  doctor: "Доктор",
+  nurse: "Медсестра",
+  teacher: "Преподаватель",
+  patient: "Пациент",
+  student: "Студент",
+};
+
+/** Compute the highest-priority display role from roles[]. */
+export function computeRole(roles?: string[]): string {
+  if (!roles?.length) return "patient";
+  return _ROLE_PRIORITY.find((r) => roles.includes(r)) ?? roles[0] ?? "patient";
+}
+
+export interface User {
   id: number;
   email: string;
   first_name: string;
   last_name: string;
   phone?: string;
-  role: "patient" | "doctor" | "admin" | "nurse";
-  role_display?: string;
+  /** @deprecated Computed from roles[] — do not read from API response directly */
+  role?: string;
+  roles?: string[];
+  profiles?: Record<string, Record<string, unknown>>;
 
   // Personal details
   birth_date?: string;
@@ -63,6 +83,11 @@ interface AuthContextProps {
   fetchSessions: () => Promise<void>;
   revokeSession: (sessionId: number) => Promise<void>;
   revokeAllOtherSessions: () => Promise<void>;
+  // Role helpers — prefer these over user.role for multi-role support
+  isDoctor: boolean;
+  isNurse: boolean;
+  isAdmin: boolean;
+  isPatient: boolean;
 }
 
 const defaultAuthContext: AuthContextProps = {
@@ -78,6 +103,10 @@ const defaultAuthContext: AuthContextProps = {
   fetchSessions: async () => {},
   revokeSession: async () => {},
   revokeAllOtherSessions: async () => {},
+  isDoctor: false,
+  isNurse: false,
+  isAdmin: false,
+  isPatient: false,
 };
 
 const AuthContext = createContext<AuthContextProps>(defaultAuthContext);
@@ -140,11 +169,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setToken(storedAccessToken);
           setUser(JSON.parse(storedUser));
           setAuthHeader(storedAccessToken);
+          // Ensure auth cookie is present (may have been lost on browser restart)
+          document.cookie = `zha_auth=1; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
 
           // Refresh user data from API to pick up role/profile changes
           try {
             const res = await api.get("/user-profile/profile/");
-            const freshUser: User = res.data;
+            const freshUser: User = { ...res.data, role: computeRole(res.data.roles) };
             setUser(freshUser);
             localStorage.setItem("user", JSON.stringify(freshUser));
           } catch {
@@ -161,11 +192,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Login
   const loginUser = useCallback((accessToken: string, refreshToken: string, userData: User) => {
+    const enriched: User = { ...userData, role: computeRole(userData.roles) };
     setToken(accessToken);
-    setUser(userData);
+    setUser(enriched);
     setTokens(accessToken, refreshToken);
-    localStorage.setItem("user", JSON.stringify(userData));
+    localStorage.setItem("user", JSON.stringify(enriched));
     setAuthHeader(accessToken);
+    // Set auth presence cookie for middleware SSR guard
+    document.cookie = `zha_auth=1; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
   }, [setAuthHeader]);
 
   // Logout
@@ -175,6 +209,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setToken(null);
     setSessions([]);
     setAuthHeader(null);
+    // Clear auth cookie
+    document.cookie = "zha_auth=; path=/; max-age=0";
 
     if (showMessage) {
       toast.warning("⏳ Ваша сессия истекла. Пожалуйста, войдите снова.");
@@ -238,6 +274,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         fetchSessions,
         revokeSession,
         revokeAllOtherSessions,
+        isDoctor: !!user?.roles?.includes("doctor"),
+        isNurse: !!user?.roles?.includes("nurse"),
+        isAdmin: !!user?.roles?.includes("admin"),
+        isPatient: !!user?.roles?.includes("patient"),
       }}
     >
       {children}

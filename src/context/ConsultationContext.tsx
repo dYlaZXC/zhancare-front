@@ -32,7 +32,7 @@ export const ConsultationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const dismissedIds = useRef<Set<number>>(new Set());
 
   // Check if current user is a doctor
-  const isDoctor = user?.role === 'doctor';
+  const isDoctor = !!user?.roles?.includes('doctor');
 
   // Handle WebSocket messages for real-time consultation updates
   const handleWebSocketMessage = useCallback((message: any) => {

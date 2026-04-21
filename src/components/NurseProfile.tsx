@@ -10,7 +10,7 @@ import { NurseHeader } from "@/components/layout/NurseHeader";
 import NurseHomeVisits from "@/components/nurse/NurseHomeVisits";
 
 export default function NurseProfile() {
-  const { user, logoutUser, loading } = useAuth();
+  const { user, logoutUser, loading, isNurse, isAdmin, isDoctor, isPatient } = useAuth();
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState("home-visits");
@@ -18,13 +18,12 @@ export default function NurseProfile() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
-    if (!loading && user && user.role !== "nurse") {
-      // Redirect to appropriate profile based on role
-      if (user.role === 'admin') {
+    if (!loading && user && !isNurse) {
+      if (isAdmin) {
         router.replace('/admin-profile');
-      } else if (user.role === 'doctor') {
+      } else if (isDoctor) {
         router.replace('/doctor-profile');
-      } else if (user.role === 'patient') {
+      } else if (isPatient) {
         router.replace('/profile');
       } else {
         router.replace("/");
@@ -32,7 +31,7 @@ export default function NurseProfile() {
     } else if (!loading && !user) {
       router.replace("/");
     }
-  }, [loading, user, router]);
+  }, [loading, user, isNurse, isAdmin, isDoctor, isPatient, router]);
 
   if (loading) {
     return (
@@ -42,7 +41,7 @@ export default function NurseProfile() {
     );
   }
 
-  if (!user || user.role !== "nurse") {
+  if (!user || !isNurse) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-lg text-gray-600">Перенаправление на страницу профиля медсестры...</div>

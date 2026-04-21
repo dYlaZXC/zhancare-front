@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Logo from "@/assets/logosaas.png";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth, ROLE_DISPLAY_MAP, computeRole } from "@/context/AuthContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { 
   faBars, 
@@ -142,12 +142,7 @@ export const Header = ({
                 {user.first_name} {user.last_name}
               </div>
               <div className="text-xs font-medium text-gray-600 leading-tight capitalize">
-                {user.role_display ?? (
-                  user.role === "doctor" ? "Доктор" :
-                  user.role === "admin" ? "Администратор" :
-                  user.role === "nurse" ? "Медсестра" :
-                  "Пациент"
-                )}
+                {ROLE_DISPLAY_MAP[computeRole(user.roles)] ?? "Пациент"}
               </div>
             </div>
           </div>

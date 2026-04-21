@@ -18,7 +18,7 @@ interface Doctor {
 }
 
 const DoctorAvailabilityTest: React.FC = () => {
-  const { token, user } = useAuth();
+  const { token, user, isDoctor } = useAuth();
   const [availableDoctors, setAvailableDoctors] = useState<Doctor[]>([]);
   const [websocketConnected, setWebsocketConnected] = useState(false);
   const [events, setEvents] = useState<string[]>([]);
@@ -102,8 +102,8 @@ const DoctorAvailabilityTest: React.FC = () => {
     }
   };
 
-  const isCurrentUserDoctor = user?.role === 'doctor';
-  const currentUserAsDoctor = isCurrentUserDoctor ? {
+  const isCurrentUserDoctor = isDoctor && !!user;
+  const currentUserAsDoctor = isCurrentUserDoctor && user ? {
     id: user.id,
     name: `${user.first_name} ${user.last_name}`,
     email: user.email,

@@ -14,20 +14,19 @@ export default function DoctorLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading } = useAuth();
+  const { user, loading, isDoctor, isAdmin, isNurse, isPatient } = useAuth();
   const router = useRouter();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
-    if (!loading && user && user.role !== "doctor") {
-      // Redirect to appropriate profile based on role
-      if (user.role === 'admin') {
+    if (!loading && user && !isDoctor) {
+      if (isAdmin) {
         router.replace('/admin/profile');
-      } else if (user.role === 'nurse') {
+      } else if (isNurse) {
         router.replace('/nurse-profile');
-      } else if (user.role === 'patient') {
+      } else if (isPatient) {
         router.replace('/patient/profile');
       } else {
         router.replace("/");
@@ -35,7 +34,7 @@ export default function DoctorLayout({
     } else if (!loading && !user) {
       router.replace("/");
     }
-  }, [loading, user, router]);
+  }, [loading, user, isDoctor, isAdmin, isNurse, isPatient, router]);
 
   const handleToggleSidebar = () => {
     setSidebarCollapsed(!sidebarCollapsed);
@@ -45,7 +44,7 @@ export default function DoctorLayout({
     return <PremiumLoadingScreen message="Проверка авторизации" />;
   }
 
-  if (!user || user.role !== "doctor") {
+  if (!user || !isDoctor) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-lg text-gray-600">Перенаправление на страницу профиля врача...</div>

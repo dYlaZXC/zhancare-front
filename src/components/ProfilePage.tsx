@@ -18,7 +18,7 @@ import ProfileDetails from "@/components/services/ProfileDetails";
 import { ActivityLog } from "@/components/services/ActivityLog";
 
 const ProfilePage = () => {
-  const { user, loading, setIsAuthOpen } = useAuth();
+  const { user, loading, setIsAuthOpen, isDoctor } = useAuth();
   const { userProfile, loading: profileLoading, error: profileError, refetch } = useUserProfile();
   const router = useRouter();
 
@@ -45,11 +45,11 @@ const ProfilePage = () => {
       return;
     }
 
-    if (!loading && user?.role === "doctor") {
+    if (!loading && isDoctor) {
       router.replace("/doctor-profile");
       return;
     }
-  }, [loading, user, router, setIsAuthOpen]);
+  }, [loading, user, isDoctor, router, setIsAuthOpen]);
 
   if (loading || profileLoading) {
     return null; // Don't show loading screen, let auth popup handle it

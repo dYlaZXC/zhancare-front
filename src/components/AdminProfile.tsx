@@ -18,7 +18,7 @@ import ReportsView from "@/components/services/admin/ReportsView";
 import ActivityView from "@/components/services/admin/ActivityView";
 
 export default function AdminProfile() {
-  const { user, logoutUser, loading, setIsAuthOpen } = useAuth();
+  const { user, logoutUser, loading, setIsAuthOpen, isAdmin, isDoctor, isNurse, isPatient } = useAuth();
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState("profile");
@@ -27,16 +27,14 @@ export default function AdminProfile() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
-    // Don't redirect if we're in the process of logging out
     if (isLoggingOut) return;
 
-    if (!loading && user && user.role !== "admin") {
-      // Redirect to appropriate profile based on role
-      if (user.role === 'doctor') {
+    if (!loading && user && !isAdmin) {
+      if (isDoctor) {
         router.replace('/doctor-profile');
-      } else if (user.role === 'nurse') {
+      } else if (isNurse) {
         router.replace('/nurse-profile');
-      } else if (user.role === 'patient') {
+      } else if (isPatient) {
         router.replace('/profile');
       } else {
         router.replace("/");
@@ -44,7 +42,7 @@ export default function AdminProfile() {
     } else if (!loading && !user) {
       router.replace("/");
     }
-  }, [loading, user, router, isLoggingOut]);
+  }, [loading, user, isAdmin, isDoctor, isNurse, isPatient, router, isLoggingOut]);
 
   if (loading) {
     return (
@@ -54,7 +52,7 @@ export default function AdminProfile() {
     );
   }
 
-  if (!user || user.role !== "admin") {
+  if (!user || !isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-lg text-gray-600">Redirecting...</div>

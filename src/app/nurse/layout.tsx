@@ -9,20 +9,19 @@ import { NurseBreadcrumb } from "@/components/layout/NurseBreadcrumb";
 import { PremiumLoadingScreen } from "@/components/layout/PremiumLoadingScreen";
 
 export default function NurseLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading, setIsAuthOpen } = useAuth();
+  const { user, loading, setIsAuthOpen, isNurse, isAdmin, isDoctor, isPatient } = useAuth();
   const router = useRouter();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
-    if (!loading && user && user.role !== "nurse") {
-      // Redirect to appropriate profile based on role
-      if (user.role === 'admin') {
+    if (!loading && user && !isNurse) {
+      if (isAdmin) {
         router.replace('/admin/profile');
-      } else if (user.role === 'doctor') {
+      } else if (isDoctor) {
         router.replace('/doctor/consultations');
-      } else if (user.role === 'patient') {
+      } else if (isPatient) {
         router.replace('/patient/profile');
       } else {
         router.replace("/");
@@ -31,13 +30,13 @@ export default function NurseLayout({ children }: { children: React.ReactNode })
       setIsAuthOpen(true);
       router.replace("/");
     }
-  }, [loading, user, router, setIsAuthOpen]);
+  }, [loading, user, isNurse, isAdmin, isDoctor, isPatient, router, setIsAuthOpen]);
 
   if (loading) {
     return <PremiumLoadingScreen message="Проверка авторизации" />;
   }
 
-  if (!user || user.role !== "nurse") {
+  if (!user || !isNurse) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-lg text-gray-600">Перенаправление на страницу профиля медсестры...</div>

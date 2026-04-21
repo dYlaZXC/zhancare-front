@@ -12,13 +12,14 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/context/LanguageContext";
+import { ROLE_DISPLAY_MAP, computeRole } from "@/context/AuthContext";
 
 type Props = {
   user: {
     first_name: string;
     last_name?: string;
-    role: string;
-    role_display?: string;
+    role?: string;
+    roles?: string[];
     email?: string;
     avatar?: string;
   };
@@ -162,10 +163,12 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
     return (firstName + lastName).toUpperCase() || user.first_name?.[0]?.toUpperCase() || 'U';
   };
 
+  const hasRole = (r: string) => !!user.roles?.includes(r);
+
   // Get profile path based on role
   const getProfilePath = () => {
-    if (user.role === "doctor") return "/doctor-profile";
-    if (user.role === "nurse") return "/nurse-profile";
+    if (hasRole("doctor")) return "/doctor-profile";
+    if (hasRole("nurse")) return "/nurse-profile";
     return "/profile"; // default for patients
   };
 
@@ -173,20 +176,20 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
   const getMenuItems = () => {
     // Get description based on role
     const getProfileDescription = () => {
-      if (user.role === "doctor") return t.doctorProfileDesc;
-      if (user.role === "nurse") return t.nurseProfileDesc;
+      if (hasRole("doctor")) return t.doctorProfileDesc;
+      if (hasRole("nurse")) return t.nurseProfileDesc;
       return t.personalInfoDesc;
     };
 
     const getAppointmentsHref = () => {
-      if (user.role === "doctor") return "/doctor-appointments";
-      if (user.role === "nurse") return "/nurse-profile"; // nurse home visits are in their profile
+      if (hasRole("doctor")) return "/doctor-appointments";
+      if (hasRole("nurse")) return "/nurse-profile"; // nurse home visits are in their profile
       return "/video";
     };
 
     const getAppointmentsDescription = () => {
-      if (user.role === "doctor") return t.doctorScheduleDesc;
-      if (user.role === "nurse") return t.nurseScheduleDesc;
+      if (hasRole("doctor")) return t.doctorScheduleDesc;
+      if (hasRole("nurse")) return t.nurseScheduleDesc;
       return t.patientAppointmentsDesc;
     };
 
@@ -274,7 +277,7 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
             {user.first_name}
           </span>
           <span className="text-[10px] sm:text-xs text-white/80 truncate">
-            {user.role_display ?? (user.role === "doctor" ? t.doctor : user.role === "nurse" ? t.nurse : user.role === "admin" ? t.admin : t.patient)}
+            {ROLE_DISPLAY_MAP[computeRole(user.roles ?? (user.role ? [user.role] : []))] ?? t.patient}
           </span>
         </div>
 

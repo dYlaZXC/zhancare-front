@@ -28,15 +28,15 @@ const ENDPOINT = "https://api.mistral.ai/v1/chat/completions";
 
 const DoctorVideoCallPage: React.FC = () => {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isDoctor } = useAuth();
 
   // Redirect if not a doctor
   useEffect(() => {
-    if (user && user.role !== "doctor") {
+    if (user && !isDoctor) {
       router.push(`/video-call/patient?${window.location.search}`);
       return;
     }
-  }, [user, router]);
+  }, [user, isDoctor, router]);
 
   const [meetingId, setMeetingId] = useState<string | null>(null);
   const [consultation, setConsultation] = useState<Consultation | null>(null);

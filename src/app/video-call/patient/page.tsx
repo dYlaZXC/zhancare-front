@@ -16,18 +16,18 @@ import PatientCallFooter from "./components/PatientCallFooter";
 
 const PatientVideoCallPage: React.FC = () => {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isPatient } = useAuth();
 
   // 🔐 Production-grade magic link authentication
   const magicLinkAuth = useMagicLinkAuth();
 
   // Redirect if not a patient
   useEffect(() => {
-    if (user && user.role !== "patient") {
+    if (user && !isPatient) {
       router.push(`/video-call/doctor?${window.location.search}`);
       return;
     }
-  }, [user, router]);
+  }, [user, isPatient, router]);
 
   const [meetingId, setMeetingId] = useState<string | null>(null);
   const [consultation, setConsultation] = useState<Consultation | null>(null);

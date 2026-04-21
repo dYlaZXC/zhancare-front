@@ -5,35 +5,27 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
-  const { user, loading, setIsAuthOpen } = useAuth();
+  const { user, loading, setIsAuthOpen, isAdmin, isDoctor, isNurse } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (loading) return;
 
     if (user) {
-      // User is already logged in, redirect to their profile
-      switch (user.role) {
-        case "admin":
-          router.replace("/admin/profile");
-          break;
-        case "doctor":
-          router.replace("/doctor/profile");
-          break;
-        case "nurse":
-          router.replace("/nurse/profile");
-          break;
-        case "patient":
-        default:
-          router.replace("/patient/profile");
-          break;
+      if (isAdmin) {
+        router.replace("/admin/profile");
+      } else if (isDoctor) {
+        router.replace("/doctor/profile");
+      } else if (isNurse) {
+        router.replace("/nurse/profile");
+      } else {
+        router.replace("/patient/profile");
       }
     } else {
-      // Open auth modal and redirect to home
       setIsAuthOpen(true);
       router.replace("/");
     }
-  }, [loading, user, router, setIsAuthOpen]);
+  }, [loading, user, isAdmin, isDoctor, isNurse, router, setIsAuthOpen]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">

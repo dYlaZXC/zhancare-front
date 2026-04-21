@@ -4,8 +4,9 @@ export interface User {
   last_name: string;
   email: string;
   phone?: string;
-  role?: "patient" | "doctor" | "admin";
-  role_display?: string;
+  role?: string;
+  roles?: string[];
+  profiles?: Record<string, Record<string, unknown>>;
 
   // Personal details
   birth_date?: string;

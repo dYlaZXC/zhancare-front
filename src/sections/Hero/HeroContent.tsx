@@ -24,7 +24,7 @@ const containerVariants = {
 };
 
 export default function HeroContent() {
-  const { user, setIsAuthOpen } = useAuth();
+  const { user, setIsAuthOpen, isDoctor } = useAuth();
   const { language } = useLanguage();
   const router = useRouter();
   
@@ -53,7 +53,7 @@ export default function HeroContent() {
   const handleBookAppointment = () => {
     if (user) {
       // User is authenticated, navigate to appropriate profile page
-      const profileRoute = user.role === "doctor" ? "/doctor-profile" : "/profile";
+      const profileRoute = isDoctor ? "/doctor-profile" : "/profile";
       router.push(profileRoute);
     } else {
       // User is not authenticated, show auth popup
