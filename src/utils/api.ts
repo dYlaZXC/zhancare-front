@@ -114,13 +114,11 @@ async function refreshAccessToken(): Promise<string> {
     // Store new tokens (both access and refresh are rotated when ROTATE_REFRESH_TOKENS is enabled)
     if (typeof window !== "undefined") {
       localStorage.setItem(ACCESS_TOKEN_KEY, access);
-      // ✅ Update refresh token if backend returns a new one (token rotation)
       if (newRefreshToken) {
         localStorage.setItem(REFRESH_TOKEN_KEY, newRefreshToken);
-        console.log("✅ Token refresh successful (with rotation)");
-      } else {
-        console.log("✅ Token refresh successful");
       }
+      // Notify AuthContext to sync React state with the new token
+      window.dispatchEvent(new CustomEvent('auth:token-refreshed', { detail: { access } }));
     }
 
     return access;
