@@ -9,6 +9,8 @@ import Step1 from "./consultations/VideoConsultationStep1";
 import Step2 from "./consultations/VideoConsultationStep2";
 import Step3 from "./consultations/VideoConsultationStep3";
 import TipsPanel from "./consultations/TipsPanel";
+import OfflineBookingFlow from "./consultations/OfflineBookingFlow";
+import DiagnosticsFlow from "./consultations/DiagnosticsFlow";
 import type { Doctor } from "./consultations/types/doctor";
 // import WebSocketTester from "../debug/WebSocketTester";
 
@@ -41,6 +43,7 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const lastToastRef = useRef<{ doctorId: number; status: string; timestamp: number } | null>(null);
 
+  const [activeFlow, setActiveFlow] = useState<'online' | 'offline' | 'diagnostics'>('online');
   const [step, setStep] = useState<1 | 2 | 3>(skipAI ? 2 : 1);
   const [symptoms, setSymptoms] = useState("");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -606,21 +609,19 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
             {/* Compact header section */}
             <div className="mb-4 space-y-3">
               <h2 className="text-xl md:text-2xl lg:text-3xl font-extrabold text-[#001E80]">
-                Консультация
+                {activeFlow === 'offline' ? 'Оффлайн приём' : activeFlow === 'diagnostics' ? 'Диагностика' : 'Консультация'}
               </h2>
-              
-              {/* Progress bar */}
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className={`h-full transition-all duration-500 rounded-full ${
-                    step === 1
-                      ? "w-1/3 bg-blue-600"
-                      : step === 2
-                      ? "w-2/3 bg-blue-600"
-                      : "w-full bg-blue-600"
-                  }`}
-                />
-              </div>
+
+              {/* Progress bar — online flow only */}
+              {activeFlow === 'online' && (
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className={`h-full transition-all duration-500 rounded-full bg-blue-600 ${
+                      step === 1 ? 'w-1/3' : step === 2 ? 'w-2/3' : 'w-full'
+                    }`}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Debug component - remove in production */}
@@ -628,15 +629,39 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
 
             {/* Step content - no extra spacing */}
             <div className="w-full">
-              {step === 1 && (
+              {/* Offline flow */}
+              {activeFlow === 'offline' && (
+                <OfflineBookingFlow
+                  doctors={doctors}
+                  onBack={() => { setActiveFlow('online'); setStep(1); }}
+                  onComplete={() => { setActiveFlow('online'); setStep(1); }}
+                  onRequestAIRecommendation={requestAIRecommendation}
+                  loadingAI={loadingAI}
+                  recommendedDoctor={recommendedDoctor}
+                  aiRecommendationId={aiRecommendationId}
+                />
+              )}
+
+              {/* Diagnostics flow */}
+              {activeFlow === 'diagnostics' && (
+                <DiagnosticsFlow
+                  onBack={() => { setActiveFlow('online'); setStep(1); }}
+                  onComplete={() => { setActiveFlow('online'); setStep(1); }}
+                />
+              )}
+
+              {/* Online flow */}
+              {activeFlow === 'online' && step === 1 && (
                 <Step1
                   symptoms={symptoms}
                   onChange={setSymptoms}
                   onNext={handleAIRecommend}
+                  onOffline={() => setActiveFlow('offline')}
+                  onDiagnostics={() => setActiveFlow('diagnostics')}
                   loading={loadingAI}
                 />
               )}
-              {step === 2 && (
+              {activeFlow === 'online' && step === 2 && (
                 <Step2
                   doctors={doctors}
                   selectedDoctorId={selectedDoctorId}
@@ -697,7 +722,7 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
                   }}
                 />
               )}
-              {step === 3 && (
+              {activeFlow === 'online' && step === 3 && (
                 <Step3
                   {...{
                     symptoms,

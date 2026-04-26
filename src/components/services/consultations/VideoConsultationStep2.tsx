@@ -37,6 +37,8 @@ interface Step2Props {
   loadingAI?: boolean;
   // Clear symptoms callback
   onClearSymptoms?: () => void;
+  // Consultation type for slot fetching
+  consultationType?: 'online' | 'offline';
 }
 
 const VideoConsultationStep2: React.FC<Step2Props> = ({
@@ -57,6 +59,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
   onRequestAIRecommendation,
   loadingAI = false,
   onClearSymptoms,
+  consultationType = 'online',
 }) => {
   // UI state
   const [searchTerm, setSearchTerm] = useState("");
@@ -104,7 +107,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
   const fetchSlotsForDate = async (date: string, silent = false) => {
     try {
       const { data } = await api.get('/schedule/day/', {
-        params: { date, consultation_type: 'online' }
+        params: { date, consultation_type: consultationType }
       });
 
       const now = new Date();
@@ -341,39 +344,132 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
+      {/* Sticky top nav */}
+      <div className="sticky top-0 -mx-1 px-1 z-20">
+        <div className="relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_8px_32px_rgba(55,114,255,0.12),0_2px_8px_rgba(0,0,0,0.06)]">
+          {/* Subtle gradient shimmer strip */}
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-400/40 to-transparent" />
+
+          <div className="flex items-center justify-between gap-3 px-3 py-2.5">
+            {/* Back button */}
+            <motion.button
+              onClick={onBack}
+              whileHover={{ x: -2, scale: 1.02 }}
+              whileTap={{ scale: 0.96 }}
+              className="group flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200/80 hover:border-gray-300 transition-all flex-shrink-0 shadow-sm"
+            >
+              <ArrowLeft size={15} className="transition-transform group-hover:-translate-x-0.5" />
+              Назад
+            </motion.button>
+
+            {/* Center label */}
+            <div className="hidden sm:flex items-center gap-1.5 text-xs font-medium text-gray-400">
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+              Выбор врача
+            </div>
+
+            {/* CTA button */}
+            {(() => {
+              const doc = selectedDoctorId ? doctors.find(d => d.id === selectedDoctorId) : null;
+              const GRADS = [['#3772ff','#2c5bcc'],['#8b5cf6','#7c3aed'],['#f43f5e','#e11d48'],['#f59e0b','#d97706'],['#10b981','#059669'],['#06b6d4','#0891b2']];
+              const [g1, g2] = doc ? GRADS[doc.id % GRADS.length] : ['#3772ff', '#2c5bcc'];
+              const earliestSlot = doc ? (doctorTimeslots[doc.id] || []).find(sl => !sl.is_booked && sl.available_spots > 0) : null;
+              const earliestLabel = earliestSlot ? (() => {
+                const d = new Date(earliestSlot.start_time);
+                const time = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+                return d.toDateString() === new Date().toDateString() ? `Сегодня ${time}` : time;
+              })() : null;
+
+              const handleCtaClick = () => {
+                if (!doc) return;
+                if (earliestSlot) {
+                  handleTimeslotSelect(earliestSlot);
+                } else {
+                  onNext();
+                }
+              };
+
+              if (!doc) {
+                return (
+                  <motion.button
+                    disabled
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed flex-shrink-0"
+                  >
+                    Записаться к врачу
+                    <ArrowRight size={15} />
+                  </motion.button>
+                );
+              }
+
+              return (
+                <motion.button
+                  onClick={handleCtaClick}
+                  disabled={bookingLoading}
+                  whileHover={{ scale: 1.03, y: -1 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="group relative flex items-center gap-2.5 px-4 py-2 rounded-xl font-semibold text-sm text-white flex-shrink-0 overflow-hidden shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
+                  style={{ background: `linear-gradient(135deg, ${g1}, ${g2})`, boxShadow: `0 4px 16px ${g1}55` }}
+                >
+                  {/* Shine overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out" />
+
+                  {/* Avatar */}
+                  <div className="relative w-7 h-7 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center font-bold text-xs border border-white/30 flex-shrink-0">
+                    {doc.name.slice(0, 2).toUpperCase()}
+                  </div>
+
+                  {/* Info */}
+                  <div className="text-left min-w-0 max-w-[120px] hidden sm:block">
+                    <p className="text-xs font-bold leading-tight truncate">{doc.name}</p>
+                    <p className="text-[10px] opacity-80 truncate">
+                      {earliestLabel ? `⚡ ${earliestLabel}` : getSpecializationName(doc, language)}
+                    </p>
+                  </div>
+
+                  <div className="w-px h-6 bg-white/25 hidden sm:block flex-shrink-0" />
+
+                  <span className="whitespace-nowrap">Записаться</span>
+                  <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5 flex-shrink-0" />
+                </motion.button>
+              );
+            })()}
+          </div>
+        </div>
+      </div>
+
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-gray-500 uppercase tracking-wide flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-y-1 gap-x-3">
+        <div className="text-sm text-gray-500 uppercase tracking-wide flex items-center gap-2 flex-shrink-0">
           <Clock size={14} />
           Шаг 2 из 3
         </div>
-        <div className="flex items-center gap-3 text-sm text-gray-500">
-          {websocketConnected && (
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Connection status — dot only on mobile, full label on sm+ */}
+          {websocketConnected ? (
             <div className="flex items-center gap-1 text-green-600">
-              <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></div>
-              <span className="text-xs">Обновления в реальном времени</span>
+              <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse flex-shrink-0" />
+              <span className="text-xs hidden sm:inline">Обновления в реальном времени</span>
             </div>
-          )}
-          {!websocketConnected && (
-            <div className="flex items-center gap-1 text-orange-600">
-              <div className="w-2 h-2 bg-orange-600 rounded-full"></div>
-              <span className="text-xs">Подключение...</span>
+          ) : (
+            <div className="flex items-center gap-1 text-orange-500">
+              <div className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0" />
+              <span className="text-xs hidden sm:inline">Подключение...</span>
             </div>
           )}
           {isPolling && (
             <div className="flex items-center gap-1 text-blue-600">
-              <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
-              <span className="text-xs">Обновление расписания</span>
+              <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse flex-shrink-0" />
+              <span className="text-xs hidden sm:inline">Обновление расписания</span>
             </div>
           )}
-          <div className="flex items-center gap-2">
-            <div className="text-xs text-gray-400">
-              🌍 {Intl.DateTimeFormat().resolvedOptions().timeZone.split('/').pop()}
-              ({new Date().toLocaleString('ru-RU', {hour: '2-digit', minute: '2-digit'})})
-            </div>
-            <div>
-              {filteredDoctors.length} врачей
-            </div>
+          {/* Timezone — hidden on mobile */}
+          <div className="hidden sm:flex items-center gap-1 text-xs text-gray-400">
+            🌍 {Intl.DateTimeFormat().resolvedOptions().timeZone.split('/').pop()}
+            ({new Date().toLocaleString('ru-RU', {hour: '2-digit', minute: '2-digit'})})
+          </div>
+          {/* Doctor count pill */}
+          <div className="text-xs font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full flex-shrink-0">
+            {filteredDoctors.length} врачей
           </div>
         </div>
       </div>
@@ -414,8 +510,8 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
         </div>
       </motion.div>
 
-      {/* Optional Symptom Input */}
-      {!symptoms && (
+      {/* Optional Symptom Input — only shown when AI recommendation is available */}
+      {!symptoms && onRequestAIRecommendation && (
         <AISymptomInput
           onRequestAIRecommendation={onRequestAIRecommendation}
           loadingAI={loadingAI}
@@ -524,20 +620,21 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
         ) : (
           <div className="space-y-3">
             {/* Global date navigation */}
-            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-3 space-y-2">
-              {/* Nav bar — exact admin style */}
-              <div className="flex items-center gap-2 md:gap-3 overflow-x-auto">
+            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-2.5 sm:p-3 space-y-2">
+              {/* Nav bar */}
+              <div className="flex items-center gap-2">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={goToToday}
-                  className="px-4 py-2 text-sm font-semibold rounded-xl text-white whitespace-nowrap flex-shrink-0 transition-all"
+                  className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl text-white whitespace-nowrap flex-shrink-0 transition-all"
                   style={{ backgroundColor: '#3772ff' }}
                 >
                   Сегодня
                 </motion.button>
 
-                <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden bg-white">
+                {/* Prev / date label / next — fills remaining space */}
+                <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden bg-white flex-1 min-w-0">
                   <motion.button
                     whileHover={{ backgroundColor: '#f3f4f6' }}
                     whileTap={{ scale: 0.95 }}
@@ -548,9 +645,9 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
                     <ChevronLeft className="w-4 h-4 text-gray-600" />
                   </motion.button>
 
-                  <div className="flex items-center gap-2 px-3 py-2 whitespace-nowrap font-semibold text-sm border-x border-gray-200" style={{ color: '#1e263e' }}>
-                    <CalendarIcon className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                    <span className="capitalize">{headerDateLabel}</span>
+                  <div className="flex items-center gap-1.5 px-2 py-2 font-semibold text-xs sm:text-sm border-x border-gray-200 flex-1 min-w-0 justify-center" style={{ color: '#1e263e' }}>
+                    <CalendarIcon className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                    <span className="capitalize truncate">{headerDateLabel}</span>
                   </div>
 
                   <motion.button
@@ -563,6 +660,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
                   </motion.button>
                 </div>
               </div>
+
               {/* 7-day strip */}
               <div className="grid grid-cols-7 gap-1">
                 {weekDates.map((dateItem) => {
@@ -577,7 +675,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
                     <button
                       key={dateItem.date}
                       onClick={() => setSelectedDate(dateItem.date)}
-                      className={`flex flex-col items-center py-2 rounded-xl text-[9px] font-semibold transition-all border ${
+                      className={`flex flex-col items-center py-1.5 sm:py-2 rounded-xl text-[8px] sm:text-[9px] font-semibold transition-all border ${
                         isDateSelected
                           ? 'bg-blue-600 text-white border-transparent shadow-sm'
                           : dateItem.isToday
@@ -587,9 +685,11 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
                           : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-gray-100'
                       }`}
                     >
-                      <span className="opacity-80">{dateItem.dayName}</span>
-                      <span className="font-bold text-[12px] leading-tight mt-0.5">{dateItem.dayNumber}</span>
-                      {dateItem.isToday && <span className={`text-[7px] mt-0.5 ${isDateSelected ? 'text-white/70' : 'text-blue-400'}`}>сег</span>}
+                      <span className="opacity-70">{dateItem.dayName}</span>
+                      <span className="font-bold text-[11px] sm:text-[12px] leading-tight mt-0.5">{dateItem.dayNumber}</span>
+                      {dateItem.isToday && (
+                        <span className={`text-[6px] sm:text-[7px] mt-0.5 ${isDateSelected ? 'text-white/70' : 'text-blue-400'}`}>сег</span>
+                      )}
                     </button>
                   );
                 })}
@@ -597,7 +697,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
             </div>
 
             {/* Doctor cards */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 w-full pb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 w-full pb-4">
               {filteredDoctors.map((doctor) => (
                 <DoctorCard
                   key={doctor.id}
@@ -616,67 +716,6 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
         )}
       </div>
 
-      {/* Sticky bottom CTA */}
-      <div className="sticky bottom-0 -mx-1 px-1 pt-3 pb-3 bg-white/95 backdrop-blur-sm border-t border-gray-100 shadow-[0_-4px_24px_rgba(0,0,0,0.07)] z-20">
-        <div className="flex items-center justify-between gap-3">
-          {/* Back */}
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 transition-all flex-shrink-0 text-sm"
-          >
-            <ArrowLeft size={15} />
-            Назад
-          </button>
-
-          {/* Combined doctor info + CTA button */}
-          {(() => {
-            const doc = selectedDoctorId ? doctors.find(d => d.id === selectedDoctorId) : null;
-            const GRADS = [['#3772ff','#2c5bcc'],['#8b5cf6','#7c3aed'],['#f43f5e','#e11d48'],['#f59e0b','#d97706'],['#10b981','#059669'],['#06b6d4','#0891b2']];
-            const [g1, g2] = doc ? GRADS[doc.id % GRADS.length] : ['#3772ff', '#2c5bcc'];
-            const earliestSlot = doc ? (doctorTimeslots[doc.id] || []).find(sl => !sl.is_booked && sl.available_spots > 0) : null;
-            const earliestLabel = earliestSlot ? (() => {
-              const d = new Date(earliestSlot.start_time);
-              const time = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-              return d.toDateString() === new Date().toDateString() ? `Сегодня ${time}` : time;
-            })() : null;
-
-            const handleCtaClick = () => {
-              if (!doc) return;
-              if (earliestSlot) {
-                handleTimeslotSelect(earliestSlot);
-              } else {
-                onNext();
-              }
-            };
-
-            return (
-              <button
-                onClick={handleCtaClick}
-                disabled={!selectedDoctorId || bookingLoading}
-                className="flex items-center gap-3 px-4 py-2 rounded-xl font-semibold text-sm transition-all shadow-sm hover:shadow-md disabled:opacity-40 disabled:cursor-not-allowed"
-                style={doc ? { background: `linear-gradient(135deg, ${g1}, ${g2})`, color: 'white' } : { background: '#e5e7eb', color: '#9ca3af' }}
-              >
-                {doc && (
-                  <>
-                    <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center font-bold text-xs flex-shrink-0">
-                      {doc.name.slice(0, 2).toUpperCase()}
-                    </div>
-                    <div className="text-left min-w-0">
-                      <p className="text-xs font-bold leading-tight truncate">{doc.name}</p>
-                      <p className="text-[10px] opacity-80 truncate">
-                        {earliestLabel ? `⚡ ${earliestLabel}` : getSpecializationName(doc, language)}
-                      </p>
-                    </div>
-                    <div className="w-px h-7 bg-white/30 flex-shrink-0" />
-                  </>
-                )}
-                Записаться к врачу
-                <ArrowRight size={15} />
-              </button>
-            );
-          })()}
-        </div>
-      </div>
 
 
       {/* Timeslot Confirmation Modal */}

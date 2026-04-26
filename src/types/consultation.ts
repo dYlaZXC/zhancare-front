@@ -5,25 +5,32 @@ export type ConsultationStatus =
   | "completed"
   | "cancelled"
   | "missed"
-  | "scheduled" // 🆕 добавлен статус для запланированных консультаций
-  | "planned"; // 🆕 добавлен статус "Запланированна" для пользовательского интерфейса
+  | "scheduled"
+  | "planned"
+  | "confirmed"
+  | "in_progress";
 
 export interface Consultation {
   id: number;
-  meeting_id: string;
-  patient_name: string;
-  patient_email: string | null;
+  meeting_id?: string;
+  patient_name?: string;
+  patient_email?: string | null;
   status: ConsultationStatus;
   doctor_first_name?: string;
   doctor_last_name?: string;
+  doctor_type?: string;
   patient_first_name?: string;
   patient_last_name?: string;
   created_at: string;
   started_at?: string;
   ended_at?: string;
-  scheduled_at?: string; // 🆕 добавлено поле для запланированного времени
-  symptoms?: string; // 🆕 добавлено поле для симптомов (может прийти из WebSocket)
-  is_urgent?: boolean; // 🆕 добавлено поле для срочности (приходит из WebSocket)
-  type?: "video" | "phone" | "chat";
-  consultation_type?: 'general' | 'cardiology' | 'psychiatry' | 'pediatric';
+  scheduled_at?: string;
+  appointment_time?: string;
+  symptoms?: string;
+  is_urgent?: boolean;
+  type?: "video" | "phone" | "chat" | "offline" | "home";
+  consultation_type?: string;
+  // Clinic appointment extras
+  clinic_name?: string;
+  clinic_address?: string;
 }

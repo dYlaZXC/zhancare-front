@@ -79,7 +79,7 @@ export default function PatientLayout({
       />
 
       {/* Main Content */}
-      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-500 ${sidebarCollapsed ? 'xl:ml-20' : 'xl:ml-80'}`}>
+      <div className={`flex-1 flex flex-col min-h-screen min-w-0 overflow-x-hidden transition-all duration-500 ${sidebarCollapsed ? 'xl:ml-20' : 'xl:ml-80'}`}>
         {/* Header */}
         <Header
           onMenuClick={() => setSidebarOpen(true)}
@@ -88,12 +88,12 @@ export default function PatientLayout({
         />
 
         {/* Main Content */}
-        <main className="flex-1 bg-gray-50">
+        <main className="flex-1 bg-gray-50 overflow-x-hidden">
           {/* Breadcrumb */}
           <Breadcrumb />
 
           {/* Page Content */}
-          <div className="px-3 pb-3">
+          <div className="px-3 pb-3 w-full">
             {children}
           </div>
         </main>

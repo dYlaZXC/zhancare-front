@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import VideoConsultationStep1 from './VideoConsultationStep1'; // Your existing step 1
 import VideoConsultationStep2Enhanced from './VideoConsultationStep2Enhanced';
@@ -69,12 +70,22 @@ const VideoConsultationWithTimeslots: React.FC<VideoConsultationWithTimeslotsPro
     loadDoctors();
   }, []);
 
+  const router = useRouter();
+
   // Handle step 1 next button (symptoms input)
   const handleStep1Next = () => {
     // Here you would normally call your AI analysis API
     // For now, we'll simulate AI recommendation
     simulateAIAnalysis();
     setCurrentStep(2);
+  };
+
+  const handleOffline = () => {
+    router.push('/patient/appointments');
+  };
+
+  const handleDiagnostics = () => {
+    router.push('/patient/appointments?type=diagnostics');
   };
 
   // Simulate AI analysis (replace with your actual AI API call)
@@ -165,6 +176,8 @@ const VideoConsultationWithTimeslots: React.FC<VideoConsultationWithTimeslotsPro
               symptoms={symptoms}
               onChange={handleSymptomsChange}
               onNext={handleStep1Next}
+              onOffline={handleOffline}
+              onDiagnostics={handleDiagnostics}
               loading={loading}
             />
           </motion.div>

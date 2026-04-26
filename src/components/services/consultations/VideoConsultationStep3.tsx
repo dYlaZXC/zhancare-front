@@ -578,349 +578,199 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-blue-50 flex flex-col">
-      <motion.div
-        className="flex-1 p-3 sm:p-4 md:p-6 lg:p-8 space-y-3 sm:space-y-4 md:space-y-6 w-full"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
+    <motion.div
+      className="space-y-3 pb-4"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35 }}
+    >
+      {/* ── Compact status bar ── */}
+      <div
+        className="relative overflow-hidden rounded-2xl px-5 py-4 flex items-center gap-4"
+        style={{ background: 'linear-gradient(135deg, #3772ff 0%, #1d4ed8 100%)' }}
       >
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="text-center space-y-2 sm:space-y-3"
-        >
-          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3">
-            <div className="p-2 sm:p-2.5 md:p-3 rounded-xl md:rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg">
-              <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
-            </div>
-            <span className="leading-tight">Все готово для консультации</span>
-          </h2>
-          <p className="text-gray-600 text-sm sm:text-base md:text-lg leading-relaxed max-w-2xl mx-auto px-4">
-            Проверьте информацию и начните видеоконсультацию с врачом
-          </p>
-        </motion.div>
-
-      {/* Progress Steps */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="bg-white border border-gray-200 rounded-xl sm:rounded-2xl lg:rounded-3xl p-4 sm:p-5 md:p-6 lg:p-8 shadow-xl"
-      >
-        <h3 className="font-semibold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2 text-sm sm:text-base md:text-lg lg:text-xl">
-          <FileText className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
-          Сводка консультации
-        </h3>
-
-        <div className="space-y-3 sm:space-y-4 md:space-y-6">
-          {steps.map((step, index) => {
-            const Icon = step.icon;
-            const status = getStepStatus(step.id);
-
-            return (
-              <motion.div
-                key={step.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 + index * 0.1 }}
-                className="flex items-start gap-3 sm:gap-4 md:gap-5"
-              >
-                <div className={`flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-lg sm:rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg ${
-                  status === "completed"
-                    ? "bg-gradient-to-br from-green-100 to-green-200 text-green-600"
-                    : status === "current"
-                    ? "bg-gradient-to-br from-blue-100 to-blue-200 text-blue-600"
-                    : "bg-gradient-to-br from-gray-100 to-gray-200 text-gray-400"
-                }`}>
-                  {status === "completed" ? (
-                    <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
-                  ) : (
-                    <Icon className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
-                  )}
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
-                    <h4 className="font-medium text-gray-900 text-sm sm:text-base md:text-lg">{step.label}</h4>
-                    {status === "current" && (
-                      <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs sm:text-sm rounded-full font-medium self-start">
-                        Активный шаг
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs sm:text-sm md:text-base text-gray-600 mb-2 sm:mb-3 leading-relaxed">{step.description}</p>
-                  
-                  <div className="text-sm">
-                    {step.key === "symptoms" && (
-                      <div className="p-3 sm:p-4 md:p-5 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg sm:rounded-xl border border-gray-200">
-                        <p className="text-gray-700 line-clamp-3 text-sm sm:text-base md:text-lg leading-relaxed">{symptoms}</p>
-                      </div>
-                    )}
-                    {step.key === "doctor" && doctor && (
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 md:p-5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg sm:rounded-xl border border-blue-200">
-                        <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg flex-shrink-0">
-                          <span className="text-sm sm:text-base md:text-lg">
-                            {doctor.avatar || doctor.name.charAt(0)}
-                          </span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-bold text-gray-900 text-base sm:text-lg md:text-xl mb-1">{doctor.name}</p>
-                          <p className="text-sm sm:text-base md:text-lg text-blue-600 font-medium mb-2">{doctor.doctor_type}</p>
-                          {doctor.rating && (
-                            <div className="flex items-center gap-1 sm:gap-2">
-                              <div className="flex items-center gap-1">
-                                <Star className="fill-yellow-400 text-yellow-400 w-3 h-3 sm:w-4 sm:h-4" />
-                                <span className="text-xs sm:text-sm md:text-base text-gray-600 font-medium">{doctor.rating}</span>
-                              </div>
-                              {doctor.experience && (
-                                <span className="text-xs sm:text-sm md:text-base text-gray-500">• {doctor.experience} лет опыта</span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Scheduled Consultation Information */}
-                    {step.key === "doctor" && scheduledConsultation && (
-                      <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center flex-shrink-0">
-                            <Calendar className="w-5 h-5 text-white" />
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900 mb-2">
-                              Запланированная консультация
-                            </h4>
-                            <div className="space-y-2 text-sm">
-                              <div className="flex items-center gap-2">
-                                <Clock className="w-4 h-4 text-green-600" />
-                                <span className="text-gray-700">
-                                  Запланировано на {new Date(scheduledConsultation.scheduled_time).toLocaleDateString('ru-RU', {
-                                    weekday: 'long',
-                                    year: 'numeric',
-                                    month: 'long',
-                                    day: 'numeric'
-                                  })} в {new Date(scheduledConsultation.scheduled_time).toLocaleTimeString('ru-RU', {
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                  })}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <User className="w-4 h-4 text-green-600" />
-                                <span className="text-gray-700">
-                                  Врач: {scheduledConsultation.doctor_name} ({scheduledConsultation.doctor_type})
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2 mt-3 p-2 bg-blue-50 rounded-lg">
-                                <Info className="w-4 h-4 text-blue-600" />
-                                <span className="text-blue-700 text-xs">
-                                  Вы можете начать консультацию в назначенное время. Врач получит уведомление.
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {step.key === "connect" && (
-                      <AILiveChecker 
-                        onComplete={() => {}}
-                        onOpenDetailedCheck={() => setShowTechCheck(true)}
-                        cameraPermission={cameraPermission}
-                        micPermission={micPermission}
-                        connectionQuality={connectionQuality}
-                      />
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
+        <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+        <div className="relative w-10 h-10 rounded-xl bg-white/20 border border-white/25 flex items-center justify-center flex-shrink-0">
+          <CheckCircle2 className="w-5 h-5 text-white" />
         </div>
-      </motion.div>
+        <div className="relative flex-1 min-w-0">
+          <p className="font-bold text-white text-base leading-tight">Всё готово</p>
+          <p className="text-white/65 text-xs mt-0.5 truncate">Проверьте данные и назначьте консультацию</p>
+        </div>
+        <div className="relative flex-shrink-0 flex items-center gap-1.5">
+          {[
+            { ok: connectionQuality === 'good', warn: connectionQuality === 'fair', label: 'Связь' },
+            { ok: cameraPermission === 'granted', warn: false, label: 'Камера' },
+            { ok: micPermission === 'granted', warn: false, label: 'Микро' },
+          ].map(({ ok, warn, label }) => (
+            <div key={label} title={label} className={`w-2 h-2 rounded-full ${ok ? 'bg-emerald-400' : warn ? 'bg-amber-400' : 'bg-red-400'}`} />
+          ))}
+        </div>
+      </div>
 
-      {/* Important Information */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl sm:rounded-2xl lg:rounded-3xl p-4 sm:p-5 md:p-6 lg:p-8 shadow-lg"
-      >
-        <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
-          <Shield className="text-blue-600 flex-shrink-0 mt-1 w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
-          <div className="space-y-3 sm:space-y-4 flex-1">
-            <h3 className="font-bold text-blue-900 text-base sm:text-lg md:text-xl">Важная информация</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:gap-6 text-xs sm:text-sm md:text-base text-blue-800">
-              <div className="flex items-start gap-2 sm:gap-3">
-                <Clock className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 text-blue-600" />
-                <span className="leading-relaxed">Средняя продолжительность: 10-15 минут</span>
+      {/* ── Main summary card ── */}
+      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+
+        {/* Doctor row */}
+        {doctor && (
+          <div className="flex items-center gap-3 px-4 py-3.5 border-b border-gray-50">
+            <div className="relative flex-shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-sm shadow-sm">
+                {doctor.name.charAt(0)}
               </div>
-              <div className="flex items-start gap-2 sm:gap-3">
-                <Info className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 text-blue-600" />
-                <span className="leading-relaxed">Консультация записывается в мед. карту</span>
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-gray-900 text-sm truncate">{doctor.name}</p>
+              <p className="text-xs text-blue-600 truncate">{doctor.doctor_type}</p>
+            </div>
+            {(doctor.rating || doctor.experience) && (
+              <div className="flex-shrink-0 flex items-center gap-2 text-[11px] text-gray-400">
+                {doctor.rating && (
+                  <span className="flex items-center gap-0.5">
+                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />{doctor.rating}
+                  </span>
+                )}
+                {doctor.experience && <span>{doctor.experience} лет</span>}
               </div>
-              <div className="flex items-start gap-2 sm:gap-3">
-                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 text-blue-600" />
-                <span className="leading-relaxed">После консультации вы получите рекомендации врача</span>
-              </div>
-              <div className="flex items-start gap-2 sm:gap-3">
-                <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 text-blue-600" />
-                <span className="leading-relaxed">В случае технических проблем обратитесь в поддержку</span>
-              </div>
+            )}
+          </div>
+        )}
+
+        {/* Appointment row */}
+        {scheduledConsultation && (
+          <div className="flex items-center gap-3 px-4 py-3.5 border-b border-gray-50">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0">
+              <Calendar className="w-4 h-4 text-emerald-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-gray-400 font-medium">Запись</p>
+              <p className="text-sm font-semibold text-gray-900 leading-tight">
+                {new Date(scheduledConsultation.scheduled_time).toLocaleDateString('ru-RU', {
+                  weekday: 'short', day: 'numeric', month: 'short'
+                })}{' · '}
+                {new Date(scheduledConsultation.scheduled_time).toLocaleTimeString('ru-RU', {
+                  hour: '2-digit', minute: '2-digit'
+                })}
+              </p>
+            </div>
+            <span className="flex-shrink-0 text-[10px] font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+              Подтверждено
+            </span>
+          </div>
+        )}
+
+        {/* Symptoms row */}
+        {symptoms && (
+          <div className="flex items-start gap-3 px-4 py-3.5 border-b border-gray-50">
+            <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <FileText className="w-4 h-4 text-gray-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-gray-400 font-medium mb-0.5">Симптомы</p>
+              <p className="text-sm text-gray-700 line-clamp-2 leading-relaxed">{symptoms}</p>
             </div>
           </div>
-        </div>
-      </motion.div>
+        )}
 
-      {/* Action Buttons */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-        className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-between items-center pt-4 sm:pt-6 border-t border-gray-200"
-      >
+        {/* Tech check row */}
+        <div className="px-4 py-3.5">
+          <AILiveChecker
+            onComplete={() => {}}
+            onOpenDetailedCheck={() => setShowTechCheck(true)}
+            cameraPermission={cameraPermission}
+            micPermission={micPermission}
+            connectionQuality={connectionQuality}
+          />
+        </div>
+      </div>
+
+      {/* ── Action buttons ── */}
+      <div className="flex gap-2.5">
         <motion.button
           onClick={onBack}
-          whileHover={{ x: -3 }}
+          whileHover={{ x: -2 }}
           whileTap={{ scale: 0.97 }}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-5 md:px-6 py-3 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition-all text-sm sm:text-base md:text-lg shadow-md hover:shadow-lg"
+          className="group flex items-center gap-1.5 px-4 py-3 rounded-xl font-semibold bg-white border border-gray-200 hover:border-gray-300 text-gray-600 text-sm transition-all shadow-sm flex-shrink-0"
         >
-          <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-          <span>Изменить данные</span>
+          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+          Назад
         </motion.button>
 
         <motion.button
-          onClick={() => {
-            // REMOVED: All urgent consultation logic
-            // All consultations now go through scheduling with time slot selection
-            if (onScheduleConsultation) {
-              onScheduleConsultation();
-            } else {
-              setShowConfirmDialog(true);
-            }
-          }}
+          onClick={() => onScheduleConsultation ? onScheduleConsultation() : setShowConfirmDialog(true)}
           disabled={loading || !selectedDoctorId || waiting || connecting}
           whileTap={!loading && !waiting && !connecting ? { scale: 0.97 } : {}}
-          whileHover={!loading && !waiting && !connecting ? { scale: 1.02 } : {}}
-          className={`w-full sm:w-auto flex items-center justify-center gap-2 sm:gap-3 px-6 sm:px-8 md:px-10 py-3 sm:py-3.5 md:py-4 rounded-lg sm:rounded-xl font-bold text-base sm:text-lg md:text-xl transition-all min-w-[200px] sm:min-w-[240px] md:min-w-[280px] shadow-xl ${
-            loading || waiting
-              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-              : connecting
-              ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white cursor-not-allowed"
-              : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-2xl hover:shadow-blue-500/25 hover:from-blue-700 hover:to-indigo-700"
-          }`}
+          whileHover={!loading && !waiting && !connecting ? { scale: 1.01 } : {}}
+          className="group relative flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white overflow-hidden shadow-md disabled:opacity-60 disabled:cursor-not-allowed transition-all"
+          style={{ background: 'linear-gradient(135deg, #3772ff, #1d4ed8)', boxShadow: '0 4px 16px rgba(55,114,255,0.3)' }}
         >
+          <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
           {loading ? (
-            <>
-              <div className="w-5 h-5 sm:w-6 sm:h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              <span>Подготовка...</span>
-            </>
+            <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /><span>Подготовка...</span></>
           ) : connecting ? (
-            <>
-              <div className="w-5 h-5 sm:w-6 sm:h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              <span>Подключаемся...</span>
-            </>
+            <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /><span>Подключение...</span></>
           ) : waiting ? (
-            <>
-              <Clock className="w-5 h-5 sm:w-6 sm:h-6" />
-              <span>Ожидание ({formatWaitingTime(waitingTime)})</span>
-            </>
+            <><Clock className="w-4 h-4" /><span>Ожидание ({formatWaitingTime(waitingTime)})</span></>
           ) : (
-            <>
-              <Video className="w-5 h-5 sm:w-6 sm:h-6" />
-              <span>Назначить консультацию</span>
-            </>
+            <><Video className="w-4 h-4" /><span>Назначить консультацию</span></>
           )}
         </motion.button>
-      </motion.div>
+      </div>
 
-      {/* Waiting State */}
+      {/* ── Waiting state ── */}
       <AnimatePresence>
         {waiting && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 rounded-xl sm:rounded-2xl lg:rounded-3xl p-4 sm:p-5 md:p-6 lg:p-8 shadow-lg"
+            exit={{ opacity: 0, y: -12 }}
+            className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3.5"
           >
-            <div className="text-center space-y-3 sm:space-y-4 md:space-y-6">
-              <div className="flex items-center justify-center gap-2 sm:gap-3">
-                <div className="w-3 h-3 sm:w-4 sm:h-4 bg-yellow-500 rounded-full animate-bounce"></div>
-                <div className="w-3 h-3 sm:w-4 sm:h-4 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-3 h-3 sm:w-4 sm:h-4 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-              </div>
-              <div className="space-y-2 sm:space-y-3">
-                <h3 className="font-bold text-yellow-900 text-base sm:text-lg md:text-xl lg:text-2xl">
-                  Ожидаем подключения врача
-                </h3>
-                <p className="text-sm sm:text-base md:text-lg text-yellow-700 leading-relaxed">
-                  Доктор {doctor?.name} скоро подключится к видеоконсультации
-                </p>
-                <p className="text-xs sm:text-sm md:text-base text-yellow-600 font-medium">
-                  Время ожидания: {formatWaitingTime(waitingTime)}
-                </p>
-              </div>
-              <button
-                onClick={onCancel}
-                className="text-red-600 hover:text-red-700 text-sm sm:text-base font-medium underline transition-colors hover:underline-offset-4"
-              >
-                Отменить консультацию
-              </button>
+            <div className="flex gap-1 flex-shrink-0">
+              {[0, 0.15, 0.3].map((d, i) => (
+                <motion.div key={i} className="w-2 h-2 bg-amber-500 rounded-full"
+                  animate={{ y: [0, -6, 0] }} transition={{ duration: 0.8, repeat: Infinity, delay: d }} />
+              ))}
             </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-900">Ожидаем врача · {formatWaitingTime(waitingTime)}</p>
+              <p className="text-xs text-amber-600 truncate">{doctor?.name} скоро подключится</p>
+            </div>
+            <button onClick={onCancel} className="text-red-500 hover:text-red-600 text-xs font-medium flex-shrink-0 transition-colors">
+              Отменить
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
 
       <TechCheckModal />
 
-      {/* Confirmation Dialog for Non-Urgent Consultations */}
+      {/* ── Confirm dialog ── */}
       <AnimatePresence>
         {showConfirmDialog && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
             onClick={() => setShowConfirmDialog(false)}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-2xl p-6 max-w-md w-full space-y-6"
+              initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
+              className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center">
-                  <Calendar className="w-8 h-8 text-blue-600" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900">Подтверждение записи</h3>
-                <p className="text-gray-600 leading-relaxed">
-                  Вы готовы назначить консультацию на это время с доктором {doctor?.name}?
-                </p>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowConfirmDialog(false)}
-                  className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-colors"
-                >
+              <p className="font-bold text-gray-900 text-base mb-1">Назначить консультацию?</p>
+              <p className="text-gray-500 text-sm mb-5">С доктором {doctor?.name} в выбранное время</p>
+              <div className="flex gap-2.5">
+                <button onClick={() => setShowConfirmDialog(false)}
+                  className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold text-sm transition-colors">
                   Отмена
                 </button>
-                <button
-                  onClick={() => {
-                    setShowConfirmDialog(false);
-                    onCall();
-                  }}
-                  className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors"
-                >
-                  Да, назначить
+                <button onClick={() => { setShowConfirmDialog(false); onCall(); }}
+                  className="flex-1 py-2.5 text-white rounded-xl font-semibold text-sm shadow-sm"
+                  style={{ background: 'linear-gradient(135deg, #3772ff, #1d4ed8)' }}>
+                  Подтвердить
                 </button>
               </div>
             </motion.div>
@@ -928,7 +778,6 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
         )}
       </AnimatePresence>
     </motion.div>
-    </div>
   );
 };
 

@@ -25,6 +25,8 @@ import {
   Sparkles,
   TrendingUp,
   Activity,
+  MapPin,
+  Home,
 } from "lucide-react";
 import { useConsultationManager } from "./useConsultationManager";
 import type { Consultation } from "@/types/consultation";
@@ -35,7 +37,7 @@ interface PatientConsultationsTableProps {
 }
 
 type FilterStatus = "all" | "pending" | "ongoing" | "completed" | "cancelled" | "missed" | "planned" | "scheduled";
-type FilterType = "all" | "video" | "chat" | "phone";
+type FilterType = "all" | "video" | "chat" | "phone" | "offline" | "home";
 
 interface SelectOption { value: string; label: string; icon?: React.ReactNode; color?: string; }
 
@@ -244,10 +246,12 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
 
   const getTypeConfig = (type: string) => {
     switch (type) {
-      case "video": return { label: "Видео", icon: <Video className="w-3.5 h-3.5" />, cls: "bg-cyan-50 text-cyan-600 border-cyan-200" };
-      case "chat":  return { label: "Чат", icon: <MessageSquare className="w-3.5 h-3.5" />, cls: "bg-indigo-50 text-indigo-600 border-indigo-200" };
-      case "phone": return { label: "Телефон", icon: <Phone className="w-3.5 h-3.5" />, cls: "bg-teal-50 text-teal-600 border-teal-200" };
-      default:      return { label: "Видео", icon: <Video className="w-3.5 h-3.5" />, cls: "bg-cyan-50 text-cyan-600 border-cyan-200" };
+      case "video":   return { label: "Видео",    icon: <Video className="w-3.5 h-3.5" />,      cls: "bg-cyan-50 text-cyan-600 border-cyan-200" };
+      case "chat":    return { label: "Чат",      icon: <MessageSquare className="w-3.5 h-3.5" />, cls: "bg-indigo-50 text-indigo-600 border-indigo-200" };
+      case "phone":   return { label: "Телефон",  icon: <Phone className="w-3.5 h-3.5" />,      cls: "bg-teal-50 text-teal-600 border-teal-200" };
+      case "offline": return { label: "Оффлайн",  icon: <MapPin className="w-3.5 h-3.5" />,     cls: "bg-emerald-50 text-emerald-600 border-emerald-200" };
+      case "home":    return { label: "На дому",  icon: <Home className="w-3.5 h-3.5" />,       cls: "bg-orange-50 text-orange-600 border-orange-200" };
+      default:        return { label: "Видео",    icon: <Video className="w-3.5 h-3.5" />,      cls: "bg-cyan-50 text-cyan-600 border-cyan-200" };
     }
   };
 
@@ -262,6 +266,7 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
   };
 
   const getSpecialization = (consultation: Consultation) => {
+    if (consultation.doctor_type) return consultation.doctor_type;
     switch (consultation.consultation_type) {
       case 'general': return 'Общая практика';
       case 'cardiology': return 'Кардиология';
@@ -287,7 +292,24 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
     const joinInfo = canJoinConsultation(consultation);
     const isWaiting = consultation.status === 'pending';
     const isOngoing = consultation.status === 'ongoing';
-    const isScheduled = consultation.status === 'scheduled' || consultation.status === 'planned';
+    const isScheduled = consultation.status === 'scheduled' || consultation.status === 'planned' || consultation.status === 'confirmed';
+    const isOffline = consultation.type === 'offline' || consultation.type === 'home';
+
+    if (isOffline) {
+      return (
+        <div className="flex items-center gap-2">
+          {consultation.clinic_address && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-50 border border-emerald-200 rounded-xl">
+              <MapPin className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+              <span className="text-xs text-emerald-700 font-medium truncate max-w-[160px]">{consultation.clinic_address}</span>
+            </div>
+          )}
+          <button className="p-2 text-gray-400 hover:text-blue-600 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-200 rounded-xl transition-all duration-200">
+            <Eye className="w-4 h-4" />
+          </button>
+        </div>
+      );
+    }
 
     return (
       <div className="flex items-center gap-2">
@@ -450,10 +472,12 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
                 value={typeFilter}
                 onChange={(v) => setTypeFilter(v as FilterType)}
                 options={[
-                  { value: "all", label: "Все типы" },
-                  { value: "video", label: "Видео", icon: <Video className="w-3.5 h-3.5" />, color: "text-cyan-500" },
-                  { value: "chat", label: "Чат", icon: <MessageSquare className="w-3.5 h-3.5" />, color: "text-indigo-500" },
-                  { value: "phone", label: "Телефон", icon: <Phone className="w-3.5 h-3.5" />, color: "text-teal-500" },
+                  { value: "all",     label: "Все типы" },
+                  { value: "video",   label: "Видео",    icon: <Video className="w-3.5 h-3.5" />,         color: "text-cyan-500" },
+                  { value: "offline", label: "Оффлайн",  icon: <MapPin className="w-3.5 h-3.5" />,        color: "text-emerald-500" },
+                  { value: "home",    label: "На дому",  icon: <Home className="w-3.5 h-3.5" />,          color: "text-orange-500" },
+                  { value: "chat",    label: "Чат",      icon: <MessageSquare className="w-3.5 h-3.5" />, color: "text-indigo-500" },
+                  { value: "phone",   label: "Телефон",  icon: <Phone className="w-3.5 h-3.5" />,         color: "text-teal-500" },
                 ]}
               />
             </div>

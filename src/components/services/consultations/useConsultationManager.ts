@@ -12,47 +12,75 @@ export const useConsultationManager = () => {
   const dismissedIds = useRef<Set<number>>(new Set());
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Check if current user is a doctor
   const fetchConsultations = useCallback(async (status?: string) => {
     try {
-      // Different endpoints based on user role
+      const results: Consultation[] = [];
+
+      // 1. Video consultations
       const baseUrl = isPatient
         ? '/consultations/my-consultations/'
         : '/consultations/doctor-consultations/';
-
       const url = status ? `${baseUrl}?status=${status}` : baseUrl;
-      // console.log(`🔄 Fetching consultations from: ${url}`);
-      const { data } = await api.get<Consultation[] | any>(url);
+      const { data } = await api.get<any>(url);
+      let videoList: any[] = [];
+      if (Array.isArray(data)) videoList = data;
+      else if (Array.isArray(data?.results)) videoList = data.results;
+      else if (Array.isArray(data?.consultations)) videoList = data.consultations;
+      videoList.forEach(c => results.push({ ...c, type: 'video' as const }));
 
-      // Handle different response formats
-      let consultationsArray: Consultation[] = [];
-      if (Array.isArray(data)) {
-        consultationsArray = data;
-      } else if (data && Array.isArray((data as any).results)) {
-        // Handle paginated response
-        consultationsArray = (data as any).results;
-      } else if (data && Array.isArray((data as any).consultations)) {
-        // Handle wrapped response
-        consultationsArray = (data as any).consultations;
-      } else {
-        console.warn("Unexpected API response format:", data);
-        consultationsArray = [];
+      // 2. Clinic (offline) appointments — patients only
+      if (isPatient) {
+        try {
+          const { data: clinicData } = await api.get<any>('/clinic-appointments/my-appointments/');
+          const rawClinicList: any[] = Array.isArray(clinicData) ? clinicData : (clinicData?.results || []);
+          // Deduplicate by doctor + appointment_time (keep latest id)
+          const seenClinic = new Map<string, any>();
+          rawClinicList.forEach(a => {
+            const key = `${a.doctor}_${a.appointment_time}`;
+            if (!seenClinic.has(key) || a.id > seenClinic.get(key).id) seenClinic.set(key, a);
+          });
+          const clinicList = Array.from(seenClinic.values());
+          clinicList.forEach(a => results.push({
+            id: a.id + 100000,
+            type: 'offline' as const,
+            status: a.status === 'confirmed' ? 'confirmed' : a.status,
+            scheduled_at: a.appointment_time,
+            appointment_time: a.appointment_time,
+            created_at: a.created_at,
+            doctor_first_name: a.doctor_name?.split(' ')[0] || '',
+            doctor_last_name: a.doctor_name?.split(' ').slice(1).join(' ') || '',
+            doctor_type: a.doctor_type,
+            clinic_name: a.clinic_name,
+            clinic_address: a.clinic_address,
+          } as Consultation));
+        } catch { /* ignore if endpoint not available */ }
+
+        // 3. Home appointments
+        try {
+          const { data: homeData } = await api.get<any>('/appointments/my-appointments/');
+          const homeList: any[] = Array.isArray(homeData) ? homeData : (homeData?.results || []);
+          homeList.forEach(a => results.push({
+            id: a.id + 200000,
+            type: 'home' as const,
+            status: a.status,
+            scheduled_at: a.appointment_time,
+            appointment_time: a.appointment_time,
+            created_at: a.created_at,
+            doctor_first_name: a.doctor_first_name || '',
+            doctor_last_name: a.doctor_last_name || '',
+          } as Consultation));
+        } catch { /* ignore if endpoint not available */ }
       }
 
-      // Sort by created_at descending (most recent first) to ensure latest consultations appear first
-      const sortedConsultations = consultationsArray.sort((a, b) => {
-        const dateA = new Date(a.created_at);
-        const dateB = new Date(b.created_at);
-        return dateB.getTime() - dateA.getTime();
-      });
-
-      // console.log(`✅ Fetched ${sortedConsultations.length} consultations`);
-      setConsultations(sortedConsultations);
+      results.sort((a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      setConsultations(results);
     } catch (error) {
       console.error("Failed to fetch consultations:", error);
       setConsultations([]);
     }
-  }, [user?.role]);
+  }, [user?.role, isPatient]);
 
   const playSound = useCallback(() => {
     if (!audioRef.current) {
