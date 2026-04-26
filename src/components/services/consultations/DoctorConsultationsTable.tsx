@@ -238,7 +238,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
     return (
       <div className="relative">
         <button
-          onClick={() => setShowStatusDropdown(isOpen ? null : consultation.meeting_id)}
+          onClick={() => setShowStatusDropdown(isOpen ? null : (consultation.meeting_id ?? null))}
           className={`${buttonClasses} ${getStatusColor(consultation.status)} hover:shadow-md transition-all duration-200 group`}
         >
           {getStatusIcon(consultation.status)}
@@ -264,7 +264,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
                 {availableStatuses.map((status) => (
                   <button
                     key={status.value}
-                    onClick={() => handleStatusChange(consultation.meeting_id, status.value)}
+                    onClick={() => handleStatusChange(consultation.meeting_id ?? '', status.value)}
                     className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors flex items-center gap-2 ${
                       consultation.status === status.value
                         ? 'bg-blue-50 text-blue-700 font-medium'
@@ -335,7 +335,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
       <div className="flex items-center justify-center gap-2">
         {canAccept && (
           <button
-            onClick={() => onAccept(consultation.meeting_id)}
+            onClick={() => onAccept(consultation.meeting_id ?? '')}
             className="p-3 text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 rounded-xl transition-all duration-200 border border-green-200 hover:border-green-300 shadow-sm group-hover:shadow-md"
             title="Принять вызов"
           >
@@ -345,7 +345,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
 
         {canReject && (
           <button
-            onClick={() => onReject(consultation.meeting_id)}
+            onClick={() => onReject(consultation.meeting_id ?? '')}
             className="p-3 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-xl transition-all duration-200 border border-red-200 hover:border-red-300 shadow-sm group-hover:shadow-md"
             title="Отклонить вызов"
           >
@@ -355,7 +355,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
 
         {consultation.status === 'ongoing' && (
           <button
-            onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id}`}
+            onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id ?? ''}`}
             className="p-3 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all duration-200 border border-blue-200 hover:border-blue-300 shadow-sm group-hover:shadow-md"
             title="Присоединиться к звонку"
           >
@@ -366,7 +366,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
         {(consultation.status === 'scheduled' || consultation.status === 'planned') && consultation.scheduled_at && (
           joinInfo.canJoin ? (
             <button
-              onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id}`}
+              onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id ?? ''}`}
               className={`p-3 text-white rounded-xl transition-all duration-200 shadow-sm group-hover:shadow-md ${
                 joinInfo.isReady
                   ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 border border-green-500'
@@ -409,7 +409,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
       <div className="flex items-center justify-center gap-2">
         {canAccept && (
           <button
-            onClick={() => onAccept(consultation.meeting_id)}
+            onClick={() => onAccept(consultation.meeting_id ?? '')}
             className="p-2.5 text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-all duration-200 border border-green-200 hover:border-green-300 shadow-sm"
             title="Принять вызов"
           >
@@ -419,7 +419,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
 
         {canReject && (
           <button
-            onClick={() => onReject(consultation.meeting_id)}
+            onClick={() => onReject(consultation.meeting_id ?? '')}
             className="p-2.5 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-all duration-200 border border-red-200 hover:border-red-300 shadow-sm"
             title="Отклонить вызов"
           >
@@ -429,7 +429,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
 
         {consultation.status === 'ongoing' && (
           <button
-            onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id}`}
+            onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id ?? ''}`}
             className="p-2.5 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all duration-200 border border-blue-200 hover:border-blue-300 shadow-sm"
             title="Присоединиться к звонку"
           >
@@ -440,7 +440,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
         {(consultation.status === 'scheduled' || consultation.status === 'planned') && consultation.scheduled_at && (
           joinInfo.canJoin ? (
             <button
-              onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id}`}
+              onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id ?? ''}`}
               className={`p-2.5 text-white rounded-lg transition-all duration-200 shadow-sm ${
                 joinInfo.isReady
                   ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 border border-green-500'
@@ -483,7 +483,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
       <div className="flex items-center gap-1.5 xs:gap-2 mt-2 xs:mt-2.5 sm:mt-3">
         {canAccept && (
           <button
-            onClick={() => onAccept(consultation.meeting_id)}
+            onClick={() => onAccept(consultation.meeting_id ?? '')}
             className="flex-1 flex items-center justify-center gap-1 xs:gap-1.5 sm:gap-2 p-1.5 xs:p-2 sm:p-2.5 text-green-600 bg-green-50 rounded-md xs:rounded-lg transition-colors border border-green-200"
           >
             <Check className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4" />
@@ -493,7 +493,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
 
         {canReject && (
           <button
-            onClick={() => onReject(consultation.meeting_id)}
+            onClick={() => onReject(consultation.meeting_id ?? '')}
             className="flex-1 flex items-center justify-center gap-1 xs:gap-1.5 sm:gap-2 p-1.5 xs:p-2 sm:p-2.5 text-red-600 bg-red-50 rounded-md xs:rounded-lg transition-colors border border-red-200"
           >
             <X className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4" />
@@ -503,7 +503,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
 
         {consultation.status === 'ongoing' && (
           <button
-            onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id}`}
+            onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id ?? ''}`}
             className="flex-1 flex items-center justify-center gap-1 xs:gap-1.5 sm:gap-2 p-1.5 xs:p-2 sm:p-2.5 text-blue-600 bg-blue-50 rounded-md xs:rounded-lg transition-colors border border-blue-200"
           >
             <PhoneCall className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4" />
@@ -514,7 +514,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
         {(consultation.status === 'scheduled' || consultation.status === 'planned') && consultation.scheduled_at && (
           joinInfo.canJoin ? (
             <button
-              onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id}`}
+              onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id ?? ''}`}
               className={`flex-1 flex items-center justify-center gap-1 xs:gap-1.5 sm:gap-2 p-1.5 xs:p-2 sm:p-2.5 text-white rounded-md xs:rounded-lg transition-colors ${
                 joinInfo.isReady
                   ? 'bg-gradient-to-r from-green-600 to-emerald-600 border border-green-500'
