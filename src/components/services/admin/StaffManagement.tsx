@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, memo, useRef } from "react";
-import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-toastify";
 import { api } from "@/utils/api";
@@ -39,8 +38,7 @@ import {
   History
 } from "lucide-react";
 
-import bnClinicLogo from "@/assets/clinics_logos/bn-clinica.png";
-import ayalaClinicLogo from "@/assets/clinics_logos/ayala_clinic.png";
+
 import ScheduleTypeSelector from "./schedule/components/ScheduleTypeSelector";
 
 /**
@@ -75,6 +73,7 @@ interface StaffMember {
   clinic?: {
     id: number;
     name: string;
+    logo?: string | null;
   } | null;
 
   // Pricing and scheduling (from profile)
@@ -2862,13 +2861,9 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                         Клиника <span className="text-red-500">*</span>
                       </label>
                       <div className="flex items-center gap-3">
-                        {(user.clinic?.id === 913 || user.clinic?.name?.toLowerCase().includes('ayala')) ? (
-                          <div className="flex-shrink-0 bg-white p-2 rounded-xl border-2 border-blue-200 shadow-md">
-                            <Image src={ayalaClinicLogo} alt="Ayala Clinic" width={80} height={28} className="object-contain" priority={false} />
-                          </div>
-                        ) : (user.clinic?.name?.toLowerCase().includes('bn') || user.clinic?.name?.toLowerCase().includes('бн')) ? (
-                          <div className="flex-shrink-0 bg-white p-2 rounded-xl border-2 border-blue-200 shadow-md">
-                            <Image src={bnClinicLogo} alt="BN Clinic" width={80} height={28} className="object-contain" priority={false} />
+                        {user.clinic?.logo ? (
+                          <div className="flex-shrink-0 bg-white p-2 rounded-xl border-2 border-blue-200 shadow-md w-16 h-16 flex items-center justify-center">
+                            <img src={user.clinic.logo} alt={user.clinic.name} className="w-full h-full object-contain" />
                           </div>
                         ) : (
                           <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center">
@@ -3401,15 +3396,9 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                         Клиника
                       </label>
                       <div className="flex items-center gap-3">
-                        {((editingMember.clinic?.id === 913 || editingMember.clinic?.name?.toLowerCase().includes('ayala')) ||
-                          (!editingMember.clinic && (user.clinic?.id === 913 || user.clinic?.name?.toLowerCase().includes('ayala')))) ? (
-                          <div className="flex-shrink-0 bg-white p-2 rounded-xl border-2 border-blue-200 shadow-md">
-                            <Image src={ayalaClinicLogo} alt="Ayala Clinic" width={80} height={28} className="object-contain" priority={false} />
-                          </div>
-                        ) : ((editingMember.clinic?.name?.toLowerCase().includes('bn') || editingMember.clinic?.name?.toLowerCase().includes('бн')) ||
-                          (!editingMember.clinic && (user.clinic?.name?.toLowerCase().includes('bn') || user.clinic?.name?.toLowerCase().includes('бн')))) ? (
-                          <div className="flex-shrink-0 bg-white p-2 rounded-xl border-2 border-blue-200 shadow-md">
-                            <Image src={bnClinicLogo} alt="BN Clinic" width={80} height={28} className="object-contain" priority={false} />
+                        {(editingMember.clinic?.logo || user.clinic?.logo) ? (
+                          <div className="flex-shrink-0 bg-white p-2 rounded-xl border-2 border-blue-200 shadow-md w-16 h-16 flex items-center justify-center">
+                            <img src={editingMember.clinic?.logo || user.clinic?.logo!} alt={editingMember.clinic?.name || user.clinic?.name} className="w-full h-full object-contain" />
                           </div>
                         ) : (
                           <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center">

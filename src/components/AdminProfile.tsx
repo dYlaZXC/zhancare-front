@@ -16,6 +16,7 @@ import PatientManagement from "@/components/services/admin/PatientManagement";
 import ScheduleView from "@/components/services/admin/ScheduleView";
 import ReportsView from "@/components/services/admin/ReportsView";
 import ActivityView from "@/components/services/admin/ActivityView";
+import { ServicesView } from "@/components/services/admin/ServicesView";
 
 export default function AdminProfile() {
   const { user, logoutUser, loading, setIsAuthOpen, isAdmin, isDoctor, isNurse, isPatient } = useAuth();
@@ -92,6 +93,8 @@ export default function AdminProfile() {
         return <ScheduleView user={user} />;
       case "reports":
         return <ReportsView user={user} />;
+      case "services":
+        return <ServicesView user={user} />;
       case "activity":
         return <ActivityView user={user} />;
       default:

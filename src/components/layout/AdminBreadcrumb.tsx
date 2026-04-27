@@ -14,7 +14,8 @@ import {
   faFileMedical,
   faHistory,
   faBolt,
-  faUser
+  faUser,
+  faClipboardList
 } from "@fortawesome/free-solid-svg-icons";
 
 interface AdminBreadcrumbItem {
@@ -76,6 +77,12 @@ export const AdminBreadcrumb = ({
       title: "Просмотр Отчетов",
       icon: <FontAwesomeIcon icon={faChartLine} className="w-4 h-4" />,
       href: "/admin/reports",
+    },
+    services: {
+      key: "services",
+      title: "Услуги",
+      icon: <FontAwesomeIcon icon={faClipboardList} className="w-4 h-4" />,
+      href: "/admin/services",
     },
     activity: {
       key: "activity",

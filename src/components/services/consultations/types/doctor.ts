@@ -4,6 +4,7 @@ export interface Clinic {
   address?: string;
   phone?: string;
   city?: string;
+  logo?: string | null;
 }
 
 export interface WorkScheduleDay {

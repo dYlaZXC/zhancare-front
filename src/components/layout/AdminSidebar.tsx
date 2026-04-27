@@ -65,6 +65,7 @@ export const AdminSidebar = ({
     { id: "staff", icon: faUsers, title: "Персонал", color: "#8b5cf6", href: "/admin/staff" },
     { id: "patients", icon: faUserMd, title: "Пациенты", color: "#10b981", href: "/admin/patients" },
     { id: "schedule", icon: faCalendarCheck, title: "Расписание", color: "#295bbf", href: "/admin/schedule" },
+    { id: "services", icon: faClipboardList, title: "Услуги", color: "#0ea5e9", href: "/admin/services" },
     { id: "activity", icon: faHistory, title: "Активность", color: "#29358f", href: "/admin/activity" },
   ];
 

@@ -56,6 +56,7 @@ interface ClinicInfo {
   working_hours?: string;
   phones?: Array<{ number: string } | string> | null;
   rating: number;
+  logo?: string | null;
 }
 interface ClinicStats {
   is_super_admin: boolean;
@@ -98,6 +99,9 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
   const [clinicForm, setClinicForm] = useState({ name: "", description: "", address: "", working_hours: "", phone: "", city_name: "" });
   const [savingClinic, setSavingClinic] = useState(false);
   const [savedClinic, setSavedClinic] = useState(false);
+  const [clinicLogo, setClinicLogo] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoRef = useRef<HTMLInputElement>(null);
 
   const [avatarPreview, setAvatarPreview] = useState<string | null>(resolveAvatarUrl(user.avatar));
   const [uploading, setUploading] = useState(false);
@@ -123,6 +127,7 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
           phone: firstPhone,
           city_name: ci.city || "",
         });
+        setClinicLogo(ci.logo || null);
       }
     } catch {
       setStats({ is_super_admin: false, clinic_info: { id: 1, name: "Демо Клиника", description: "", address: "Алматы, ул. Демонстрационная 123", city: "Алматы", working_hours: "", phones: [], rating: 4.8 } });
@@ -191,6 +196,42 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
       toast.error("Не удалось удалить фото");
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error("Файл слишком большой. Максимум 5 МБ."); return; }
+    if (!stats?.clinic_info?.id) return;
+    setClinicLogo(URL.createObjectURL(file));
+    setUploadingLogo(true);
+    try {
+      const fd = new FormData();
+      fd.append("logo", file);
+      const res = await api.post(`/clinic-logo/${stats.clinic_info.id}/`, fd, { headers: { "Content-Type": "multipart/form-data" } });
+      setClinicLogo(res.data.logo);
+      toast.success("Логотип обновлён");
+    } catch {
+      toast.error("Не удалось загрузить логотип");
+      setClinicLogo(null);
+    } finally {
+      setUploadingLogo(false);
+      if (logoRef.current) logoRef.current.value = "";
+    }
+  };
+
+  const handleDeleteLogo = async () => {
+    if (!stats?.clinic_info?.id) return;
+    setUploadingLogo(true);
+    try {
+      await api.delete(`/clinic-logo/${stats.clinic_info.id}/`);
+      setClinicLogo(null);
+      toast.success("Логотип удалён");
+    } catch {
+      toast.error("Не удалось удалить логотип");
+    } finally {
+      setUploadingLogo(false);
     }
   };
 
@@ -372,6 +413,56 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
                 <h2 className="text-sm font-bold text-gray-800">Данные клиники</h2>
                 <p className="text-xs text-gray-400">Управление информацией о клинике</p>
               </div>
+            </div>
+
+            {/* Clinic logo upload */}
+            <div className="flex items-center gap-5 mb-6 p-4 rounded-2xl border border-gray-100 bg-gray-50">
+              <div className="relative flex-shrink-0 group">
+                <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-gray-200 bg-white flex items-center justify-center shadow-sm">
+                  {clinicLogo ? (
+                    <img src={clinicLogo} alt="Логотип клиники" className="w-full h-full object-cover" />
+                  ) : (
+                    <Building2 className="w-8 h-8 text-gray-300" />
+                  )}
+                  {uploadingLogo && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-2xl">
+                      <Loader2 className="w-5 h-5 text-white animate-spin" />
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => logoRef.current?.click()}
+                  disabled={uploadingLogo}
+                  className="absolute inset-0 rounded-2xl bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center cursor-pointer"
+                >
+                  <Camera className="w-5 h-5 text-white" />
+                </button>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-gray-700 mb-0.5">Логотип / фото клиники</p>
+                <p className="text-xs text-gray-400 mb-3">JPG, PNG, WEBP — до 5 МБ</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => logoRef.current?.click()}
+                    disabled={uploadingLogo}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-all disabled:opacity-40"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    {clinicLogo ? "Заменить" : "Загрузить"}
+                  </button>
+                  {clinicLogo && (
+                    <button
+                      onClick={handleDeleteLogo}
+                      disabled={uploadingLogo}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-red-500 bg-red-50 border border-red-200 hover:bg-red-100 transition-all disabled:opacity-40"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Удалить
+                    </button>
+                  )}
+                </div>
+              </div>
+              <input ref={logoRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleLogoChange} />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

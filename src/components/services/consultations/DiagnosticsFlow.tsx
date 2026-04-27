@@ -22,6 +22,7 @@ interface DiagnosticsService {
   duration_minutes: number;
   clinic: number;
   clinic_name: string;
+  clinic_logo?: string | null;
   category: string;
   category_label: string;
 }
@@ -378,14 +379,27 @@ const DiagnosticsFlow: React.FC<DiagnosticsFlowProps> = ({ onBack, onComplete })
                         selectedService?.id === svc.id ? 'bg-blue-50' : 'hover:bg-gray-50'
                       }`}
                     >
-                      <div className="min-w-0">
-                        <span className={`text-sm font-medium block ${selectedService?.id === svc.id ? 'text-blue-700' : 'text-gray-700'}`}>
-                          {svc.name}
-                        </span>
-                        <span className="text-[11px] text-gray-400">{svc.clinic_name}</span>
-                        {svc.price && (
-                          <span className="text-[11px] text-gray-500 ml-2">· {Number(svc.price).toLocaleString('ru-RU')} ₸</span>
+                      <div className="flex items-center gap-3 min-w-0">
+                        {svc.clinic_logo ? (
+                          <div className="w-8 h-8 rounded-lg overflow-hidden bg-white border border-gray-100 shadow-sm flex-shrink-0 flex items-center justify-center">
+                            <img src={svc.clinic_logo} alt={svc.clinic_name} className="w-full h-full object-contain" />
+                          </div>
+                        ) : (
+                          <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex-shrink-0 flex items-center justify-center">
+                            <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                          </div>
                         )}
+                        <div className="min-w-0">
+                          <span className={`text-sm font-medium block ${selectedService?.id === svc.id ? 'text-blue-700' : 'text-gray-700'}`}>
+                            {svc.name}
+                          </span>
+                          <div className="flex items-center gap-1 flex-wrap">
+                            <span className="text-[11px] text-gray-400">{svc.clinic_name}</span>
+                            {svc.price && (
+                              <span className="text-[11px] text-gray-500">· {Number(svc.price).toLocaleString('ru-RU')} ₸</span>
+                            )}
+                          </div>
+                        </div>
                       </div>
                       {selectedService?.id === svc.id && <CheckCircle2 className="w-4 h-4 text-blue-500 flex-shrink-0" />}
                     </button>

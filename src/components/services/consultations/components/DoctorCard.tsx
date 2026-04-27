@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
 import clsx from "clsx";
 import {
   CheckCircle2,
@@ -20,8 +19,6 @@ import {
 import type { Doctor, TimeSlot, Language } from "../types/doctor";
 import { getSpecializationName } from "../utils/doctorUtils";
 import { formatTime } from "../utils/timeslotUtils";
-import bnClinicLogo from "@/assets/clinics_logos/bn-clinica.png";
-import ayalaClinicLogo from "@/assets/clinics_logos/ayala_clinic.png";
 
 interface DoctorCardProps {
   doctor: Doctor;
@@ -100,8 +97,6 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
   const displaySlots = slotsForDate.slice(0, 6);
   const hiddenCount = slotsForDate.length - 6;
 
-  const isBnClinic = doctor.clinic?.name?.toLowerCase().includes('bn') || doctor.clinic?.name?.toLowerCase().includes('бн');
-  const isAyalaClinic = doctor.clinic?.id === 913 || doctor.clinic?.name?.toLowerCase().includes('ayala');
 
   return (
     <div
@@ -252,23 +247,23 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
 
         {/* Clinic row */}
         <div className="flex items-center gap-1.5 mt-2">
-          {isBnClinic ? (
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-50 border border-blue-100 rounded-lg">
-              <Image src={bnClinicLogo} alt="BN Clinic" width={44} height={14} className="object-contain" />
-            </div>
-          ) : isAyalaClinic ? (
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-50 border border-blue-100 rounded-lg">
-              <Image src={ayalaClinicLogo} alt="Ayala Clinic" width={44} height={14} className="object-contain" />
-            </div>
-          ) : doctor.clinic ? (
-            <div className="flex items-center gap-1 text-[10px] text-gray-500 bg-gray-50 border border-gray-100 px-2 py-1 rounded-lg min-w-0">
-              <Building2 size={9} className="text-gray-400 flex-shrink-0" />
-              <span className="truncate font-medium">{doctor.clinic.name}{doctor.clinic.city ? ` • ${doctor.clinic.city}` : ''}</span>
+          {doctor.clinic ? (
+            <div className="flex items-center gap-2 px-2 py-1.5 bg-blue-50 border border-blue-100 rounded-lg min-w-0">
+              {doctor.clinic.logo ? (
+                <div className="w-6 h-6 rounded-md overflow-hidden bg-white border border-blue-100 flex-shrink-0 flex items-center justify-center p-0.5">
+                  <img src={doctor.clinic.logo} alt={doctor.clinic.name} className="w-full h-full object-contain" />
+                </div>
+              ) : (
+                <div className="w-6 h-6 rounded-md bg-blue-100 flex-shrink-0 flex items-center justify-center">
+                  <Building2 size={11} className="text-blue-500" />
+                </div>
+              )}
+              <span className="text-[10px] font-semibold text-blue-700 truncate">{doctor.clinic.name}</span>
             </div>
           ) : (
-            <div className="flex items-center gap-1 text-[10px] text-gray-400 bg-gray-50 border border-gray-100 px-2 py-1 rounded-lg">
-              <Building2 size={9} className="flex-shrink-0" />
-              <span>Независимый врач</span>
+            <div className="flex items-center gap-1.5 px-2 py-1.5 bg-gray-50 border border-gray-100 rounded-lg">
+              <Building2 size={10} className="text-gray-400 flex-shrink-0" />
+              <span className="text-[10px] text-gray-400">Независимый врач</span>
             </div>
           )}
           <div className="flex items-center gap-1 text-[10px] text-gray-400 ml-auto">
