@@ -174,7 +174,8 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
               style={{ background: `linear-gradient(135deg, ${g1}, ${g2})` }}
             >
               {doctor.avatar ? (
-                <Image src={doctor.avatar} alt={doctor.name} fill className="object-cover" />
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={doctor.avatar} alt={doctor.name} className="w-full h-full object-cover" />
               ) : (
                 <span>{doctor.name.slice(0, 2).toUpperCase()}</span>
               )}

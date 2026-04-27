@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   Calendar,
   Clock,
@@ -156,6 +157,7 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [detailsConsultation, setDetailsConsultation] = useState<Consultation | null>(null);
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -376,7 +378,7 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
             <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-white" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-gray-900 tracking-tight">Мои консультации</h3>
+            <h3 className="text-lg font-bold text-gray-900 tracking-tight">Мои записи</h3>
             <p className="text-xs text-gray-500">{filteredConsultations.length} из {consultations.length} записей</p>
           </div>
         </div>
@@ -710,7 +712,9 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
                     </button>
                   )}
                   {!isOngoing && (!isScheduled || !joinInfo.canJoin) && (
-                    <button className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-600 text-sm font-medium rounded-xl transition-colors">
+                    <button
+                      onClick={() => setDetailsConsultation(consultation)}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-600 text-sm font-medium rounded-xl transition-colors">
                       <Eye className="w-4 h-4" />
                       Детали
                     </button>
@@ -771,6 +775,89 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
           </div>
         </div>
       )}
+
+      {/* ── Details Modal (portal to body to escape stacking context) ── */}
+      {detailsConsultation && typeof document !== 'undefined' && createPortal((() => {
+        const c = detailsConsultation;
+        const status = getStatusConfig(c.status);
+        const type = getTypeConfig(c.type || "video");
+        const dateStr = c.scheduled_at || c.created_at;
+        const doctorName = `${c.doctor_first_name || ''} ${c.doctor_last_name || ''}`.trim() || "—";
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setDetailsConsultation(null)}>
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <div
+              className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Детали записи</h3>
+                  <p className="text-xs text-gray-400 mt-0.5">#{c.id}</p>
+                </div>
+                <button onClick={() => setDetailsConsultation(null)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Doctor */}
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                  {(c.doctor_first_name?.[0] || 'Д').toUpperCase()}
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900 text-sm">{doctorName}</p>
+                  <p className="text-xs text-gray-400">{getSpecialization(c)}</p>
+                </div>
+              </div>
+
+              {/* Info grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-gray-50 rounded-xl">
+                  <p className="text-xs text-gray-400 mb-1 flex items-center gap-1"><Calendar className="w-3 h-3" /> Дата</p>
+                  <p className="text-sm font-semibold text-gray-900">{dateStr ? formatDate(dateStr) : "—"}</p>
+                  <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><Clock className="w-3 h-3" />{dateStr ? formatTime(dateStr) : "—"}</p>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-xl">
+                  <p className="text-xs text-gray-400 mb-1">Тип</p>
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold border ${type.cls}`}>
+                    {type.icon}{type.label}
+                  </span>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-xl">
+                  <p className="text-xs text-gray-400 mb-1">Статус</p>
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold border ${status.cls}`}>
+                    {status.icon}{status.label}
+                  </span>
+                </div>
+                {c.clinic_name && (
+                  <div className="p-3 bg-gray-50 rounded-xl">
+                    <p className="text-xs text-gray-400 mb-1 flex items-center gap-1"><MapPin className="w-3 h-3" /> Клиника</p>
+                    <p className="text-sm font-semibold text-gray-900 leading-tight">{c.clinic_name}</p>
+                    {c.clinic_address && <p className="text-xs text-gray-400 mt-0.5">{c.clinic_address}</p>}
+                  </div>
+                )}
+              </div>
+
+              {/* Symptoms */}
+              {c.symptoms && (
+                <div className="p-3 bg-gray-50 rounded-xl">
+                  <p className="text-xs text-gray-400 mb-1">Жалобы / симптомы</p>
+                  <p className="text-sm text-gray-700 leading-relaxed">{c.symptoms}</p>
+                </div>
+              )}
+
+              <button
+                onClick={() => setDetailsConsultation(null)}
+                className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-xl transition-colors"
+              >
+                Закрыть
+              </button>
+            </div>
+          </div>
+        );
+      })(), document.body)}
     </div>
   );
 };

@@ -28,6 +28,7 @@ export interface User {
   first_name: string;
   last_name: string;
   phone?: string;
+  avatar?: string | null;
   /** @deprecated Computed from roles[] — do not read from API response directly */
   role?: string;
   roles?: string[];

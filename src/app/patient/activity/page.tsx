@@ -1,7 +1,7 @@
 "use client";
 
-import { ActivityLog } from "@/components/services/ActivityLog";
+import PatientActivityDashboard from "@/components/services/patient/PatientActivityDashboard";
 
 export default function PatientActivityPage() {
-  return <ActivityLog />;
+  return <PatientActivityDashboard />;
 }

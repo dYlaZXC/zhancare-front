@@ -12,6 +12,7 @@ import { PersonalDetailsCard } from "./profile/PersonalDetailsCard";
 import { MedicalDetailsCard } from "./profile/MedicalDetailsCard";
 import { GeneralInfoTab } from "./profile/GeneralInfoTab";
 import { InsuranceStatusCard } from "./profile/InsuranceStatusCard";
+import { AvatarUploadCard } from "./profile/AvatarUploadCard";
 import { ConsultationsTab } from "./profile/ConsultationsTab";
 import { VisitsTab } from "./profile/VisitsTab";
 import { CalendarCard } from "./profile/CalendarCard";
@@ -41,6 +42,7 @@ const ProfileDetails: React.FC<ProfileDetailsProps> = ({ user, onRefetch }) => {
   const [isEditing, setIsEditing]           = useState(false);
   const [editValues, setEditValues]         = useState(user);
   const [errors, setErrors]                 = useState<{ email?: string }>({});
+  const [avatarUrl, setAvatarUrl]           = useState<string | null>(user.avatar ?? null);
 
   const printRef = useRef<HTMLDivElement>(null);
   const { consultations, appointments, loading } = useProfileData();
@@ -297,13 +299,19 @@ const ProfileDetails: React.FC<ProfileDetailsProps> = ({ user, onRefetch }) => {
       case "settings":
         return (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch">
-            <PersonalDetailsCard
-              user={user}
-              isEditable={true}
-              onSave={handlePersonalDataSave}
-              onRefetch={onRefetch}
-              showCompletionProgress={true}
-            />
+            <div className="space-y-4">
+              <AvatarUploadCard
+                user={{ ...user, avatar: avatarUrl }}
+                onAvatarChange={setAvatarUrl}
+              />
+              <PersonalDetailsCard
+                user={user}
+                isEditable={true}
+                onSave={handlePersonalDataSave}
+                onRefetch={onRefetch}
+                showCompletionProgress={true}
+              />
+            </div>
             <div className="space-y-4">
               <MedicalDetailsCard user={user} onRefetch={onRefetch} />
               <InsuranceStatusCard />

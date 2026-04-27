@@ -72,7 +72,7 @@ export default function NurseLayout({ children }: { children: React.ReactNode })
           <NurseBreadcrumb />
 
           {/* Page Content */}
-          <div className="px-3 pb-3">
+          <div className="px-3 pt-4 pb-3">
             {children}
           </div>
         </main>

@@ -15,10 +15,10 @@ import {
   Clock,
   AlertCircle,
   CheckCircle2,
-  ArrowRight,
   Video,
   Home,
-  Stethoscope
+  Stethoscope,
+  ArrowRight
 } from "lucide-react";
 import PatientConsultationsTable from "./PatientConsultationsTable";
 
@@ -154,39 +154,35 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
       <div className="relative flex flex-col items-center gap-8 px-6 py-10">
         {/* Title */}
         <div className="flex flex-col items-center gap-2 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 mb-1">
-            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-            <span className="text-xs font-medium text-blue-600 tracking-wide uppercase">Zhancare AI</span>
-          </div>
           <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Медицинские услуги</h3>
           <p className="text-sm text-gray-400">Выберите удобный формат консультации</p>
         </div>
 
         {/* Cards */}
-        <div className="flex flex-col sm:flex-row items-stretch justify-center gap-3 w-full max-w-2xl">
+        <div className="flex flex-col sm:flex-row items-stretch gap-3 w-full">
 
           {/* Online — primary */}
           <motion.button
             onClick={onNext}
             whileHover={{ y: -3, scale: 1.02 }}
             whileTap={{ scale: 0.97 }}
-            className="group relative flex-1 flex sm:flex-col flex-row items-center sm:gap-3 gap-4 sm:px-6 px-4 sm:py-6 py-4 rounded-2xl overflow-hidden text-white font-semibold text-sm transition-all cursor-pointer"
+            className="group relative flex-1 flex flex-col gap-3 px-4 sm:px-6 py-4 sm:py-5 rounded-2xl overflow-hidden text-white font-semibold text-sm transition-all cursor-pointer"
             style={{ background: 'linear-gradient(135deg, #3772ff 0%, #6048f5 100%)', boxShadow: '0 8px 28px rgba(55,114,255,0.35)' }}
           >
-            {/* Shine */}
             <div className="absolute inset-0 bg-gradient-to-br from-white/15 via-transparent to-transparent" />
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
-            {/* Glow blob */}
             <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-indigo-400/30 rounded-full blur-2xl" />
 
-            <div className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/20 backdrop-blur-sm border border-white/25 flex items-center justify-center shadow-inner flex-shrink-0">
-              <Video size={20} />
+            <div className="relative flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm border border-white/25 flex items-center justify-center shadow-inner flex-shrink-0">
+                <Video size={20} />
+              </div>
+              <div className="text-left">
+                <p className="font-bold text-base leading-tight">Онлайн</p>
+                <p className="text-xs opacity-75 mt-0.5">консультация</p>
+              </div>
             </div>
-            <div className="relative sm:text-center text-left flex-1">
-              <p className="font-bold text-base leading-tight">Онлайн</p>
-              <p className="text-xs opacity-75 mt-0.5">консультация</p>
-            </div>
-            <div className="relative flex items-center gap-1 text-xs font-semibold bg-white/20 px-3 py-1 rounded-full border border-white/25 flex-shrink-0">
+            <div className="relative flex items-center justify-center gap-1.5 text-xs font-semibold bg-white/20 px-3 py-1.5 rounded-full border border-white/25 w-full">
               Начать <ArrowRight size={12} className="transition-transform group-hover:translate-x-0.5" />
             </div>
           </motion.button>
@@ -196,21 +192,23 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
             onClick={onOffline}
             whileHover={{ y: -3, scale: 1.02 }}
             whileTap={{ scale: 0.97 }}
-            className="group relative flex-1 flex sm:flex-col flex-row items-center sm:gap-3 gap-4 sm:px-6 px-4 sm:py-6 py-4 rounded-2xl overflow-hidden text-white font-semibold text-sm transition-all cursor-pointer"
+            className="group relative flex-1 flex flex-col gap-3 px-4 sm:px-6 py-4 sm:py-5 rounded-2xl overflow-hidden text-white font-semibold text-sm transition-all cursor-pointer"
             style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', boxShadow: '0 8px 28px rgba(16,185,129,0.35)' }}
           >
             <div className="absolute inset-0 bg-gradient-to-br from-white/15 via-transparent to-transparent" />
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
             <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-emerald-300/30 rounded-full blur-2xl" />
 
-            <div className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/20 backdrop-blur-sm border border-white/25 flex items-center justify-center shadow-inner flex-shrink-0">
-              <Home size={20} />
+            <div className="relative flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm border border-white/25 flex items-center justify-center shadow-inner flex-shrink-0">
+                <Home size={20} />
+              </div>
+              <div className="text-left">
+                <p className="font-bold text-base leading-tight">Оффлайн</p>
+                <p className="text-xs opacity-75 mt-0.5">приём врача</p>
+              </div>
             </div>
-            <div className="relative sm:text-center text-left flex-1">
-              <p className="font-bold text-base leading-tight">Оффлайн</p>
-              <p className="text-xs opacity-75 mt-0.5">приём врача</p>
-            </div>
-            <div className="relative flex items-center gap-1 text-xs font-semibold bg-white/20 px-3 py-1 rounded-full border border-white/25 flex-shrink-0">
+            <div className="relative flex items-center justify-center gap-1.5 text-xs font-semibold bg-white/20 px-3 py-1.5 rounded-full border border-white/25 w-full">
               Записаться <ArrowRight size={12} className="transition-transform group-hover:translate-x-0.5" />
             </div>
           </motion.button>
@@ -220,21 +218,23 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
             onClick={onDiagnostics}
             whileHover={{ y: -3, scale: 1.02 }}
             whileTap={{ scale: 0.97 }}
-            className="group relative flex-1 flex sm:flex-col flex-row items-center sm:gap-3 gap-4 sm:px-6 px-4 sm:py-6 py-4 rounded-2xl overflow-hidden text-white font-semibold text-sm transition-all cursor-pointer"
+            className="group relative flex-1 flex flex-col gap-3 px-4 sm:px-6 py-4 sm:py-5 rounded-2xl overflow-hidden text-white font-semibold text-sm transition-all cursor-pointer"
             style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)', boxShadow: '0 8px 28px rgba(139,92,246,0.35)' }}
           >
             <div className="absolute inset-0 bg-gradient-to-br from-white/15 via-transparent to-transparent" />
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
             <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-violet-400/30 rounded-full blur-2xl" />
 
-            <div className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/20 backdrop-blur-sm border border-white/25 flex items-center justify-center shadow-inner flex-shrink-0">
-              <Stethoscope size={20} />
+            <div className="relative flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm border border-white/25 flex items-center justify-center shadow-inner flex-shrink-0">
+                <Stethoscope size={20} />
+              </div>
+              <div className="text-left">
+                <p className="font-bold text-base leading-tight">Диагностика</p>
+                <p className="text-xs opacity-75 mt-0.5">анализы и обследование</p>
+              </div>
             </div>
-            <div className="relative sm:text-center text-left flex-1">
-              <p className="font-bold text-base leading-tight">Диагностика</p>
-              <p className="text-xs opacity-75 mt-0.5">анализы и обследование</p>
-            </div>
-            <div className="relative flex items-center gap-1 text-xs font-semibold bg-white/20 px-3 py-1 rounded-full border border-white/25 flex-shrink-0">
+            <div className="relative flex items-center justify-center gap-1.5 text-xs font-semibold bg-white/20 px-3 py-1.5 rounded-full border border-white/25 w-full">
               Записаться <ArrowRight size={12} className="transition-transform group-hover:translate-x-0.5" />
             </div>
           </motion.button>

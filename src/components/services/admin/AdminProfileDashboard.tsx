@@ -1,697 +1,450 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Image from "next/image";
+import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { api } from "@/utils/api";
+import { toast } from "react-toastify";
 import {
   Building2,
-  AlertCircle,
   Loader2,
-  TrendingUp,
-  Users,
-  Activity,
-  DollarSign,
-  Star,
-  Calendar,
-  Video,
-  CheckCircle,
-  Clock,
-  UserPlus,
-  Stethoscope,
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Save,
   Shield,
-  BarChart3,
-  PieChart as PieChartIcon
+  Camera,
+  Trash2,
+  CheckCircle2,
+  Sparkles,
+  Lock,
+  Clock,
+  AlignLeft,
 } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBolt } from "@fortawesome/free-solid-svg-icons";
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  Area,
-  AreaChart
-} from "recharts";
-import bnClinicLogo from "@/assets/clinics_logos/bn-clinica.png";
-import ayalaClinicLogo from "@/assets/clinics_logos/ayala_clinic.png";
+
+const BACKEND = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') ?? 'http://127.0.0.1:8000';
+function resolveAvatarUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  return `${BACKEND}${url}`;
+}
 
 interface User {
   id: number;
   email: string;
   first_name: string;
   last_name: string;
+  phone?: string;
+  avatar?: string | null;
   role?: string;
   roles?: string[];
-  clinic?: {
-    id: number;
-    name: string;
-    address: string;
-    city: string;
-    rating: number;
-  };
 }
 
 interface AdminProfileDashboardProps {
   user: User;
 }
 
-interface AnalyticsDataPoint {
-  date: string;
-  day: string;
-  consultations: number;
-  completed_consultations: number;
-  appointments: number;
-  revenue: number;
-  new_patients: number;
-}
-
-interface UserDistribution {
-  doctors: number;
-  nurses: number;
-  patients: number;
-}
-
-interface ConsultationStatusDistribution {
-  pending: number;
-  in_progress: number;
-  completed: number;
-  cancelled: number;
-}
-
 interface ClinicInfo {
   id: number;
   name: string;
+  description?: string;
   address: string;
+  city?: string;
+  working_hours?: string;
+  phones?: Array<{ number: string } | string> | null;
   rating: number;
 }
-
 interface ClinicStats {
   is_super_admin: boolean;
   clinic_info?: ClinicInfo | null;
-  total_doctors: number;
-  total_nurses: number;
-  total_patients: number;
-  active_consultations: number;
-  completed_consultations_today: number;
-  pending_appointments: number;
-  total_revenue_month: number;
-  average_rating: number;
-  analytics_data?: AnalyticsDataPoint[];
-  user_distribution?: UserDistribution;
-  consultation_status_distribution?: ConsultationStatusDistribution;
 }
+
+const InputField = ({
+  label, value, onChange, icon: Icon, placeholder, type = "text"
+}: {
+  label: string; value: string; onChange: (v: string) => void;
+  icon: React.ElementType; placeholder?: string; type?: string;
+}) => (
+  <div className="flex flex-col gap-1.5">
+    <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">{label}</label>
+    <div className="relative group">
+      <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200 z-10" />
+      <input
+        type={type}
+        value={value}
+        placeholder={placeholder}
+        onChange={e => onChange(e.target.value)}
+        className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-300 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all duration-200 shadow-sm hover:border-gray-300"
+      />
+    </div>
+  </div>
+);
 
 export default function AdminProfileDashboard({ user }: AdminProfileDashboardProps) {
   const [stats, setStats] = useState<ClinicStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [personalForm, setPersonalForm] = useState({
+    first_name: user.first_name,
+    last_name: user.last_name,
+    email: user.email,
+    phone: user.phone || "",
+  });
+  const [savingPersonal, setSavingPersonal] = useState(false);
+  const [savedPersonal, setSavedPersonal] = useState(false);
 
-  useEffect(() => {
-    fetchClinicStats();
-  }, []);
+  const [clinicForm, setClinicForm] = useState({ name: "", description: "", address: "", working_hours: "", phone: "", city_name: "" });
+  const [savingClinic, setSavingClinic] = useState(false);
+  const [savedClinic, setSavedClinic] = useState(false);
+
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(resolveAvatarUrl(user.avatar));
+  const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { fetchClinicStats(); }, []);
 
   const fetchClinicStats = async () => {
-    setLoading(true);
-    setError(null);
-
     try {
-      const response = await api.get('/clinic-stats/');
-      setStats(response.data);
-    } catch (err: any) {
-      console.error("Error fetching clinic stats:", err);
-      // More user-friendly error message
-      if (err.message.includes('fetch')) {
-        setError("Не удается подключиться к серверу. Пожалуйста, убедитесь, что бэкенд-сервер запущен.");
-      } else {
-        setError(err.message || "Не удалось загрузить статистику клиники");
+      const res = await api.get("/clinic-stats/");
+      setStats(res.data);
+      if (res.data.clinic_info) {
+        const ci = res.data.clinic_info;
+        const firstPhone = Array.isArray(ci.phones) && ci.phones.length > 0
+          ? (typeof ci.phones[0] === 'string' ? ci.phones[0] : ci.phones[0]?.number ?? '')
+          : '';
+        setClinicForm({
+          name: ci.name || "",
+          description: ci.description || "",
+          address: ci.address || "",
+          working_hours: ci.working_hours || "",
+          phone: firstPhone,
+          city_name: ci.city || "",
+        });
       }
-
-      // Set mock data for development/demo purposes
-      const mockAnalyticsData: AnalyticsDataPoint[] = [
-        { date: '2026-01-05', day: 'Вс', consultations: 12, completed_consultations: 10, appointments: 8, revenue: 50000, new_patients: 5 },
-        { date: '2026-01-06', day: 'Пн', consultations: 18, completed_consultations: 15, appointments: 12, revenue: 75000, new_patients: 8 },
-        { date: '2026-01-07', day: 'Вт', consultations: 15, completed_consultations: 13, appointments: 10, revenue: 65000, new_patients: 6 },
-        { date: '2026-01-08', day: 'Ср', consultations: 20, completed_consultations: 18, appointments: 15, revenue: 90000, new_patients: 10 },
-        { date: '2026-01-09', day: 'Чт', consultations: 22, completed_consultations: 20, appointments: 17, revenue: 100000, new_patients: 12 },
-        { date: '2026-01-10', day: 'Пт', consultations: 25, completed_consultations: 22, appointments: 20, revenue: 110000, new_patients: 15 },
-        { date: '2026-01-11', day: 'Сб', consultations: 16, completed_consultations: 14, appointments: 11, revenue: 70000, new_patients: 7 },
-      ];
-
-      setStats({
-        is_super_admin: false,
-        clinic_info: {
-          id: 1,
-          name: "Демо Клиника",
-          address: "Алматы, ул. Демонстрационная 123",
-          rating: 4.8
-        },
-        total_doctors: 12,
-        total_nurses: 8,
-        total_patients: 156,
-        active_consultations: 3,
-        completed_consultations_today: 15,
-        pending_appointments: 7,
-        total_revenue_month: 2500000,
-        average_rating: 4.8,
-        analytics_data: mockAnalyticsData,
-        user_distribution: {
-          doctors: 12,
-          nurses: 8,
-          patients: 156
-        },
-        consultation_status_distribution: {
-          pending: 5,
-          in_progress: 3,
-          completed: 142,
-          cancelled: 8
-        }
-      });
-    } finally {
-      setLoading(false);
+    } catch {
+      setStats({ is_super_admin: false, clinic_info: { id: 1, name: "Демо Клиника", description: "", address: "Алматы, ул. Демонстрационная 123", city: "Алматы", working_hours: "", phones: [], rating: 4.8 } });
     }
   };
 
-  const statCards = stats ? [
-    {
-      title: "Всего Докторов",
-      value: stats.total_doctors,
-      icon: Stethoscope,
-      gradient: "from-[#3772ff] to-[#2956bf]",
-      bgColor: "bg-[#ebf1ff]",
-      iconColor: "text-[#3772ff]",
-      changeText: "Активные специалисты",
-      changeColor: "text-[#2956bf]"
-    },
-    {
-      title: "Всего Медсестер",
-      value: stats.total_nurses,
-      icon: UserPlus,
-      gradient: "from-[#3267e6] to-[#214499]",
-      bgColor: "bg-[#e1eaff]",
-      iconColor: "text-[#3267e6]",
-      changeText: "Медицинский персонал",
-      changeColor: "text-[#214499]"
-    },
-    {
-      title: "Всего Пациентов",
-      value: stats.total_patients,
-      icon: Users,
-      gradient: "from-[#2c5bcc] to-[#193373]",
-      bgColor: "bg-[#c1d3ff]",
-      iconColor: "text-[#2c5bcc]",
-      changeText: "Зарегистрированные",
-      changeColor: "text-[#193373]"
-    },
-    {
-      title: "Активные Консультации",
-      value: stats.active_consultations,
-      icon: Video,
-      gradient: "from-[#283353] to-[#1e263e]",
-      bgColor: "bg-[#eaebee]",
-      iconColor: "text-[#283353]",
-      changeText: "Сейчас онлайн",
-      changeColor: "text-[#1e263e]"
-    },
-    {
-      title: "Завершено Сегодня",
-      value: stats.completed_consultations_today,
-      icon: CheckCircle,
-      gradient: "from-[#3772ff] to-[#3267e6]",
-      bgColor: "bg-[#ebf1ff]",
-      iconColor: "text-[#3772ff]",
-      changeText: "Успешно выполнено",
-      changeColor: "text-[#2956bf]"
-    },
-    {
-      title: "Ожидающие Записи",
-      value: stats.pending_appointments,
-      icon: Clock,
-      gradient: "from-[#2c5bcc] to-[#2956bf]",
-      bgColor: "bg-[#e1eaff]",
-      iconColor: "text-[#2c5bcc]",
-      changeText: "В очереди",
-      changeColor: "text-[#214499]"
-    },
-    {
-      title: "Доход за Месяц",
-      value: `${(stats.total_revenue_month || 140000).toLocaleString()} ₸`,
-      icon: DollarSign,
-      gradient: "from-[#3267e6] to-[#193373]",
-      bgColor: "bg-[#c1d3ff]",
-      iconColor: "text-[#3267e6]",
-      changeText: "Общий доход",
-      changeColor: "text-[#2956bf]"
-    },
-    {
-      title: "Средний Рейтинг",
-      value: stats.average_rating.toFixed(1),
-      icon: Star,
-      gradient: "from-[#3772ff] to-[#2c5bcc]",
-      bgColor: "bg-[#ebf1ff]",
-      iconColor: "text-[#3772ff]",
-      changeText: "Оценка клиники",
-      changeColor: "text-[#214499]"
-    },
-  ] : [];
+  const handleSavePersonal = async () => {
+    setSavingPersonal(true);
+    try {
+      await api.patch("/user-profile/profile/", personalForm);
+      toast.success("Личные данные обновлены");
+      setSavedPersonal(true);
+      setTimeout(() => setSavedPersonal(false), 2500);
+    } catch {
+      toast.error("Не удалось сохранить данные");
+    } finally {
+      setSavingPersonal(false);
+    }
+  };
+
+  const handleSaveClinic = async () => {
+    if (!stats?.clinic_info?.id) return;
+    setSavingClinic(true);
+    try {
+      await api.patch(`/clinic-update/${stats.clinic_info.id}/`, clinicForm);
+      toast.success("Данные клиники обновлены");
+      setSavedClinic(true);
+      setTimeout(() => setSavedClinic(false), 2500);
+    } catch {
+      toast.error("Не удалось сохранить данные клиники");
+    } finally {
+      setSavingClinic(false);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error("Файл слишком большой. Максимум 5 МБ."); return; }
+    setAvatarPreview(URL.createObjectURL(file));
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("avatar", file);
+      const res = await api.post("/user-profile/avatar/", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      setAvatarPreview(resolveAvatarUrl(res.data.avatar));
+      toast.success("Фото обновлено");
+    } catch {
+      toast.error("Не удалось загрузить фото");
+      setAvatarPreview(resolveAvatarUrl(user.avatar));
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const handleDeleteAvatar = async () => {
+    setDeleting(true);
+    try {
+      await api.delete("/user-profile/avatar/");
+      setAvatarPreview(null);
+      toast.success("Фото удалено");
+    } catch {
+      toast.error("Не удалось удалить фото");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const initials = `${personalForm.first_name?.[0] ?? ""}${personalForm.last_name?.[0] ?? ""}`.toUpperCase();
 
   return (
-    <div className="w-full">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="w-16 h-16 animate-spin mb-4" style={{ color: '#3772ff' }} />
-            <span className="text-lg font-medium" style={{ color: '#283353' }}>
-              Загрузка статистики...
-            </span>
-          </div>
-        ) : null}
+    <div className="w-full space-y-6">
 
-        {/* Clinic Info Banner - Show when admin manages specific clinic */}
-        {!loading && stats && !stats.is_super_admin && stats.clinic_info && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-3xl p-6 flex items-center gap-4 border-2 mb-8"
-            style={{
-              background: 'linear-gradient(135deg, #ebf1ff 0%, #d6e4ff 100%)',
-              borderColor: '#3772ff'
-            }}
-          >
-            {/* Clinic Logo or Stethoscope Icon */}
-            {(stats.clinic_info.id === 913 || stats.clinic_info.name?.toLowerCase().includes('ayala')) ? (
-              <div className="flex-shrink-0 bg-white p-2 rounded-xl border-2 border-[#3772ff] shadow-md">
-                <Image
-                  src={ayalaClinicLogo}
-                  alt="Ayala Clinic"
-                  width={80}
-                  height={28}
-                  className="object-contain"
-                  priority={false}
-                />
-              </div>
-            ) : (stats.clinic_info.name?.toLowerCase().includes('bn') || stats.clinic_info.name?.toLowerCase().includes('бн')) ? (
-              <div className="flex-shrink-0 bg-white p-2 rounded-xl border-2 border-[#3772ff] shadow-md">
-                <Image
-                  src={bnClinicLogo}
-                  alt="BN Clinic"
-                  width={80}
-                  height={28}
-                  className="object-contain"
-                  priority={false}
-                />
-              </div>
-            ) : (
-              <Stethoscope className="w-7 h-7 flex-shrink-0" style={{ color: '#3772ff' }} />
-            )}
-            <div className="flex-1">
-              <h3 className="font-bold text-base mb-1" style={{ color: '#1e263e' }}>
-                {stats.clinic_info.name}
-              </h3>
-              <p className="text-sm" style={{ color: '#283353' }}>
-                {stats.clinic_info.address}
-              </p>
+      {/* ── HERO CARD ─────────────────────────────────────────── */}
+      <div className="relative rounded-3xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #12263a 0%, #1e263e 30%, #29358f 70%, #3772ff 100%)' }}>
+        {/* Ambient blobs */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute -top-16 -left-16 w-72 h-72 rounded-full blur-3xl opacity-30" style={{ background: 'radial-gradient(circle, #3772ff 0%, transparent 70%)' }} />
+          <div className="absolute -bottom-20 right-10 w-64 h-64 rounded-full blur-3xl opacity-20" style={{ background: 'radial-gradient(circle, #8b5cf6 0%, transparent 70%)' }} />
+          <div className="absolute top-8 right-1/3 w-40 h-40 rounded-full blur-2xl opacity-10" style={{ background: 'radial-gradient(circle, #60a5fa 0%, transparent 70%)' }} />
+          {/* Decorative grid */}
+          <svg className="absolute right-0 top-0 h-full opacity-5" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice">
+            <defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="white" strokeWidth="0.5"/></pattern></defs>
+            <rect width="200" height="200" fill="url(#grid)" />
+          </svg>
+        </div>
+
+        <div className="relative flex flex-col sm:flex-row items-center sm:items-end gap-6 px-8 py-8 sm:py-10">
+          {/* Avatar */}
+          <div className="relative flex-shrink-0 group">
+            <div className="w-28 h-28 rounded-3xl overflow-hidden border-4 border-white shadow-2xl"
+                 style={{ background: avatarPreview ? 'transparent' : 'linear-gradient(135deg, #3772ff 0%, #8b5cf6 100%)' }}>
+              {avatarPreview ? (
+                <img src={avatarPreview} alt="avatar" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <span className="text-white font-black text-4xl drop-shadow">{initials || <User className="w-12 h-12" />}</span>
+                </div>
+              )}
+              {(uploading || deleting) && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                  <Loader2 className="w-7 h-7 text-white animate-spin" />
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-2">
-              <Star className="w-5 h-5" style={{ color: '#fbbf24' }} fill="#fbbf24" />
-              <span className="font-semibold text-lg" style={{ color: '#1e263e' }}>
-                {stats.clinic_info.rating.toFixed(1)}
+
+            {/* Camera overlay */}
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading || deleting}
+              className="absolute inset-0 rounded-3xl bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-1 cursor-pointer"
+            >
+              <Camera className="w-6 h-6 text-white" />
+              <span className="text-white text-[10px] font-bold">Изменить</span>
+            </button>
+
+            {/* Online dot */}
+            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-400 rounded-full border-2 border-[#1e263e] shadow-lg animate-pulse" />
+          </div>
+
+          {/* Name + info */}
+          <div className="flex-1 text-center sm:text-left">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-1">
+              <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                {personalForm.first_name} {personalForm.last_name}
+              </h1>
+              {stats?.is_super_admin && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-purple-200 border border-purple-400/40"
+                      style={{ background: 'rgba(139,92,246,0.25)' }}>
+                  <Sparkles className="w-3 h-3" /> Супер Админ
+                </span>
+              )}
+            </div>
+            <p className="text-blue-200/80 text-sm mb-3">{personalForm.email}</p>
+            <div className="flex flex-wrap justify-center sm:justify-start gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-white/90 border border-white/20"
+                    style={{ background: 'rgba(55,114,255,0.3)' }}>
+                <FontAwesomeIcon icon={faBolt} className="text-xs" /> Администратор
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold text-emerald-300 border border-emerald-400/30"
+                    style={{ background: 'rgba(16,185,129,0.15)' }}>
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Онлайн
               </span>
             </div>
-          </motion.div>
-        )}
-
-        {/* Super Admin Badge */}
-        {!loading && stats && stats.is_super_admin && !error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-3xl p-6 flex items-center gap-4 border-2 mb-8"
-            style={{
-              background: 'linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)',
-              borderColor: '#8b5cf6'
-            }}
-          >
-            <Shield className="w-7 h-7 flex-shrink-0" style={{ color: '#8b5cf6' }} />
-            <div>
-              <h3 className="font-bold text-base mb-1" style={{ color: '#1e263e' }}>
-                Системный Администратор
-              </h3>
-              <p className="text-sm" style={{ color: '#6b21a8' }}>
-                Управление всей платформой и всеми клиниками
-              </p>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Show stats even if there's an error (using mock data) */}
-        {stats && (
-          <>
-        {/* Statistics Grid */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="mb-8"
-        >
-          <h2 className="text-3xl font-bold mb-6 flex items-center gap-3" style={{ color: '#1e263e' }}>
-            <TrendingUp className="w-8 h-8" style={{ color: '#3772ff' }} />
-            Статистика Клиники
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {statCards.map((card, index) => (
-                  <motion.div
-                    key={card.title}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 * index }}
-                    className="group relative overflow-hidden rounded-3xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:-translate-y-1"
-                    style={{
-                      background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-                    }}
-                  >
-                    {/* Gradient Accent */}
-                    <div
-                      className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r ${card.gradient}`}
-                    ></div>
-
-                    {/* Icon */}
-                    <div className="flex items-center justify-between mb-4">
-                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${card.bgColor} transition-transform duration-300 group-hover:scale-110`}>
-                        <card.icon className={`w-7 h-7 ${card.iconColor}`} />
-                      </div>
-                      <div className={`w-2 h-2 rounded-full ${card.bgColor} animate-pulse`}></div>
-                    </div>
-
-                    {/* Content */}
-                    <h3 className="text-sm font-semibold mb-2 text-gray-600 uppercase tracking-wide">
-                      {card.title}
-                    </h3>
-                    <p className="text-3xl font-bold mb-2" style={{ color: '#1e263e' }}>
-                      {card.value}
-                    </p>
-                    <p className={`text-sm font-medium ${card.changeColor} flex items-center gap-1`}>
-                      <Activity className="w-4 h-4" />
-                      {card.changeText}
-                    </p>
-
-                    {/* Hover Effect */}
-                    <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300`}></div>
-                  </motion.div>
-            ))}
           </div>
-        </motion.div>
 
-        {/* Quick Actions */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="rounded-3xl p-8 shadow-lg border border-gray-100"
-          style={{
-            background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-          }}
-        >
-          <h2 className="text-2xl font-bold mb-6 flex items-center gap-3" style={{ color: '#1e263e' }}>
-            <Calendar className="w-7 h-7" style={{ color: '#3772ff' }} />
-            Быстрые Действия
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { title: 'Управление Персоналом', icon: Users, color: '#3772ff' },
-              { title: 'Просмотр Расписания', icon: Calendar, color: '#3267e6' },
-              { title: 'Просмотр Отчетов', icon: TrendingUp, color: '#2c5bcc' },
-              { title: 'История Активности', icon: Activity, color: '#2956bf' },
-            ].map((action, index) => (
-              <motion.button
-                key={action.title}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.5 + index * 0.1 }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="p-6 rounded-2xl border-2 border-gray-200 hover:border-transparent transition-all duration-300 text-left group"
-                style={{
-                  background: 'white',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = `linear-gradient(135deg, ${action.color}15 0%, ${action.color}05 100%)`;
-                  e.currentTarget.style.borderColor = `${action.color}40`;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'white';
-                  e.currentTarget.style.borderColor = '#e5e7eb';
-                }}
+          {/* Avatar action buttons */}
+          <div className="flex gap-2 flex-shrink-0">
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading || deleting}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white border border-white/20 hover:bg-white/10 transition-all disabled:opacity-40"
+              style={{ background: 'rgba(55,114,255,0.3)' }}
+            >
+              <Camera className="w-3.5 h-3.5" />
+              {avatarPreview ? "Заменить фото" : "Загрузить фото"}
+            </button>
+            {avatarPreview && (
+              <button
+                onClick={handleDeleteAvatar}
+                disabled={uploading || deleting}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-red-300 border border-red-400/30 hover:bg-red-500/10 transition-all disabled:opacity-40"
               >
-                <action.icon
-                  className="w-8 h-8 mb-3 transition-transform duration-300 group-hover:scale-110"
-                  style={{ color: action.color }}
-                />
-                <h3 className="font-semibold text-gray-800 group-hover:text-gray-900">
-                  {action.title}
-                </h3>
+                <Trash2 className="w-3.5 h-3.5" />
+                Удалить
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom accent line */}
+        <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+      </div>
+
+      {/* ── PERSONAL INFO ─────────────────────────────────────── */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+        className="relative bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+
+        {/* Left accent bar */}
+        <div className="absolute left-0 top-0 w-1 h-full rounded-r-full" style={{ background: 'linear-gradient(to bottom, #3772ff, #6048f5)' }} />
+
+        <div className="px-8 py-6">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #ebf1ff, #d6e4ff)' }}>
+                <User className="w-4 h-4 text-blue-600" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-gray-800">Личные данные</h2>
+                <p className="text-xs text-gray-400">Редактирование профиля администратора</p>
+              </div>
+            </div>
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold text-blue-600 bg-blue-50 border border-blue-100">
+              <Lock className="w-3 h-3" /> Защищено
+            </div>
+          </div>
+
+          {/* Fields */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <InputField label="Имя" value={personalForm.first_name} onChange={v => setPersonalForm(p => ({ ...p, first_name: v }))} icon={User} />
+            <InputField label="Фамилия" value={personalForm.last_name} onChange={v => setPersonalForm(p => ({ ...p, last_name: v }))} icon={User} />
+            <InputField label="Email" value={personalForm.email} onChange={v => setPersonalForm(p => ({ ...p, email: v }))} icon={Mail} type="email" />
+            <InputField label="Телефон" value={personalForm.phone} onChange={v => setPersonalForm(p => ({ ...p, phone: v }))} icon={Phone} placeholder="+7 (___) ___-__-__" />
+          </div>
+
+          {/* Save */}
+          <div className="mt-6 flex justify-end">
+            <motion.button
+              onClick={handleSavePersonal}
+              disabled={savingPersonal}
+              whileTap={{ scale: 0.97 }}
+              className="relative flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white shadow-lg hover:shadow-xl disabled:opacity-50 transition-all overflow-hidden"
+              style={{ background: 'linear-gradient(135deg, #3772ff 0%, #6048f5 100%)' }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 -translate-x-full hover:translate-x-full transition-transform duration-700" />
+              {savingPersonal ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : savedPersonal ? (
+                <CheckCircle2 className="w-4 h-4 text-green-200" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              {savedPersonal ? "Сохранено!" : "Сохранить"}
+            </motion.button>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ── CLINIC INFO ───────────────────────────────────────── */}
+      {stats && !stats.is_super_admin && stats.clinic_info && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          className="relative bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+
+          {/* Left accent bar */}
+          <div className="absolute left-0 top-0 w-1 h-full rounded-r-full" style={{ background: 'linear-gradient(to bottom, #10b981, #059669)' }} />
+
+          <div className="px-8 py-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)' }}>
+                <Building2 className="w-4 h-4 text-emerald-600" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-gray-800">Данные клиники</h2>
+                <p className="text-xs text-gray-400">Управление информацией о клинике</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Row 1: name */}
+              <div className="sm:col-span-2">
+                <InputField label="Название клиники" value={clinicForm.name} onChange={v => setClinicForm(p => ({ ...p, name: v }))} icon={Building2} />
+              </div>
+
+              {/* Row 2: city + phone */}
+              <InputField label="Город" value={clinicForm.city_name} onChange={v => setClinicForm(p => ({ ...p, city_name: v }))} icon={MapPin} placeholder="Алматы" />
+              <InputField label="Телефон клиники" value={clinicForm.phone} onChange={v => setClinicForm(p => ({ ...p, phone: v }))} icon={Phone} placeholder="+7 (___) ___-__-__" />
+
+              {/* Row 3: address */}
+              <div className="sm:col-span-2">
+                <InputField label="Адрес" value={clinicForm.address} onChange={v => setClinicForm(p => ({ ...p, address: v }))} icon={MapPin} />
+              </div>
+
+              {/* Row 4: working hours */}
+              <InputField label="Часы работы" value={clinicForm.working_hours} onChange={v => setClinicForm(p => ({ ...p, working_hours: v }))} icon={Clock} placeholder="Пн-Пт: 9:00–18:00, Сб: 10:00–15:00" />
+
+              {/* Row 5: description */}
+              <div className="sm:col-span-2 flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Описание клиники</label>
+                <div className="relative group">
+                  <AlignLeft className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" />
+                  <textarea
+                    rows={3}
+                    value={clinicForm.description}
+                    onChange={e => setClinicForm(p => ({ ...p, description: e.target.value }))}
+                    placeholder="Краткое описание клиники, специализации, особенностей..."
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-300 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all duration-200 shadow-sm hover:border-gray-300 resize-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <motion.button
+                onClick={handleSaveClinic}
+                disabled={savingClinic}
+                whileTap={{ scale: 0.97 }}
+                className="relative flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white shadow-lg hover:shadow-xl disabled:opacity-50 transition-all overflow-hidden"
+                style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 -translate-x-full hover:translate-x-full transition-transform duration-700" />
+                {savingClinic ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : savedClinic ? (
+                  <CheckCircle2 className="w-4 h-4 text-green-100" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                {savedClinic ? "Сохранено!" : "Сохранить"}
               </motion.button>
-            ))}
+            </div>
           </div>
         </motion.div>
+      )}
 
-        {/* Analytics Charts Section */}
-        {stats?.analytics_data && stats.analytics_data.length > 0 && (
-          <>
-            {/* Revenue & Consultations Trend */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-              className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8"
-            >
-              {/* Revenue Trend Chart */}
-              <div className="rounded-3xl p-8 shadow-lg border border-gray-100" style={{ background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)' }}>
-                <h2 className="text-2xl font-bold mb-6 flex items-center gap-3" style={{ color: '#1e263e' }}>
-                  <BarChart3 className="w-7 h-7" style={{ color: '#3772ff' }} />
-                  Тренд Доходов (7 дней)
-                </h2>
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={stats.analytics_data.map(d => ({ ...d, revenue: d.revenue || [50000,75000,65000,90000,100000,110000,70000][stats.analytics_data!.indexOf(d)] || 60000 }))}>
-                    <defs>
-                      <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3772ff" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#3772ff" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis dataKey="day" stroke="#6b7280" style={{ fontSize: '14px' }} />
-                    <YAxis stroke="#6b7280" style={{ fontSize: '14px' }} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#ffffff',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '12px',
-                        padding: '12px'
-                      }}
-                      formatter={(value: number) => [`${value.toLocaleString()} ₸`, 'Доход']}
-                      labelFormatter={(label) => `День: ${label}`}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="revenue"
-                      stroke="#3772ff"
-                      strokeWidth={3}
-                      fill="url(#revenueGradient)"
-                      name="Доход"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
+      {/* ── SUPER ADMIN BADGE ─────────────────────────────────── */}
+      {stats?.is_super_admin && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          className="relative rounded-3xl p-6 flex items-center gap-5 overflow-hidden border border-purple-200/50"
+          style={{ background: 'linear-gradient(135deg, #faf5ff 0%, #f3e8ff 50%, #ede9fe 100%)' }}>
+          <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full blur-3xl opacity-30" style={{ background: 'radial-gradient(circle, #8b5cf6, transparent)' }} />
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0"
+               style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)' }}>
+            <Shield className="w-7 h-7 text-white" />
+          </div>
+          <div>
+            <h3 className="font-black text-base text-purple-900">Системный Администратор</h3>
+            <p className="text-sm text-purple-700 mt-0.5">Полный доступ ко всем клиникам и ресурсам платформы</p>
+          </div>
+        </motion.div>
+      )}
 
-              {/* Consultations Trend */}
-              <div className="rounded-3xl p-8 shadow-lg border border-gray-100" style={{ background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)' }}>
-                <h2 className="text-2xl font-bold mb-6 flex items-center gap-3" style={{ color: '#1e263e' }}>
-                  <TrendingUp className="w-7 h-7" style={{ color: '#3267e6' }} />
-                  Консультации и Записи
-                </h2>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={stats.analytics_data}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis dataKey="day" stroke="#6b7280" style={{ fontSize: '14px' }} />
-                    <YAxis stroke="#6b7280" style={{ fontSize: '14px' }} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#ffffff',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '12px',
-                        padding: '12px'
-                      }}
-                      labelFormatter={(label) => `День: ${label}`}
-                    />
-                    <Legend wrapperStyle={{ fontSize: '14px', paddingTop: '20px' }} />
-                    <Line
-                      type="monotone"
-                      dataKey="consultations"
-                      stroke="#3267e6"
-                      strokeWidth={3}
-                      dot={{ fill: '#3267e6', r: 5 }}
-                      name="Консультации"
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="appointments"
-                      stroke="#2c5bcc"
-                      strokeWidth={3}
-                      dot={{ fill: '#2c5bcc', r: 5 }}
-                      name="Записи"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </motion.div>
-
-            {/* Distribution Charts */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.7 }}
-              className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8"
-            >
-              {/* User Distribution Pie Chart */}
-              {stats.user_distribution && (
-                <div className="rounded-3xl p-8 shadow-lg border border-gray-100" style={{ background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)' }}>
-                  <h2 className="text-2xl font-bold mb-6 flex items-center gap-3" style={{ color: '#1e263e' }}>
-                    <PieChartIcon className="w-7 h-7" style={{ color: '#2956bf' }} />
-                    Распределение Пользователей
-                  </h2>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={[
-                          { name: 'Пациенты', value: stats.user_distribution.patients, color: '#3772ff' },
-                          { name: 'Доктора', value: stats.user_distribution.doctors, color: '#3267e6' },
-                          { name: 'Медсестры', value: stats.user_distribution.nurses, color: '#2c5bcc' },
-                        ]}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={100}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {[
-                          { name: 'Пациенты', value: stats.user_distribution.patients, color: '#3772ff' },
-                          { name: 'Доктора', value: stats.user_distribution.doctors, color: '#3267e6' },
-                          { name: 'Медсестры', value: stats.user_distribution.nurses, color: '#2c5bcc' },
-                        ].map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#ffffff',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '12px',
-                          padding: '12px'
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-
-              {/* Consultation Status Bar Chart */}
-              {stats.consultation_status_distribution && (
-                <div className="rounded-3xl p-8 shadow-lg border border-gray-100" style={{ background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)' }}>
-                  <h2 className="text-2xl font-bold mb-6 flex items-center gap-3" style={{ color: '#1e263e' }}>
-                    <Activity className="w-7 h-7" style={{ color: '#2956bf' }} />
-                    Статус Консультаций
-                  </h2>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart
-                      data={[
-                        { name: 'Ожидание', value: stats.consultation_status_distribution.pending, color: '#f59e0b' },
-                        { name: 'В процессе', value: stats.consultation_status_distribution.in_progress, color: '#3772ff' },
-                        { name: 'Завершено', value: stats.consultation_status_distribution.completed, color: '#10b981' },
-                        { name: 'Отменено', value: stats.consultation_status_distribution.cancelled, color: '#ef4444' },
-                      ]}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis dataKey="name" stroke="#6b7280" style={{ fontSize: '14px' }} />
-                      <YAxis stroke="#6b7280" style={{ fontSize: '14px' }} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#ffffff',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '12px',
-                          padding: '12px'
-                        }}
-                        formatter={(value: number) => [`${value}`, 'Количество']}
-                      />
-                      <Bar dataKey="value" radius={[8, 8, 0, 0]} name="Количество">
-                        {[
-                          { name: 'Ожидание', value: stats.consultation_status_distribution.pending, color: '#f59e0b' },
-                          { name: 'В процессе', value: stats.consultation_status_distribution.in_progress, color: '#3772ff' },
-                          { name: 'Завершено', value: stats.consultation_status_distribution.completed, color: '#10b981' },
-                          { name: 'Отменено', value: stats.consultation_status_distribution.cancelled, color: '#ef4444' },
-                        ].map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-            </motion.div>
-
-            {/* New Patients Trend */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.8 }}
-              className="rounded-3xl p-8 shadow-lg border border-gray-100 mt-8"
-              style={{ background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)' }}
-            >
-              <h2 className="text-2xl font-bold mb-6 flex items-center gap-3" style={{ color: '#1e263e' }}>
-                <UserPlus className="w-7 h-7" style={{ color: '#8b5cf6' }} />
-                Новые Пациенты (7 дней)
-              </h2>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={stats.analytics_data}>
-                  <defs>
-                    <linearGradient id="patientGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.2}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="day" stroke="#6b7280" style={{ fontSize: '14px' }} />
-                  <YAxis stroke="#6b7280" style={{ fontSize: '14px' }} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '12px',
-                      padding: '12px'
-                    }}
-                    formatter={(value: number) => [`${value}`, 'Новые пациенты']}
-                    labelFormatter={(label) => `День: ${label}`}
-                  />
-                  <Bar dataKey="new_patients" fill="url(#patientGradient)" radius={[8, 8, 0, 0]} name="Новые пациенты" />
-                </BarChart>
-              </ResponsiveContainer>
-            </motion.div>
-          </>
-        )}
-        </>
-        )}
+      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFileChange} />
     </div>
   );
 }

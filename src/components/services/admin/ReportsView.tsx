@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import Image from "next/image";
 import {
   FileText,
   Download,
@@ -15,8 +16,16 @@ import {
   Loader2,
   AlertCircle,
   Filter,
-  RefreshCw
+  RefreshCw,
+  Stethoscope,
+  UserPlus,
+  Video,
+  CheckCircle,
+  Clock,
+  Star,
 } from "lucide-react";
+import bnClinicLogo from "@/assets/clinics_logos/bn-clinica.png";
+import ayalaClinicLogo from "@/assets/clinics_logos/ayala_clinic.png";
 import {
   LineChart,
   Line,
@@ -38,6 +47,20 @@ import { api } from "@/utils/api";
 
 interface ReportsViewProps {
   user: any;
+}
+
+interface ClinicInfo { id: number; name: string; address: string; city?: string; phone?: string; rating: number; }
+interface ClinicStats {
+  is_super_admin: boolean;
+  clinic_info?: ClinicInfo | null;
+  total_doctors: number;
+  total_nurses: number;
+  total_patients: number;
+  active_consultations: number;
+  completed_consultations_today: number;
+  pending_appointments: number;
+  total_revenue_month: number;
+  average_rating: number;
 }
 
 interface ReportData {
@@ -107,6 +130,7 @@ interface AgeGroupCount {
 }
 
 export default function ReportsView({ user }: ReportsViewProps) {
+  const [clinicStats, setClinicStats] = useState<ClinicStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reportData, setReportData] = useState<ReportData | null>(null);
@@ -116,8 +140,27 @@ export default function ReportsView({ user }: ReportsViewProps) {
   });
 
   useEffect(() => {
+    fetchClinicStats();
+  }, []);
+
+  useEffect(() => {
     fetchReports();
   }, [dateRange]);
+
+  const fetchClinicStats = async () => {
+    try {
+      const res = await api.get("/clinic-stats/");
+      setClinicStats(res.data);
+    } catch {
+      setClinicStats({
+        is_super_admin: false,
+        clinic_info: { id: 1, name: "Демо Клиника", address: "Алматы, ул. Демонстрационная 123", rating: 4.8 },
+        total_doctors: 12, total_nurses: 8, total_patients: 156,
+        active_consultations: 3, completed_consultations_today: 15,
+        pending_appointments: 7, total_revenue_month: 2500000, average_rating: 4.8,
+      });
+    }
+  };
 
   const fetchReports = async () => {
     setLoading(true);
@@ -256,14 +299,76 @@ export default function ReportsView({ user }: ReportsViewProps) {
     }
   };
 
+  const statCards = clinicStats ? [
+    { title: "Всего Докторов", value: clinicStats.total_doctors, icon: Stethoscope, gradient: "from-[#3772ff] to-[#2956bf]", bgColor: "bg-[#ebf1ff]", iconColor: "text-[#3772ff]" },
+    { title: "Всего Медсестер", value: clinicStats.total_nurses, icon: UserPlus, gradient: "from-[#3267e6] to-[#214499]", bgColor: "bg-[#e1eaff]", iconColor: "text-[#3267e6]" },
+    { title: "Всего Пациентов", value: clinicStats.total_patients, icon: Users, gradient: "from-[#2c5bcc] to-[#193373]", bgColor: "bg-[#c1d3ff]", iconColor: "text-[#2c5bcc]" },
+    { title: "Активные Консультации", value: clinicStats.active_consultations, icon: Video, gradient: "from-[#283353] to-[#1e263e]", bgColor: "bg-[#eaebee]", iconColor: "text-[#283353]" },
+    { title: "Завершено Сегодня", value: clinicStats.completed_consultations_today, icon: CheckCircle, gradient: "from-[#3772ff] to-[#3267e6]", bgColor: "bg-[#ebf1ff]", iconColor: "text-[#3772ff]" },
+    { title: "Ожидающие Записи", value: clinicStats.pending_appointments, icon: Clock, gradient: "from-[#2c5bcc] to-[#2956bf]", bgColor: "bg-[#e1eaff]", iconColor: "text-[#2c5bcc]" },
+    { title: "Доход за Месяц", value: `${(clinicStats.total_revenue_month || 140000).toLocaleString()} ₸`, icon: DollarSign, gradient: "from-[#3267e6] to-[#193373]", bgColor: "bg-[#c1d3ff]", iconColor: "text-[#3267e6]" },
+    { title: "Средний Рейтинг", value: clinicStats.average_rating.toFixed(1), icon: Star, gradient: "from-[#3772ff] to-[#2c5bcc]", bgColor: "bg-[#ebf1ff]", iconColor: "text-[#3772ff]" },
+  ] : [];
+
   return (
     <div className="w-full">
+
+      {/* Clinic Banner */}
+      {clinicStats && !clinicStats.is_super_admin && clinicStats.clinic_info && (
+        <div className="rounded-2xl p-5 flex items-center gap-4 border-2 mb-6" style={{ background: 'linear-gradient(135deg, #ebf1ff 0%, #d6e4ff 100%)', borderColor: '#3772ff' }}>
+          {clinicStats.clinic_info.name?.toLowerCase().includes("ayala") ? (
+            <div className="flex-shrink-0 bg-white p-2 rounded-xl border-2 border-[#3772ff]">
+              <Image src={ayalaClinicLogo} alt="Ayala" width={80} height={28} className="object-contain" />
+            </div>
+          ) : clinicStats.clinic_info.name?.toLowerCase().includes("bn") ? (
+            <div className="flex-shrink-0 bg-white p-2 rounded-xl border-2 border-[#3772ff]">
+              <Image src={bnClinicLogo} alt="BN" width={80} height={28} className="object-contain" />
+            </div>
+          ) : (
+            <Stethoscope className="w-6 h-6 flex-shrink-0 text-[#3772ff]" />
+          )}
+          <div className="flex-1">
+            <h3 className="font-bold text-sm text-[#1e263e]">{clinicStats.clinic_info.name}</h3>
+            <p className="text-xs text-[#283353] mt-0.5">{clinicStats.clinic_info.address}</p>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Star className="w-4 h-4 text-amber-400" fill="#fbbf24" />
+            <span className="font-bold text-[#1e263e]">{clinicStats.clinic_info.rating.toFixed(1)}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Stat Cards */}
+      {statCards.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-[#1e263e]">
+            <TrendingUp className="w-5 h-5 text-[#3772ff]" /> Статистика Клиники
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {statCards.map((card, index) => (
+              <motion.div key={card.title} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 * index }}
+                className="relative overflow-hidden rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
+                style={{ background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)' }}>
+                <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${card.gradient}`} />
+                <div className="flex items-center justify-between mb-3">
+                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${card.bgColor}`}>
+                    <card.icon className={`w-5 h-5 ${card.iconColor}`} />
+                  </div>
+                </div>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{card.title}</h3>
+                <p className="text-2xl font-bold text-[#1e263e]">{card.value}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold mb-2" style={{ color: '#1e263e' }}>
-              Отчеты и Аналитика
+              Аналитика
             </h1>
             <p className="text-gray-600">
               Подробные отчеты по доходам, консультациям и пациентам

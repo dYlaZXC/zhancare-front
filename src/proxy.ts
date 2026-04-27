@@ -21,7 +21,7 @@ const PROTECTED_PREFIXES = [
 // Routes only accessible when NOT authenticated
 const AUTH_ONLY_ROUTES = ["/login"];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isAuthenticated = !!request.cookies.get("zha_auth")?.value;
 

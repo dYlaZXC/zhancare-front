@@ -137,52 +137,17 @@ export const DoctorSidebar = ({
 
         {/* Enhanced Responsive Mobile/Tablet Header with Close Button Only */}
         <div className="flex justify-between items-center px-3 py-4 xs:px-4 xs:py-5 sm:px-6 sm:py-6 xl:hidden relative z-10 border-b border-white/10">
-          {/* Mobile Logo Container */}
-          <div className="relative group">
-            <Link href="/" onClick={() => setSidebarOpen(false)} className="block outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 rounded-2xl">
-              <div className="relative overflow-hidden rounded-2xl p-3 backdrop-blur-md border border-white/20 transition-all duration-500 group-hover:scale-105 group-hover:-rotate-1"
-                   style={{ 
-                     background: `
-                       linear-gradient(135deg, 
-                         rgba(55, 114, 255, 0.15) 0%, 
-                         rgba(50, 103, 230, 0.1) 50%, 
-                         rgba(41, 53, 143, 0.05) 100%
-                       )
-                     ` 
-                   }}>
-                
-                {/* Logo Image */}
-                <div className="relative">
-                  <Image 
-                    src={Logo} 
-                    alt="Logo" 
-                    width={100} 
-                    height={32} 
-                    priority 
-                    className="w-20 h-6 xs:w-24 xs:h-7 sm:w-28 sm:h-8 transition-all duration-500 group-hover:scale-110 drop-shadow-lg" 
-                  />
-                  
-                  {/* Animated glow behind logo */}
-                  <div className="absolute inset-0 -z-10 bg-gradient-to-r from-blue-400/20 via-purple-400/20 to-blue-600/20 rounded-xl blur-md opacity-0 group-hover:opacity-100 transition-all duration-500 animate-pulse"></div>
-                </div>
-                
-                {/* Shimmer overlay effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 transform translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1200 ease-out"></div>
-                
-                {/* Subtle border glow */}
-                <div className="absolute inset-0 rounded-2xl border border-white/10 group-hover:border-white/30 transition-all duration-500"></div>
-                
-                {/* Corner accent */}
-                <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-white/20 rounded-tr-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-white/20 rounded-bl-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-              </div>
-            </Link>
-
-            {/* Floating particles effect */}
-            <div className="absolute -top-2 -left-2 w-2 h-2 bg-blue-400 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-700 group-hover:animate-bounce" style={{ animationDelay: '0s' }}></div>
-            <div className="absolute -top-1 -right-3 w-1.5 h-1.5 bg-purple-400 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-700 group-hover:animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-            <div className="absolute -bottom-2 -right-1 w-2 h-2 bg-indigo-400 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-700 group-hover:animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-          </div>
+          {/* Mobile Logo */}
+          <Link href="/" onClick={() => setSidebarOpen(false)} className="block outline-none focus:outline-none">
+            <Image
+              src={Logo}
+              alt="Logo"
+              width={220}
+              height={55}
+              priority
+              className="w-full max-w-[160px] h-auto hover:opacity-90 transition-opacity duration-300 drop-shadow-lg"
+            />
+          </Link>
 
           {/* Enhanced Close Button */}
           <div className="relative group">
@@ -247,36 +212,32 @@ export const DoctorSidebar = ({
         </div>
 
         {/* Desktop Logo - Hidden on mobile/tablet, shown only on XL screens and above */}
-        <div className={`hidden xl:flex items-center ${isCollapsed ? 'justify-center px-2 py-4' : 'justify-center px-4 py-6 md:px-6 md:py-8'} relative z-10 overflow-hidden`}>
-          <Link href="/" className="group relative outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 rounded-2xl">
-            <div className={`relative overflow-hidden rounded-2xl ${isCollapsed ? 'p-2' : 'p-4'} backdrop-blur-sm border border-white/10`} style={{ background: 'rgba(55, 114, 255, 0.05)' }}>
-              {isCollapsed ? (
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-lg font-bold text-white shadow-md"
-                     style={{ background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)' }}>
-                  Z
-                </div>
-              ) : (
-                <Image 
-                  src={Logo} 
-                  alt="Logo" 
-                  width={280} 
-                  height={55} 
-                  priority 
-                  className="w-auto h-12 group-hover:scale-105 transition-all duration-500" 
-                />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
-            </div>
+        <div className={`hidden xl:flex items-center ${isCollapsed ? 'justify-center px-2 py-4' : 'px-4 py-5 md:px-6 md:py-6'} relative z-10`}>
+          <Link href="/" className="outline-none focus:outline-none w-full">
+            {isCollapsed ? (
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-lg font-bold text-white shadow-md mx-auto"
+                   style={{ background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)' }}>
+                Z
+              </div>
+            ) : (
+              <Image
+                src={Logo}
+                alt="Logo"
+                width={280}
+                height={55}
+                priority
+                className="w-full h-auto hover:opacity-90 transition-opacity duration-300 drop-shadow-lg"
+              />
+            )}
           </Link>
         </div>
 
         {/* Responsive User Info */}
         <div className={`${isCollapsed ? 'px-2 py-4' : 'px-3 py-4 xs:px-4 xs:py-5 sm:px-6 sm:py-6'} text-center relative z-10`}>
           <div className="relative group mb-4 flex justify-center">
-            <div className={`relative ${isCollapsed ? 'w-10 h-10' : 'w-16 h-16 xs:w-18 xs:h-18 sm:w-20 sm:h-20'} rounded-xl xs:rounded-2xl flex items-center justify-center ${isCollapsed ? 'text-sm' : 'text-xl xs:text-2xl sm:text-2xl'} font-bold shadow-2xl transform group-hover:scale-110 transition-all duration-300 border-2 backdrop-blur-sm`}
-                 style={{ 
+            <div className={`relative ${isCollapsed ? 'w-10 h-10' : 'w-16 h-16 xs:w-18 xs:h-18 sm:w-20 sm:h-20'} rounded-xl xs:rounded-2xl flex items-center justify-center ${isCollapsed ? 'text-sm' : 'text-xl xs:text-2xl sm:text-2xl'} font-bold shadow-2xl transform group-hover:scale-110 transition-all duration-300 border-2 border-white backdrop-blur-sm`}
+                 style={{
                    background: getRoleGradient(userRole).bg,
-                   borderColor: getRoleGradient(userRole).border 
                  }}>
               <span className="relative z-10 text-white drop-shadow-lg">
                 {user.first_name.charAt(0)}
@@ -514,7 +475,7 @@ export const DoctorSidebar = ({
 
       {/* Desktop Sidebar - Always visible on XL screens (1280px+) and above */}
       <aside
-        className={`hidden xl:flex fixed top-0 left-0 h-screen ${isCollapsed ? "w-20" : "w-80"} text-white flex-col transition-all duration-500 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; z-40 shadow-2xl border-r border-white/10 backdrop-blur-xl will-change-transform overflow-x-hidden`}
+        className={`hidden xl:flex fixed top-0 left-0 h-screen ${isCollapsed ? "w-20" : "w-80"} text-white flex-col justify-between overflow-y-hidden transition-all duration-500 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; z-40 shadow-2xl border-r border-white/10 backdrop-blur-xl will-change-transform overflow-x-hidden`}
         style={{
           background: `
             radial-gradient(circle at ${mousePos.x}px ${mousePos.y}px, rgba(55, 114, 255, 0.2) 0%, transparent 50%),
@@ -529,64 +490,72 @@ export const DoctorSidebar = ({
           <div className="absolute top-1/2 left-1/2 w-12 h-12 xs:w-16 xs:h-16 rounded-full blur-md animate-ping" style={{ background: 'radial-gradient(circle, rgba(67, 126, 255, 0.25) 0%, transparent 70%)', animationDuration: '2s' }}></div>
         </div>
 
+        {/* Top group: Logo + User Info */}
+        <div className="flex flex-col flex-shrink-0 relative z-10">
+
         {/* Desktop Logo */}
-        <div className={`flex items-center ${isCollapsed ? 'justify-center px-2 py-4' : 'justify-center px-6 py-8'} relative z-10 overflow-hidden`}>
-          <Link href="/" className="group relative outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-2 rounded-2xl">
-            <div className={`relative overflow-hidden rounded-2xl ${isCollapsed ? 'p-2' : 'p-4'} backdrop-blur-sm border border-white/10`} style={{ background: 'rgba(55, 114, 255, 0.05)' }}>
-              {isCollapsed ? (
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-lg font-bold text-white shadow-md"
-                     style={{ background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)' }}>
-                  Z
-                </div>
-              ) : (
-                <Image 
-                  src={Logo} 
-                  alt="Logo" 
-                  width={280} 
-                  height={55} 
-                  priority 
-                  className="w-auto h-12 group-hover:scale-105 transition-all duration-500" 
-                />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
-            </div>
+        <div className={`flex items-center ${isCollapsed ? 'justify-center px-2 py-4' : 'px-6 py-4'} relative z-10`}>
+          <Link href="/" className="outline-none focus:outline-none w-full">
+            {isCollapsed ? (
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-lg font-bold text-white shadow-md mx-auto"
+                   style={{ background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)' }}>
+                Z
+              </div>
+            ) : (
+              <Image
+                src={Logo}
+                alt="Logo"
+                width={280}
+                height={55}
+                priority
+                className="w-full h-auto hover:opacity-90 transition-opacity duration-300 drop-shadow-lg"
+              />
+            )}
           </Link>
         </div>
 
         {/* Desktop User Info */}
-        <div className={`${isCollapsed ? 'px-2 py-4' : 'px-6 py-6'} text-center relative z-10`}>
-          <div className="relative group mb-4 flex justify-center">
-            <div className={`relative ${isCollapsed ? 'w-10 h-10' : 'w-20 h-20'} rounded-2xl flex items-center justify-center ${isCollapsed ? 'text-sm' : 'text-2xl'} font-bold shadow-2xl transform group-hover:scale-110 transition-all duration-300 border-2 backdrop-blur-sm`}
-                 style={{ 
-                   background: getRoleGradient(userRole).bg,
-                   borderColor: getRoleGradient(userRole).border 
-                 }}>
-              <span className="relative z-10 text-white drop-shadow-lg">
-                {user.first_name.charAt(0)}
-              </span>
-              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-2xl"></div>
-              <div className="absolute -inset-1 bg-gradient-to-br from-white/30 to-transparent rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              
-              {/* Status indicator - online */}
-              <div className={`absolute -bottom-1 -right-1 ${isCollapsed ? 'w-3 h-3' : 'w-6 h-6'} bg-white rounded-full flex items-center justify-center shadow-lg border-2 border-white`}>
-                <div className={`${isCollapsed ? 'w-1.5 h-1.5' : 'w-3 h-3'} bg-emerald-400 rounded-full animate-pulse`}></div>
+        <div className={`${isCollapsed ? 'px-2 py-3' : 'px-6 py-3'} text-center relative z-10`}>
+          <div className="group mb-2">
+            {isCollapsed ? (
+              <div className="relative inline-block mx-auto">
+                <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center text-sm font-bold shadow-2xl border-2 border-white"
+                     style={{ background: user.avatar ? 'transparent' : getRoleGradient(userRole).bg }}>
+                  {user.avatar ? <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{user.first_name.charAt(0)}</span>}
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-white rounded-full flex items-center justify-center shadow border-2 border-white">
+                  <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="relative mx-auto w-full max-w-[140px] 2xl:max-w-[180px] aspect-square">
+                <div className="w-full h-full rounded-2xl overflow-hidden flex items-center justify-center text-4xl font-bold shadow-2xl border-2 border-white"
+                     style={{ background: user.avatar ? 'transparent' : getRoleGradient(userRole).bg }}>
+                  {user.avatar
+                    ? <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
+                    : <span className="text-white drop-shadow-lg">{user.first_name.charAt(0)}</span>}
+                  {!user.avatar && <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>}
+                </div>
+                <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-lg border-2 border-white">
+                  <div className="w-3 h-3 bg-emerald-400 rounded-full animate-pulse"></div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Desktop User Info - conditional based on collapsed state */}
           {!isCollapsed && (
             <>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl shadow-lg border backdrop-blur-sm mb-3 text-xs font-bold uppercase tracking-wide"
-                   style={{ 
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-xl shadow-lg border backdrop-blur-sm mb-2 text-xs font-bold uppercase tracking-wide"
+                   style={{
                      background: getRoleGradient(userRole).bg,
-                     borderColor: getRoleGradient(userRole).border 
+                     borderColor: getRoleGradient(userRole).border
                    }}>
                 <FontAwesomeIcon icon={getRoleIcon(userRole)} className="text-xs" />
                 <span>Доктор</span>
               </div>
 
-              <h2 className="text-lg font-bold mb-1 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent leading-tight">
+              <h2 className="text-base font-bold mb-0.5 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent leading-tight">
                 {user.first_name} {user.last_name}
               </h2>
               <p className="text-xs text-gray-300 break-words opacity-80 leading-relaxed">{user.email}</p>
@@ -594,9 +563,10 @@ export const DoctorSidebar = ({
           )}
         </div>
 
+        </div>{/* end top group */}
 
         {/* Desktop Navigation */}
-        <nav className={`mt-2 space-y-3 ${isCollapsed ? 'px-2' : 'px-6'} flex-1 overflow-y-auto overflow-x-hidden relative z-10`}>
+        <nav className={`flex-1 flex flex-col justify-start gap-2 ${isCollapsed ? 'px-2 py-3' : 'px-6 py-3'} overflow-x-hidden overflow-y-hidden relative z-10`}>
           {doctorMenu.map((item, index) => (
             <div key={`desktop-${item.id}`} className="relative">
               <Link
@@ -617,13 +587,13 @@ export const DoctorSidebar = ({
                 role="tab"
                 aria-selected={activeTab === item.id}
               >
-                <div className={`relative flex items-center gap-4 ${isCollapsed ? 'justify-center px-3 py-3' : 'px-5 py-4'} rounded-2xl text-left transition-all duration-300 overflow-hidden whitespace-nowrap ${
+                <div className={`relative flex items-center gap-4 ${isCollapsed ? 'justify-center px-3 py-2' : 'px-4 py-2.5 2xl:py-4'} rounded-2xl text-left transition-all duration-300 overflow-hidden whitespace-nowrap ${
                   activeTab === item.id
                     ? `text-white shadow-2xl font-semibold`
                     : "backdrop-blur-sm"
                 }`}
-                     style={activeTab === item.id 
-                       ? { 
+                     style={activeTab === item.id
+                       ? {
                            background: `rgba(55, 114, 255, 0.15)`,
                            border: '1px solid rgba(55, 114, 255, 0.4)',
                            boxShadow: '0 0 20px rgba(55, 114, 255, 0.2)',
@@ -652,7 +622,7 @@ export const DoctorSidebar = ({
                   )}
 
                   {/* Icon container */}
-                  <div className={`relative flex items-center justify-center ${isCollapsed ? 'w-6 h-6' : 'w-10 h-10'} rounded-xl transition-all duration-300 ${
+                  <div className={`relative flex items-center justify-center ${isCollapsed ? 'w-6 h-6' : 'w-9 h-9'} rounded-xl transition-all duration-300 ${
                     activeTab === item.id 
                       ? "text-white shadow-lg" 
                       : ""
@@ -718,7 +688,7 @@ export const DoctorSidebar = ({
         </nav>
 
         {/* Desktop Logout Button */}
-        <div className={`${isCollapsed ? 'px-2' : 'px-6'} py-6 relative z-10`}>
+        <div className={`${isCollapsed ? 'px-2' : 'px-6'} py-4 2xl:py-6 relative z-10 flex-shrink-0`}>
           <button
             onClick={handleLogout}
             className={`w-full group relative overflow-hidden min-h-[48px] ${isCollapsed ? 'px-3 py-3 justify-center' : 'px-5 py-4 justify-center gap-3'} rounded-2xl text-white font-semibold flex items-center transition-all duration-300 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; shadow-2xl hover:scale-105 hover:-translate-y-1 active:scale-95 border-0 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent will-change-transform`}

@@ -6,6 +6,7 @@ import { useAuth, computeRole } from "@/context/AuthContext";
 
 export interface FullUserProfile {
   id: number;
+  avatar?: string | null;
   first_name: string;
   last_name: string;
   email: string;
@@ -121,6 +122,7 @@ export const useUserProfile = () => {
   // Create the final user profile object with proper fallbacks
   const userProfile = fullUserProfile ? {
     id: String(fullUserProfile.id || user?.id || 0),
+    avatar: fullUserProfile.avatar ?? null,
     first_name: fullUserProfile.first_name || user?.first_name || "",
     last_name: fullUserProfile.last_name || user?.last_name || "",
     email: fullUserProfile.email || user?.email || "",

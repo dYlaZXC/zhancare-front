@@ -131,9 +131,11 @@ export const Header = ({
           <div className="hidden md:flex items-center gap-3 px-3 py-2 rounded-xl border border-gray-200/50 backdrop-blur-sm"
                style={{ background: 'linear-gradient(135deg, rgba(55, 114, 255, 0.03) 0%, rgba(41, 53, 143, 0.03) 100%)' }}>
             {/* Mini Avatar */}
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold text-white shadow-md"
-                 style={{ background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)' }}>
-              {user.first_name.charAt(0)}
+            <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center text-sm font-bold text-white shadow-md flex-shrink-0"
+                 style={user.avatar ? undefined : { background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)' }}>
+              {user.avatar
+                ? <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
+                : user.first_name.charAt(0)}
             </div>
             
             {/* User Info */}

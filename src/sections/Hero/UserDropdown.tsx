@@ -21,7 +21,7 @@ type Props = {
     role?: string;
     roles?: string[];
     email?: string;
-    avatar?: string;
+    avatar?: string | null;
   };
   onLogout: () => void;
   disableClickOutside?: boolean;
@@ -254,11 +254,10 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
         {/* Avatar */}
         <div className="relative shrink-0">
           {user.avatar ? (
-            <Image
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
               src={user.avatar}
               alt={`${user.first_name} avatar`}
-              width={32}
-              height={32}
               className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover ring-2 ring-white/30"
             />
           ) : (

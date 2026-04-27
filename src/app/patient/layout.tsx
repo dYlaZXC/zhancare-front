@@ -93,7 +93,7 @@ export default function PatientLayout({
           <Breadcrumb />
 
           {/* Page Content */}
-          <div className="px-3 pb-3 w-full">
+          <div className="px-3 pt-4 pb-3 w-full">
             {children}
           </div>
         </main>
