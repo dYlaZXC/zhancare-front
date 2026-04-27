@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUserInjured } from "@fortawesome/free-solid-svg-icons";
+import { useAuth } from "@/context/AuthContext";
 
 const BACKEND = process.env.NEXT_PUBLIC_API_URL?.replace("/api/v1", "") ?? "http://127.0.0.1:8000";
 const resolveAvatar = (url?: string | null) => {
@@ -261,6 +262,7 @@ function SaveButton({ saving, saved, onClick, color }: { saving: boolean; saved:
 
 // ─── Main component ───────────────────────────────────────────
 export default function PatientProfileDashboard() {
+  const { updateUser } = useAuth();
   const [profile, setProfile] = useState<PatientProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -341,7 +343,9 @@ export default function PatientProfileDashboard() {
     try {
       const fd = new FormData(); fd.append("avatar", file);
       const res = await api.post("/user-profile/avatar/", fd, { headers: { "Content-Type": "multipart/form-data" } });
-      setAvatarPreview(resolveAvatar(res.data.avatar));
+      const resolvedUrl = resolveAvatar(res.data.avatar);
+      setAvatarPreview(resolvedUrl);
+      updateUser({ avatar: res.data.avatar });
       toast.success("Фото обновлено");
     } catch {
       toast.error("Не удалось загрузить фото");
@@ -351,7 +355,12 @@ export default function PatientProfileDashboard() {
 
   const handleDeleteAvatar = async () => {
     setDeleting(true);
-    try { await api.delete("/user-profile/avatar/"); setAvatarPreview(null); toast.success("Фото удалено"); }
+    try {
+      await api.delete("/user-profile/avatar/");
+      setAvatarPreview(null);
+      updateUser({ avatar: null });
+      toast.success("Фото удалено");
+    }
     catch { toast.error("Не удалось удалить"); }
     finally { setDeleting(false); }
   };

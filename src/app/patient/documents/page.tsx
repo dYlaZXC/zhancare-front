@@ -632,25 +632,44 @@ export default function PatientDocumentsPage() {
                     </button>
                   </div>
 
-                  {/* File Preview - Smaller */}
-                  <div className="relative pt-10 pb-3 px-3"
-                       style={{
-                         background: isPDF
-                           ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%)'
-                           : 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%)'
-                       }}>
-                    <div className="w-14 h-14 mx-auto rounded-xl flex items-center justify-center shadow-md"
-                         style={{
-                           background: isPDF
-                             ? 'linear-gradient(135deg, #fecaca 0%, #fca5a5 100%)'
-                             : 'linear-gradient(135deg, #93c5fd 0%, #60a5fa 100%)'
-                         }}>
-                      {isPDF ? (
-                        <FontAwesomeIcon icon={faFilePdf} className="text-xl text-red-700" />
-                      ) : (
-                        <FontAwesomeIcon icon={faFileImage} className="text-xl text-blue-700" />
-                      )}
-                    </div>
+                  {/* File Preview */}
+                  <div className="relative mt-8 overflow-hidden bg-gray-50" style={{ height: 168 }}>
+                    {isPDF ? (
+                      <>
+                        {/* iframe is wider than container — scrollbar pushed outside the overflow:hidden clip */}
+                        <iframe
+                          src={`${doc.file_url}#toolbar=0&navpanes=0&scrollbar=0&view=FitH&zoom=75`}
+                          className="border-0 pointer-events-none absolute top-0 left-0"
+                          style={{ width: 'calc(100% + 20px)', height: 240, marginTop: -4 }}
+                          scrolling="no"
+                          title={doc.original_filename}
+                          loading="lazy"
+                        />
+                        {/* Bottom fade to mask cut-off edge */}
+                        <div className="absolute inset-0 pointer-events-none"
+                             style={{ background: 'linear-gradient(to bottom, transparent 55%, white 100%)' }} />
+                      </>
+                    ) : (
+                      <>
+                        <img
+                          src={doc.file_url}
+                          alt={doc.original_filename}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                          onError={(e) => {
+                            const t = e.currentTarget;
+                            t.style.display = "none";
+                            (t.parentElement?.querySelector('.img-fallback') as HTMLElement | null)?.classList.remove("hidden");
+                          }}
+                        />
+                        <div className="img-fallback hidden absolute inset-0 flex items-center justify-center bg-blue-50">
+                          <FontAwesomeIcon icon={faFileImage} className="text-4xl text-blue-200" />
+                        </div>
+                      </>
+                    )}
+                    {/* Category badge overlap area top gradient */}
+                    <div className="absolute top-0 left-0 right-0 h-8 pointer-events-none"
+                         style={{ background: 'linear-gradient(to bottom, rgba(255,255,255,0.5), transparent)' }} />
                   </div>
 
                   {/* File Info - Smaller */}

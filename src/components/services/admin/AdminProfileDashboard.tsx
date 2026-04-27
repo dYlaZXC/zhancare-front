@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBolt } from "@fortawesome/free-solid-svg-icons";
+import { useAuth } from "@/context/AuthContext";
 
 const BACKEND = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') ?? 'http://127.0.0.1:8000';
 function resolveAvatarUrl(url: string | null | undefined): string | null {
@@ -83,6 +84,7 @@ const InputField = ({
 );
 
 export default function AdminProfileDashboard({ user }: AdminProfileDashboardProps) {
+  const { updateUser } = useAuth();
   const [stats, setStats] = useState<ClinicStats | null>(null);
   const [personalForm, setPersonalForm] = useState({
     first_name: user.first_name,
@@ -167,6 +169,7 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
       fd.append("avatar", file);
       const res = await api.post("/user-profile/avatar/", fd, { headers: { "Content-Type": "multipart/form-data" } });
       setAvatarPreview(resolveAvatarUrl(res.data.avatar));
+      updateUser({ avatar: res.data.avatar });
       toast.success("Фото обновлено");
     } catch {
       toast.error("Не удалось загрузить фото");
@@ -182,6 +185,7 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
     try {
       await api.delete("/user-profile/avatar/");
       setAvatarPreview(null);
+      updateUser({ avatar: null });
       toast.success("Фото удалено");
     } catch {
       toast.error("Не удалось удалить фото");

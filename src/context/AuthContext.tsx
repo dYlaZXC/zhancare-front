@@ -84,6 +84,7 @@ interface AuthContextProps {
   fetchSessions: () => Promise<void>;
   revokeSession: (sessionId: number) => Promise<void>;
   revokeAllOtherSessions: () => Promise<void>;
+  updateUser: (patch: Partial<User>) => void;
   // Role helpers — prefer these over user.role for multi-role support
   isDoctor: boolean;
   isNurse: boolean;
@@ -104,6 +105,7 @@ const defaultAuthContext: AuthContextProps = {
   fetchSessions: async () => {},
   revokeSession: async () => {},
   revokeAllOtherSessions: async () => {},
+  updateUser: () => {},
   isDoctor: false,
   isNurse: false,
   isAdmin: false,
@@ -260,6 +262,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, []);
 
+  const updateUser = useCallback((patch: Partial<User>) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...patch };
+      localStorage.setItem("user", JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -275,6 +286,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         fetchSessions,
         revokeSession,
         revokeAllOtherSessions,
+        updateUser,
         isDoctor: !!user?.roles?.includes("doctor"),
         isNurse: !!user?.roles?.includes("nurse"),
         isAdmin: !!user?.roles?.includes("admin"),

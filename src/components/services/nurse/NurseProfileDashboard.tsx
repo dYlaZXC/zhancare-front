@@ -105,7 +105,7 @@ function SaveButton({ saving, saved, onClick, color }: { saving: boolean; saved:
 }
 
 export default function NurseProfileDashboard() {
-  const { user: authUser } = useAuth();
+  const { user: authUser, updateUser } = useAuth();
   const [profile, setProfile] = useState<NurseProfile | null>(null);
   const [form, setForm] = useState({
     first_name: "", last_name: "", phone: "",
@@ -168,6 +168,7 @@ export default function NurseProfileDashboard() {
       fd.append("avatar", file);
       const res = await api.post("/user-profile/avatar/", fd, { headers: { "Content-Type": "multipart/form-data" } });
       setAvatarPreview(resolveAvatar(res.data.avatar));
+      updateUser({ avatar: res.data.avatar });
       toast.success("Фото обновлено");
     } catch {
       toast.error("Не удалось загрузить фото");
@@ -183,6 +184,7 @@ export default function NurseProfileDashboard() {
     try {
       await api.delete("/user-profile/avatar/");
       setAvatarPreview(null);
+      updateUser({ avatar: null });
       toast.success("Фото удалено");
     } catch {
       toast.error("Не удалось удалить");

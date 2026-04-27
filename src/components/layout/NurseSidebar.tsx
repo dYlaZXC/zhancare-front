@@ -14,6 +14,12 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useState, useEffect } from "react";
+
+const BACKEND = process.env.NEXT_PUBLIC_API_URL?.replace("/api/v1", "") ?? "http://127.0.0.1:8000";
+const resolveAvatar = (url?: string | null) => {
+  if (!url) return null;
+  return url.startsWith("http") ? url : `${BACKEND}${url}`;
+};
 import { useAuth, computeRole, ROLE_DISPLAY_MAP } from "@/context/AuthContext";
 import { toast } from "react-toastify";
 import Link from "next/link";
@@ -514,7 +520,7 @@ export const NurseSidebar = ({
               <div className="relative inline-block mx-auto">
                 <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center text-sm font-bold shadow-2xl border-2 border-white"
                      style={{ background: user.avatar ? 'transparent' : getRoleGradient(userRole).bg }}>
-                  {user.avatar ? <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{user.first_name.charAt(0)}</span>}
+                  {user.avatar ? <img src={resolveAvatar(user.avatar)!} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{user.first_name.charAt(0)}</span>}
                 </div>
                 <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-white rounded-full flex items-center justify-center shadow border-2 border-white">
                   <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div>
@@ -525,7 +531,7 @@ export const NurseSidebar = ({
                 <div className="w-full h-full rounded-2xl overflow-hidden flex items-center justify-center text-4xl font-bold shadow-2xl border-2 border-white"
                      style={{ background: user.avatar ? 'transparent' : getRoleGradient(userRole).bg }}>
                   {user.avatar
-                    ? <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
+                    ? <img src={resolveAvatar(user.avatar)!} alt="avatar" className="w-full h-full object-cover" />
                     : <span className="text-white drop-shadow-lg">{user.first_name.charAt(0)}</span>}
                   {!user.avatar && <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>}
                 </div>
