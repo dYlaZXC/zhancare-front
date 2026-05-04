@@ -28,40 +28,14 @@ import Logo from "@/assets/logosaas.png";
 import BookingModal from "@/sections/Chat/BookingModal";
 import LanguageSwitcher from "@/sections/Hero/LanguageSwitcher";
 import type { Doctor } from "@/components/services/consultations/types/doctor";
+import { aiService, isInjectionAttempt, CHAT_ENDPOINT, CHAT_UPLOAD_ENDPOINT } from "@/lib/ai";
+import type { ClinicContext, DoctorRecommendation } from "@/lib/ai";
 
 interface TimeSlot {
   id: string;
   date: string;
   time: string;
   available: boolean;
-}
-
-interface DoctorRecommendation {
-  id: number;
-  name: string;
-  specialization?: {
-    ru: string;
-    en: string;
-    kz: string;
-  };
-  doctor_type?: string; // Legacy field for backward compatibility
-  email: string;
-  phone?: string;
-  years_of_experience?: number;
-  clinic?: {
-    name: string;
-    address: string;
-    city: string | null;
-    rating: number | null;
-  };
-  language?: string;
-  urgency: string;
-  timeSlots?: TimeSlot[];
-  nearest_slot?: {
-    date: string;
-    time: string;
-    label: string;
-  };
 }
 
 interface BookingConfirmationData {
@@ -82,42 +56,117 @@ interface Message {
   doctorName?: string;
   imageUrl?: string;
   bookingConfirmation?: BookingConfirmationData;
+  preliminaryDiagnosis?: string;
 }
 
-// Helper function to format AI message content with better structure
+// Renders **bold** and *italic* inline markdown within a single text segment.
+function renderInline(text: string, key?: number): React.ReactNode {
+  const parts: React.ReactNode[] = [];
+  const regex = /\*\*(.*?)\*\*|\*(.*?)\*/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = regex.exec(text)) !== null) {
+    if (m.index > last) parts.push(text.slice(last, m.index));
+    if (m[1] !== undefined) parts.push(<strong key={m.index}>{m[1]}</strong>);
+    else if (m[2] !== undefined) parts.push(<em key={m.index}>{m[2]}</em>);
+    last = regex.lastIndex;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return <span key={key}>{parts}</span>;
+}
+
+// Parses the AI response into paragraphs, numbered lists, and bullet lists.
 const formatAIMessage = (content: string) => {
   if (!content) return null;
-  const paragraphs = (content ?? "").split('\n\n').filter(p => p.trim());
 
-  return (
-    <div className="space-y-3">
-      {paragraphs.map((paragraph, idx) => {
-        // Check if paragraph contains a list (sentences ending with dots)
-        const sentences = paragraph.split('. ').filter(s => s.trim());
+  const lines = content.split("\n");
+  const blocks: React.ReactNode[] = [];
+  type ListState = { ordered: boolean; items: string[] } | null;
+  let list: ListState = null;
+  let paraLines: string[] = [];
+  let key = 0;
 
-        if (sentences.length > 3) {
-          // If many sentences, format as a list
-          return (
-            <div key={idx} className="space-y-2">
-              {sentences.map((sentence, sIdx) => (
-                <div key={sIdx} className="flex items-start gap-2">
-                  <span className="text-blue-600 leading-relaxed" style={{ color: "#3772ff" }}>•</span>
-                  <span className="flex-1 leading-relaxed">{sentence.trim()}{sIdx < sentences.length - 1 && !sentence.endsWith('.') ? '.' : ''}</span>
-                </div>
-              ))}
-            </div>
-          );
-        } else {
-          // Regular paragraph
-          return (
-            <p key={idx} className="leading-relaxed">
-              {paragraph}
-            </p>
-          );
-        }
-      })}
-    </div>
-  );
+  const flushPara = () => {
+    if (!paraLines.length) return;
+    blocks.push(
+      <p key={key++} className="leading-relaxed">
+        {renderInline(paraLines.join(" "))}
+      </p>
+    );
+    paraLines = [];
+  };
+
+  const flushList = () => {
+    if (!list) return;
+    if (list.ordered) {
+      blocks.push(
+        <ol key={key++} className="space-y-2 list-none">
+          {list.items.map((item, i) => (
+            <li key={i} className="flex items-start gap-2">
+              <span className="font-semibold flex-shrink-0 w-5 text-right" style={{ color: "#3772ff" }}>
+                {i + 1}.
+              </span>
+              <span className="leading-relaxed flex-1">{renderInline(item)}</span>
+            </li>
+          ))}
+        </ol>
+      );
+    } else {
+      blocks.push(
+        <ul key={key++} className="space-y-2 list-none">
+          {list.items.map((item, i) => (
+            <li key={i} className="flex items-start gap-2">
+              <span
+                className="flex-shrink-0 rounded-full mt-[7px]"
+                style={{ width: 6, height: 6, background: "#3772ff" }}
+              />
+              <span className="leading-relaxed flex-1">{renderInline(item)}</span>
+            </li>
+          ))}
+        </ul>
+      );
+    }
+    list = null;
+  };
+
+  for (const raw of lines) {
+    const line = raw.trim();
+
+    if (!line) {
+      flushPara();
+      flushList();
+      continue;
+    }
+
+    // Numbered list: "1." or "1)"
+    const ol = line.match(/^(\d+)[.)]\s+(.+)/);
+    if (ol) {
+      flushPara();
+      if (list && !list.ordered) flushList();
+      if (!list) list = { ordered: true, items: [] };
+      list.items.push(ol[2]);
+      continue;
+    }
+
+    // Bullet list: "-", "*", "•"
+    const ul = line.match(/^[-*•]\s+(.+)/);
+    if (ul) {
+      flushPara();
+      if (list && list.ordered) flushList();
+      if (!list) list = { ordered: false, items: [] };
+      list.items.push(ul[1]);
+      continue;
+    }
+
+    // Regular text — flush any open list first
+    flushList();
+    paraLines.push(line);
+  }
+
+  flushPara();
+  flushList();
+
+  return <div className="space-y-3">{blocks}</div>;
 };
 
 const UI = {
@@ -126,7 +175,8 @@ const UI = {
     title: "ИИ Медицинский Ассистент",
     subtitle: "Диагностика симптомов",
     online: "Онлайн",
-    welcomeTitle: "Добро пожаловать в ZhanCare AI",
+    welcomeTitle: "Добро пожаловать в ZhanBot.Ai",
+    welcomeClinic: (name: string) => `Добро пожаловать в ${name}`,
     welcomeDesc: "Я проведу предварительную диагностику ваших симптомов и помогу подобрать подходящего специалиста. Все данные конфиденциальны и защищены.",
     aiLabel: "ИИ Ассистент",
     placeholder: "Опишите ваши симптомы...",
@@ -138,7 +188,8 @@ const UI = {
     title: "AI Medical Assistant",
     subtitle: "Symptom Diagnostics",
     online: "Online",
-    welcomeTitle: "Welcome to ZhanCare AI",
+    welcomeTitle: "Welcome to ZhanBot.Ai",
+    welcomeClinic: (name: string) => `Welcome to ${name}`,
     welcomeDesc: "I will conduct a preliminary diagnosis of your symptoms and help you find the right specialist. All data is confidential and secure.",
     aiLabel: "AI Assistant",
     placeholder: "Describe your symptoms...",
@@ -150,7 +201,8 @@ const UI = {
     title: "ЖИ Медициналық Көмекші",
     subtitle: "Симптомдарды диагностикалау",
     online: "Онлайн",
-    welcomeTitle: "ZhanCare AI-ға қош келдіңіз",
+    welcomeTitle: "ZhanBot.Ai-ға қош келдіңіз",
+    welcomeClinic: (name: string) => `${name}-ға қош келдіңіз`,
     welcomeDesc: "Мен симптомдарыңыздың алдын ала диагностикасын жүргіземін және сізге тиісті маманды таңдауға көмектесемін. Барлық деректер құпия және қорғалған.",
     aiLabel: "ЖИ Көмекші",
     placeholder: "Симптомдарыңызды сипаттаңыз...",
@@ -159,9 +211,10 @@ const UI = {
   },
 };
 
-export default function AISymptomsChecker() {
+export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }) {
   const router = useRouter();
   const { language, setLanguage } = useLanguage();
+  const accentColor = clinic?.primaryColor ?? "#3772ff";
 
   const ui = UI[language as keyof typeof UI] ?? UI.ru;
 
@@ -174,14 +227,15 @@ export default function AISymptomsChecker() {
         return "Сәлеметсіз бе! Мен сіздің медициналық AI көмекшісімін. Сізді не алаңдатып тұр? Симптомдарыңызды толық сипаттаңыз. Сондай-ақ симптомдардың фотосуреттерін тіркеуге болады (бөртпе, қызару және т.б.).";
       case "ru":
       default:
-        return "Здравствуйте! Я ваш медицинский ИИ-ассистент. Расскажите, пожалуйста, что вас беспокоит? Опишите ваши симптомы подробно. Вы также можете прикрепить фото симптомов (сыпь, покраснения и т.д.).";
+        return clinic?.welcomeMessage ||
+          "Здравствуйте! Я ваш медицинский ИИ-ассистент. Расскажите, пожалуйста, что вас беспокоит? Опишите ваши симптомы подробно. Вы также можете прикрепить фото симптомов (сыпь, покраснения и т.д.).";
     }
   };
 
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: getWelcomeMessage(),
+      content: clinic?.welcomeMessage ?? getWelcomeMessage(),
     },
   ]);
   const [input, setInput] = useState("");
@@ -190,9 +244,37 @@ export default function AISymptomsChecker() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [preselectedDoctor, setPreselectedDoctor] = useState<Doctor | null>(null);
+  const [streamingText, setStreamingText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const uploadImage = async (dataUrl: string): Promise<string | null> => {
+    try {
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      if (blob.size > 5 * 1024 * 1024) return null;
+
+      const urlRes = await fetch(CHAT_UPLOAD_ENDPOINT, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content_type: blob.type || "image/jpeg" }),
+      });
+      if (!urlRes.ok) return null;
+      const { upload_url, file_url } = await urlRes.json();
+
+      const uploadRes = await fetch(upload_url, {
+        method: "PUT",
+        headers: { "Content-Type": blob.type || "image/jpeg" },
+        body: blob,
+      });
+      if (!uploadRes.ok) return null;
+      return file_url as string;
+    } catch {
+      return null;
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -201,6 +283,27 @@ export default function AISymptomsChecker() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Auto-send the configured start message once on mount
+  useEffect(() => {
+    const msg = clinic?.autoMessage?.trim();
+    if (!msg) return;
+    const timer = setTimeout(() => {
+      setInput(msg);
+    }, 600); // short delay so the welcome message renders first
+    return () => clearTimeout(timer);
+  }, []); // eslint-disable-line
+
+  // Trigger send once input is pre-filled by autoMessage
+  const autoSentRef = useRef(false);
+  useEffect(() => {
+    const msg = clinic?.autoMessage?.trim();
+    if (!msg || autoSentRef.current) return;
+    if (input === msg) {
+      autoSentRef.current = true;
+      handleSendMessage();
+    }
+  }, [input]); // eslint-disable-line
 
   // Update welcome message when language changes
   useEffect(() => {
@@ -238,255 +341,150 @@ export default function AISymptomsChecker() {
       inputRef.current.scrollTop = 0;
     }
 
+    // ── Prompt injection early guard (EN + RU + KZ via aiService) ───────────
+    if (isInjectionAttempt(userMessage)) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "user", content: userMessage },
+        {
+          role: "assistant",
+          content:
+            language === "en"
+              ? "I'm a medical assistant and cannot change my role. Please describe your symptoms so I can help you find the right doctor."
+              : language === "kz"
+              ? "Мен медициналық көмекшімін және рөлімді өзгерте алмаймын. Симптомдарыңызды сипаттаңыз."
+              : "Я медицинский ассистент и не могу изменить свою роль. Пожалуйста, опишите ваши симптомы — я помогу подобрать врача.",
+        },
+      ]);
+      setIsLoading(false);
+      return;
+    }
+
     setMessages((prev) => [...prev, { role: "user", content: userMessage, imageUrl: userImage || undefined }]);
     setIsLoading(true);
 
     try {
-      // Check if user is actually describing symptoms (not just greeting or asking questions)
-      const startsWithGreeting = /^(hi|hello|привет|здравствуй|добрый|hey|хай|салам)/i.test(userMessage.trim());
-      const startsWithQuestion = /^(how|what|when|where|why|как|что|когда|где|почему|можно|можете|у вас|есть ли)/i.test(userMessage.trim());
-      const isShortMessage = userMessage.trim().length < 10;
+      // Only block pure greetings (hi, hello, привет) with no medical content at all
+      const isOnlyGreeting = /^(hi|hello|привет|здравствуй|добрый день|добрый вечер|доброе утро|hey|хай|салам|сәлем)\s*[!.,]?\s*$/i.test(userMessage.trim());
 
-      // Check for symptom keywords in the entire message
-      const hasSymptomKeywords = /боли|болит|температура|кашель|головная|живот|горло|насморк|слабость|тошнота|рвота|понос|давление|сердце|грудь|спина|pain|ache|fever|cough|headache|stomach|throat|cold|weak|nausea|vomiting|diarrhea|pressure|chest|back|ауру|температура|жөтел|бас ауруы|іш қатты|жүрек/i.test(userMessage.trim());
-
-      // Check for random/nonsense text (no vowels, too many consonants, random characters)
+      // Block obvious nonsense (no vowels)
       const hasVowels = /[аеёиоуыэюяaeiouy]/i.test(userMessage.trim());
       const consonantRatio = (userMessage.match(/[бвгджзйклмнпрстфхцчшщbcdfghjklmnpqrstvwxyz]/gi) || []).length / userMessage.trim().length;
       const isLikelyNonsense = !hasVowels || consonantRatio > 0.8;
 
-      // Determine if message is ONLY a greeting/question or if it contains symptoms
-      const isOnlyGreeting = startsWithGreeting && isShortMessage && !hasSymptomKeywords;
-      const isOnlyQuestion = startsWithQuestion && isShortMessage && !hasSymptomKeywords;
-      const isTooVague = isShortMessage && !hasSymptomKeywords;
-
-      // Only call AI if it seems like actual symptoms (not greeting/question and message has substance)
-      if (isOnlyGreeting || isOnlyQuestion || isLikelyNonsense || isTooVague) {
-        // Detect language based on message content
-        const isEnglish = /^(hi|hello|hey|good|how|what|when|where|why|can|do|does)/i.test(userMessage.trim());
+      if (!userImage && (isOnlyGreeting || isLikelyNonsense)) {
+        const isEnglish = /^(hi|hello|hey)/i.test(userMessage.trim());
         const isKazakh = /[әғқңөұүһ]/i.test(userMessage.trim());
-
-        // Respond with a friendly message encouraging symptom description in detected language
-        let greetingResponses;
-
-        if (isEnglish) {
-          greetingResponses = [
-            "Hello! Please describe your symptoms in detail so I can help you find the right doctor.",
-            "Hi! Tell me, what's bothering you? Please describe your symptoms.",
-            "Hello! I'll help you find a doctor. Please describe what symptoms are concerning you.",
-          ];
-        } else if (isKazakh) {
-          greetingResponses = [
-            "Сәлеметсіз бе! Симптомдарыңызды толық сипаттаңыз, маманды табуға көмектесе аламын.",
-            "Сәлем! Сізді не алаңдатып тұр? Симптомдарыңызды сипаттаңыз.",
-            "Сәлеметсіз бе! Дәрігерді табуға көмектесемін. Қандай симптомдар сіздің алаңдатып тұрғанын айтыңыз.",
-          ];
-        } else {
-          // Default to Russian
-          greetingResponses = [
-            "Здравствуйте! Пожалуйста, опишите ваши симптомы подробно, чтобы я мог помочь вам найти подходящего врача.",
-            "Привет! Расскажите, что вас беспокоит? Опишите ваши симптомы.",
-            "Здравствуйте! Я помогу вам найти врача. Опишите, пожалуйста, какие симптомы вас беспокоят.",
-          ];
-        }
-
-        const randomResponse = greetingResponses[Math.floor(Math.random() * greetingResponses.length)];
-
-        setMessages((prev) => [...prev, { role: "assistant", content: randomResponse }]);
+        const greetingResponse = isEnglish
+          ? "Hello! Tell me what's bothering you — I'll suggest likely causes and recommend a specialist."
+          : isKazakh
+          ? "Сәлеметсіз бе! Симптомдарыңызды айтыңыз — ықтимал себептерді және маманды ұсынамын."
+          : "Здравствуйте! Опишите симптомы — я сразу предложу вероятные причины и порекомендую специалиста.";
+        setMessages((prev) => [...prev, { role: "assistant", content: greetingResponse }]);
         setIsLoading(false);
         return;
       }
 
-      // Collect all user messages to build full symptom description
-      const allUserMessages = [...messages.filter(m => m.role === "user").map(m => m.content), userMessage];
-      const fullSymptoms = allUserMessages.join(". ");
-
-      // Call AI recommendation API and fetch alternative doctors in parallel
-      const [response, altDoctorsResponse] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/consultations/ai-recommend/`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ symptoms: fullSymptoms, language: "ru" }),
-        }),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/consultations/get-random-doctors/`, {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-        }),
-      ]);
-
-      if (!response.ok) {
-        throw new Error("Failed to get AI recommendation");
-      }
-
-      const data = await response.json();
-      const altDoctorsData = altDoctorsResponse.ok ? await altDoctorsResponse.json() : null;
-      console.log("AI API Response:", data);
-      console.log("Messages length:", messages.length);
-      console.log("Data success:", data.success);
-      console.log("Data recommended_doctor:", data.recommended_doctor);
-
-      // Format the AI response
-      let aiResponse = "";
-      let specialty = "";
-      let reason = "";
-
-      // Extract reason and specialty from different response formats
-      if (data.success && data.recommended_doctor) {
-        // Doctor found format
-        reason = data.recommended_doctor.reason || "";
-        specialty = data.recommended_doctor.doctor_type || "";
-      } else if (!data.success && data.ai_data) {
-        // No doctor found format
-        reason = data.ai_data.reason || "";
-        specialty = data.ai_data.specialty || "";
-      } else if (data.reason) {
-        // Direct format (if any)
-        reason = data.reason;
-        specialty = data.specialty || "";
-      }
-
-      // Use the reason as AI response
-      if (reason) {
-        aiResponse = reason;
-      } else if (data.error) {
-        // Handle error from backend
-        aiResponse = "Извините, произошла ошибка при обработке вашего запроса. Пожалуйста, попробуйте описать ваши симптомы более подробно.";
-      } else {
-        // Fallback response if API doesn't return expected data
-        const responses = [
-          "Понимаю. Как долго у вас эти симптомы?",
-          "Спасибо за информацию. Есть ли у вас температура?",
-          "Хорошо. Принимали ли вы какие-либо лекарства?",
-        ];
-        aiResponse = responses[Math.min(messages.length / 2, responses.length - 1)];
-      }
-
-      // Detect language from AI response to localize additional messages
-      const detectResponseLanguage = (text: string) => {
-        const hasEnglish = /[a-zA-Z]/.test(text);
-        const hasCyrillic = /[а-яА-ЯёЁ]/.test(text);
-        const hasKazakh = /[әғқңөұүһіӘҒҚҢӨҰҮҺІ]/.test(text);
-
-        if (hasEnglish && !hasCyrillic) return "en";
-        if (hasKazakh) return "kz";
-        return "ru";
-      };
-
-      const responseLang = detectResponseLanguage(aiResponse);
-
-      // If we have enough information (either doctor found or not)
-      // Note: messages.length will be 1 here because setState is async and hasn't updated yet
-      console.log("Checking condition: messages.length >= 1 && (data.success || (!data.success && data.ai_data))");
-      console.log("Result:", messages.length >= 1 && (data.success || (!data.success && data.ai_data)));
-
-      if (messages.length >= 1 && (data.success || (!data.success && data.ai_data))) {
-        console.log("Inside main condition block");
-        // Add AI explanation message with localized specialty recommendation
-        if (specialty) {
-          const specialtyMessages = {
-            en: `\n\nBased on your symptoms, I recommend consulting with a specialist: ${specialty}.`,
-            ru: `\n\nОсновываясь на ваших симптомах, я рекомендую консультацию с специалистом: ${specialty}.`,
-            kz: `\n\nСимптомдарыңызға сүйене отырып, маманмен кеңесуді ұсынамын: ${specialty}.`
-          };
-          aiResponse += specialtyMessages[responseLang as keyof typeof specialtyMessages] || specialtyMessages.ru;
+      // Upload image first if present
+      let imageStorageUrl: string | undefined;
+      if (userImage) {
+        imageStorageUrl = (await uploadImage(userImage)) ?? undefined;
+        if (!imageStorageUrl && !input.trim()) {
+          const uploadErr = { ru: "Не удалось загрузить изображение. Попробуйте ещё раз.", en: "Failed to upload image. Please try again.", kz: "Суретті жүктеу мүмкін болмады. Қайталап көріңіз." };
+          setMessages(prev => [...prev, { role: "assistant", content: uploadErr[language as keyof typeof uploadErr] ?? uploadErr.ru }]);
+          setIsLoading(false);
+          return;
         }
+      }
 
-        // If doctor found (either exact match or fallback)
-        console.log("Checking doctor card condition:", data.success, data.recommended_doctor);
-        if (data.success && data.recommended_doctor) {
-          console.log("Creating doctor card!");
+      // Build conversation history (user + assistant only)
+      const history = messages
+        .filter(m => m.role === "user" || m.role === "assistant")
+        .slice(-10)
+        .map(m => ({ role: m.role as "user" | "assistant", content: m.content }));
 
-          const doctorFoundMessages = {
-            en: "I found a suitable doctor for you:",
-            ru: "Я нашел подходящего врача для вас:",
-            kz: "Сізге қолайлы дәрігерді таптым:"
-          };
-          let cardContent = doctorFoundMessages[responseLang as keyof typeof doctorFoundMessages] || doctorFoundMessages.ru;
+      // ── Call ZhanBot chat AI ──────────────────────────────────────────────────
+      const chatRes = await fetch(CHAT_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          message: (userImage && !input.trim()) ? "" : userMessage,
+          language,
+          history,
+          ...(clinic?.clinicSlug ? { clinic_slug: clinic.clinicSlug } : {}),
+          ...(imageStorageUrl ? { image_url: imageStorageUrl } : {}),
+        }),
+      });
 
-          // If it's a fallback doctor (when requested specialty not available)
-          if (data.fallback_used && data.requested_specialty) {
-            const fallbackMessages = {
-              en: `\n\nUnfortunately, we currently don't have an available specialist in "${data.requested_specialty}". However, I can offer you a consultation with our doctor who can conduct an initial examination and refer you to the appropriate specialist if needed.`,
-              ru: `\n\nК сожалению, в данный момент у нас нет доступного специалиста по направлению "${data.requested_specialty}". Но я могу предложить вам консультацию с нашим врачом, который сможет провести первичный осмотр и при необходимости направить вас к нужному специалисту.`,
-              kz: `\n\nӨкінішке орай, қазіргі уақытта "${data.requested_specialty}" бағыты бойынша қолжетімді маман жоқ. Бірақ мен сізге біздің дәрігермен кеңесуді ұсына аламын, ол алғашқы тексеруді өткізе алады және қажет болса, сізді қажетті маманға жібере алады.`
-            };
-            aiResponse += fallbackMessages[responseLang as keyof typeof fallbackMessages] || fallbackMessages.ru;
+      if (!chatRes.ok) throw new Error("Chat AI error");
 
-            const alternativeMessages = {
-              en: "Recommended doctor (alternative):",
-              ru: "Рекомендуемый врач (альтернатива):",
-              kz: "Ұсынылған дәрігер (балама):"
-            };
-            cardContent = alternativeMessages[responseLang as keyof typeof alternativeMessages] || alternativeMessages.ru;
+      const chatData = await chatRes.json();
+      let aiText: string = chatData.text || "";
+      // Safety: if backend returned raw JSON instead of natural language, replace with fallback
+      const trimmed = aiText.trim();
+      if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+        const fallbacks = {
+          ru: "Опишите ваши симптомы подробнее — я помогу подобрать подходящего специалиста.",
+          en: "Please describe your symptoms in more detail so I can find the right specialist for you.",
+          kz: "Симптомдарыңызды толығырақ сипаттаңыз — сізге сәйкес маманды табуға көмектесемін.",
+        };
+        aiText = fallbacks[language as keyof typeof fallbacks] ?? fallbacks.ru;
+      }
+      const showDoctorBtn: boolean = chatData.show_doctor_button ?? false;
+      const preliminaryDiagnosis: string | undefined = chatData.preliminary_diagnosis || undefined;
+
+      // ── Typewriter effect ─────────────────────────────────────────────────────
+      await new Promise<void>(resolve => {
+        let i = 0;
+        const tick = () => {
+          i++;
+          setStreamingText(aiText.slice(0, i));
+          if (i < aiText.length) {
+            setTimeout(tick, 15);
+          } else {
+            setStreamingText("");
+            setMessages(prev => [...prev, {
+              role: "assistant",
+              content: aiText,
+              ...(preliminaryDiagnosis ? { preliminaryDiagnosis } : {}),
+            }]);
+            resolve();
           }
+        };
+        tick();
+      });
 
-          // Use alternative_doctors from ai-recommend response (already scored & deduped)
-          // Fall back to the separate get-random-doctors call if not present
-          const altDoctors: DoctorRecommendation[] = data.alternative_doctors?.length
-            ? data.alternative_doctors
-            : altDoctorsData?.success && altDoctorsData?.doctors
-              ? altDoctorsData.doctors
-                  .filter((d: DoctorRecommendation) => d.id !== data.recommended_doctor.id)
-                  .slice(0, 3)
-              : [];
+      // ── If AI recommends a doctor, fetch the actual match ─────────────────────
+      if (showDoctorBtn) {
+        const allUserMessages = [...messages.filter(m => m.role === "user").map(m => m.content), userMessage];
+        const fullSymptoms = allUserMessages.join(". ");
 
-          setMessages((prev) => [
-            ...prev,
-            { role: "assistant", content: aiResponse },
-            {
-              role: "doctor-card",
-              content: cardContent,
-              doctor: data.recommended_doctor,
-              otherDoctors: altDoctors
-            }
-          ]);
-          setIsLoading(false);
-          return;
-        }
+        const result = await aiService.analyzeSymptoms({
+          symptoms: fullSymptoms,
+          language,
+          clinicSlug: clinic?.clinicSlug,
+        });
 
-        // If no doctor found at all (even fallback failed)
-        if (!data.success && data.ai_data && specialty) {
-          const noDoctorMessages = {
-            en: `\n\nUnfortunately, all our doctors are currently busy. Please try again later or contact us by phone for urgent consultation.`,
-            ru: `\n\nК сожалению, в данный момент все наши врачи заняты. Пожалуйста, попробуйте позже или свяжитесь с нами по телефону для срочной консультации.`,
-            kz: `\n\nӨкінішке орай, қазіргі уақытта барлық дәрігерлеріміз бос емес. Кейінірек қайталап көріңіз немесе шұғыл кеңес алу үшін бізге телефон арқылы хабарласыңыз.`
-          };
-          const noDocMessage = noDoctorMessages[responseLang as keyof typeof noDoctorMessages] || noDoctorMessages.ru;
-
-          setMessages((prev) => [
-            ...prev,
-            { role: "assistant", content: aiResponse + noDocMessage }
-          ]);
-          setIsLoading(false);
-          return;
+        if (!result.injectionBlocked && result.success && result.recommendedDoctor) {
+          const lang = language as "en" | "ru" | "kz";
+          const cardLabels = { en: "I found a suitable doctor for you:", ru: "Я нашел подходящего врача для вас:", kz: "Сізге қолайлы дәрігерді таптым:" };
+          setMessages(prev => [...prev, {
+            role: "doctor-card",
+            content: cardLabels[lang] ?? cardLabels.ru,
+            doctor: result.recommendedDoctor,
+            otherDoctors: result.alternativeDoctors ?? [],
+          }]);
         }
       }
 
-      setMessages((prev) => [...prev, { role: "assistant", content: aiResponse }]);
       setIsLoading(false);
     } catch (error) {
-      console.error("Error calling AI recommendation API:", error);
-
-      // Fallback to simulated responses on error
-      const responses = [
-        "Понимаю. Как долго у вас эти симптомы?",
-        "Спасибо за информацию. Есть ли у вас температура?",
-        "Хорошо. Принимали ли вы какие-либо лекарства?",
-        "Отлично. Основываясь на ваших симптомах, я рекомендую консультацию с терапевтом. Подбираю подходящего врача...",
-      ];
-
-      const response = responses[Math.min(messages.length / 2, responses.length - 1)];
-      setMessages((prev) => [...prev, { role: "assistant", content: response }]);
+      console.error("AI error:", error);
+      setStreamingText("");
+      const errMsg = { ru: "Произошла ошибка. Попробуйте ещё раз.", en: "An error occurred. Please try again.", kz: "Қате орын алды. Қайталап көріңіз." };
+      setMessages(prev => [...prev, { role: "assistant", content: errMsg[language as keyof typeof errMsg] ?? errMsg.ru }]);
       setIsLoading(false);
-
-      // After 4 exchanges, redirect to doctor matching
-      if (messages.length >= 7) {
-        setTimeout(() => {
-          router.push("/consultation/matching");
-        }, 2000);
-      }
     }
   };
 
@@ -554,79 +552,40 @@ export default function AISymptomsChecker() {
 
   const handleShowOtherDoctors = async () => {
     setIsLoading(true);
-
     try {
-      // Call API to get 5 random available doctors
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/consultations/get-random-doctors/`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-      });
+      const doctors = await aiService.getRandomDoctors();
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch alternative doctors");
-      }
-
-      const data = await response.json();
-      console.log("Alternative doctors response:", data);
-
-      if (data.success && data.doctors && data.doctors.length > 0) {
-        // Detect language from previous messages
-        const lastBotMessage = messages.filter(m => m.role === "assistant").pop();
-        const detectResponseLanguage = (text: string) => {
-          const hasEnglish = /[a-zA-Z]/.test(text || "");
-          const hasCyrillic = /[а-яА-ЯёЁ]/.test(text || "");
-          const hasKazakh = /[әғқңөұүһіӘҒҚҢӨҰҮҺІ]/.test(text || "");
-
-          if (hasEnglish && !hasCyrillic) return "en";
-          if (hasKazakh) return "kz";
-          return "ru";
-        };
-
-        const responseLang = detectResponseLanguage(lastBotMessage?.content || "");
-
-        const messages_text = {
+      if (doctors.length > 0) {
+        const listLabels: Record<string, string> = {
           en: "Here are other available doctors you can consult with:",
           ru: "Вот другие доступные врачи, с которыми вы можете проконсультироваться:",
-          kz: "Міне, сіз кеңес ала алатын басқа қолжетімді дәрігерлер:"
+          kz: "Міне, сіз кеңес ала алатын басқа қолжетімді дәрігерлер:",
         };
-
         setMessages((prev) => [
           ...prev,
           {
             role: "doctors-list",
-            content: messages_text[responseLang as keyof typeof messages_text] || messages_text.ru,
-            doctors: data.doctors
-          }
+            content: listLabels[language] ?? listLabels.ru,
+            doctors,
+          },
         ]);
       } else {
-        const errorMessages = {
+        const emptyLabels: Record<string, string> = {
           en: "Sorry, no available doctors at the moment. Please try again later.",
           ru: "Извините, в данный момент нет доступных врачей. Пожалуйста, попробуйте позже.",
-          kz: "Кешіріңіз, қазіргі уақытта қолжетімді дәрігерлер жоқ. Кейінірек қайталап көріңіз."
+          kz: "Кешіріңіз, қазіргі уақытта қолжетімді дәрігерлер жоқ. Кейінірек қайталап көріңіз.",
         };
-
         setMessages((prev) => [
           ...prev,
-          {
-            role: "assistant",
-            content: errorMessages.ru
-          }
+          { role: "assistant", content: emptyLabels[language] ?? emptyLabels.ru },
         ]);
       }
-
-      setIsLoading(false);
-    } catch (error) {
-      console.error("Error fetching alternative doctors:", error);
+    } catch {
       setMessages((prev) => [
         ...prev,
-        {
-          role: "assistant",
-          content: "Произошла ошибка при загрузке списка врачей. Пожалуйста, попробуйте позже."
-        }
+        { role: "assistant", content: "Произошла ошибка при загрузке списка врачей. Пожалуйста, попробуйте позже." },
       ]);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -750,9 +709,11 @@ export default function AISymptomsChecker() {
                 <FontAwesomeIcon icon={faCircleCheck} className="text-white text-base sm:text-xl" />
               </div>
               <div className="text-white">
-                <h3 className="font-bold text-base sm:text-lg lg:text-xl mb-1 sm:mb-2">{ui.welcomeTitle}</h3>
+                <h3 className="font-bold text-base sm:text-lg lg:text-xl mb-1 sm:mb-2">
+                  {clinic ? ui.welcomeClinic(clinic.clinicName) : ui.welcomeTitle}
+                </h3>
                 <p className="text-xs sm:text-sm leading-relaxed opacity-90">
-                  {ui.welcomeDesc}
+                  {clinic?.welcomeMessage || ui.welcomeDesc}
                 </p>
               </div>
             </div>
@@ -780,6 +741,24 @@ export default function AISymptomsChecker() {
                       <div className="px-2 py-1 rounded-lg mb-2 inline-block" style={{ background: "#ebf1ff" }}>
                         <span className="text-xs font-semibold" style={{ color: "#2956bf" }}>{ui.aiLabel}</span>
                       </div>
+                      {message.preliminaryDiagnosis && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="flex items-start gap-2 mb-2 px-4 py-2.5 rounded-xl border"
+                          style={{ background: "#fffbeb", borderColor: "#fde68a" }}
+                        >
+                          <span className="text-base flex-shrink-0 mt-px">🔍</span>
+                          <div>
+                            <span className="text-xs font-semibold block mb-0.5" style={{ color: "#92400e" }}>
+                              {language === "en" ? "Preliminary" : language === "kz" ? "Болжамды диагноз" : "Примерный диагноз"}
+                            </span>
+                            <span className="text-sm font-medium" style={{ color: "#78350f" }}>
+                              {message.preliminaryDiagnosis}
+                            </span>
+                          </div>
+                        </motion.div>
+                      )}
                       <div
                         className="rounded-2xl sm:rounded-3xl px-4 py-3 sm:px-6 sm:py-4 shadow-lg border"
                         style={{
@@ -1413,7 +1392,7 @@ export default function AISymptomsChecker() {
             ))}
           </AnimatePresence>
 
-          {isLoading && (
+          {(isLoading || streamingText) && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1427,10 +1406,18 @@ export default function AISymptomsChecker() {
                   <FontAwesomeIcon icon={faRobot} className="text-white text-xs sm:text-sm" />
                 </div>
                 <div className="rounded-2xl sm:rounded-3xl px-4 py-3 sm:px-6 sm:py-4 shadow-lg border" style={{ background: "white", borderColor: "#e1eaff" }}>
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <FontAwesomeIcon icon={faSpinner} className="animate-spin text-sm sm:text-base" style={{ color: "#3772ff" }} />
-                    <span className="text-sm sm:text-base" style={{ color: "#283353" }}>Анализирую симптомы...</span>
-                  </div>
+                  {streamingText ? (
+                    <div className="text-sm sm:text-base break-words" style={{ color: "#283353", overflowWrap: "break-word", wordBreak: "break-word" }}>
+                      {formatAIMessage(streamingText)}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <FontAwesomeIcon icon={faSpinner} className="animate-spin text-sm sm:text-base" style={{ color: "#3772ff" }} />
+                      <span className="text-sm sm:text-base" style={{ color: "#283353" }}>
+                        {{ ru: "Анализирую симптомы...", en: "Analysing symptoms...", kz: "Симптомдарды талдаймын..." }[language as "ru" | "en" | "kz"] ?? "Анализирую симптомы..."}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>

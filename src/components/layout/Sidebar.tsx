@@ -312,7 +312,7 @@ export const Sidebar = ({
         </div>
 
         {/* Responsive Navigation */}
-        <nav className={`mt-2 space-y-2 xs:space-y-3 ${isCollapsed ? 'px-2' : 'px-3 xs:px-4 sm:px-6'} flex-shrink-0 overflow-x-hidden relative z-10`}>
+        <nav className={`mt-2 space-y-2 xs:space-y-3 ${isCollapsed ? 'px-2' : 'px-3 xs:px-4 sm:px-6'} flex-1 overflow-y-auto overflow-x-hidden relative z-10`}>
           {menuItems.map((item, index) => (
             <div key={item.id} className="relative">
               <Link
@@ -568,7 +568,7 @@ export const Sidebar = ({
         </div>{/* end top group */}
 
         {/* Desktop Navigation — flex-1 fills all remaining space, items justify-around */}
-        <nav className={`flex-1 flex flex-col justify-start gap-2 ${isCollapsed ? 'px-2 py-3' : 'px-6 py-3'} overflow-x-hidden overflow-y-hidden relative z-10`}>
+        <nav className={`flex-1 flex flex-col justify-start gap-2 ${isCollapsed ? 'px-2 py-3' : 'px-6 py-3'} overflow-x-hidden overflow-y-auto relative z-10`}>
           {menuItems.map((item, index) => (
             <div key={item.id} className="relative">
               <Link

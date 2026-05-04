@@ -333,7 +333,7 @@ export default function ReportsView({ user }: ReportsViewProps) {
           </div>
           <div className="flex items-center gap-1.5">
             <Star className="w-4 h-4 text-amber-400" fill="#fbbf24" />
-            <span className="font-bold text-[#1e263e]">{clinicStats.clinic_info.rating.toFixed(1)}</span>
+            <span className="font-bold text-[#1e263e]">{clinicStats.clinic_info.rating != null ? clinicStats.clinic_info.rating.toFixed(1) : "—"}</span>
           </div>
         </div>
       )}

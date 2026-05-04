@@ -572,7 +572,7 @@ export const DoctorSidebar = ({
         </div>{/* end top group */}
 
         {/* Desktop Navigation */}
-        <nav className={`flex-1 flex flex-col justify-start gap-2 ${isCollapsed ? 'px-2 py-3' : 'px-6 py-3'} overflow-x-hidden overflow-y-hidden relative z-10`}>
+        <nav className={`flex-1 flex flex-col justify-start gap-2 ${isCollapsed ? 'px-2 py-3' : 'px-6 py-3'} overflow-x-hidden overflow-y-auto relative z-10`}>
           {doctorMenu.map((item, index) => (
             <div key={`desktop-${item.id}`} className="relative">
               <Link

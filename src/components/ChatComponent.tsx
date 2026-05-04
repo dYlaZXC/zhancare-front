@@ -9,9 +9,7 @@ import { ChatMessages } from "./ChatMessages";
 import { ChatInput } from "./ChatInput";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-
-const API_KEY = "aTzSULuZc45ObRxLrRBFa50GnCanWo1M";
-const ENDPOINT = "https://api.mistral.ai/v1/chat/completions";
+import { isInjectionAttempt, CHAT_ENDPOINT } from "@/lib/ai";
 
 export const ChatComponent = ({ onClose }: { onClose: () => void }) => {
   const [userInput, setUserInput] = useState("");
@@ -51,6 +49,17 @@ export const ChatComponent = ({ onClose }: { onClose: () => void }) => {
     if (!userInput.trim()) return;
     const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
+    if (isInjectionAttempt(userInput)) {
+      const blocked = language === "ru"
+        ? "Я медицинский ассистент. Пожалуйста, задайте медицинский вопрос."
+        : language === "kz"
+        ? "Мен медициналық көмекшімін. Медициналық сұрақ қойыңыз."
+        : "I am a medical assistant. Please ask a medical question.";
+      setMessages(prev => [...prev, { user: userInput, response: blocked, timestamp }]);
+      setUserInput("");
+      return;
+    }
+
     const newMessage = { user: userInput, response: "", timestamp };
     setMessages((prev) => [...prev, newMessage]);
     setLoading(true);
@@ -85,30 +94,17 @@ export const ChatComponent = ({ onClose }: { onClose: () => void }) => {
     }
 
     try {
-      const payload = {
-        model: "open-mistral-nemo",
-        temperature: 0.3,
-        top_p: 1,
-        max_tokens: 500,
-        messages: [
-          { role: "system", content: translations.assistantInstruction },
-          { role: "user", content: userInput },
-        ],
-      };
-
-      const res = await fetch(ENDPOINT, {
+      const res = await fetch(CHAT_ENDPOINT, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${API_KEY}`,
-        },
-        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ message: userInput, language }),
       });
 
       if (!res.ok) throw new Error(translations.fetchError);
 
       const data = await res.json();
-      const aiText = data.choices[0].message.content;
+      const aiText: string = data.text || translations.genericError;
 
       let index = 0;
       setStreamedResponse("");

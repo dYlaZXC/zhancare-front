@@ -19,10 +19,8 @@ import DoctorChatBox from "./components/DoctorChatBox";
 import DoctorChatInput from "./components/DoctorChatInput";
 import DoctorCallFooter from "./components/DoctorCallFooter";
 import FloatingConsultationButton from "./components/FloatingConsultationButton";
+import { isInjectionAttempt, CHAT_ENDPOINT } from "@/lib/ai";
 // import DoctorFloatingBadge from "./components/DoctorFloatingBadge";
-
-const API_KEY = "aTzSULuZc45ObRxLrRBFa50GnCanWo1M";
-const ENDPOINT = "https://api.mistral.ai/v1/chat/completions";
 
 // Using shared Consultation type from @/types/consultation
 
@@ -135,30 +133,27 @@ const DoctorVideoCallPage: React.FC = () => {
   const sendMessage = async () => {
     if (!userInput.trim()) return;
 
+    if (isInjectionAttempt(userInput)) {
+      setMessages(prev => [...prev, { user: userInput, response: "Я медицинский ассистент. Пожалуйста, задайте медицинский вопрос." }]);
+      setUserInput("");
+      return;
+    }
+
     const newMessage = { user: userInput, response: "" };
     setMessages((prev) => [...prev, newMessage]);
     setLoading(true);
     setError("");
 
     try {
-      const payload = {
-        model: "open-mistral-nemo",
-        temperature: 0.3,
-        top_p: 1,
-        max_tokens: 500,
-        messages: [
-          { role: "system", content: "Вы медицинский ассистент врача. Предоставляйте профессиональные медицинские советы." },
-          { role: "user", content: userInput },
-        ],
-      };
-
-      const res = await fetch(ENDPOINT, {
+      const res = await fetch(CHAT_ENDPOINT, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${API_KEY}`,
-        },
-        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          message: userInput,
+          language: "ru",
+          context: "doctor_assistant",
+        }),
       });
 
       if (!res.ok) throw new Error("Ошибка запроса");
@@ -166,7 +161,7 @@ const DoctorVideoCallPage: React.FC = () => {
       const data = await res.json();
       setMessages((prev) => {
         const last = prev[prev.length - 1];
-        return [...prev.slice(0, -1), { ...last, response: data.choices[0].message.content }];
+        return [...prev.slice(0, -1), { ...last, response: data.text }];
       });
     } catch {
       setError("Ошибка получения ответа");

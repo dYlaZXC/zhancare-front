@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -16,16 +16,20 @@ import {
   faStar,
   faClock,
   faStethoscope,
+  faBriefcaseMedical,
+  faSearch,
+  faTimes,
+  faSortAmountDown,
 } from "@fortawesome/free-solid-svg-icons";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { api } from "@/utils/api";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// ── Types ──────────────────────────────────────────────────────────────────────
 type ConsultationType = "online" | "offline";
 
 interface SlotInfo {
-  start: string; // "HH:MM"
+  start: string;
   end: string;
   status: "free" | "booked";
 }
@@ -41,7 +45,7 @@ interface DoctorWithSlots {
   years_of_experience?: number;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────────
 function getNextDays(n = 14) {
   const days = [];
   const today = new Date();
@@ -51,11 +55,9 @@ function getNextDays(n = 14) {
     days.push({
       value: d.toLocaleDateString("sv-SE"),
       dayLabel: d.toLocaleDateString("ru-RU", { weekday: "short" }),
-      dateLabel: d.toLocaleDateString("ru-RU", {
-        day: "numeric",
-        month: "short",
-      }),
+      dateLabel: d.toLocaleDateString("ru-RU", { day: "numeric", month: "short" }),
       isToday: i === 0,
+      isWeekend: d.getDay() === 0 || d.getDay() === 6,
     });
   }
   return days;
@@ -73,27 +75,194 @@ function formatScheduledAt(date: string, time: string) {
   });
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
+const AVATAR_GRADIENTS = [
+  "from-blue-500 to-indigo-600",
+  "from-violet-500 to-purple-600",
+  "from-rose-500 to-pink-600",
+  "from-amber-500 to-orange-500",
+  "from-teal-500 to-cyan-600",
+  "from-emerald-500 to-green-600",
+];
+
+function SpecDropdown({
+  specializations,
+  value,
+  onChange,
+}: {
+  specializations: string[];
+  value: string | null;
+  onChange: (v: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+
+  const filtered = useMemo(
+    () =>
+      query.trim()
+        ? specializations.filter((s) => s.toLowerCase().includes(query.toLowerCase()))
+        : specializations,
+    [specializations, query]
+  );
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+        setQuery("");
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative flex-1">
+      <button
+        onClick={() => { setOpen((o) => !o); setQuery(""); }}
+        className={`flex items-center gap-2 w-full px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
+          value
+            ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+            : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
+        }`}
+      >
+        <FontAwesomeIcon icon={faStethoscope} className="text-[10px]" />
+        <span className="truncate">{value ?? "Специализация"}</span>
+        {value ? (
+          <span
+            role="button"
+            onClick={(e) => { e.stopPropagation(); onChange(null); }}
+            className="ml-auto w-4 h-4 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center shrink-0"
+          >
+            <FontAwesomeIcon icon={faTimes} className="text-[8px]" />
+          </span>
+        ) : (
+          <FontAwesomeIcon icon={faChevronRight} className={`ml-auto text-[9px] transition-transform ${open ? "rotate-90" : ""}`} />
+        )}
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.97 }}
+            transition={{ duration: 0.15 }}
+            className="absolute top-full left-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 z-30 overflow-hidden"
+          >
+            {/* Search inside dropdown */}
+            <div className="p-2 border-b border-gray-100">
+              <div className="relative">
+                <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-[11px] pointer-events-none" />
+                <input
+                  autoFocus
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Поиск специализации..."
+                  className="w-full pl-8 pr-3 py-2 text-xs bg-gray-50 rounded-xl border border-gray-100 focus:outline-none focus:border-blue-400 text-gray-700 placeholder:text-gray-300"
+                />
+              </div>
+            </div>
+
+            {/* Options list */}
+            <div className="max-h-52 overflow-y-auto">
+              <button
+                onClick={() => { onChange(null); setOpen(false); setQuery(""); }}
+                className={`w-full text-left px-4 py-2.5 text-xs font-semibold transition-colors ${
+                  value === null ? "bg-indigo-50 text-indigo-700" : "text-gray-500 hover:bg-gray-50"
+                }`}
+              >
+                Все специализации
+              </button>
+              {filtered.length === 0 ? (
+                <p className="px-4 py-3 text-xs text-gray-400 text-center">Ничего не найдено</p>
+              ) : (
+                filtered.map((spec) => (
+                  <button
+                    key={spec}
+                    onClick={() => { onChange(spec); setOpen(false); setQuery(""); }}
+                    className={`w-full text-left px-4 py-2.5 text-xs font-medium transition-colors ${
+                      value === spec ? "bg-indigo-50 text-indigo-700 font-semibold" : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    {spec}
+                  </button>
+                ))
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function StarRating({ rating }: { rating: number }) {
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((s) => (
+        <FontAwesomeIcon
+          key={s}
+          icon={faStar}
+          className={`text-[10px] ${s <= Math.round(rating) ? "text-amber-400" : "text-gray-200"}`}
+        />
+      ))}
+      <span className="ml-1 text-xs font-semibold text-gray-600">{rating.toFixed(1)}</span>
+    </div>
+  );
+}
+
+// ── Component ──────────────────────────────────────────────────────────────────
 export default function SchedulePage() {
   const router = useRouter();
 
-  // Step state: 1=type+date, 2=doctor+slot, 3=symptoms+confirm, 4=success
   const [step, setStep] = useState(1);
-
-  // Selections
-  const [consultationType, setConsultationType] =
-    useState<ConsultationType>("online");
+  const [consultationType, setConsultationType] = useState<ConsultationType>("online");
   const [selectedDate, setSelectedDate] = useState("");
   const [doctors, setDoctors] = useState<DoctorWithSlots[]>([]);
-  const [selectedDoctor, setSelectedDoctor] = useState<DoctorWithSlots | null>(
-    null
-  );
+  const [selectedDoctor, setSelectedDoctor] = useState<DoctorWithSlots | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<SlotInfo | null>(null);
   const [symptoms, setSymptoms] = useState("");
-
-  // UI states
   const [loadingDoctors, setLoadingDoctors] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Filters
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterSpec, setFilterSpec] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<"default" | "rating" | "experience" | "slots">("default");
+
+  const specializations = useMemo(() => {
+    const specs = doctors.map((d) => d.specialization).filter(Boolean) as string[];
+    return Array.from(new Set(specs));
+  }, [doctors]);
+
+  const filteredDoctors = useMemo(() => {
+    let list = [...doctors];
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(
+        (d) =>
+          `${d.first_name} ${d.last_name}`.toLowerCase().includes(q) ||
+          (d.specialization?.toLowerCase().includes(q) ?? false)
+      );
+    }
+    if (filterSpec) {
+      list = list.filter((d) => d.specialization === filterSpec);
+    }
+    if (sortBy === "rating") {
+      list.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+    } else if (sortBy === "experience") {
+      list.sort((a, b) => (b.years_of_experience ?? 0) - (a.years_of_experience ?? 0));
+    } else if (sortBy === "slots") {
+      list.sort(
+        (a, b) =>
+          b.slots.filter((s) => s.status === "free").length -
+          a.slots.filter((s) => s.status === "free").length
+      );
+    }
+    return list;
+  }, [doctors, searchQuery, filterSpec, sortBy]);
   const [result, setResult] = useState<{
     consultation_id: number;
     access_code: string;
@@ -103,24 +272,20 @@ export default function SchedulePage() {
 
   const days = getNextDays();
 
-  // Load doctors+slots when date changes
   useEffect(() => {
     if (!selectedDate) return;
     setDoctors([]);
     setSelectedDoctor(null);
     setSelectedSlot(null);
+    setSearchQuery("");
+    setFilterSpec(null);
+    setSortBy("default");
     setLoadingDoctors(true);
     api
-      .get("/schedule/day/", {
-        params: {
-          date: selectedDate,
-          consultation_type: consultationType,
-        },
-      })
+      .get("/schedule/day/", { params: { date: selectedDate, consultation_type: consultationType } })
       .then(({ data }) => {
         const withSlots = (data.doctors || []).filter(
-          (d: DoctorWithSlots) =>
-            d.slots && d.slots.some((s) => s.status === "free")
+          (d: DoctorWithSlots) => d.slots && d.slots.some((s) => s.status === "free")
         );
         setDoctors(withSlots);
       })
@@ -143,268 +308,443 @@ export default function SchedulePage() {
       setStep(4);
     } catch (err: unknown) {
       const msg =
-        (err as { response?: { data?: { error?: string } } })?.response?.data
-          ?.error || "Ошибка при записи";
+        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+        "Ошибка при записи";
       toast.error(msg);
     } finally {
       setSubmitting(false);
     }
   };
 
+  const stepProgress = step < 4 ? ((step - 1) / 2) * 100 : 100;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-indigo-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 py-4 shadow-sm sticky top-0 z-10">
-        <div className="container mx-auto max-w-3xl flex items-center justify-between">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/60">
+
+      {/* ── Header ── */}
+      <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-xl border-b border-white/60 shadow-sm">
+        <div className="container mx-auto max-w-2xl px-4 py-3 flex items-center justify-between gap-4">
           <button
             onClick={() => (step > 1 && step < 4 ? setStep(step - 1) : router.back())}
-            className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            className="group flex items-center gap-2 px-3 py-2 rounded-xl text-gray-500 hover:text-gray-900 hover:bg-gray-100/80 transition-all"
           >
-            <FontAwesomeIcon icon={faArrowLeft} />
-            <span className="hidden sm:inline">Назад</span>
+            <FontAwesomeIcon icon={faArrowLeft} className="transition-transform group-hover:-translate-x-0.5" />
+            <span className="hidden sm:inline text-sm font-medium">Назад</span>
           </button>
-          <h1 className="text-lg font-bold text-gray-900">
+
+          <h1 className="text-base font-bold text-gray-900 tracking-tight">
             Запланировать консультацию
           </h1>
-          {/* Step indicator */}
-          <div className="flex items-center gap-1">
-            {[1, 2, 3].map((s) => (
-              <div
-                key={s}
-                className={`w-2.5 h-2.5 rounded-full transition-all ${
-                  s < step
-                    ? "bg-blue-500"
-                    : s === step
-                    ? "bg-blue-600 scale-110"
-                    : "bg-gray-200"
-                }`}
+
+          {/* Progress */}
+          <div className="flex items-center gap-2 w-20">
+            <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"
+                animate={{ width: `${stepProgress}%` }}
+                transition={{ duration: 0.4, ease: "easeInOut" }}
               />
-            ))}
+            </div>
+            <span className="text-xs font-semibold text-gray-400 shrink-0">
+              {step < 4 ? `${step}/3` : "✓"}
+            </span>
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto max-w-3xl px-4 py-8">
+      <div className="container mx-auto max-w-2xl px-4 py-8 pb-24">
         <AnimatePresence mode="wait">
-          {/* ═══ STEP 1: Type + Date ═══ */}
+
+          {/* ══════════════ STEP 1 ══════════════ */}
           {step === 1 && (
             <motion.div
               key="step1"
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -30 }}
-              className="space-y-6"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-5"
             >
-              {/* Type */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                <h2 className="text-lg font-bold text-gray-900 mb-4">
+              {/* Consultation type */}
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 px-1">
                   Тип консультации
-                </h2>
+                </p>
                 <div className="grid grid-cols-2 gap-3">
                   {(
                     [
-                      { key: "online", icon: faVideo, label: "Онлайн", desc: "Видеозвонок" },
-                      { key: "offline", icon: faHospital, label: "Офлайн", desc: "Личный приём" },
+                      {
+                        key: "online",
+                        icon: faVideo,
+                        label: "Онлайн",
+                        desc: "Видеозвонок",
+                        activeGrad: "from-blue-500 to-indigo-600",
+                        activeRing: "ring-blue-400/40",
+                        activeBg: "from-blue-500/10 to-indigo-500/10",
+                        iconBg: "bg-blue-100 text-blue-600",
+                      },
+                      {
+                        key: "offline",
+                        icon: faHospital,
+                        label: "Офлайн",
+                        desc: "Личный приём",
+                        activeGrad: "from-violet-500 to-purple-600",
+                        activeRing: "ring-violet-400/40",
+                        activeBg: "from-violet-500/10 to-purple-500/10",
+                        iconBg: "bg-violet-100 text-violet-600",
+                      },
                     ] as const
-                  ).map(({ key, icon, label, desc }) => (
-                    <button
-                      key={key}
-                      onClick={() => {
-                        setConsultationType(key);
-                        setDoctors([]);
-                        setSelectedDoctor(null);
-                        setSelectedSlot(null);
-                      }}
-                      className={`flex flex-col items-center gap-2 p-5 rounded-xl border-2 transition-all ${
-                        consultationType === key
-                          ? key === "online"
-                            ? "border-blue-500 bg-blue-50 text-blue-700"
-                            : "border-purple-500 bg-purple-50 text-purple-700"
-                          : "border-gray-200 text-gray-600 hover:border-gray-300"
-                      }`}
-                    >
-                      <FontAwesomeIcon icon={icon} className="text-2xl" />
-                      <span className="font-semibold">{label}</span>
-                      <span className="text-xs opacity-70">{desc}</span>
-                    </button>
-                  ))}
+                  ).map(({ key, icon, label, desc, activeGrad, activeRing, activeBg, iconBg }) => {
+                    const isActive = consultationType === key;
+                    return (
+                      <motion.button
+                        key={key}
+                        whileTap={{ scale: 0.97 }}
+                        onClick={() => {
+                          setConsultationType(key);
+                          setDoctors([]);
+                          setSelectedDoctor(null);
+                          setSelectedSlot(null);
+                        }}
+                        className={`relative flex flex-col items-center gap-3 p-6 rounded-2xl border-2 transition-all duration-200 overflow-hidden ${
+                          isActive
+                            ? `border-transparent bg-gradient-to-br ${activeBg} ring-4 ${activeRing} shadow-lg`
+                            : "border-gray-100 bg-white hover:border-gray-200 hover:shadow-md shadow-sm"
+                        }`}
+                      >
+                        {isActive && (
+                          <div className={`absolute top-2 right-2 w-2 h-2 rounded-full bg-gradient-to-br ${activeGrad}`} />
+                        )}
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl ${isActive ? iconBg : "bg-gray-50 text-gray-400"} transition-colors`}>
+                          <FontAwesomeIcon icon={icon} />
+                        </div>
+                        <div className="text-center">
+                          <p className={`font-bold text-sm ${isActive ? "text-gray-900" : "text-gray-600"}`}>{label}</p>
+                          <p className={`text-xs mt-0.5 ${isActive ? "text-gray-500" : "text-gray-400"}`}>{desc}</p>
+                        </div>
+                        {isActive && (
+                          <div className={`absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r ${activeGrad}`} />
+                        )}
+                      </motion.button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Date */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                <h2 className="text-lg font-bold text-gray-900 mb-4">
+              {/* Date picker */}
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 px-1">
                   Выберите дату
-                </h2>
-                <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
-                  {days.map((day) => (
-                    <button
-                      key={day.value}
-                      onClick={() => setSelectedDate(day.value)}
-                      className={`flex flex-col items-center py-3 px-1 rounded-xl border-2 transition-all ${
-                        selectedDate === day.value
-                          ? "border-blue-500 bg-blue-600 text-white"
-                          : "border-gray-200 hover:border-blue-300 text-gray-700"
-                      }`}
-                    >
-                      <span className="text-xs font-medium">{day.dayLabel}</span>
-                      <span className="text-sm font-bold mt-0.5">{day.dateLabel}</span>
-                      {day.isToday && (
-                        <span className={`text-[10px] mt-0.5 font-semibold ${selectedDate === day.value ? "text-blue-200" : "text-blue-500"}`}>
-                          Сегодня
-                        </span>
-                      )}
-                    </button>
-                  ))}
+                </p>
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+                  <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                    {days.map((day) => {
+                      const isSelected = selectedDate === day.value;
+                      return (
+                        <motion.button
+                          key={day.value}
+                          whileTap={{ scale: 0.93 }}
+                          onClick={() => setSelectedDate(day.value)}
+                          className={`relative flex flex-col items-center py-3 px-1 rounded-xl transition-all duration-200 ${
+                            isSelected
+                              ? "bg-gradient-to-b from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-200"
+                              : day.isWeekend
+                              ? "bg-gray-50/60 text-gray-400 hover:bg-blue-50 hover:text-blue-600"
+                              : "bg-transparent text-gray-600 hover:bg-blue-50 hover:text-blue-600"
+                          }`}
+                        >
+                          <span className={`text-[10px] font-semibold uppercase ${isSelected ? "text-blue-100" : "text-gray-400"}`}>
+                            {day.dayLabel}
+                          </span>
+                          <span className={`text-sm font-bold mt-0.5 leading-tight ${isSelected ? "text-white" : ""}`}>
+                            {day.dateLabel.split(" ")[0]}
+                          </span>
+                          <span className={`text-[9px] mt-0.5 ${isSelected ? "text-blue-100" : "text-gray-400"}`}>
+                            {day.dateLabel.split(" ")[1]}
+                          </span>
+                          {day.isToday && (
+                            <span className={`absolute -top-1 left-1/2 -translate-x-1/2 text-[8px] font-bold px-1.5 py-0.5 rounded-full ${
+                              isSelected ? "bg-white text-blue-600 border border-black" : "bg-blue-100 text-blue-600 border border-black"
+                            }`}>
+                              сег
+                            </span>
+                          )}
+                        </motion.button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
-              <button
+              <motion.button
+                whileTap={{ scale: 0.98 }}
                 onClick={() => setStep(2)}
                 disabled={!selectedDate}
-                className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-bold text-base shadow-xl hover:shadow-2xl transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3"
+                className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-bold text-sm shadow-xl shadow-blue-200/60 hover:shadow-2xl hover:shadow-blue-300/60 transition-all hover:scale-[1.01] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none flex items-center justify-center gap-2.5"
               >
+                <FontAwesomeIcon icon={faUserMd} />
                 Показать врачей
-                <FontAwesomeIcon icon={faChevronRight} />
-              </button>
+                <FontAwesomeIcon icon={faChevronRight} className="text-blue-200" />
+              </motion.button>
             </motion.div>
           )}
 
-          {/* ═══ STEP 2: Doctor + Slot ═══ */}
+          {/* ══════════════ STEP 2 ══════════════ */}
           {step === 2 && (
             <motion.div
               key="step2"
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -30 }}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              transition={{ duration: 0.3 }}
               className="space-y-4"
             >
-              {/* Summary bar */}
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-3 flex items-center gap-3 text-sm text-gray-600">
-                <FontAwesomeIcon
-                  icon={consultationType === "online" ? faVideo : faHospital}
-                  className={consultationType === "online" ? "text-blue-500" : "text-purple-500"}
-                />
-                <span className="font-semibold">
+              {/* Context bar */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold ${
+                  consultationType === "online"
+                    ? "bg-blue-100 text-blue-700"
+                    : "bg-violet-100 text-violet-700"
+                }`}>
+                  <FontAwesomeIcon icon={consultationType === "online" ? faVideo : faHospital} />
                   {consultationType === "online" ? "Онлайн" : "Офлайн"}
-                </span>
-                <span className="text-gray-300">·</span>
-                <FontAwesomeIcon icon={faCalendar} className="text-gray-400" />
-                <span>
-                  {new Date(selectedDate + "T00:00:00").toLocaleDateString(
-                    "ru-RU",
-                    { day: "numeric", month: "long" }
-                  )}
-                </span>
+                </div>
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-gray-100 text-gray-600">
+                  <FontAwesomeIcon icon={faCalendar} />
+                  {new Date(selectedDate + "T00:00:00").toLocaleDateString("ru-RU", { day: "numeric", month: "long" })}
+                </div>
+                {!loadingDoctors && doctors.length > 0 && (
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-100 text-emerald-700">
+                    {filteredDoctors.length !== doctors.length
+                      ? `${filteredDoctors.length} из ${doctors.length}`
+                      : doctors.length}{" "}
+                    врач{doctors.length === 1 ? "" : doctors.length <= 4 ? "а" : "ей"}
+                  </div>
+                )}
               </div>
 
-              <h2 className="text-lg font-bold text-gray-900 px-1">
-                Выберите врача и время
-              </h2>
+              <p className="text-lg font-bold text-gray-900 px-1">Выберите врача и время</p>
 
-              {loadingDoctors ? (
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm py-16 flex flex-col items-center gap-3 text-gray-400">
-                  <FontAwesomeIcon
-                    icon={faSpinner}
-                    className="text-3xl animate-spin text-blue-400"
-                  />
-                  <span className="text-sm">Загружаем доступных врачей...</span>
+              {/* ── Filters ── */}
+              {!loadingDoctors && doctors.length > 0 && (
+                <div className="space-y-3">
+                  {/* Search */}
+                  <div className="relative">
+                    <FontAwesomeIcon
+                      icon={faSearch}
+                      className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-300 text-sm pointer-events-none"
+                    />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Поиск по имени или специализации..."
+                      className="w-full pl-10 pr-10 py-3 bg-white border-2 border-gray-100 rounded-2xl text-sm text-gray-800 placeholder:text-gray-300 focus:border-blue-400 focus:outline-none transition-colors shadow-sm"
+                    />
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center transition-colors"
+                      >
+                        <FontAwesomeIcon icon={faTimes} className="text-[9px] text-gray-500" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Specialization dropdown + Sort */}
+                  <div className="flex items-center gap-2">
+                    {/* Spec searchable dropdown */}
+                    {specializations.length > 0 && (
+                      <SpecDropdown
+                        specializations={specializations}
+                        value={filterSpec}
+                        onChange={setFilterSpec}
+                      />
+                    )}
+
+                    {/* Sort dropdown */}
+                    <div className="relative shrink-0">
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                        className="appearance-none pl-8 pr-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 focus:outline-none focus:border-blue-400 cursor-pointer hover:border-gray-300 transition-colors"
+                      >
+                        <option value="default">По умолчанию</option>
+                        <option value="rating">По рейтингу</option>
+                        <option value="experience">По опыту</option>
+                        <option value="slots">По слотам</option>
+                      </select>
+                      <FontAwesomeIcon
+                        icon={faSortAmountDown}
+                        className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-[10px] pointer-events-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* No results after filtering */}
+                  {filteredDoctors.length === 0 && (
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm py-10 flex flex-col items-center gap-3 text-center px-6">
+                      <FontAwesomeIcon icon={faSearch} className="text-2xl text-gray-200" />
+                      <p className="text-sm font-semibold text-gray-600">Ничего не найдено</p>
+                      <button
+                        onClick={() => { setSearchQuery(""); setFilterSpec(null); }}
+                        className="text-xs text-blue-500 font-semibold hover:underline"
+                      >
+                        Сбросить фильтры
+                      </button>
+                    </div>
+                  )}
                 </div>
-              ) : doctors.length === 0 ? (
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm py-16 flex flex-col items-center gap-3 text-gray-400">
-                  <FontAwesomeIcon icon={faUserMd} className="text-4xl opacity-30" />
-                  <p className="text-sm font-medium">
-                    Нет доступных врачей на эту дату
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    Попробуйте другую дату или тип консультации
-                  </p>
+              )}
+
+              {/* Loading */}
+              {loadingDoctors && (
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm py-20 flex flex-col items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center">
+                    <FontAwesomeIcon icon={faSpinner} className="text-2xl text-blue-500 animate-spin" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-semibold text-gray-700">Загружаем врачей</p>
+                    <p className="text-xs text-gray-400 mt-1">Это займёт секунду</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Empty */}
+              {!loadingDoctors && doctors.length === 0 && (
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm py-20 flex flex-col items-center gap-4 text-center px-6">
+                  <div className="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center">
+                    <FontAwesomeIcon icon={faUserMd} className="text-2xl text-gray-300" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-700">Нет доступных врачей</p>
+                    <p className="text-xs text-gray-400 mt-1">Попробуйте другую дату или тип консультации</p>
+                  </div>
                   <button
                     onClick={() => setStep(1)}
-                    className="mt-2 px-5 py-2 rounded-xl border-2 border-blue-200 text-blue-600 text-sm font-semibold hover:bg-blue-50 transition-colors"
+                    className="mt-1 px-5 py-2.5 rounded-xl border-2 border-blue-200 text-blue-600 text-sm font-semibold hover:bg-blue-50 transition-colors flex items-center gap-2"
                   >
-                    <FontAwesomeIcon icon={faChevronLeft} className="mr-1.5" />
+                    <FontAwesomeIcon icon={faChevronLeft} />
                     Изменить дату
                   </button>
                 </div>
-              ) : (
+              )}
+
+              {/* Doctor list */}
+              {!loadingDoctors && filteredDoctors.length > 0 && (
                 <div className="space-y-3">
-                  {doctors.map((doc) => {
+                  {filteredDoctors.map((doc, idx) => {
                     const isSelected = selectedDoctor?.doctor_id === doc.doctor_id;
                     const freeSlots = doc.slots.filter((s) => s.status === "free");
+                    const grad = AVATAR_GRADIENTS[doc.doctor_id % AVATAR_GRADIENTS.length];
+
                     return (
-                      <div
+                      <motion.div
                         key={doc.doctor_id}
-                        className={`bg-white rounded-2xl border-2 shadow-sm transition-all ${
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.05 }}
+                        className={`rounded-2xl border-2 overflow-hidden transition-all duration-200 ${
                           isSelected
-                            ? "border-blue-500"
-                            : "border-gray-100 hover:border-blue-200"
+                            ? "border-blue-500 shadow-xl shadow-blue-100/60"
+                            : "border-gray-100 bg-white hover:border-blue-200 hover:shadow-md shadow-sm"
                         }`}
                       >
-                        {/* Doctor card header */}
+                        {/* Card header */}
                         <button
                           onClick={() => {
                             setSelectedDoctor(isSelected ? null : doc);
                             setSelectedSlot(null);
                           }}
-                          className="w-full flex items-center gap-4 p-4 text-left"
+                          className={`w-full flex items-center gap-4 p-4 text-left transition-colors ${
+                            isSelected ? "bg-gradient-to-r from-blue-50 to-indigo-50/60" : "bg-white"
+                          }`}
                         >
-                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shrink-0">
+                          {/* Avatar */}
+                          <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${grad} flex items-center justify-center text-white font-bold text-xl shrink-0 shadow-lg`}>
                             {doc.first_name.charAt(0)}
                           </div>
+
+                          {/* Info */}
                           <div className="flex-1 min-w-0">
-                            <p className="font-bold text-gray-900">
+                            <p className="font-bold text-gray-900 text-sm">
                               {doc.first_name} {doc.last_name}
                             </p>
                             {doc.specialization && (
-                              <p className="text-sm text-gray-500 flex items-center gap-1">
-                                <FontAwesomeIcon
-                                  icon={faStethoscope}
-                                  className="text-xs"
-                                />
+                              <p className="text-xs text-indigo-600 font-medium flex items-center gap-1 mt-0.5">
+                                <FontAwesomeIcon icon={faStethoscope} className="text-[10px]" />
                                 {doc.specialization}
                               </p>
                             )}
+                            <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                              {doc.rating != null && doc.rating > 0 && (
+                                <StarRating rating={doc.rating} />
+                              )}
+                              {doc.years_of_experience != null && doc.years_of_experience > 0 && (
+                                <span className="flex items-center gap-1 text-[10px] text-gray-400 font-medium">
+                                  <FontAwesomeIcon icon={faBriefcaseMedical} className="text-[9px]" />
+                                  {doc.years_of_experience} лет
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-3 shrink-0">
-                            <span className="text-xs text-gray-400 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-lg">
+
+                          {/* Right */}
+                          <div className="flex flex-col items-end gap-2 shrink-0">
+                            <span className={`text-[11px] font-bold px-2.5 py-1 rounded-lg ${
+                              freeSlots.length > 0
+                                ? "bg-emerald-100 text-emerald-700"
+                                : "bg-gray-100 text-gray-500"
+                            }`}>
                               {freeSlots.length} слот{freeSlots.length === 1 ? "" : freeSlots.length <= 4 ? "а" : "ов"}
                             </span>
                             <FontAwesomeIcon
                               icon={isSelected ? faChevronLeft : faChevronRight}
-                              className="text-gray-400 text-sm"
+                              className={`text-xs transition-colors ${isSelected ? "text-blue-500" : "text-gray-300"}`}
                             />
                           </div>
                         </button>
 
-                        {/* Slots — shown when doctor is selected */}
-                        {isSelected && (
-                          <div className="border-t border-gray-100 px-4 pb-4 pt-3">
-                            <p className="text-xs font-semibold text-gray-500 mb-2 flex items-center gap-1">
-                              <FontAwesomeIcon icon={faClock} />
-                              Доступное время
-                              <span className="ml-1 text-gray-400">
-                                ({doc.preferred_consultation_duration} мин)
-                              </span>
-                            </p>
-                            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                              {freeSlots.map((slot) => (
-                                <button
-                                  key={slot.start}
-                                  onClick={() => setSelectedSlot(slot)}
-                                  className={`py-2 px-1 rounded-xl border-2 text-sm font-semibold transition-all ${
-                                    selectedSlot?.start === slot.start
-                                      ? "border-blue-500 bg-blue-600 text-white"
-                                      : "border-gray-200 text-gray-700 hover:border-blue-300"
-                                  }`}
-                                >
-                                  {slot.start}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                        {/* Time slots */}
+                        <AnimatePresence>
+                          {isSelected && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.25 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="border-t border-blue-100 bg-blue-50/40 px-4 pb-4 pt-3">
+                                <p className="text-[11px] font-semibold text-gray-500 mb-3 flex items-center gap-1.5">
+                                  <FontAwesomeIcon icon={faClock} className="text-blue-400" />
+                                  Доступное время
+                                  <span className="text-gray-400 font-normal">· {doc.preferred_consultation_duration} мин</span>
+                                </p>
+                                <div className="grid grid-cols-5 sm:grid-cols-8 gap-2">
+                                  {freeSlots.map((slot) => {
+                                    const isSlotSelected = selectedSlot?.start === slot.start;
+                                    return (
+                                      <motion.button
+                                        key={slot.start}
+                                        whileTap={{ scale: 0.93 }}
+                                        onClick={() => setSelectedSlot(slot)}
+                                        className={`py-2 rounded-xl text-xs font-bold transition-all ${
+                                          isSlotSelected
+                                            ? "bg-gradient-to-b from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-200"
+                                            : "bg-white border border-gray-200 text-gray-700 hover:border-blue-300 hover:text-blue-600"
+                                        }`}
+                                      >
+                                        {slot.start}
+                                      </motion.button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </motion.div>
                     );
                   })}
                 </div>
@@ -414,92 +754,102 @@ export default function SchedulePage() {
                 <motion.button
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => setStep(3)}
-                  className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-bold text-base shadow-xl hover:shadow-2xl transition-all hover:scale-[1.02] flex items-center justify-center gap-3"
+                  className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-bold text-sm shadow-xl shadow-blue-200/60 hover:scale-[1.01] transition-all flex items-center justify-center gap-2.5"
                 >
                   Продолжить
-                  <FontAwesomeIcon icon={faChevronRight} />
+                  <FontAwesomeIcon icon={faChevronRight} className="text-blue-200" />
                 </motion.button>
               )}
             </motion.div>
           )}
 
-          {/* ═══ STEP 3: Symptoms + Confirm ═══ */}
+          {/* ══════════════ STEP 3 ══════════════ */}
           {step === 3 && selectedDoctor && selectedSlot && (
             <motion.div
               key="step3"
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -30 }}
-              className="space-y-5"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-4"
             >
-              {/* Summary */}
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3">
-                <h2 className="text-lg font-bold text-gray-900">
-                  Детали записи
-                </h2>
-                <div className="space-y-2 text-sm text-gray-700">
-                  <div className="flex items-center gap-2">
-                    <FontAwesomeIcon
-                      icon={faUserMd}
-                      className="text-blue-400 w-4"
-                    />
-                    <span className="font-semibold">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest px-1">
+                Детали записи
+              </p>
+
+              {/* Booking summary */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                {/* Doctor banner */}
+                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-4 flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${AVATAR_GRADIENTS[selectedDoctor.doctor_id % AVATAR_GRADIENTS.length]} flex items-center justify-center text-white font-bold text-lg shadow-lg ring-2 ring-white/30`}>
+                    {selectedDoctor.first_name.charAt(0)}
+                  </div>
+                  <div>
+                    <p className="font-bold text-white text-sm">
                       {selectedDoctor.first_name} {selectedDoctor.last_name}
-                    </span>
+                    </p>
                     {selectedDoctor.specialization && (
-                      <span className="text-gray-400">
-                        · {selectedDoctor.specialization}
-                      </span>
+                      <p className="text-blue-200 text-xs mt-0.5">{selectedDoctor.specialization}</p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <FontAwesomeIcon
-                      icon={faCalendar}
-                      className="text-blue-400 w-4"
-                    />
-                    <span>
-                      {formatScheduledAt(selectedDate, selectedSlot.start)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <FontAwesomeIcon
-                      icon={consultationType === "online" ? faVideo : faHospital}
-                      className="text-blue-400 w-4"
-                    />
-                    <span>
-                      {consultationType === "online" ? "Онлайн" : "Офлайн"} ·{" "}
-                      {selectedDoctor.preferred_consultation_duration} мин
-                    </span>
-                  </div>
+                </div>
+
+                {/* Details */}
+                <div className="px-5 py-4 space-y-3">
+                  {[
+                    {
+                      icon: faCalendar,
+                      label: "Дата и время",
+                      value: formatScheduledAt(selectedDate, selectedSlot.start),
+                      color: "text-blue-500",
+                    },
+                    {
+                      icon: consultationType === "online" ? faVideo : faHospital,
+                      label: "Формат",
+                      value: `${consultationType === "online" ? "Онлайн-консультация" : "Личный приём"} · ${selectedDoctor.preferred_consultation_duration} мин`,
+                      color: consultationType === "online" ? "text-blue-500" : "text-violet-500",
+                    },
+                  ].map(({ icon, label, value, color }) => (
+                    <div key={label} className="flex items-start gap-3">
+                      <div className={`w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center ${color} shrink-0 mt-0.5`}>
+                        <FontAwesomeIcon icon={icon} className="text-sm" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-gray-400 font-medium">{label}</p>
+                        <p className="text-sm font-semibold text-gray-800 mt-0.5">{value}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
               {/* Symptoms */}
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                <label className="block text-sm font-bold text-gray-900 mb-3">
-                  Опишите жалобы{" "}
-                  <span className="font-normal text-gray-400">(необязательно)</span>
+                <label className="block text-sm font-bold text-gray-900 mb-1">
+                  Жалобы{" "}
+                  <span className="font-normal text-gray-400 text-xs">— необязательно</span>
                 </label>
+                <p className="text-xs text-gray-400 mb-3">Опишите симптомы, чтобы врач мог подготовиться</p>
                 <textarea
                   value={symptoms}
                   onChange={(e) => setSymptoms(e.target.value)}
-                  placeholder="Расскажите, что вас беспокоит, чтобы врач мог подготовиться к приёму..."
+                  placeholder="Например: головная боль, температура 37.5, началось 3 дня назад..."
                   rows={4}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none resize-none text-sm"
+                  className="w-full px-4 py-3 border-2 border-gray-100 rounded-xl focus:border-blue-400 focus:outline-none resize-none text-sm text-gray-700 placeholder:text-gray-300 bg-gray-50/50 transition-colors"
                 />
               </div>
 
-              {/* Submit */}
               <button
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-bold text-base shadow-xl hover:shadow-2xl transition-all hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3"
+                className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-bold text-sm shadow-xl shadow-blue-200/60 hover:scale-[1.01] transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2.5"
               >
                 {submitting ? (
                   <>
                     <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
-                    Запись...
+                    Создаём запись...
                   </>
                 ) : (
                   <>
@@ -509,89 +859,100 @@ export default function SchedulePage() {
                 )}
               </button>
 
-              <p className="text-center text-xs text-gray-400">
-                После подтверждения вы получите код доступа на email. Врач
-                сможет начать звонок в назначенное время.
+              <p className="text-center text-xs text-gray-400 px-4">
+                После подтверждения вы получите код доступа на email
               </p>
             </motion.div>
           )}
 
-          {/* ═══ STEP 4: Success ═══ */}
+          {/* ══════════════ STEP 4 ══════════════ */}
           {step === 4 && result && (
             <motion.div
               key="step4"
-              initial={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden text-center"
+              transition={{ duration: 0.35 }}
+              className="space-y-4"
             >
-              <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-8 py-10 text-white">
+              {/* Success banner */}
+              <div className="bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600 rounded-3xl p-8 text-center text-white shadow-2xl shadow-emerald-200/60">
                 <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
-                  className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4"
+                  initial={{ scale: 0, rotate: -20 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: "spring", stiffness: 260, delay: 0.15 }}
+                  className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-3xl flex items-center justify-center mx-auto mb-5 shadow-inner"
                 >
-                  <FontAwesomeIcon icon={faCheckCircle} className="text-4xl" />
+                  <FontAwesomeIcon icon={faCheckCircle} className="text-4xl text-white" />
                 </motion.div>
-                <h2 className="text-3xl font-bold mb-2">Запись создана!</h2>
-                <p className="text-green-100">
-                  Консультация успешно запланирована
-                </p>
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.25 }}
+                >
+                  <h2 className="text-2xl font-extrabold mb-1">Запись создана!</h2>
+                  <p className="text-emerald-100 text-sm">Консультация успешно запланирована</p>
+                </motion.div>
               </div>
 
-              <div className="p-8 space-y-5">
-                <div className="bg-gray-50 rounded-2xl p-5 space-y-3 text-sm text-gray-700 text-left">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-500">Врач</span>
-                    <span className="font-semibold">
-                      {result.doctor.name}
-                      {result.doctor.specialization && (
-                        <span className="text-gray-400 font-normal ml-1">
-                          · {result.doctor.specialization}
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-500">Время</span>
-                    <span className="font-semibold">
-                      {new Date(result.scheduled_at).toLocaleString("ru-RU", {
-                        day: "numeric",
-                        month: "long",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-500">Код доступа</span>
-                    <span className="font-mono font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-lg tracking-widest">
+              {/* Details card */}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+              >
+                <div className="px-5 pt-5 pb-4 space-y-3">
+                  {[
+                    { label: "Врач", value: result.doctor.name + (result.doctor.specialization ? ` · ${result.doctor.specialization}` : "") },
+                    {
+                      label: "Время", value: new Date(result.scheduled_at).toLocaleString("ru-RU", {
+                        day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+                      }),
+                    },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="flex items-center justify-between gap-4">
+                      <span className="text-xs text-gray-400 font-medium shrink-0">{label}</span>
+                      <span className="text-sm font-semibold text-gray-800 text-right">{value}</span>
+                    </div>
+                  ))}
+
+                  <div className="flex items-center justify-between gap-4 pt-3 border-t border-gray-50">
+                    <span className="text-xs text-gray-400 font-medium">Код доступа</span>
+                    <span className="font-mono font-extrabold text-lg text-blue-600 bg-blue-50 px-4 py-1.5 rounded-xl tracking-[0.2em] border border-blue-100">
                       {result.access_code}
                     </span>
                   </div>
                 </div>
 
-                <p className="text-xs text-gray-400">
-                  Код доступа и ссылка на консультацию отправлены на ваш email
-                </p>
-
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <button
-                    onClick={() => router.push("/")}
-                    className="flex-1 py-3 border-2 border-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
-                  >
-                    На главную
-                  </button>
-                  <button
-                    onClick={() => router.push("/patient")}
-                    className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all hover:scale-[1.02]"
-                  >
-                    Мои консультации
-                  </button>
+                <div className="bg-amber-50/60 border-t border-amber-100 px-5 py-3">
+                  <p className="text-xs text-amber-700 font-medium text-center">
+                    Код доступа и ссылка отправлены на ваш email
+                  </p>
                 </div>
-              </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="grid grid-cols-2 gap-3"
+              >
+                <button
+                  onClick={() => router.push("/")}
+                  className="py-3.5 border-2 border-gray-200 text-gray-600 rounded-2xl font-semibold text-sm hover:bg-gray-50 hover:border-gray-300 transition-all"
+                >
+                  На главную
+                </button>
+                <button
+                  onClick={() => router.push("/patient")}
+                  className="py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-semibold text-sm shadow-lg shadow-blue-200/60 hover:scale-[1.02] transition-all"
+                >
+                  Мои записи
+                </button>
+              </motion.div>
             </motion.div>
           )}
+
         </AnimatePresence>
       </div>
     </div>

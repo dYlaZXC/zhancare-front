@@ -5,6 +5,7 @@ import { JitsiMeeting } from "@jitsi/react-sdk";
 import { useLanguage } from "@/context/LanguageContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
+import { isInjectionAttempt, CHAT_ENDPOINT } from "@/lib/ai";
 
 interface VideoCallProps {
   meetingId: string;
@@ -14,9 +15,6 @@ interface VideoCallProps {
   userName: string;
   jwtToken?: string;
 }
-
-const API_KEY = "QqkMxELY0YVGkCx17Vya04Sq9nGvCahu";
-const ENDPOINT = "https://api.mistral.ai/v1/chat/completions";
 
 const VideoCall: React.FC<VideoCallProps> = ({
   meetingId,
@@ -43,30 +41,30 @@ const VideoCall: React.FC<VideoCallProps> = ({
   const sendMessage = async () => {
     if (!userInput.trim()) return;
 
+    if (isInjectionAttempt(userInput)) {
+      setMessages(prev => [...prev, {
+        user: userInput,
+        response: t.genericError || "Я медицинский ассистент. Пожалуйста, задайте медицинский вопрос."
+      }]);
+      setUserInput("");
+      return;
+    }
+
     const newMessage = { user: userInput, response: "" };
     setMessages((prev) => [...prev, newMessage]);
     setLoading(true);
     setError("");
 
     try {
-      const payload = {
-        model: "open-mistral-nemo",
-        temperature: 0.3,
-        top_p: 1,
-        max_tokens: 500,
-        messages: [
-          { role: "system", content: t.assistantInstruction },
-          { role: "user", content: userInput },
-        ],
-      };
-
-      const res = await fetch(ENDPOINT, {
+      const res = await fetch(CHAT_ENDPOINT, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${API_KEY}`,
-        },
-        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          message: userInput,
+          language: language === "ru" ? "ru" : "kz",
+          context: "doctor_assistant",
+        }),
       });
 
       if (!res.ok) throw new Error(t.fetchError);
@@ -75,7 +73,7 @@ const VideoCall: React.FC<VideoCallProps> = ({
 
       setMessages((prev) => {
         const last = prev[prev.length - 1];
-        return [...prev.slice(0, -1), { ...last, response: data.choices[0].message.content }];
+        return [...prev.slice(0, -1), { ...last, response: data.text }];
       });
     } catch (err) {
       setError(t.genericError);

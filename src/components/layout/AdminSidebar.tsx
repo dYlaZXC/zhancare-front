@@ -16,6 +16,7 @@ import {
   faTimes,
   faBolt,
   faUser,
+  faRobot,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useState, useEffect } from "react";
@@ -67,6 +68,7 @@ export const AdminSidebar = ({
     { id: "schedule", icon: faCalendarCheck, title: "Расписание", color: "#295bbf", href: "/admin/schedule" },
     { id: "services", icon: faClipboardList, title: "Услуги", color: "#0ea5e9", href: "/admin/services" },
     { id: "activity", icon: faHistory, title: "Активность", color: "#29358f", href: "/admin/activity" },
+    { id: "ai-agents", icon: faRobot, title: "AI Агенты", color: "#8b5cf6", href: "/admin/ai-agents" },
   ];
 
   // Determine active tab from current pathname
@@ -580,7 +582,7 @@ export const AdminSidebar = ({
         </div>{/* end top group */}
 
         {/* Desktop Navigation */}
-        <nav className={`flex-1 flex flex-col justify-start gap-2 ${isCollapsed ? 'px-2 py-3' : 'px-6 py-3'} overflow-x-hidden overflow-y-hidden relative z-10`}>
+        <nav className={`flex-1 flex flex-col justify-start gap-2 ${isCollapsed ? 'px-2 py-3' : 'px-6 py-3'} overflow-x-hidden overflow-y-auto relative z-10`}>
           {adminMenu.map((item, index) => (
             <div key={`desktop-${item.id}`} className="relative">
               <Link

@@ -420,7 +420,7 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
               <div className="relative flex-shrink-0 group">
                 <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-gray-200 bg-white flex items-center justify-center shadow-sm">
                   {clinicLogo ? (
-                    <img src={clinicLogo} alt="Логотип клиники" className="w-full h-full object-cover" />
+                    <img src={clinicLogo} alt="Логотип клиники" className="w-full h-full object-contain p-1.5" />
                   ) : (
                     <Building2 className="w-8 h-8 text-gray-300" />
                   )}

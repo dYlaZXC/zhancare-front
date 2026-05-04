@@ -31,6 +31,7 @@ import DiagnosticsForm from "./forms/DiagnosticsForm";
 import TreatmentRecommendationsForm from "./forms/TreatmentRecommendationsForm";
 import DiagnosisForm from "./forms/DiagnosisForm";
 import { Consultation } from "@/types/consultation";
+import { isInjectionAttempt, CHAT_ENDPOINT } from "@/lib/ai";
 
 interface FloatingConsultationButtonProps {
   consultation: Consultation;
@@ -149,10 +150,6 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
   const [aiLoading, setAiLoading] = useState(false);
   const aiChatRef = useRef<HTMLDivElement>(null);
 
-  // Mistral AI configuration
-  const API_KEY = "aTzSULuZc45ObRxLrRBFa50GnCanWo1M";
-  const ENDPOINT = "https://api.mistral.ai/v1/chat/completions";
-
   // Send message to AI
   const handleSendAIMessage = async () => {
     if (!aiInput.trim() || aiLoading) return;
@@ -160,41 +157,44 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
     const userMessage = aiInput.trim();
     setAiInput("");
 
-    // Add user message to chat
+    if (isInjectionAttempt(userMessage)) {
+      setAiMessages(prev => [...prev,
+        { role: 'user' as const, content: userMessage },
+        { role: 'assistant' as const, content: "Я медицинский ассистент. Пожалуйста, задайте медицинский вопрос." }
+      ]);
+      return;
+    }
+
     const newMessages = [...aiMessages, { role: 'user' as const, content: userMessage }];
     setAiMessages(newMessages);
     setAiLoading(true);
 
     try {
-      // Build context from consultation data
-      const contextMessage = `Вы медицинский ассистент врача. Вот текущая информация о консультации:
-Пациент: ${consultation.patient_name}
-${consultationFormData.complaints ? `Жалобы: ${consultationFormData.complaints}` : ''}
-${consultationFormData.anamnesis ? `Анамнез: ${consultationFormData.anamnesis}` : ''}
-${consultationFormData.diagnostics ? `Диагностика: ${consultationFormData.diagnostics}` : ''}
-${consultationFormData.treatment ? `Лечение: ${consultationFormData.treatment}` : ''}
-${consultationFormData.diagnosis ? `Диагноз: ${consultationFormData.diagnosis}` : ''}
+      const consultationContext = [
+        `Пациент: ${consultation.patient_name}`,
+        consultationFormData.complaints ? `Жалобы: ${consultationFormData.complaints}` : '',
+        consultationFormData.anamnesis ? `Анамнез: ${consultationFormData.anamnesis}` : '',
+        consultationFormData.diagnostics ? `Диагностика: ${consultationFormData.diagnostics}` : '',
+        consultationFormData.treatment ? `Лечение: ${consultationFormData.treatment}` : '',
+        consultationFormData.diagnosis ? `Диагноз: ${consultationFormData.diagnosis}` : '',
+      ].filter(Boolean).join('\n');
 
-Предоставляйте профессиональные медицинские советы и помогайте врачу в консультации.`;
+      const history = newMessages.slice(0, -1).map(msg => ({
+        role: msg.role as "user" | "assistant",
+        content: msg.content,
+      }));
 
-      const payload = {
-        model: "open-mistral-nemo",
-        temperature: 0.3,
-        top_p: 1,
-        max_tokens: 500,
-        messages: [
-          { role: "system", content: contextMessage },
-          ...newMessages.map(msg => ({ role: msg.role, content: msg.content }))
-        ],
-      };
-
-      const res = await fetch(ENDPOINT, {
+      const res = await fetch(CHAT_ENDPOINT, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${API_KEY}`,
-        },
-        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          message: userMessage,
+          language: "ru",
+          context: "doctor_assistant",
+          consultation_context: consultationContext,
+          history,
+        }),
       });
 
       if (!res.ok) {
@@ -202,7 +202,7 @@ ${consultationFormData.diagnosis ? `Диагноз: ${consultationFormData.diagn
       }
 
       const data = await res.json();
-      const aiResponse = data.choices[0].message.content;
+      const aiResponse = data.text;
 
       // Add AI response to chat
       setAiMessages([...newMessages, { role: 'assistant', content: aiResponse }]);

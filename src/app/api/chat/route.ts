@@ -1,35 +1,33 @@
 import { NextResponse } from "next/server";
+import { isInjectionAttempt } from "@/lib/ai";
 
-const API_KEY = process.env.MISTRAL_API_KEY || "QqkMxELY0YVGkCx17Vya04Sq9nGvCahu";
+const API_KEY = process.env.MISTRAL_API_KEY;
 const ENDPOINT = "https://api.mistral.ai/v1/chat/completions";
 
-// Simple in-memory rate limiting (per IP)
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
-const RATE_LIMIT_WINDOW = 60000; // 1 minute
+const RATE_LIMIT_WINDOW = 60000;
 const MAX_REQUESTS_PER_WINDOW = 10;
 
 function checkRateLimit(ip: string): boolean {
   const now = Date.now();
   const record = rateLimitMap.get(ip);
-
   if (!record || now > record.resetTime) {
     rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
     return true;
   }
-
-  if (record.count >= MAX_REQUESTS_PER_WINDOW) {
-    return false;
-  }
-
+  if (record.count >= MAX_REQUESTS_PER_WINDOW) return false;
   record.count++;
   return true;
 }
 
 export async function POST(req: Request) {
-  // Get client IP for rate limiting
+  if (!API_KEY) {
+    console.error("MISTRAL_API_KEY is not configured");
+    return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
+  }
+
   const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
 
-  // Check rate limit
   if (!checkRateLimit(ip)) {
     return NextResponse.json(
       { error: "Rate limit exceeded. Please wait a moment before trying again." },
@@ -48,7 +46,20 @@ export async function POST(req: Request) {
       );
     }
 
-    // Forward request to Mistral API
+    // Scan all user messages for injection attempts
+    const userMessages: string[] = messages
+      .filter((m: any) => m.role === "user")
+      .map((m: any) => (typeof m.content === "string" ? m.content : JSON.stringify(m.content)));
+
+    for (const text of userMessages) {
+      if (isInjectionAttempt(text)) {
+        return NextResponse.json(
+          { error: "I am a medical assistant. Please describe your symptoms." },
+          { status: 400 }
+        );
+      }
+    }
+
     const response = await fetch(ENDPOINT, {
       method: "POST",
       headers: {
@@ -58,7 +69,7 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         model: model || "pixtral-12b-2409",
         messages,
-        temperature: temperature || 0.5,
+        temperature: 0.2,
         top_p: top_p || 1,
         stream: false,
       }),
@@ -77,9 +88,6 @@ export async function POST(req: Request) {
     return NextResponse.json(data);
   } catch (error: any) {
     console.error("Chat API error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

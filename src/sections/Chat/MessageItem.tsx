@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { FaUser, FaStethoscope, FaCopy, FaCheck } from "react-icons/fa";
 import Image from "next/image";
@@ -29,12 +29,96 @@ const messageVariants = {
   }),
 };
 
-function formatMessageToHTML(text: string): string {
-  let safe = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  safe = safe.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-  safe = safe.replace(/\*(.*?)\*/g, "<em>$1</em>");
-  safe = safe.replace(/\n/g, "<br/>");
-  return safe;
+function renderInline(text: string): React.ReactNode {
+  const parts: React.ReactNode[] = [];
+  const regex = /\*\*(.*?)\*\*|\*(.*?)\*/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = regex.exec(text)) !== null) {
+    if (m.index > last) parts.push(text.slice(last, m.index));
+    if (m[1] !== undefined) parts.push(<strong key={m.index}>{m[1]}</strong>);
+    else if (m[2] !== undefined) parts.push(<em key={m.index}>{m[2]}</em>);
+    last = regex.lastIndex;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return <>{parts}</>;
+}
+
+function formatBotMessage(text: string): React.ReactNode {
+  const lines = text.split("\n");
+  const blocks: React.ReactNode[] = [];
+  type ListState = { ordered: boolean; items: string[] } | null;
+  let list: ListState = null;
+  let paraLines: string[] = [];
+  let key = 0;
+
+  const flushPara = () => {
+    if (!paraLines.length) return;
+    blocks.push(
+      <p key={key++} className="leading-relaxed">
+        {renderInline(paraLines.join(" "))}
+      </p>
+    );
+    paraLines = [];
+  };
+
+  const flushList = () => {
+    if (!list) return;
+    if (list.ordered) {
+      blocks.push(
+        <ol key={key++} className="space-y-1.5 list-none">
+          {list.items.map((item, i) => (
+            <li key={i} className="flex items-start gap-2">
+              <span className="font-semibold flex-shrink-0 w-5 text-right text-[#6aa2ff]">{i + 1}.</span>
+              <span className="leading-relaxed flex-1">{renderInline(item)}</span>
+            </li>
+          ))}
+        </ol>
+      );
+    } else {
+      blocks.push(
+        <ul key={key++} className="space-y-1.5 list-none">
+          {list.items.map((item, i) => (
+            <li key={i} className="flex items-start gap-2">
+              <span className="flex-shrink-0 rounded-full mt-[7px] bg-[#6aa2ff]" style={{ width: 5, height: 5 }} />
+              <span className="leading-relaxed flex-1">{renderInline(item)}</span>
+            </li>
+          ))}
+        </ul>
+      );
+    }
+    list = null;
+  };
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) { flushPara(); flushList(); continue; }
+
+    const ol = line.match(/^(\d+)[.)]\s+(.+)/);
+    if (ol) {
+      flushPara();
+      if (list && !list.ordered) flushList();
+      if (!list) list = { ordered: true, items: [] };
+      list.items.push(ol[2]);
+      continue;
+    }
+
+    const ul = line.match(/^[-*•]\s+(.+)/);
+    if (ul) {
+      flushPara();
+      if (list && list.ordered) flushList();
+      if (!list) list = { ordered: false, items: [] };
+      list.items.push(ul[1]);
+      continue;
+    }
+
+    flushList();
+    paraLines.push(line);
+  }
+  flushPara();
+  flushList();
+
+  return <div className="space-y-2">{blocks}</div>;
 }
 
 export default function MessageItem({
@@ -109,11 +193,7 @@ export default function MessageItem({
             )}
             {message.sender === "bot" ? (
               <>
-                <span
-                  dangerouslySetInnerHTML={{
-                    __html: formatMessageToHTML(message.text),
-                  }}
-                />
+                {formatBotMessage(message.text)}
                 {isStreaming && (
                   <motion.span
                     className="inline-block w-[2px] h-[1em] bg-white/80 ml-[2px] align-middle rounded-sm"
