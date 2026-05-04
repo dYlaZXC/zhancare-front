@@ -697,7 +697,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
             </div>
 
             {/* Doctor cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 w-full pb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full pb-4">
               {filteredDoctors.map((doctor) => (
                 <DoctorCard
                   key={doctor.id}

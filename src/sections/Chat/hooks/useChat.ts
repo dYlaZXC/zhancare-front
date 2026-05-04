@@ -159,8 +159,15 @@ export const useChat = ({
       }
 
       const data = await res.json();
-      const fullText: string = data.text || getErrorMessage();
-      const showDoctorButton: boolean = data.show_doctor_button ?? false;
+      const rawText: string = data.text || getErrorMessage();
+      const isJsonResponse = rawText.trimStart().startsWith("{") && rawText.trimEnd().endsWith("}");
+      const fallbackText = language === "en"
+        ? "Please describe your symptoms in more detail — I'll give you a medical analysis right away."
+        : language === "kz"
+        ? "Симптомдарыңызды толығырақ сипаттаңыз — дереу медициналық талдау беремін."
+        : "Опишите ваши симптомы подробнее — я сразу дам медицинский анализ.";
+      const fullText: string = isJsonResponse ? fallbackText : rawText;
+      const showDoctorButton: boolean = isJsonResponse ? false : (data.show_doctor_button ?? false);
 
       let index = 0;
       setStreamingMessageId(botMessageId);

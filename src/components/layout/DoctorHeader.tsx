@@ -48,9 +48,9 @@ export const DoctorHeader = ({
         const response = await api.get('/user-profile/profile/');
         const profileData = response.data;
 
-        // Handle availability_status - check both top-level and nested profile_data
-        const status = profileData.availability_status
-          || profileData.profile_data?.availability_status
+        const status = profileData.profiles?.doctor?.availability_status
+          || profileData.profiles?.nurse?.availability_status
+          || profileData.availability_status
           || 'offline';
         setAvailabilityStatus(status as 'available' | 'busy' | 'offline' | 'break');
       } catch (error) {
@@ -63,25 +63,22 @@ export const DoctorHeader = ({
     fetchCurrentStatus();
   }, [user]);
 
-  // Listen for WebSocket availability changes
+  // Connect WebSocket and listen for availability changes
   useEffect(() => {
     if (!user || !isDoctor) return;
 
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (token) websocketService.connect(token).catch(() => {});
+
     const handleAvailabilityChange = (data: any) => {
-      // Check if the change is for the current user
       if (data.data && data.data.doctor_id === user.id) {
         setAvailabilityStatus(data.data.availability_status);
       }
     };
 
-    // Subscribe to doctor availability changes
     websocketService.onDoctorAvailabilityChanged(handleAvailabilityChange);
-
-    return () => {
-      // Cleanup: unsubscribe from availability changes
-      websocketService.offDoctorAvailabilityChanged(handleAvailabilityChange);
-    };
-  }, [user]);
+    return () => websocketService.offDoctorAvailabilityChanged(handleAvailabilityChange);
+  }, [user, isDoctor]);
 
   const getAvailabilityStatusInfo = (status: typeof availabilityStatus) => {
     switch (status) {
@@ -297,6 +294,7 @@ export const DoctorHeader = ({
                     <div className="p-2">
                       <DoctorAvailabilityToggle
                         currentStatus={availabilityStatus}
+                        doctorId={user?.id}
                         onStatusChange={(newStatus) => {
                           setAvailabilityStatus(newStatus as any);
                           setShowAvailabilityDropdown(false);

@@ -4,7 +4,6 @@ import React from "react";
 import clsx from "clsx";
 import {
   CheckCircle2,
-  MessageSquare,
   Video,
   Phone,
   MapPin,
@@ -161,8 +160,8 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
 
       {/* Header */}
       <div className="p-4 pb-3">
+        {/* Avatar + name row */}
         <div className="flex items-start gap-3">
-          {/* Avatar */}
           <div className="relative flex-shrink-0">
             <div
               className="w-11 h-11 rounded-2xl flex items-center justify-center text-white font-bold text-sm shadow-sm overflow-hidden"
@@ -183,10 +182,11 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
             )}
           </div>
 
-          {/* Name + spec + availability */}
+          {/* Name + spec + badges */}
           <div className="flex-1 min-w-0 pt-0.5">
-            <p className="text-sm font-bold text-gray-900 leading-tight truncate pr-16">{doctor.name || 'Имя не указано'}</p>
-            <div className="flex items-center gap-1 mt-0.5">
+            {/* leave room for the absolute badge (top-3 right-3 ≈ 80px wide) */}
+            <p className="text-sm font-bold text-gray-900 leading-tight truncate pr-[72px]">{doctor.name || 'Имя не указано'}</p>
+            <div className="flex items-center gap-1 mt-0.5 min-w-0">
               <Stethoscope size={9} className="text-blue-500 flex-shrink-0" />
               <p className="text-xs text-blue-600 font-medium truncate">{getSpecializationName(doctor, language)}</p>
             </div>
@@ -199,9 +199,9 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
               ) : null}
             </div>
             {earliestLabel && (
-              <div className="flex items-center gap-1.5 mt-1.5">
-                <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">
-                  <Zap size={8} className="fill-blue-400 text-blue-400" />
+              <div className="flex items-center gap-1 mt-1.5 min-w-0">
+                <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full truncate">
+                  <Zap size={8} className="fill-blue-400 text-blue-400 flex-shrink-0" />
                   {earliestLabel}
                 </span>
               </div>
@@ -209,16 +209,31 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
           </div>
         </div>
 
-        {/* Price + consult types */}
-        <div className="flex items-center justify-between mt-3">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className={clsx(
-              "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium",
-              doctor.language ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-400'
-            )}>
-              <MessageSquare size={8} />
-              {doctor.language === 'kz' ? 'Қазақша' : doctor.language === 'en' ? 'English' : doctor.language === 'ru' ? 'Русский' : '—'}
-            </span>
+        {/* Price block — full width, stacks cleanly */}
+        {doctor.online_consultation_price ? (() => {
+          const price = Number(doctor.online_consultation_price);
+          const duration = doctor.preferred_consultation_duration || 30;
+          const perMin = Math.round(price / duration);
+          return (
+            <div className="flex items-center justify-between mt-3 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-medium">
+                  <Video size={8} />Видео
+                </span>
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 text-[10px] font-medium">
+                  <Phone size={8} />Аудио
+                </span>
+              </div>
+              <div className="flex flex-col items-end flex-shrink-0">
+                <span className="text-sm font-black text-emerald-600 leading-none">
+                  {price.toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ₸
+                </span>
+                <span className="text-[10px] text-emerald-700 font-medium leading-none mt-0.5">за {duration} мин · ≈{perMin} ₸/мин</span>
+              </div>
+            </div>
+          );
+        })() : (
+          <div className="flex items-center gap-1.5 mt-3 flex-wrap">
             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-green-50 text-green-700 text-[10px] font-medium">
               <Video size={8} />Видео
             </span>
@@ -226,47 +241,30 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
               <Phone size={8} />Аудио
             </span>
           </div>
-          <div className="flex-shrink-0">
-            {doctor.online_consultation_price ? (() => {
-              const price = Number(doctor.online_consultation_price);
-              const duration = doctor.preferred_consultation_duration || 30;
-              const perMin = Math.round(price / duration);
-              return (
-                <div className="flex flex-col items-end gap-1 bg-emerald-50 border border-emerald-200 px-2.5 py-2 rounded-lg">
-                  <span className="text-sm font-black text-emerald-600 leading-none">
-                    {price.toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ₸
-                  </span>
-                  <span className="text-[10px] text-emerald-700 font-semibold leading-none">за {duration} мин · ≈{perMin.toLocaleString('ru-RU')} ₸/мин</span>
-                </div>
-              );
-            })() : (
-              <div className="text-xs text-gray-400 italic px-2 py-1">—</div>
-            )}
-          </div>
-        </div>
+        )}
 
-        {/* Clinic row */}
-        <div className="flex items-center gap-1.5 mt-2">
+        {/* Clinic + location row */}
+        <div className="flex items-center gap-2 mt-2 min-w-0">
           {doctor.clinic ? (
-            <div className="flex items-center gap-2 px-2 py-1.5 bg-blue-50 border border-blue-100 rounded-lg min-w-0">
+            <div className="flex items-center gap-1.5 px-2 py-1.5 bg-blue-50 border border-blue-100 rounded-lg min-w-0 flex-1 overflow-hidden">
               {doctor.clinic.logo ? (
-                <div className="w-6 h-6 rounded-md overflow-hidden bg-white border border-blue-100 flex-shrink-0 flex items-center justify-center p-0.5">
+                <div className="w-5 h-5 rounded-md overflow-hidden bg-white border border-blue-100 flex-shrink-0 flex items-center justify-center p-0.5">
                   <img src={doctor.clinic.logo} alt={doctor.clinic.name} className="w-full h-full object-contain" />
                 </div>
               ) : (
-                <div className="w-6 h-6 rounded-md bg-blue-100 flex-shrink-0 flex items-center justify-center">
-                  <Building2 size={11} className="text-blue-500" />
+                <div className="w-5 h-5 rounded-md bg-blue-100 flex-shrink-0 flex items-center justify-center">
+                  <Building2 size={10} className="text-blue-500" />
                 </div>
               )}
               <span className="text-[10px] font-semibold text-blue-700 truncate">{doctor.clinic.name}</span>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 px-2 py-1.5 bg-gray-50 border border-gray-100 rounded-lg">
+            <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border border-gray-100 rounded-lg flex-1">
               <Building2 size={10} className="text-gray-400 flex-shrink-0" />
               <span className="text-[10px] text-gray-400">Независимый врач</span>
             </div>
           )}
-          <div className="flex items-center gap-1 text-[10px] text-gray-400 ml-auto">
+          <div className="flex-shrink-0 flex items-center gap-1 text-[10px] text-gray-400">
             <MapPin size={9} /><span>Онлайн</span>
           </div>
         </div>

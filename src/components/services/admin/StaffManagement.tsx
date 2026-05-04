@@ -1198,21 +1198,6 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         errors.preferredConsultationDuration = 'Укажите длительность консультации (5-180 минут)';
       }
 
-      // ✅ Validate that at least one day is enabled in at least one week
-      let hasEnabledDay = false;
-
-      // Check if ANY week has at least one enabled day
-      for (const weekStartDate in weeklySchedules) {
-        const weekSchedule = weeklySchedules[weekStartDate];
-        if (weekSchedule?.online && Object.values(weekSchedule.online).some((day: any) => day.enabled)) {
-          hasEnabledDay = true;
-          break;
-        }
-      }
-
-      if (!hasEnabledDay) {
-        errors.schedule = 'Необходимо включить хотя бы один день в расписании работы';
-      }
     }
 
     // ✅ Clinic is optional - global admins can choose to assign or not assign a clinic

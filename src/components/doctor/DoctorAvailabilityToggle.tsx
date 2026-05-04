@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Power,
-  Clock,
   Coffee,
   Users,
   CheckCircle,
@@ -15,12 +14,14 @@ import {
 } from "lucide-react";
 import { api } from "@/utils/api";
 import { toast } from "react-toastify";
+import { websocketService } from "@/services/websocketService";
 
 interface DoctorAvailabilityToggleProps {
   currentStatus: 'available' | 'busy' | 'offline' | 'break';
   onStatusChange?: (newStatus: string) => void;
   lastSeen?: string;
   availabilityNote?: string;
+  doctorId?: number;
 }
 
 type AvailabilityStatus = 'available' | 'busy' | 'offline' | 'break';
@@ -39,18 +40,34 @@ const DoctorAvailabilityToggle: React.FC<DoctorAvailabilityToggleProps> = ({
   currentStatus,
   onStatusChange,
   lastSeen,
-  availabilityNote: initialNote
+  availabilityNote: initialNote,
+  doctorId,
 }) => {
   const [status, setStatus] = useState<AvailabilityStatus>(currentStatus);
-
-  // Update internal status when props change
-  React.useEffect(() => {
-    setStatus(currentStatus);
-  }, [currentStatus]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [availabilityNote, setAvailabilityNote] = useState(initialNote || '');
   const [showNoteInput, setShowNoteInput] = useState(false);
+  const pendingStatusRef = useRef<AvailabilityStatus | null>(null);
+
+  // Sync when parent passes a new status (e.g. from WebSocket in DoctorHeader)
+  useEffect(() => { setStatus(currentStatus); }, [currentStatus]);
+
+  // WebSocket: listen for real-time status changes for this doctor
+  useEffect(() => {
+    const handleWsChange = (data: any) => {
+      const payload = data?.data ?? data;
+      if (doctorId && payload?.doctor_id !== doctorId) return;
+      const newStatus = payload?.availability_status as AvailabilityStatus;
+      if (newStatus) {
+        setStatus(newStatus);
+        onStatusChange?.(newStatus);
+      }
+    };
+
+    websocketService.onDoctorAvailabilityChanged(handleWsChange);
+    return () => websocketService.offDoctorAvailabilityChanged(handleWsChange);
+  }, [doctorId, onStatusChange]);
 
   const statusOptions: StatusOption[] = [
     {
@@ -124,6 +141,7 @@ const DoctorAvailabilityToggle: React.FC<DoctorAvailabilityToggleProps> = ({
 
   const handleStatusSelect = (newStatus: AvailabilityStatus) => {
     if (newStatus === 'break' || newStatus === 'offline') {
+      pendingStatusRef.current = newStatus;
       setShowNoteInput(true);
     } else {
       updateAvailabilityStatus(newStatus);
@@ -131,7 +149,8 @@ const DoctorAvailabilityToggle: React.FC<DoctorAvailabilityToggleProps> = ({
   };
 
   const handleNoteSubmit = () => {
-    const newStatus = showNoteInput ? (availabilityNote.includes('перерыв') ? 'break' : 'offline') : status;
+    const newStatus = pendingStatusRef.current ?? status;
+    pendingStatusRef.current = null;
     updateAvailabilityStatus(newStatus, availabilityNote);
   };
 
