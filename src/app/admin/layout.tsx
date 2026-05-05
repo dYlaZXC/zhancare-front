@@ -66,7 +66,7 @@ export default function AdminLayout({
       />
 
       {/* Main */}
-      <div className={`flex-1 flex flex-col transition-all duration-500 ${sidebarCollapsed ? 'xl:ml-20' : 'xl:ml-80'}`}>
+      <div className={`flex-1 min-w-0 flex flex-col transition-all duration-500 ${sidebarCollapsed ? 'xl:ml-20' : 'xl:ml-80'}`}>
         {/* Header */}
         <AdminHeader
           onMenuClick={() => setSidebarOpen(true)}

@@ -20,7 +20,7 @@ const resolveAvatar = (url?: string | null) => {
   if (!url) return null;
   return url.startsWith("http") ? url : `${BACKEND}${url}`;
 };
-import { useAuth, computeRole, ROLE_DISPLAY_MAP } from "@/context/AuthContext";
+import { useAuth, computeRole } from "@/context/AuthContext";
 import { toast } from "react-toastify";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -36,7 +36,7 @@ export const NurseSidebar = ({
   onClose,
   isCollapsed = false,
 }: NurseSidebarProps) => {
-  const { user, logoutUser, setIsAuthOpen } = useAuth();
+  const { user, logoutUser } = useAuth();
   const userRole = computeRole(user?.roles);
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);

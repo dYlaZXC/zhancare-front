@@ -2,7 +2,7 @@
 import Image from "next/image";
 import Logo from "@/assets/logosaas.png";
 import MenuIcon from "@/assets/menu.svg";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import ru from "@/locales/ru.json";
@@ -11,6 +11,7 @@ import en from "@/locales/en.json";
 import LanguageSwitcher from "./LanguageSwitcher";
 import UserDropdown from "./UserDropdown";
 import MobileMenu from "./MobileMenu";
+import Link from "next/link";
 
 // Constants
 const SCROLL_THRESHOLD = 50;
@@ -38,6 +39,8 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [tractionOpen, setTractionOpen] = useState(false);
+  const tractionRef = useRef<HTMLDivElement>(null);
 
   // Enhanced scroll handler - always visible, just changes background
   const handleScroll = useCallback(() => {
@@ -108,6 +111,17 @@ export default function Header() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isMenuOpen]);
 
+  // Close traction dropdown on outside click
+  useEffect(() => {
+    const handleOutside = (e: MouseEvent) => {
+      if (tractionRef.current && !tractionRef.current.contains(e.target as Node)) {
+        setTractionOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, []);
+
   const toggleMenu = useCallback(() => {
     setIsMenuOpen((prev) => !prev);
   }, []);
@@ -166,11 +180,21 @@ export default function Header() {
     }
   }, [language]);
 
-  // Memoize navigation keys
-  const navigationKeys = useMemo(() => 
-    Object.keys(translations.navigation) as Array<keyof typeof translations.navigation>,
+  // Memoize navigation keys — "traction" is rendered separately as a dropdown
+  const navigationKeys = useMemo(() =>
+    (Object.keys(translations.navigation) as Array<keyof typeof translations.navigation>)
+      .filter(k => k !== 'traction'),
     [translations]
   );
+
+  const tractionDropdownLabels = useMemo(() => {
+    const map: Record<string, { journey: string; pipeline: string }> = {
+      ru: { journey: 'Наш путь',        pipeline: 'Pipeline клиник' },
+      en: { journey: 'Our Journey',     pipeline: 'Clinic Pipeline' },
+      kz: { journey: 'Біздің жол',      pipeline: 'Клиника Pipeline' },
+    };
+    return map[language] ?? map.ru;
+  }, [language]);
 
   // Animation classes - always visible sticky header
   const headerClasses = useMemo(() => {
@@ -231,6 +255,62 @@ export default function Header() {
                     <div className="absolute inset-0 bg-white rounded-full transform scale-0 group-hover:scale-100 transition-transform duration-200" />
                   </button>
                 ))}
+
+                {/* "Наш путь" dropdown */}
+                <div ref={tractionRef} className="relative">
+                  <button
+                    onClick={() => setTractionOpen(prev => !prev)}
+                    className="group relative flex items-center gap-1 px-2 py-1 lg:px-3 lg:py-1.5 laptop-hd:px-2.5 laptop-hd:py-1 desktop-fhd:px-3 desktop-fhd:py-1.5 rounded-full border border-white/30 hover:bg-white hover:text-[#1D1D2F] transition-all duration-200 whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-white/50 text-xs lg:text-sm laptop-hd:text-xs desktop-fhd:text-sm"
+                    aria-haspopup="true"
+                    aria-expanded={tractionOpen}
+                  >
+                    <span className="relative z-10">{translations.navigation['traction']}</span>
+                    <svg
+                      className={`relative z-10 w-3 h-3 transition-transform duration-200 ${tractionOpen ? 'rotate-180' : ''}`}
+                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                    <div className="absolute inset-0 bg-white rounded-full transform scale-0 group-hover:scale-100 transition-transform duration-200" />
+                  </button>
+
+                  {/* Dropdown menu */}
+                  {tractionOpen && (
+                    <div className="absolute top-full left-0 mt-2 w-52 rounded-2xl overflow-hidden shadow-2xl border border-white/10 z-50"
+                         style={{ background: 'rgba(29,29,47,0.97)', backdropFilter: 'blur(20px)' }}>
+                      {/* Item 1 — scroll to Traction section */}
+                      <button
+                        onClick={() => { handleScrollToSection('traction'); setTractionOpen(false); }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-white/90 hover:bg-white/10 transition-colors"
+                      >
+                        <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-[#3772ff] to-[#29358f] flex items-center justify-center text-base">🚀</span>
+                        <div>
+                          <div className="font-semibold leading-tight">{tractionDropdownLabels.journey}</div>
+                          <div className="text-xs text-white/50 mt-0.5">
+                            {language === 'ru' ? 'Наша история' : language === 'kz' ? 'Біздің тарих' : 'Our story'}
+                          </div>
+                        </div>
+                      </button>
+
+                      <div className="h-px mx-3 bg-white/10" />
+
+                      {/* Item 2 — Pipeline page */}
+                      <Link
+                        href="/admin/pipeline"
+                        onClick={() => setTractionOpen(false)}
+                        className="flex items-center gap-3 px-4 py-3 text-sm text-white/90 hover:bg-white/10 transition-colors"
+                      >
+                        <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-[#10b981] to-[#059669] flex items-center justify-center text-base">📊</span>
+                        <div>
+                          <div className="font-semibold leading-tight">{tractionDropdownLabels.pipeline}</div>
+                          <div className="text-xs text-white/50 mt-0.5">
+                            {language === 'ru' ? 'CRM клиник' : language === 'kz' ? 'Клиника CRM' : 'Clinics CRM'}
+                          </div>
+                        </div>
+                      </Link>
+                    </div>
+                  )}
+                </div>
               </div>
               
               <div className="flex items-center gap-1 lg:gap-2 laptop-hd:gap-1.5 desktop-fhd:gap-2 ml-1 lg:ml-2 laptop-hd:ml-1.5 desktop-fhd:ml-2">

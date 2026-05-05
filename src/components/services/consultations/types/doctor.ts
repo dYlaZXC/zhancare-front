@@ -48,9 +48,14 @@ export interface TimeSlot {
   id: number;
   start_time: string;
   end_time: string;
-  available_spots: number;
-  max_consultations: number;
-  is_booked?: boolean; // Add field to track if slot is booked
+  // AppointmentSlot fields
+  location_type?: string | null;
+  status?: string;
+  staff_id?: number;
+  // UI-layer fields derived from schedule display
+  available_spots?: number;
+  max_consultations?: number;
+  is_booked?: boolean;
 }
 
 export interface RecommendedDoctor {

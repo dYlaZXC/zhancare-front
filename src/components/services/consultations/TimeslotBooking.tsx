@@ -15,12 +15,13 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 
-interface TimeSlot {
+interface AppointmentSlot {
   id: number;
   start_time: string;
   end_time: string;
-  available_spots: number;
-  max_consultations: number;
+  location_type: string | null;
+  status: string;
+  staff_id?: number;
 }
 
 interface Doctor {
@@ -45,9 +46,9 @@ const TimeslotBooking: React.FC<TimeslotBookingProps> = ({
   onBookingComplete,
   onBack
 }) => {
-  const [timeslots, setTimeslots] = useState<TimeSlot[]>([]);
+  const [timeslots, setTimeslots] = useState<AppointmentSlot[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedTimeslot, setSelectedTimeslot] = useState<TimeSlot | null>(null);
+  const [selectedTimeslot, setSelectedTimeslot] = useState<AppointmentSlot | null>(null);
   const [booking, setBooking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>("");
@@ -90,7 +91,7 @@ const TimeslotBooking: React.FC<TimeslotBookingProps> = ({
 
       try {
         const response = await fetch(
-          `/api/consultations/timeslots/available/?doctor_id=${doctorId}&start_date=${selectedDate}&end_date=${selectedDate}&limit=20`,
+          `/api/consultations/slots/available/?doctor_id=${doctorId}&start_date=${selectedDate}&end_date=${selectedDate}&limit=20`,
           {
             headers: {
               'Authorization': `Token ${localStorage.getItem('access_token')}`,
@@ -104,7 +105,7 @@ const TimeslotBooking: React.FC<TimeslotBookingProps> = ({
         }
 
         const data = await response.json();
-        setTimeslots(data.timeslots || []);
+        setTimeslots(data.slots || []);
       } catch (err: any) {
         console.error('Error fetching timeslots:', err);
         setError(err.message || 'Ошибка загрузки временных слотов');
@@ -131,7 +132,7 @@ const TimeslotBooking: React.FC<TimeslotBookingProps> = ({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          timeslot_id: selectedTimeslot.id,
+          slot_id: selectedTimeslot.id,
           ai_recommendation_id: aiRecommendationId,
         }),
       });
@@ -177,7 +178,7 @@ const TimeslotBooking: React.FC<TimeslotBookingProps> = ({
     });
   };
 
-  const TimeSlotGroup = ({ title, slots, icon }: { title: string; slots: TimeSlot[]; icon: React.ReactNode }) => {
+  const AppointmentSlotGroup = ({ title, slots, icon }: { title: string; slots: AppointmentSlot[]; icon: React.ReactNode }) => {
     if (slots.length === 0) return null;
 
     return (
@@ -202,7 +203,7 @@ const TimeslotBooking: React.FC<TimeslotBookingProps> = ({
             >
               <div className="font-medium text-sm">{formatTime(slot.start_time)}</div>
               <div className="text-xs text-gray-500 mt-1">
-                {slot.available_spots} мест
+                {slot.location_type === 'clinic' ? 'Клиника' : slot.location_type === 'home' ? 'На дому' : 'Онлайн'}
               </div>
             </motion.button>
           ))}
@@ -314,17 +315,17 @@ const TimeslotBooking: React.FC<TimeslotBookingProps> = ({
           </div>
         ) : (
           <div className="space-y-6">
-            <TimeSlotGroup
+            <AppointmentSlotGroup
               title="Утро (9:00 - 12:00)"
               slots={groupedTimeslots.morning}
               icon={<Clock className="w-4 h-4" />}
             />
-            <TimeSlotGroup
+            <AppointmentSlotGroup
               title="День (12:00 - 17:00)"
               slots={groupedTimeslots.afternoon}
               icon={<Clock className="w-4 h-4" />}
             />
-            <TimeSlotGroup
+            <AppointmentSlotGroup
               title="Вечер (17:00 - 20:00)"
               slots={groupedTimeslots.evening}
               icon={<Clock className="w-4 h-4" />}
