@@ -7,8 +7,7 @@ export default function PatientPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to profile page by default
-    router.replace("/patient/profile");
+    router.replace("/patient/video");
   }, [router]);
 
   return null;

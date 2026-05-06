@@ -13,6 +13,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUserInjured } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context/AuthContext";
+import PhoneInput from "@/components/ui/PhoneInput";
 
 const BACKEND = process.env.NEXT_PUBLIC_API_URL?.replace("/api/v1", "") ?? "http://127.0.0.1:8000";
 const resolveAvatar = (url?: string | null) => {
@@ -240,7 +241,11 @@ const Card = ({ children, accentColor, delay = 0 }: { children: React.ReactNode;
     initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}
     className="relative bg-white rounded-3xl shadow-sm border border-gray-100 overflow-visible"
   >
-    <div className="absolute left-0 top-0 w-1 h-full rounded-r-full" style={{ background: accentColor }} />
+    {/* Separate overflow-hidden layer just for the accent bar so it's clipped by the card corners
+        while the card itself stays overflow-visible for dropdown menus */}
+    <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+      <div className="absolute left-0 top-0 w-1.5 h-full" style={{ background: accentColor }} />
+    </div>
     <div className="px-8 py-6">{children}</div>
   </motion.div>
 );
@@ -314,23 +319,33 @@ export default function PatientProfileDashboard() {
     finally { setLoading(false); }
   };
 
+  // Convert empty strings to null so DRF DateField/ChoiceField don't reject them
+  const cleanPayload = (obj: Record<string, string>) =>
+    Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, v === "" ? null : v]));
+
   const handleSavePersonal = async () => {
     setSavingPersonal(true);
     try {
-      await api.patch("/user-profile/profile/", personalForm);
+      await api.patch("/user-profile/profile/", cleanPayload(personalForm));
       toast.success("Личные данные обновлены");
       setSavedPersonal(true); setTimeout(() => setSavedPersonal(false), 2500);
-    } catch { toast.error("Не удалось сохранить"); }
+    } catch (e: any) {
+      const detail = e?.response?.data;
+      toast.error(detail ? JSON.stringify(detail) : "Не удалось сохранить");
+    }
     finally { setSavingPersonal(false); }
   };
 
   const handleSaveMedical = async () => {
     setSavingMedical(true);
     try {
-      await api.patch("/user-profile/profile/", medicalForm);
+      await api.patch("/user-profile/profile/", cleanPayload(medicalForm));
       toast.success("Медицинские данные обновлены");
       setSavedMedical(true); setTimeout(() => setSavedMedical(false), 2500);
-    } catch { toast.error("Не удалось сохранить"); }
+    } catch (e: any) {
+      const detail = e?.response?.data;
+      toast.error(detail ? JSON.stringify(detail) : "Не удалось сохранить");
+    }
     finally { setSavingMedical(false); }
   };
 
@@ -517,7 +532,15 @@ export default function PatientProfileDashboard() {
           <InputField label="Имя" value={personalForm.first_name} onChange={(v) => setPersonalForm((p) => ({ ...p, first_name: v }))} icon={User} />
           <InputField label="Фамилия" value={personalForm.last_name} onChange={(v) => setPersonalForm((p) => ({ ...p, last_name: v }))} icon={User} />
           <InputField label="Email" value={profile.email} icon={Mail} readOnly />
-          <InputField label="Телефон" value={personalForm.phone} onChange={(v) => setPersonalForm((p) => ({ ...p, phone: v }))} icon={Phone} placeholder="+7 (___) ___-__-__" />
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Телефон</label>
+            <PhoneInput
+              value={personalForm.phone ?? ""}
+              onChange={(e164) => setPersonalForm((p) => ({ ...p, phone: e164 }))}
+              placeholder="+7 (___) ___-__-__"
+              inputClassName="pl-10 pr-4 py-3 text-sm border-gray-200 bg-white text-gray-800 placeholder-gray-300 hover:border-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm rounded-xl"
+            />
+          </div>
           <InputField label="Дата рождения" value={personalForm.birth_date} onChange={(v) => setPersonalForm((p) => ({ ...p, birth_date: v }))} icon={Calendar} type="date" />
 
           <SelectWrapper>

@@ -40,6 +40,7 @@ import {
 
 
 import ScheduleTypeSelector from "./schedule/components/ScheduleTypeSelector";
+import PhoneInputUI from "@/components/ui/PhoneInput";
 
 /**
  * Staff member interface representing doctors and nurses.
@@ -2502,13 +2503,12 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Телефон <span className="text-red-500">*</span>
                     </label>
-                    <PhoneInput
+                    <PhoneInputUI
                       value={formData.phone}
-                      onChange={(value) => { setFormData({ ...formData, phone: value }); clearError('phone'); }}
-                      placeholder="+7 (700) 123 45 67"
-                      className={formErrors.phone ? 'w-full pl-12 pr-4 py-3 rounded-xl border-2 border-red-500 focus:border-blue-500 focus:outline-none transition-colors' : undefined}
+                      onChange={(e164) => { setFormData({ ...formData, phone: e164 }); clearError('phone'); }}
+                      placeholder="+7 (700) 123-45-67"
+                      error={formErrors.phone || undefined}
                     />
-                    {formErrors.phone && <p key={validationKey} className="animate-shake text-red-500 text-xs mt-1">{formErrors.phone}</p>}
                   </div>
 
                   {/* Password */}
@@ -3042,13 +3042,12 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Телефон <span className="text-red-500">*</span>
                     </label>
-                    <PhoneInput
+                    <PhoneInputUI
                       value={formData.phone}
-                      onChange={(value) => { setFormData({ ...formData, phone: value }); clearError('phone'); }}
-                      placeholder="+7 (700) 123 45 67"
-                      className={formErrors.phone ? 'w-full pl-12 pr-4 py-3 rounded-xl border-2 border-red-500 focus:border-blue-500 focus:outline-none transition-colors' : undefined}
+                      onChange={(e164) => { setFormData({ ...formData, phone: e164 }); clearError('phone'); }}
+                      placeholder="+7 (700) 123-45-67"
+                      error={formErrors.phone || undefined}
                     />
-                    {formErrors.phone && <p key={validationKey} className="animate-shake text-red-500 text-xs mt-1">{formErrors.phone}</p>}
                   </div>
 
                   {/* Password */}

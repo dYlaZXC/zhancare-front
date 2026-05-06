@@ -24,6 +24,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBolt } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context/AuthContext";
+import PhoneInput from "@/components/ui/PhoneInput";
 
 const BACKEND = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') ?? 'http://127.0.0.1:8000';
 function resolveAvatarUrl(url: string | null | undefined): string | null {
@@ -134,15 +135,19 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
     }
   };
 
+  const cleanPayload = (obj: Record<string, string>) =>
+    Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, v === "" ? null : v]));
+
   const handleSavePersonal = async () => {
     setSavingPersonal(true);
     try {
-      await api.patch("/user-profile/profile/", personalForm);
+      await api.patch("/user-profile/profile/", cleanPayload(personalForm));
       toast.success("Личные данные обновлены");
       setSavedPersonal(true);
       setTimeout(() => setSavedPersonal(false), 2500);
-    } catch {
-      toast.error("Не удалось сохранить данные");
+    } catch (e: any) {
+      const detail = e?.response?.data;
+      toast.error(detail ? JSON.stringify(detail) : "Не удалось сохранить данные");
     } finally {
       setSavingPersonal(false);
     }
@@ -346,7 +351,7 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
         className="relative bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
 
         {/* Left accent bar */}
-        <div className="absolute left-0 top-0 w-1 h-full rounded-r-full" style={{ background: 'linear-gradient(to bottom, #3772ff, #6048f5)' }} />
+        <div className="absolute left-0 top-0 w-1.5 h-full" style={{ background: 'linear-gradient(to bottom, #3772ff, #6048f5)' }} />
 
         <div className="px-8 py-6">
           {/* Header */}
@@ -370,7 +375,15 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
             <InputField label="Имя" value={personalForm.first_name} onChange={v => setPersonalForm(p => ({ ...p, first_name: v }))} icon={User} />
             <InputField label="Фамилия" value={personalForm.last_name} onChange={v => setPersonalForm(p => ({ ...p, last_name: v }))} icon={User} />
             <InputField label="Email" value={personalForm.email} onChange={v => setPersonalForm(p => ({ ...p, email: v }))} icon={Mail} type="email" />
-            <InputField label="Телефон" value={personalForm.phone} onChange={v => setPersonalForm(p => ({ ...p, phone: v }))} icon={Phone} placeholder="+7 (___) ___-__-__" />
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Телефон</label>
+              <PhoneInput
+                value={personalForm.phone}
+                onChange={(e164) => setPersonalForm(p => ({ ...p, phone: e164 }))}
+                placeholder="+7 (___) ___-__-__"
+                inputClassName="pl-10 pr-4 py-3 text-sm border-gray-200 bg-white text-gray-800 placeholder-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm hover:border-gray-300 rounded-xl"
+              />
+            </div>
           </div>
 
           {/* Save */}
@@ -402,7 +415,7 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
           className="relative bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
 
           {/* Left accent bar */}
-          <div className="absolute left-0 top-0 w-1 h-full rounded-r-full" style={{ background: 'linear-gradient(to bottom, #10b981, #059669)' }} />
+          <div className="absolute left-0 top-0 w-1.5 h-full" style={{ background: 'linear-gradient(to bottom, #10b981, #059669)' }} />
 
           <div className="px-8 py-6">
             <div className="flex items-center gap-3 mb-6">
@@ -473,7 +486,15 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
 
               {/* Row 2: city + phone */}
               <InputField label="Город" value={clinicForm.city_name} onChange={v => setClinicForm(p => ({ ...p, city_name: v }))} icon={MapPin} placeholder="Алматы" />
-              <InputField label="Телефон клиники" value={clinicForm.phone} onChange={v => setClinicForm(p => ({ ...p, phone: v }))} icon={Phone} placeholder="+7 (___) ___-__-__" />
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Телефон клиники</label>
+                <PhoneInput
+                  value={clinicForm.phone}
+                  onChange={(e164) => setClinicForm(p => ({ ...p, phone: e164 }))}
+                  placeholder="+7 (___) ___-__-__"
+                  inputClassName="pl-10 pr-4 py-3 text-sm border-gray-200 bg-white text-gray-800 placeholder-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm hover:border-gray-300 rounded-xl"
+                />
+              </div>
 
               {/* Row 3: address */}
               <div className="sm:col-span-2">

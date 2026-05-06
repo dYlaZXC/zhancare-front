@@ -173,7 +173,7 @@ const AuthPopup = () => {
 
       // Redirect based on roles[]
       const userRoles: string[] = responseData.user.roles ?? [];
-      let redirectUrl = "/profile"; // default for patients
+      let redirectUrl = "/patient/video"; // default for patients
       if (userRoles.includes("doctor")) {
         redirectUrl = "/doctor-profile";
       } else if (userRoles.includes("nurse")) {
@@ -204,14 +204,13 @@ const AuthPopup = () => {
     }
   };
 
-  // Handle Phone OTP login success
   const handlePhoneLoginSuccess = async (accessToken: string, refreshToken: string, user: any) => {
     const safeUser = user ?? { roles: [], first_name: "", last_name: "", email: "" };
     await loginUser(accessToken, refreshToken, safeUser);
     toast.success(errorMessages.loginSuccess);
     setIsAuthOpen(false);
     const userRoles: string[] = safeUser.roles ?? [];
-    let redirectUrl = "/profile";
+    let redirectUrl = "/patient/video";
     if (userRoles.includes("doctor")) redirectUrl = "/doctor-profile";
     else if (userRoles.includes("nurse")) redirectUrl = "/nurse-profile";
     else if (userRoles.includes("admin")) redirectUrl = "/admin-profile";

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
+import PhoneInput from "@/components/ui/PhoneInput";
 import { api } from "@/utils/api";
 import { toast } from "react-toastify";
 import {
@@ -85,7 +86,7 @@ const Card = ({ children, accentColor, delay = 0 }: { children: React.ReactNode;
     initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}
     className="relative bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden"
   >
-    <div className="absolute left-0 top-0 w-1 h-full rounded-r-full" style={{ background: accentColor }} />
+    <div className="absolute left-0 top-0 w-1.5 h-full" style={{ background: accentColor }} />
     <div className="px-8 py-6">{children}</div>
   </motion.div>
 );
@@ -140,18 +141,22 @@ export default function NurseProfileDashboard() {
     }
   };
 
+  const cleanPayload = (obj: Record<string, any>) =>
+    Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, v === "" ? null : v]));
+
   const handleSave = async () => {
     setSaving(true);
     try {
-      await api.patch("/user-profile/profile/", {
+      await api.patch("/user-profile/profile/", cleanPayload({
         ...form,
-        experience: form.experience ? parseInt(form.experience) : undefined,
-      });
+        experience: form.experience ? parseInt(form.experience) : "",
+      }));
       toast.success("Профиль обновлён");
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
-    } catch {
-      toast.error("Не удалось сохранить");
+    } catch (e: any) {
+      const detail = e?.response?.data;
+      toast.error(detail ? JSON.stringify(detail) : "Не удалось сохранить");
     } finally {
       setSaving(false);
     }
@@ -313,7 +318,15 @@ export default function NurseProfileDashboard() {
           <InputField label="Имя" value={form.first_name} onChange={(v) => setForm((p) => ({ ...p, first_name: v }))} icon={User} />
           <InputField label="Фамилия" value={form.last_name} onChange={(v) => setForm((p) => ({ ...p, last_name: v }))} icon={User} />
           <InputField label="Email" value={profile.email} icon={Mail} readOnly />
-          <InputField label="Телефон" value={form.phone} onChange={(v) => setForm((p) => ({ ...p, phone: v }))} icon={Phone} placeholder="+7 (___) ___-__-__" />
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Телефон</label>
+            <PhoneInput
+              value={form.phone}
+              onChange={(e164) => setForm((p) => ({ ...p, phone: e164 }))}
+              placeholder="+7 (___) ___-__-__"
+              inputClassName="pl-10 pr-4 py-3 text-sm border-gray-200 bg-white text-gray-800 placeholder-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm hover:border-gray-300 rounded-xl"
+            />
+          </div>
         </div>
         <div className="mt-6 flex justify-end">
           <SaveButton saving={saving} saved={saved} onClick={handleSave} color="linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)" />

@@ -78,13 +78,17 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     if (typeof window !== "undefined") {
-      const token = getAccessToken();
-      if (token) {
-        // Use Bearer token format for JWT
-        config.headers.Authorization = `Bearer ${token}`;
+      // Never send a token on auth endpoints — stale/blacklisted tokens cause 401
+      const isAuthEndpoint = config.url?.includes("/auth/login") ||
+                             config.url?.includes("/auth/register");
+
+      if (!isAuthEndpoint) {
+        const token = getAccessToken();
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
       }
 
-      // withCredentials for CORS if backend requires it
       config.withCredentials = true;
     }
 

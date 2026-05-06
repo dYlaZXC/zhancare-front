@@ -21,6 +21,7 @@ import { useState, useEffect } from "react";
 import { InfoCard } from "./InfoCard";
 import { InfoRow } from "./InfoRow";
 import { User } from "./types";
+import PhoneInput from "@/components/ui/PhoneInput";
 
 interface PersonalDetailsCardProps {
   user: User;
@@ -390,7 +391,15 @@ export const PersonalDetailsCard = ({
             </label>
           </div>
           
-          {field.type === 'select' ? (
+          {field.type === 'tel' ? (
+            <PhoneInput
+              value={editValue}
+              onChange={(e164) => handleFieldChange(field.key, e164)}
+              error={errors[field.key] || undefined}
+              inputClassName="px-4 py-3 font-medium"
+              showIcon={false}
+            />
+          ) : field.type === 'select' ? (
             <select
               value={editValue}
               onChange={(e) => handleFieldChange(field.key, e.target.value)}

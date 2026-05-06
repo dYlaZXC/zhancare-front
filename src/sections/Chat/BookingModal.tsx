@@ -25,6 +25,7 @@ import { api } from "@/utils/api";
 import { useAuth } from "@/context/AuthContext";
 import { useVoiceGuide } from "@/hooks/useVoiceGuide";
 import type { Doctor, TimeSlot } from "@/components/services/consultations/types/doctor";
+import PhoneInput from "@/components/ui/PhoneInput";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -821,30 +822,13 @@ export default function BookingModal({
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           {t.guestPhone} *
                         </label>
-                        <div className="relative">
-                          <Phone
-                            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                            size={20}
-                          />
-                          <input
-                            type="tel"
-                            value={guestInfo.phone}
-                            onChange={(e) =>
-                              setGuestInfo({ ...guestInfo, phone: e.target.value })
-                            }
-                            placeholder={t.guestPhonePlaceholder}
-                            className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${
-                              guestErrors.phone
-                                ? "border-red-300 bg-red-50"
-                                : "border-gray-300"
-                            }`}
-                          />
-                        </div>
-                        {guestErrors.phone && (
-                          <p className="text-red-500 text-xs mt-1">
-                            {guestErrors.phone}
-                          </p>
-                        )}
+                        <PhoneInput
+                          value={guestInfo.phone}
+                          onChange={(e164) => setGuestInfo({ ...guestInfo, phone: e164 })}
+                          placeholder={t.guestPhonePlaceholder}
+                          error={guestErrors.phone}
+                          inputClassName="pr-4 py-3"
+                        />
                       </div>
 
                       <div>

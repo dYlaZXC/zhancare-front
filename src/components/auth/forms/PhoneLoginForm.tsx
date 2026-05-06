@@ -2,8 +2,10 @@
 
 import { useState, FormEvent } from "react";
 import { motion } from "framer-motion";
-import { Phone, Lock, Loader2, Shield } from "lucide-react";
+import { Lock, Loader2, Shield } from "lucide-react";
 import AuthInput from "./AuthInput";
+import PhoneAuthInput from "./PhoneAuthInput";
+import { isPhoneComplete } from "@/utils/phoneFormat";
 import { api } from "@/utils/api";
 
 interface PhoneLoginFormProps {
@@ -13,31 +15,15 @@ interface PhoneLoginFormProps {
 }
 
 export default function PhoneLoginForm({ onSuccess, loading, setLoading }: PhoneLoginFormProps) {
+  // phone is always stored as E.164 (+7XXXXXXXXXX) — PhoneAuthInput emits that
   const [phone, setPhone]       = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors]     = useState<{ phone?: string; password?: string }>({});
 
-  const formatPhone = (raw: string) => {
-    const digits = raw.replace(/\D/g, "");
-    if (digits.startsWith("7") || digits.startsWith("8")) {
-      const d = digits.startsWith("8") ? "7" + digits.slice(1) : digits;
-      const p = d.slice(1);
-      let out = "+7";
-      if (p.length > 0) out += " (" + p.slice(0, 3);
-      if (p.length >= 3) out += ") " + p.slice(3, 6);
-      if (p.length >= 6) out += " " + p.slice(6, 8);
-      if (p.length >= 8) out += " " + p.slice(8, 10);
-      return out;
-    }
-    return raw;
-  };
-
-  const e164 = (formatted: string) => "+" + formatted.replace(/\D/g, "");
-
   const validate = () => {
     const next: typeof errors = {};
-    if (e164(phone).length < 11) next.phone = "Введите корректный номер телефона";
+    if (!isPhoneComplete(phone)) next.phone = "Введите корректный номер телефона";
     if (password.length < 8)    next.password = "Пароль должен содержать минимум 8 символов";
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -49,7 +35,8 @@ export default function PhoneLoginForm({ onSuccess, loading, setLoading }: Phone
 
     setLoading(true);
     try {
-      const res = await api.post("/auth/login/", { phone: e164(phone), password });
+      // phone is already E.164 — send directly
+      const res = await api.post("/auth/login/", { phone, password });
       onSuccess(res.data.access_token, res.data.refresh_token, res.data.user ?? null);
     } catch (err: any) {
       const msg = err?.response?.data?.error ?? "Неправильный номер телефона или пароль.";
@@ -61,15 +48,13 @@ export default function PhoneLoginForm({ onSuccess, loading, setLoading }: Phone
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <AuthInput
+      <PhoneAuthInput
         name="phone"
-        type="tel"
-        placeholder="+7 (777) 123 45 67"
-        icon={Phone}
+        placeholder="+7 (777) 123-45-67"
         value={phone}
         autoComplete="tel"
         onChange={e => {
-          setPhone(formatPhone(e.target.value));
+          setPhone(e.target.value); // already E.164 from PhoneAuthInput
           if (errors.phone) setErrors(prev => ({ ...prev, phone: undefined }));
         }}
         validationError={errors.phone}
