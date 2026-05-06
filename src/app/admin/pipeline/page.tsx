@@ -673,17 +673,42 @@ function ImportModal({ onClose }: { onClose: () => void }) {
           {result && (
             <div className="space-y-2 bg-emerald-50 rounded-xl px-4 py-3 text-sm">
               {result.pipeline && !result.pipeline.error && (
-                <p className="text-emerald-700">
-                  Pipeline: <b>{result.pipeline.created}</b> создано, <b>{result.pipeline.updated}</b> обновлено
-                </p>
+                <>
+                  <p className="text-emerald-700">
+                    Pipeline: <b>{result.pipeline.created}</b> создано, <b>{result.pipeline.updated}</b> обновлено
+                  </p>
+                  {result.pipeline.columns_detected && (
+                    <p className="text-gray-500 text-xs break-all">
+                      Колонки pipeline: {result.pipeline.columns_detected.join(", ")}
+                    </p>
+                  )}
+                  {result.pipeline.row_errors?.length > 0 && (
+                    <div className="text-red-600 text-xs mt-1 space-y-0.5">
+                      {result.pipeline.row_errors.map((e: string, i: number) => <p key={i}>{e}</p>)}
+                    </div>
+                  )}
+                </>
               )}
               {result.pipeline?.error && (
                 <p className="text-red-600">Pipeline ошибка: {result.pipeline.error}</p>
               )}
               {result.clinics && !result.clinics.error && (
-                <p className="text-emerald-700">
-                  Клиники: <b>{result.clinics.created}</b> создано, <b>{result.clinics.updated}</b> обновлено
-                </p>
+                <>
+                  <p className="text-emerald-700">
+                    Клиники: <b>{result.clinics.created}</b> создано, <b>{result.clinics.updated}</b> обновлено
+                    {result.clinics.skipped > 0 && <>, <b>{result.clinics.skipped}</b> пропущено</>}
+                  </p>
+                  {result.clinics.columns_detected && (
+                    <p className="text-gray-500 text-xs break-all">
+                      Колонки клиник: {result.clinics.columns_detected.join(", ")}
+                    </p>
+                  )}
+                  {result.clinics.row_errors?.length > 0 && (
+                    <div className="text-red-600 text-xs mt-1 space-y-0.5">
+                      {result.clinics.row_errors.map((e: string, i: number) => <p key={i}>{e}</p>)}
+                    </div>
+                  )}
+                </>
               )}
               {result.clinics?.error && (
                 <p className="text-red-600">Клиники ошибка: {result.clinics.error}</p>

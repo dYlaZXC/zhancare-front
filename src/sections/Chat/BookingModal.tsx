@@ -530,7 +530,7 @@ export default function BookingModal({
   });
 
   const availableTimeslots = filteredTimeslots.filter(
-    (slot) => !slot.is_booked && slot.available_spots > 0
+    (slot) => !slot.is_booked && (slot.available_spots ?? 1) > 0
   );
 
   if (!isOpen) return null;

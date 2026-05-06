@@ -62,7 +62,7 @@ const SlotPickerModal: React.FC<SlotPickerModalProps> = ({
     for (const dateItem of weekDates) {
       const hasFree = timeslots.some(s => {
         const d = new Date(s.start_time);
-        return d.getFullYear() === dateItem.year && d.getMonth() === dateItem.month && d.getDate() === dateItem.dayNumber && !s.is_booked && s.available_spots > 0;
+        return d.getFullYear() === dateItem.year && d.getMonth() === dateItem.month && d.getDate() === dateItem.dayNumber && !s.is_booked && (s.available_spots ?? 1) > 0;
       });
       if (hasFree) return dateItem.date;
     }
@@ -71,7 +71,7 @@ const SlotPickerModal: React.FC<SlotPickerModalProps> = ({
 
   const [selectedDate, setSelectedDate] = useState(() => {
     // Initially pick first available date overall
-    const slot = timeslots.find(s => !s.is_booked && s.available_spots > 0);
+    const slot = timeslots.find(s => !s.is_booked && (s.available_spots ?? 1) > 0);
     if (!slot) return weekDates[0].date;
     const d = new Date(slot.start_time);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -105,7 +105,7 @@ const SlotPickerModal: React.FC<SlotPickerModalProps> = ({
       .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
 
   const slotsForDate = getSlotsForDate(selectedDate);
-  const freeCount = slotsForDate.filter(s => !s.is_booked && s.available_spots > 0).length;
+  const freeCount = slotsForDate.filter(s => !s.is_booked && (s.available_spots ?? 1) > 0).length;
   const bookedCount = slotsForDate.length - freeCount;
 
   // Close on Escape
@@ -197,7 +197,7 @@ const SlotPickerModal: React.FC<SlotPickerModalProps> = ({
                 const isDateSelected = selectedDate === dateItem.date;
                 const hasFreeSlots = timeslots.some(s => {
                   const d = new Date(s.start_time);
-                  return d.getFullYear() === dateItem.year && d.getMonth() === dateItem.month && d.getDate() === dateItem.dayNumber && !s.is_booked && s.available_spots > 0;
+                  return d.getFullYear() === dateItem.year && d.getMonth() === dateItem.month && d.getDate() === dateItem.dayNumber && !s.is_booked && (s.available_spots ?? 1) > 0;
                 });
                 return (
                   <button
@@ -244,7 +244,7 @@ const SlotPickerModal: React.FC<SlotPickerModalProps> = ({
                   </div>
                   <div className="grid grid-cols-4 gap-2">
                     {slotsForDate.map(slot => {
-                      const isFree = !slot.is_booked && slot.available_spots > 0;
+                      const isFree = !slot.is_booked && (slot.available_spots ?? 1) > 0;
                       return (
                         <button
                           key={slot.id}

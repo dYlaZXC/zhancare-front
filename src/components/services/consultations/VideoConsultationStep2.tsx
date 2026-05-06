@@ -373,7 +373,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
               const doc = selectedDoctorId ? doctors.find(d => d.id === selectedDoctorId) : null;
               const GRADS = [['#3772ff','#2c5bcc'],['#8b5cf6','#7c3aed'],['#f43f5e','#e11d48'],['#f59e0b','#d97706'],['#10b981','#059669'],['#06b6d4','#0891b2']];
               const [g1, g2] = doc ? GRADS[doc.id % GRADS.length] : ['#3772ff', '#2c5bcc'];
-              const earliestSlot = doc ? (doctorTimeslots[doc.id] || []).find(sl => !sl.is_booked && sl.available_spots > 0) : null;
+              const earliestSlot = doc ? (doctorTimeslots[doc.id] || []).find(sl => !sl.is_booked && (sl.available_spots ?? 1) > 0) : null;
               const earliestLabel = earliestSlot ? (() => {
                 const d = new Date(earliestSlot.start_time);
                 const time = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
@@ -668,7 +668,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
                   const hasAnyFreeSlots = Object.values(doctorTimeslots).some(slots =>
                     slots.some(s => {
                       const d = new Date(s.start_time);
-                      return d.getFullYear() === dateItem.year && d.getMonth() === dateItem.month && d.getDate() === dateItem.dayNumber && !s.is_booked && s.available_spots > 0;
+                      return d.getFullYear() === dateItem.year && d.getMonth() === dateItem.month && d.getDate() === dateItem.dayNumber && !s.is_booked && (s.available_spots ?? 1) > 0;
                     })
                   );
                   return (

@@ -70,7 +70,7 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
     'bg-gray-100 text-gray-500';
 
   // Earliest free slot across all dates (for ⚡ chip)
-  const earliestSlot = timeslots.find(s => !s.is_booked && s.available_spots > 0);
+  const earliestSlot = timeslots.find(s => !s.is_booked && (s.available_spots ?? 1) > 0);
   const earliestLabel = (() => {
     if (!earliestSlot) return null;
     const d = new Date(earliestSlot.start_time);
@@ -92,7 +92,7 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
         .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
     : [];
 
-  const freeCount = slotsForDate.filter(s => !s.is_booked && s.available_spots > 0).length;
+  const freeCount = slotsForDate.filter(s => !s.is_booked && (s.available_spots ?? 1) > 0).length;
   const displaySlots = slotsForDate.slice(0, 6);
   const hiddenCount = slotsForDate.length - 6;
 
@@ -291,7 +291,7 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
             </div>
             <div className="grid grid-cols-3 gap-1">
               {displaySlots.map(slot => {
-                const isFree = !slot.is_booked && slot.available_spots > 0;
+                const isFree = !slot.is_booked && (slot.available_spots ?? 1) > 0;
                 return (
                   <button
                     key={slot.id}

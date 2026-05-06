@@ -143,6 +143,12 @@ export default function DoctorSchedule() {
   const [plannerSaving, setPlannerSaving] = useState(false);
   const [plannerDirty, setPlannerDirty] = useState(false);
 
+  // ── "Постоянное" tab state (declared here so plannerConflictDates can use it) ──
+  const [templateData, setTemplateData] = useState<TemplateEntry[]>([]);
+  const [templateType, setTemplateType] = useState<ConsultationType>("online");
+  const [templateLoading, setTemplateLoading] = useState(false);
+  const [templateSaving, setTemplateSaving] = useState(false);
+
   // ── Conflict detection ─────────────────────────────────────────────────────
   const plannerConflictDates = useMemo(() => {
     const otherType: ConsultationType = plannerType === "online" ? "offline" : "online";
@@ -172,12 +178,6 @@ export default function DoctorSchedule() {
     });
     return conflicting;
   }, [plannerDays, plannerDaysOther, templateData, plannerType]);
-
-  // ── "Постоянное" tab state ──
-  const [templateData, setTemplateData] = useState<TemplateEntry[]>([]);
-  const [templateType, setTemplateType] = useState<ConsultationType>("online");
-  const [templateLoading, setTemplateLoading] = useState(false);
-  const [templateSaving, setTemplateSaving] = useState(false);
 
   // ── "История" tab state ──
   const [historyData, setHistoryData] = useState<HistoryEntry[]>([]);

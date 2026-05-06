@@ -62,7 +62,7 @@ const SlotPickerPanel: React.FC<SlotPickerPanelProps> = ({
   const weekDates = getWeekDates(weekOffset);
 
   const [selectedDate, setSelectedDate] = useState(() => {
-    const slot = timeslots.find(s => !s.is_booked && s.available_spots > 0);
+    const slot = timeslots.find(s => !s.is_booked && (s.available_spots ?? 1) > 0);
     if (!slot) return weekDates[0].date;
     const d = new Date(slot.start_time);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -75,7 +75,7 @@ const SlotPickerPanel: React.FC<SlotPickerPanelProps> = ({
     const firstFree = weekDates.find(dateItem =>
       timeslots.some(s => {
         const d = new Date(s.start_time);
-        return d.getFullYear() === dateItem.year && d.getMonth() === dateItem.month && d.getDate() === dateItem.dayNumber && !s.is_booked && s.available_spots > 0;
+        return d.getFullYear() === dateItem.year && d.getMonth() === dateItem.month && d.getDate() === dateItem.dayNumber && !s.is_booked && (s.available_spots ?? 1) > 0;
       })
     );
     setSelectedDate(firstFree?.date || weekDates[0].date);
@@ -101,7 +101,7 @@ const SlotPickerPanel: React.FC<SlotPickerPanelProps> = ({
       .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
 
   const slotsForDate = getSlotsForDate(selectedDate);
-  const freeCount = slotsForDate.filter(s => !s.is_booked && s.available_spots > 0).length;
+  const freeCount = slotsForDate.filter(s => !s.is_booked && (s.available_spots ?? 1) > 0).length;
   const bookedCount = slotsForDate.length - freeCount;
 
   return (
@@ -171,7 +171,7 @@ const SlotPickerPanel: React.FC<SlotPickerPanelProps> = ({
             const isDateSelected = selectedDate === dateItem.date;
             const hasFreeSlots = timeslots.some(s => {
               const d = new Date(s.start_time);
-              return d.getFullYear() === dateItem.year && d.getMonth() === dateItem.month && d.getDate() === dateItem.dayNumber && !s.is_booked && s.available_spots > 0;
+              return d.getFullYear() === dateItem.year && d.getMonth() === dateItem.month && d.getDate() === dateItem.dayNumber && !s.is_booked && (s.available_spots ?? 1) > 0;
             });
             return (
               <button
@@ -217,7 +217,7 @@ const SlotPickerPanel: React.FC<SlotPickerPanelProps> = ({
             </div>
             <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-1.5">
               {slotsForDate.map(slot => {
-                const isFree = !slot.is_booked && slot.available_spots > 0;
+                const isFree = !slot.is_booked && (slot.available_spots ?? 1) > 0;
                 return (
                   <button
                     key={slot.id}

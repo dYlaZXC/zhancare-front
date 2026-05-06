@@ -485,7 +485,7 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
                       <div className="grid grid-cols-2 gap-2 md:gap-3">
                         {timeslots.length > 0 ? (
                           // Show only available slots in quick view
-                          timeslots.filter(slot => !slot.is_booked && slot.available_spots > 0).slice(0, 4).map((timeslot, index) => (
+                          timeslots.filter(slot => !slot.is_booked && (slot.available_spots ?? 1) > 0).slice(0, 4).map((timeslot, index) => (
                             <div
                               key={timeslot.id}
                               onClick={(e) => {
