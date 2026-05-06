@@ -206,10 +206,11 @@ const AuthPopup = () => {
 
   // Handle Phone OTP login success
   const handlePhoneLoginSuccess = async (accessToken: string, refreshToken: string, user: any) => {
-    await loginUser(accessToken, refreshToken, user);
+    const safeUser = user ?? { roles: [], first_name: "", last_name: "", email: "" };
+    await loginUser(accessToken, refreshToken, safeUser);
     toast.success(errorMessages.loginSuccess);
     setIsAuthOpen(false);
-    const userRoles: string[] = user?.roles ?? [];
+    const userRoles: string[] = safeUser.roles ?? [];
     let redirectUrl = "/profile";
     if (userRoles.includes("doctor")) redirectUrl = "/doctor-profile";
     else if (userRoles.includes("nurse")) redirectUrl = "/nurse-profile";
