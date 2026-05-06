@@ -20,7 +20,6 @@ import {
   Stethoscope,
   ArrowRight
 } from "lucide-react";
-import PatientConsultationsTable from "./PatientConsultationsTable";
 
 interface Step1Props {
   symptoms: string;
@@ -151,11 +150,11 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
         <div className="absolute top-0 right-1/4 w-80 h-64 bg-indigo-500/4 rounded-full blur-[100px]" />
       </div>
 
-      <div className="relative flex flex-col items-center gap-8 px-6 py-10">
+      <div className="relative flex flex-col items-center gap-4 px-6 py-6">
         {/* Title */}
-        <div className="flex flex-col items-center gap-2 text-center">
-          <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Медицинские услуги</h3>
-          <p className="text-sm text-gray-400">Выберите удобный формат консультации</p>
+        <div className="flex flex-col items-center gap-1 text-center">
+          <h3 className="text-lg font-bold text-gray-900 tracking-tight">Новая консультация</h3>
+          <p className="text-xs text-gray-400">Выберите удобный формат</p>
         </div>
 
         {/* Cards */}
@@ -242,15 +241,6 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
         </div>
       </div>
 
-      {/* Divider */}
-      <div className="relative mx-6 h-px bg-gray-100" />
-
-      {/* Patient Consultations Table */}
-      <div className="relative py-6">
-        <PatientConsultationsTable />
-      </div>
-
-      <div className="pb-4" />
     </div>
   );
 };

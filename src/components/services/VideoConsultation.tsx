@@ -11,6 +11,7 @@ import Step3 from "./consultations/VideoConsultationStep3";
 import TipsPanel from "./consultations/TipsPanel";
 import OfflineBookingFlow from "./consultations/OfflineBookingFlow";
 import DiagnosticsFlow from "./consultations/DiagnosticsFlow";
+import PatientConsultationsTable from "./consultations/PatientConsultationsTable";
 import type { Doctor } from "./consultations/types/doctor";
 // import WebSocketTester from "../debug/WebSocketTester";
 
@@ -652,14 +653,19 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
 
               {/* Online flow */}
               {activeFlow === 'online' && step === 1 && (
-                <Step1
-                  symptoms={symptoms}
-                  onChange={setSymptoms}
-                  onNext={handleAIRecommend}
-                  onOffline={() => setActiveFlow('offline')}
-                  onDiagnostics={() => setActiveFlow('diagnostics')}
-                  loading={loadingAI}
-                />
+                <div className="space-y-4">
+                  {/* Service buttons at the top */}
+                  <Step1
+                    symptoms={symptoms}
+                    onChange={setSymptoms}
+                    onNext={handleAIRecommend}
+                    onOffline={() => setActiveFlow('offline')}
+                    onDiagnostics={() => setActiveFlow('diagnostics')}
+                    loading={loadingAI}
+                  />
+                  {/* Consultation list below */}
+                  <PatientConsultationsTable />
+                </div>
               )}
               {activeFlow === 'online' && step === 2 && (
                 <Step2

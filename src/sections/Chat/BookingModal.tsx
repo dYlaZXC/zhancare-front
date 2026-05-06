@@ -20,6 +20,7 @@ import {
   Mail,
   UserCircle,
   LogIn,
+  UserPlus,
 } from "lucide-react";
 import { api } from "@/utils/api";
 import { useAuth } from "@/context/AuthContext";
@@ -295,6 +296,13 @@ export default function BookingModal({
     }
   }, [isOpen]);
 
+  // Auto-advance when user logs in while on the auth-required step
+  useEffect(() => {
+    if (step === "guestinfo" && isLoggedIn) {
+      setStep("emailcollect");
+    }
+  }, [isLoggedIn, step]);
+
   const fetchDoctors = async () => {
     setLoading(true);
     try {
@@ -422,7 +430,7 @@ export default function BookingModal({
   };
 
   const handleLoginClick = () => {
-    onClose();
+    // Keep modal open — after login isLoggedIn becomes true and useEffect advances the step
     setIsAuthOpen(true);
   };
 
@@ -761,20 +769,16 @@ export default function BookingModal({
 
                 {/* Step 3 (Guest): Guest Info */}
                 {step === "guestinfo" && selectedDoctor && selectedTimeslot && (
-                  <div className="space-y-4">
-                    {/* Selected appointment summary */}
+                  <div className="space-y-5">
+                    {/* Appointment summary */}
                     <div className="p-3 bg-blue-50 rounded-xl border border-blue-200">
                       <div className="flex items-center gap-3 mb-2">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold">
                           {selectedDoctor.name.charAt(0)}
                         </div>
                         <div>
-                          <p className="font-bold text-gray-900">
-                            {selectedDoctor.name}
-                          </p>
-                          <p className="text-sm text-blue-600">
-                            {selectedDoctor.doctor_type}
-                          </p>
+                          <p className="font-bold text-gray-900">{selectedDoctor.name}</p>
+                          <p className="text-sm text-blue-600">{selectedDoctor.doctor_type}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -786,98 +790,31 @@ export default function BookingModal({
                       </div>
                     </div>
 
-                    {/* Guest Info Form */}
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          {t.guestName} *
-                        </label>
-                        <div className="relative">
-                          <UserCircle
-                            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                            size={20}
-                          />
-                          <input
-                            type="text"
-                            value={guestInfo.name}
-                            onChange={(e) =>
-                              setGuestInfo({ ...guestInfo, name: e.target.value })
-                            }
-                            placeholder={t.guestNamePlaceholder}
-                            className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${
-                              guestErrors.name
-                                ? "border-red-300 bg-red-50"
-                                : "border-gray-300"
-                            }`}
-                          />
-                        </div>
-                        {guestErrors.name && (
-                          <p className="text-red-500 text-xs mt-1">
-                            {guestErrors.name}
-                          </p>
-                        )}
+                    {/* Auth required */}
+                    <div className="text-center py-4">
+                      <div className="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                        <UserCircle className="w-8 h-8 text-blue-600" />
                       </div>
+                      <h3 className="text-lg font-bold text-gray-900 mb-1">Войдите в аккаунт</h3>
+                      <p className="text-sm text-gray-500 mb-6">Для записи к врачу необходимо войти или зарегистрироваться</p>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          {t.guestPhone} *
-                        </label>
-                        <PhoneInput
-                          value={guestInfo.phone}
-                          onChange={(e164) => setGuestInfo({ ...guestInfo, phone: e164 })}
-                          placeholder={t.guestPhonePlaceholder}
-                          error={guestErrors.phone}
-                          inputClassName="pr-4 py-3"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          {t.guestEmail}
-                        </label>
-                        <div className="relative">
-                          <Mail
-                            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                            size={20}
-                          />
-                          <input
-                            type="email"
-                            value={guestInfo.email}
-                            onChange={(e) =>
-                              setGuestInfo({ ...guestInfo, email: e.target.value })
-                            }
-                            placeholder={t.guestEmailPlaceholder}
-                            className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${
-                              guestErrors.email ? "border-red-300 bg-red-50" : "border-gray-300"
-                            }`}
-                          />
-                        </div>
-                        {guestErrors.email && (
-                          <p className="text-red-500 text-xs mt-1">{guestErrors.email}</p>
-                        )}
-                        <p className="text-xs text-gray-500 mt-1">Мы отправим ссылку для подключения к онлайн-консультации на этот адрес.</p>
-                      </div>
-                    </div>
-
-                    {/* Continue Button */}
-                    <button
-                      onClick={handleGuestInfoSubmit}
-                      className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-lg hover:shadow-lg transition-all flex items-center justify-center gap-2"
-                    >
-                      {t.continueAsGuest}
-                      <ChevronRight size={20} />
-                    </button>
-
-                    {/* Login Option */}
-                    <div className="text-center">
-                      <p className="text-sm text-gray-500 mb-2">{t.orLogin}</p>
                       <button
                         onClick={handleLoginClick}
-                        className="inline-flex items-center gap-2 px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-medium"
+                        className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-base hover:shadow-lg transition-all flex items-center justify-center gap-2 mb-3"
                       >
                         <LogIn size={18} />
-                        {t.loginToBook}
+                        Войти
                       </button>
+
+                      <button
+                        onClick={handleLoginClick}
+                        className="w-full py-3 border-2 border-blue-600 text-blue-600 rounded-xl font-bold text-base hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
+                      >
+                        <UserPlus size={18} />
+                        Зарегистрироваться
+                      </button>
+
+                      <p className="text-xs text-gray-400 mt-4">Вход по Email или номеру телефона</p>
                     </div>
                   </div>
                 )}
