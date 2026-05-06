@@ -17,6 +17,7 @@ import AuthTabs from "@/components/auth/AuthTabs";
 import LoginForm, { LoginFormData } from "@/components/auth/forms/LoginForm";
 import RegisterForm, { RegisterFormData } from "@/components/auth/forms/RegisterForm";
 import ForgotPasswordForm from "@/components/auth/forms/ForgotPasswordForm";
+import PhoneLoginForm from "@/components/auth/forms/PhoneLoginForm";
 
 const AuthPopup = () => {
   const { isAuthOpen, setIsAuthOpen, loginUser } = useAuth();
@@ -64,6 +65,7 @@ const AuthPopup = () => {
   }, [language]);
 
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
+  const [loginMethod, setLoginMethod] = useState<"email" | "phone">("email");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -200,6 +202,19 @@ const AuthPopup = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle Phone OTP login success
+  const handlePhoneLoginSuccess = async (accessToken: string, refreshToken: string, user: any) => {
+    await loginUser(accessToken, refreshToken, user);
+    toast.success(errorMessages.loginSuccess);
+    setIsAuthOpen(false);
+    const userRoles: string[] = user?.roles ?? [];
+    let redirectUrl = "/profile";
+    if (userRoles.includes("doctor")) redirectUrl = "/doctor-profile";
+    else if (userRoles.includes("nurse")) redirectUrl = "/nurse-profile";
+    else if (userRoles.includes("admin")) redirectUrl = "/admin-profile";
+    setTimeout(() => { window.location.href = redirectUrl; }, 300);
   };
 
   // Handle Register
@@ -376,12 +391,56 @@ const AuthPopup = () => {
                       exit={{ opacity: 0, x: 20 }}
                       transition={{ duration: 0.3, ease: "easeInOut" }}
                     >
-                      <LoginForm
-                        translations={translations}
-                        onSubmit={handleLogin}
-                        onForgotPassword={() => setShowForgotPassword(true)}
-                        loading={loading}
-                      />
+                      {/* Email / Phone toggle */}
+                      <div className="flex rounded-xl border border-[#e8e8e8] overflow-hidden mb-5">
+                        {(["email", "phone"] as const).map(m => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => setLoginMethod(m)}
+                            className={`flex-1 py-2.5 text-sm font-semibold transition-all duration-200 ${
+                              loginMethod === m
+                                ? "bg-gradient-to-r from-[#3772ff] to-[#2956bf] text-white shadow-inner"
+                                : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                            }`}
+                          >
+                            {m === "email" ? "Email" : "Телефон"}
+                          </button>
+                        ))}
+                      </div>
+
+                      <AnimatePresence mode="wait">
+                        {loginMethod === "email" ? (
+                          <motion.div
+                            key="email-login"
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 10 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <LoginForm
+                              translations={translations}
+                              onSubmit={handleLogin}
+                              onForgotPassword={() => setShowForgotPassword(true)}
+                              loading={loading}
+                            />
+                          </motion.div>
+                        ) : (
+                          <motion.div
+                            key="phone-login"
+                            initial={{ opacity: 0, x: 10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -10 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <PhoneLoginForm
+                              onSuccess={handlePhoneLoginSuccess}
+                              loading={loading}
+                              setLoading={setLoading}
+                            />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </motion.div>
                   ) : (
                     <motion.div
