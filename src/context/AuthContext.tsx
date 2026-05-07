@@ -74,6 +74,9 @@ interface Session {
 interface AuthContextProps {
   isAuthOpen: boolean;
   setIsAuthOpen: (isOpen: boolean) => void;
+  authDefaultTab: "login" | "register";
+  authNoRedirect: boolean;
+  openAuth: (tab?: "login" | "register", noRedirect?: boolean) => void;
   user: User | null;
   token: string | null;
   loading: boolean;
@@ -95,6 +98,9 @@ interface AuthContextProps {
 const defaultAuthContext: AuthContextProps = {
   isAuthOpen: false,
   setIsAuthOpen: () => {},
+  authDefaultTab: "login",
+  authNoRedirect: false,
+  openAuth: () => {},
   user: null,
   token: null,
   loading: true,
@@ -116,6 +122,13 @@ const AuthContext = createContext<AuthContextProps>(defaultAuthContext);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authDefaultTab, setAuthDefaultTab] = useState<"login" | "register">("login");
+  const [authNoRedirect, setAuthNoRedirect] = useState(false);
+  const openAuth = (tab: "login" | "register" = "login", noRedirect = false) => {
+    setAuthDefaultTab(tab);
+    setAuthNoRedirect(noRedirect);
+    setIsAuthOpen(true);
+  };
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -276,6 +289,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       value={{
         isAuthOpen,
         setIsAuthOpen,
+        authDefaultTab,
+        authNoRedirect,
+        openAuth,
         user,
         token,
         loading,

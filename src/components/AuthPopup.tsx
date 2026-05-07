@@ -20,7 +20,7 @@ import ForgotPasswordForm from "@/components/auth/forms/ForgotPasswordForm";
 import PhoneLoginForm from "@/components/auth/forms/PhoneLoginForm";
 
 const AuthPopup = () => {
-  const { isAuthOpen, setIsAuthOpen, loginUser } = useAuth();
+  const { isAuthOpen, setIsAuthOpen, loginUser, authDefaultTab, authNoRedirect } = useAuth();
   const { language } = useLanguage();
 
   // Get translations based on language
@@ -65,6 +65,7 @@ const AuthPopup = () => {
   }, [language]);
 
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
+  useEffect(() => { if (isAuthOpen) setActiveTab(authDefaultTab); }, [isAuthOpen, authDefaultTab]);
   const [loginMethod, setLoginMethod] = useState<"email" | "phone">("email");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -171,23 +172,18 @@ const AuthPopup = () => {
       // Wait for Telegram notification to send (topic 3 = Login)
       await sendTelegramNotification(loginMessage, 3);
 
-      // Redirect based on roles[]
-      const userRoles: string[] = responseData.user.roles ?? [];
-      let redirectUrl = "/patient/video"; // default for patients
-      if (userRoles.includes("doctor")) {
-        redirectUrl = "/doctor-profile";
-      } else if (userRoles.includes("nurse")) {
-        redirectUrl = "/nurse-profile";
-      } else if (userRoles.includes("admin")) {
-        redirectUrl = "/admin-profile";
-      }
-
-      // Small delay to ensure notification is sent
-      setTimeout(() => {
-        window.location.href = redirectUrl;
-      }, 500);
-
       setIsAuthOpen(false);
+
+      // If opened from a context (e.g. booking modal) — don't redirect, stay on page
+      if (!authNoRedirect) {
+        const userRoles: string[] = responseData.user.roles ?? [];
+        let redirectUrl = "/patient/video";
+        if (userRoles.includes("doctor")) redirectUrl = "/doctor-profile";
+        else if (userRoles.includes("nurse")) redirectUrl = "/nurse-profile";
+        else if (userRoles.includes("admin")) redirectUrl = "/admin-profile";
+
+        setTimeout(() => { window.location.href = redirectUrl; }, 500);
+      }
     } catch (err: any) {
       const errorData = err?.response?.data;
       let errorMessage = errorMessages.generalError;
@@ -209,12 +205,14 @@ const AuthPopup = () => {
     await loginUser(accessToken, refreshToken, safeUser);
     toast.success(errorMessages.loginSuccess);
     setIsAuthOpen(false);
-    const userRoles: string[] = safeUser.roles ?? [];
-    let redirectUrl = "/patient/video";
-    if (userRoles.includes("doctor")) redirectUrl = "/doctor-profile";
-    else if (userRoles.includes("nurse")) redirectUrl = "/nurse-profile";
-    else if (userRoles.includes("admin")) redirectUrl = "/admin-profile";
-    setTimeout(() => { window.location.href = redirectUrl; }, 300);
+    if (!authNoRedirect) {
+      const userRoles: string[] = safeUser.roles ?? [];
+      let redirectUrl = "/patient/video";
+      if (userRoles.includes("doctor")) redirectUrl = "/doctor-profile";
+      else if (userRoles.includes("nurse")) redirectUrl = "/nurse-profile";
+      else if (userRoles.includes("admin")) redirectUrl = "/admin-profile";
+      setTimeout(() => { window.location.href = redirectUrl; }, 300);
+    }
   };
 
   // Handle Register

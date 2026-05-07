@@ -221,7 +221,7 @@ export default function BookingModal({
   language,
   preselectedDoctor,
 }: BookingModalProps) {
-  const { token, user, setIsAuthOpen } = useAuth();
+  const { token, user, openAuth } = useAuth();
   const t = translations[language as keyof typeof translations] || translations.ru;
 
   // State
@@ -235,6 +235,7 @@ export default function BookingModal({
   const [selectedTimeslot, setSelectedTimeslot] = useState<TimeSlot | null>(null);
   const [loading, setLoading] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingError, setBookingError] = useState<string | null>(null);
 
   // Guest user state
   const [guestInfo, setGuestInfo] = useState<GuestInfo>({
@@ -429,9 +430,8 @@ export default function BookingModal({
     }
   };
 
-  const handleLoginClick = () => {
-    // Keep modal open — after login isLoggedIn becomes true and useEffect advances the step
-    setIsAuthOpen(true);
+  const handleLoginClick = (tab: "login" | "register" = "login") => {
+    openAuth(tab, true); // noRedirect=true — stay on booking page after login
   };
 
   const handleConfirmBooking = async () => {
@@ -445,11 +445,10 @@ export default function BookingModal({
 
     setBookingLoading(true);
     try {
-      // start_time is "YYYY-MM-DDTHH:MM:00" (local) — convert to UTC ISO for correct backend storage
-      const localDate = new Date(selectedTimeslot.start_time);
+      // Send as local ISO string (no UTC conversion) — backend stores times as-is
       const bookingData: any = {
         doctor_id: selectedDoctor.id,
-        scheduled_time: localDate.toISOString(),
+        scheduled_time: selectedTimeslot.start_time, // "YYYY-MM-DDTHH:MM:00" local, no offset
       };
 
       // Add guest info if not logged in
@@ -488,11 +487,10 @@ export default function BookingModal({
       }
     } catch (error: any) {
       console.error("Error booking consultation:", error);
-      // Show more user-friendly error message
       const errorMessage = error?.response?.data?.error ||
         error?.response?.data?.message ||
         "Ошибка при записи. Попробуйте снова.";
-      alert(errorMessage);
+      setBookingError(errorMessage);
     } finally {
       setBookingLoading(false);
     }
@@ -799,7 +797,7 @@ export default function BookingModal({
                       <p className="text-sm text-gray-500 mb-6">Для записи к врачу необходимо войти или зарегистрироваться</p>
 
                       <button
-                        onClick={handleLoginClick}
+                        onClick={() => handleLoginClick("login")}
                         className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-base hover:shadow-lg transition-all flex items-center justify-center gap-2 mb-3"
                       >
                         <LogIn size={18} />
@@ -807,7 +805,7 @@ export default function BookingModal({
                       </button>
 
                       <button
-                        onClick={handleLoginClick}
+                        onClick={() => handleLoginClick("register")}
                         className="w-full py-3 border-2 border-blue-600 text-blue-600 rounded-xl font-bold text-base hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
                       >
                         <UserPlus size={18} />
@@ -977,9 +975,26 @@ export default function BookingModal({
                         )}
                       </div>
 
+                      {/* Inline booking error */}
+                      {bookingError && (
+                        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 flex flex-col gap-2">
+                          <p className="text-sm font-semibold text-red-700">{bookingError}</p>
+                          <button
+                            onClick={() => {
+                              setBookingError(null);
+                              setSelectedTimeslot(null);
+                              setStep("timeslots");
+                            }}
+                            className="self-start text-xs font-bold text-red-600 underline underline-offset-2 hover:text-red-800 transition-colors"
+                          >
+                            ← Выбрать другое время
+                          </button>
+                        </div>
+                      )}
+
                       {/* Confirm Button */}
                       <button
-                        onClick={handleConfirmBooking}
+                        onClick={() => { setBookingError(null); handleConfirmBooking(); }}
                         disabled={bookingLoading}
                         className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-lg hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                       >
