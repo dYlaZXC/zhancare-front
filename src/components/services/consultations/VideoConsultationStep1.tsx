@@ -143,104 +143,37 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
   };
 
   return (
-    <div className="relative bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
-      {/* Background ambient */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 left-1/4 w-96 h-64 bg-blue-500/5 rounded-full blur-[100px]" />
-        <div className="absolute top-0 right-1/4 w-80 h-64 bg-indigo-500/4 rounded-full blur-[100px]" />
-      </div>
+    <div className="flex flex-col sm:flex-row gap-3">
+      {[
+        { label: 'Онлайн',      sub: 'видео-консультация',    icon: <Video size={20} />,       action: 'Начать',     onClick: onNext },
+        { label: 'Оффлайн',     sub: 'приём у врача',          icon: <Home size={20} />,        action: 'Записаться', onClick: onOffline },
+        { label: 'Диагностика', sub: 'анализы и обследование', icon: <Stethoscope size={20} />, action: 'Записаться', onClick: onDiagnostics },
+      ].map(({ label, sub, icon, action, onClick }) => (
+        <motion.button
+          key={label}
+          onClick={onClick}
+          whileHover={{ y: -3, scale: 1.02 }}
+          whileTap={{ scale: 0.97 }}
+          className="group relative flex-1 flex items-center gap-4 px-5 py-4 rounded-2xl overflow-hidden text-white text-left"
+          style={{ background: 'linear-gradient(135deg, #12263a 0%, #1e263e 25%, #29358f 75%, #3772ff 100%)' }}
+        >
+          {/* Top highlight line */}
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+          {/* Hover overlay */}
+          <div className="absolute inset-0 bg-white/0 group-hover:bg-white/5 transition-colors duration-200" />
 
-      <div className="relative flex flex-col items-center gap-4 px-6 py-6">
-        {/* Title */}
-        <div className="flex flex-col items-center gap-1 text-center">
-          <h3 className="text-lg font-bold text-gray-900 tracking-tight">Новая консультация</h3>
-          <p className="text-xs text-gray-400">Выберите удобный формат</p>
-        </div>
-
-        {/* Cards */}
-        <div className="flex flex-col sm:flex-row items-stretch gap-3 w-full">
-
-          {/* Online — primary */}
-          <motion.button
-            onClick={onNext}
-            whileHover={{ y: -3, scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            className="group relative flex-1 flex flex-col gap-3 px-4 sm:px-6 py-4 sm:py-5 rounded-2xl overflow-hidden text-white font-semibold text-sm transition-all cursor-pointer"
-            style={{ background: 'linear-gradient(135deg, #3772ff 0%, #6048f5 100%)', boxShadow: '0 8px 28px rgba(55,114,255,0.35)' }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-white/15 via-transparent to-transparent" />
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
-            <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-indigo-400/30 rounded-full blur-2xl" />
-
-            <div className="relative flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm border border-white/25 flex items-center justify-center shadow-inner flex-shrink-0">
-                <Video size={20} />
-              </div>
-              <div className="text-left">
-                <p className="font-bold text-base leading-tight">Онлайн</p>
-                <p className="text-xs opacity-75 mt-0.5">консультация</p>
-              </div>
-            </div>
-            <div className="relative flex items-center justify-center gap-1.5 text-xs font-semibold bg-white/20 px-3 py-1.5 rounded-full border border-white/25 w-full">
-              Начать <ArrowRight size={12} className="transition-transform group-hover:translate-x-0.5" />
-            </div>
-          </motion.button>
-
-          {/* Offline */}
-          <motion.button
-            onClick={onOffline}
-            whileHover={{ y: -3, scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            className="group relative flex-1 flex flex-col gap-3 px-4 sm:px-6 py-4 sm:py-5 rounded-2xl overflow-hidden text-white font-semibold text-sm transition-all cursor-pointer"
-            style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', boxShadow: '0 8px 28px rgba(16,185,129,0.35)' }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-white/15 via-transparent to-transparent" />
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
-            <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-emerald-300/30 rounded-full blur-2xl" />
-
-            <div className="relative flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm border border-white/25 flex items-center justify-center shadow-inner flex-shrink-0">
-                <Home size={20} />
-              </div>
-              <div className="text-left">
-                <p className="font-bold text-base leading-tight">Оффлайн</p>
-                <p className="text-xs opacity-75 mt-0.5">приём врача</p>
-              </div>
-            </div>
-            <div className="relative flex items-center justify-center gap-1.5 text-xs font-semibold bg-white/20 px-3 py-1.5 rounded-full border border-white/25 w-full">
-              Записаться <ArrowRight size={12} className="transition-transform group-hover:translate-x-0.5" />
-            </div>
-          </motion.button>
-
-          {/* Diagnostics */}
-          <motion.button
-            onClick={onDiagnostics}
-            whileHover={{ y: -3, scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            className="group relative flex-1 flex flex-col gap-3 px-4 sm:px-6 py-4 sm:py-5 rounded-2xl overflow-hidden text-white font-semibold text-sm transition-all cursor-pointer"
-            style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)', boxShadow: '0 8px 28px rgba(139,92,246,0.35)' }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-white/15 via-transparent to-transparent" />
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
-            <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-violet-400/30 rounded-full blur-2xl" />
-
-            <div className="relative flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm border border-white/25 flex items-center justify-center shadow-inner flex-shrink-0">
-                <Stethoscope size={20} />
-              </div>
-              <div className="text-left">
-                <p className="font-bold text-base leading-tight">Диагностика</p>
-                <p className="text-xs opacity-75 mt-0.5">анализы и обследование</p>
-              </div>
-            </div>
-            <div className="relative flex items-center justify-center gap-1.5 text-xs font-semibold bg-white/20 px-3 py-1.5 rounded-full border border-white/25 w-full">
-              Записаться <ArrowRight size={12} className="transition-transform group-hover:translate-x-0.5" />
-            </div>
-          </motion.button>
-
-        </div>
-      </div>
-
+          <div className="relative w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0">
+            {icon}
+          </div>
+          <div className="relative flex-1 min-w-0">
+            <p className="text-sm font-bold leading-tight">{label}</p>
+            <p className="text-xs opacity-60 mt-0.5 truncate">{sub}</p>
+          </div>
+          <div className="relative flex items-center gap-1 text-xs font-semibold opacity-70 group-hover:opacity-100 transition-opacity flex-shrink-0">
+            {action} <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
+          </div>
+        </motion.button>
+      ))}
     </div>
   );
 };
