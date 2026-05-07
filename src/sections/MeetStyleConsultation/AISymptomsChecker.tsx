@@ -13,13 +13,20 @@ import {
   faHeartPulse,
   faCircleCheck,
   faUserMd,
+  faVideo,
+  faHouse,
+  faStethoscope,
+  faArrowRight,
   faImage,
   faTimes,
   faClock,
   faCalendarDays,
-  faVideo,
   faBell,
   faEnvelope,
+  faStar,
+  faBolt,
+  faHospital,
+  faLocationDot,
 } from "@fortawesome/free-solid-svg-icons";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
@@ -45,8 +52,10 @@ interface BookingConfirmationData {
   formattedTime: string;
 }
 
+type ConsultationFlow = 'online' | 'offline' | 'diagnostics';
+
 interface Message {
-  role: "user" | "assistant" | "doctor-card" | "doctors-list" | "time-slots" | "booking-confirmation";
+  role: "user" | "assistant" | "doctor-card" | "doctors-list" | "time-slots" | "booking-confirmation" | "consultation-type-selector";
   content: string;
   doctor?: DoctorRecommendation;
   doctors?: DoctorRecommendation[];
@@ -56,6 +65,7 @@ interface Message {
   doctorName?: string;
   imageUrl?: string;
   bookingConfirmation?: BookingConfirmationData;
+  selectedConsultationType?: ConsultationFlow;
   preliminaryDiagnosis?: string;
 }
 
@@ -245,6 +255,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [preselectedDoctor, setPreselectedDoctor] = useState<Doctor | null>(null);
   const [streamingText, setStreamingText] = useState("");
+  const [accumulatedSymptoms, setAccumulatedSymptoms] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -455,27 +466,22 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
         tick();
       });
 
-      // ── If AI recommends a doctor, fetch the actual match ─────────────────────
+      // ── If AI recommends a doctor, ask patient to choose consultation type ──────
       if (showDoctorBtn) {
         const allUserMessages = [...messages.filter(m => m.role === "user").map(m => m.content), userMessage];
         const fullSymptoms = allUserMessages.join(". ");
+        setAccumulatedSymptoms(fullSymptoms);
 
-        const result = await aiService.analyzeSymptoms({
-          symptoms: fullSymptoms,
-          language,
-          clinicSlug: clinic?.clinicSlug,
-        });
-
-        if (!result.injectionBlocked && result.success && result.recommendedDoctor) {
-          const lang = language as "en" | "ru" | "kz";
-          const cardLabels = { en: "I found a suitable doctor for you:", ru: "Я нашел подходящего врача для вас:", kz: "Сізге қолайлы дәрігерді таптым:" };
-          setMessages(prev => [...prev, {
-            role: "doctor-card",
-            content: cardLabels[lang] ?? cardLabels.ru,
-            doctor: result.recommendedDoctor,
-            otherDoctors: result.alternativeDoctors ?? [],
-          }]);
-        }
+        const lang = language as "en" | "ru" | "kz";
+        const selectorLabels = {
+          en: "How would you like to consult?",
+          ru: "Как вы хотите получить консультацию?",
+          kz: "Қалай кеңес алғыңыз келеді?",
+        };
+        setMessages(prev => [...prev, {
+          role: "consultation-type-selector",
+          content: selectorLabels[lang] ?? selectorLabels.ru,
+        }]);
       }
 
       setIsLoading(false);
@@ -585,6 +591,71 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
         ...prev,
         { role: "assistant", content: "Произошла ошибка при загрузке списка врачей. Пожалуйста, попробуйте позже." },
       ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleConsultationTypeSelect = async (type: ConsultationFlow) => {
+    const lang = language as "en" | "ru" | "kz";
+
+    // Mark the selector as selected so buttons become inactive
+    setMessages(prev => prev.map(m =>
+      m.role === "consultation-type-selector" && !m.selectedConsultationType
+        ? { ...m, selectedConsultationType: type }
+        : m
+    ));
+
+    const typeLabels = {
+      online:      { en: "Online video consultation", ru: "Онлайн видео-консультация", kz: "Онлайн бейне кеңес" },
+      offline:     { en: "In-person visit",           ru: "Оффлайн приём у врача",     kz: "Офлайн дәрігерге баю" },
+      diagnostics: { en: "Diagnostics",               ru: "Диагностика",               kz: "Диагностика" },
+    };
+    const choiceLabel = typeLabels[type][lang] ?? typeLabels[type].ru;
+
+    // Add user's choice as a message
+    setMessages(prev => [...prev, { role: "user", content: `✅ ${choiceLabel}` }]);
+    setIsLoading(true);
+
+    try {
+      if (type === "online") {
+        const result = await aiService.analyzeSymptoms({
+          symptoms: accumulatedSymptoms,
+          language,
+          clinicSlug: clinic?.clinicSlug,
+        });
+
+        if (!result.injectionBlocked && result.success && result.recommendedDoctor) {
+          const cardLabels = { en: "I found the best doctor for your symptoms:", ru: "Я подобрал подходящего врача по вашим симптомам:", kz: "Симптомдарыңызға сәйкес дәрігерді таптым:" };
+          setMessages(prev => [...prev, {
+            role: "doctor-card",
+            content: cardLabels[lang] ?? cardLabels.ru,
+            doctor: result.recommendedDoctor,
+            otherDoctors: result.alternativeDoctors ?? [],
+          }]);
+        } else {
+          // Fallback to random doctors
+          const doctors = await aiService.getRandomDoctors();
+          const listLabels = { en: "Available doctors for online consultation:", ru: "Доступные врачи для онлайн-консультации:", kz: "Онлайн кеңеске қолжетімді дәрігерлер:" };
+          setMessages(prev => [...prev, { role: "doctors-list", content: listLabels[lang] ?? listLabels.ru, doctors }]);
+        }
+      } else {
+        const doctors = await aiService.getRandomDoctors();
+        const listLabels = {
+          offline:     { en: "Available doctors for in-person visit:", ru: "Доступные врачи для приёма:", kz: "Қабылдауға қолжетімді дәрігерлер:" },
+          diagnostics: { en: "Available specialists for diagnostics:", ru: "Специалисты для диагностики:", kz: "Диагностикаға арналған мамандар:" },
+        };
+        const label = listLabels[type]?.[lang] ?? listLabels[type]?.ru;
+        if (doctors.length > 0) {
+          setMessages(prev => [...prev, { role: "doctors-list", content: label, doctors }]);
+        } else {
+          const emptyLabels = { en: "No available doctors at the moment. Try again later.", ru: "В данный момент нет доступных врачей. Попробуйте позже.", kz: "Қазіргі уақытта дәрігерлер жоқ. Кейінірек қайталаңыз." };
+          setMessages(prev => [...prev, { role: "assistant", content: emptyLabels[lang] ?? emptyLabels.ru }]);
+        }
+      }
+    } catch {
+      const errLabels = { en: "Error loading doctors. Please try again.", ru: "Ошибка загрузки врачей. Попробуйте ещё раз.", kz: "Дәрігерлерді жүктеу қатесі. Қайталап көріңіз." };
+      setMessages(prev => [...prev, { role: "assistant", content: errLabels[lang] ?? errLabels.ru }]);
     } finally {
       setIsLoading(false);
     }
@@ -937,7 +1008,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                         <div className="relative px-5 py-5 sm:px-6 sm:py-5">
                           {/* Best match pill */}
                           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full mb-4 text-xs font-bold" style={{ background: "rgba(251,191,36,0.2)", border: "1px solid rgba(251,191,36,0.4)" }}>
-                            <span>⭐</span>
+                            <FontAwesomeIcon icon={faStar} className="text-amber-300 text-[10px]" />
                             <span className="text-amber-200">{otherDoctorLabels.bestMatch[lang as keyof typeof otherDoctorLabels.bestMatch]}</span>
                           </div>
 
@@ -963,13 +1034,13 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                               <div className="flex flex-wrap gap-2">
                                 {message.doctor.years_of_experience && (
                                   <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold" style={{ background: "rgba(255,255,255,0.15)", backdropFilter: "blur(10px)" }}>
-                                    <span>✨</span>
+                                    <FontAwesomeIcon icon={faBolt} className="text-amber-300 text-[9px]" />
                                     <span className="text-white">{message.doctor.years_of_experience} {labels.experience[lang as keyof typeof labels.experience]}</span>
                                   </div>
                                 )}
                                 {message.doctor.clinic?.rating && (
                                   <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold" style={{ background: "rgba(251,191,36,0.15)" }}>
-                                    <span>⭐</span>
+                                    <FontAwesomeIcon icon={faStar} className="text-amber-300 text-[9px]" />
                                     <span className="text-amber-200">{message.doctor.clinic.rating.toFixed(1)}</span>
                                   </div>
                                 )}
@@ -980,16 +1051,16 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                           {/* Clinic row */}
                           {message.doctor.clinic && (
                             <div className="flex items-center gap-2 mb-4 text-xs text-blue-200">
-                              <span>🏥</span>
+                              <FontAwesomeIcon icon={faHospital} className="text-blue-300 text-[11px] flex-shrink-0" />
                               <span className="font-medium text-white">{message.doctor.clinic.name}</span>
-                              {message.doctor.clinic.city && <><span>·</span><span>📍 {message.doctor.clinic.city}</span></>}
+                              {message.doctor.clinic.city && <><span>·</span><FontAwesomeIcon icon={faLocationDot} className="text-blue-300 text-[10px] flex-shrink-0" /><span>{message.doctor.clinic.city}</span></>}
                             </div>
                           )}
 
                           {/* Nearest available slot */}
                           {isSlotFuture(message.doctor.nearest_slot) && (
                             <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl text-xs font-medium" style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)" }}>
-                              <span>🕐</span>
+                              <FontAwesomeIcon icon={faClock} className="text-blue-200 text-[11px] flex-shrink-0" />
                               <span className="text-white opacity-90">
                                 {{
                                   ru: "Ближайший слот:",
@@ -1063,7 +1134,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                                     {/* Experience */}
                                     {doc.years_of_experience && (
                                       <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] mb-2.5" style={{ background: "rgba(255,255,255,0.15)" }}>
-                                        <span>✨</span>
+                                        <FontAwesomeIcon icon={faBolt} className="text-amber-300 text-[9px]" />
                                         <span className="text-white font-medium">{doc.years_of_experience} {labels.experience[lang as keyof typeof labels.experience]}</span>
                                       </div>
                                     )}
@@ -1179,7 +1250,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                                     <p className="text-blue-100 text-xs sm:text-sm mb-1.5">{doctorSpecialization}</p>
                                     {doctor.years_of_experience && (
                                       <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs" style={{ background: "rgba(255, 255, 255, 0.15)" }}>
-                                        <span className="text-blue-100">✨</span>
+                                        <FontAwesomeIcon icon={faBolt} className="text-amber-300 text-[9px]" />
                                         <span className="text-white font-semibold">{doctor.years_of_experience} {labels.experience[lang as keyof typeof labels.experience]}</span>
                                       </div>
                                     )}
@@ -1200,13 +1271,13 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                                     <div className="flex items-center justify-between gap-2">
                                       {doctor.clinic.city && (
                                         <div className="flex items-center gap-1">
-                                          <span className="text-blue-200 text-xs">📍</span>
+                                          <FontAwesomeIcon icon={faLocationDot} className="text-blue-300 text-[9px]" />
                                           <span className="text-blue-100 text-xs">{doctor.clinic.city}</span>
                                         </div>
                                       )}
                                       {doctor.clinic.rating && (
                                         <div className="flex items-center gap-1 px-2 py-0.5 rounded-full" style={{ background: "rgba(251, 191, 36, 0.15)" }}>
-                                          <span className="text-xs">⭐</span>
+                                          <FontAwesomeIcon icon={faStar} className="text-amber-300 text-[9px]" />
                                           <span className="text-amber-200 text-xs font-bold">{doctor.clinic.rating.toFixed(1)}</span>
                                         </div>
                                       )}
@@ -1217,7 +1288,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                                 {/* Nearest slot for alternative doctor */}
                                 {isSlotFuture(doctor.nearest_slot) && (
                                   <div className="flex items-center gap-1.5 mb-2.5 px-2.5 py-1.5 rounded-lg text-xs" style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)" }}>
-                                    <span>🕐</span>
+                                    <FontAwesomeIcon icon={faClock} className="text-blue-200 text-[11px] flex-shrink-0" />
                                     <span className="text-white font-semibold">{doctor.nearest_slot?.label}</span>
                                   </div>
                                 )}
@@ -1367,6 +1438,68 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                       )}
                     </div>
                   </div>
+                  );
+                })() : message.role === "consultation-type-selector" ? (() => {
+                  const isSelected = !!message.selectedConsultationType;
+                  const typeConfig = [
+                    { type: 'online'      as ConsultationFlow, label: { en: "Online",      ru: "Онлайн",      kz: "Онлайн"      }, sub: { en: "video consultation", ru: "видео-консультация", kz: "бейне кеңес" }, icon: faVideo,        bg: "#1d4ed8" },
+                    { type: 'offline'     as ConsultationFlow, label: { en: "Offline",     ru: "Оффлайн",     kz: "Оффлайн"     }, sub: { en: "in-person visit",   ru: "приём у врача",     kz: "дәрігерге баю" }, icon: faHouse,        bg: "#0f766e" },
+                    { type: 'diagnostics' as ConsultationFlow, label: { en: "Diagnostics", ru: "Диагностика", kz: "Диагностика" }, sub: { en: "tests & exams",     ru: "анализы и обследование", kz: "талдау және тексеру" }, icon: faStethoscope, bg: "#7c3aed" },
+                  ];
+                  const lang = language as "en" | "ru" | "kz";
+                  const actionLabel = { en: { online: "Start", offline: "Book", diagnostics: "Book" }, ru: { online: "Начать", offline: "Записаться", diagnostics: "Записаться" }, kz: { online: "Бастау", offline: "Жазылу", diagnostics: "Жазылу" } };
+                  return (
+                    <div className="max-w-[92%] sm:max-w-[88%] flex gap-2 sm:gap-3">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 mt-1" style={{ background: "linear-gradient(135deg, #3772ff 0%, #2956bf 100%)" }}>
+                        <FontAwesomeIcon icon={faRobot} className="text-white text-xs sm:text-sm" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="px-2 py-1 rounded-lg mb-3 inline-block" style={{ background: "#ebf1ff" }}>
+                          <span className="text-xs font-semibold" style={{ color: "#2956bf" }}>{message.content}</span>
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          {typeConfig.map(({ type, label, sub, icon, bg }) => {
+                            const chosen = message.selectedConsultationType === type;
+                            return (
+                              <motion.button
+                                key={type}
+                                onClick={() => !isSelected && handleConsultationTypeSelect(type)}
+                                whileHover={!isSelected ? { y: -2, scale: 1.02 } : {}}
+                                whileTap={!isSelected ? { scale: 0.97 } : {}}
+                                disabled={isSelected}
+                                className="group relative flex-1 flex items-center gap-3 px-4 py-3 rounded-xl text-white text-left transition-all duration-200"
+                                style={{
+                                  backgroundColor: bg,
+                                  opacity: isSelected && !chosen ? 0.4 : 1,
+                                  cursor: isSelected ? "default" : "pointer",
+                                  outline: chosen ? "2px solid white" : "none",
+                                  outlineOffset: "2px",
+                                }}
+                              >
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 rounded-xl" />
+                                <div className="relative w-8 h-8 rounded-lg bg-white/20 border border-white/25 flex items-center justify-center flex-shrink-0">
+                                  <FontAwesomeIcon icon={icon} className="text-sm" />
+                                </div>
+                                <div className="relative flex-1 min-w-0">
+                                  <p className="text-xs font-bold leading-tight">{label[lang]}</p>
+                                  <p className="text-[10px] opacity-60 mt-0.5 truncate">{sub[lang]}</p>
+                                </div>
+                                {chosen && (
+                                  <div className="relative">
+                                    <FontAwesomeIcon icon={faCircleCheck} className="text-white text-sm" />
+                                  </div>
+                                )}
+                                {!isSelected && (
+                                  <div className="relative flex items-center gap-0.5 text-[10px] font-semibold opacity-70 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                                    {actionLabel[lang]?.[type]} <FontAwesomeIcon icon={faArrowRight} className="text-[9px]" />
+                                  </div>
+                                )}
+                              </motion.button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
                   );
                 })() : (
                   <div className="max-w-[90%] sm:max-w-[85%]">

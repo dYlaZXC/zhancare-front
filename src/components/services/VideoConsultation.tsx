@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
 import { api } from "@/utils/api";
 import { useAuth } from "@/context/AuthContext";
@@ -39,12 +39,19 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
   console.log(`🆔 VideoConsultation instance rendering: ${componentInstanceId.current}`);
   const { token } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const lastToastRef = useRef<{ doctorId: number; status: string; timestamp: number } | null>(null);
 
-  const [activeFlow, setActiveFlow] = useState<'online' | 'offline' | 'diagnostics'>('online');
+  const initialFlow = (() => {
+    const f = searchParams?.get('flow');
+    if (f === 'offline' || f === 'diagnostics') return f;
+    return 'online';
+  })();
+
+  const [activeFlow, setActiveFlow] = useState<'online' | 'offline' | 'diagnostics'>(initialFlow);
   const [step, setStep] = useState<1 | 2 | 3>(skipAI ? 2 : 1);
   const [symptoms, setSymptoms] = useState("");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -610,17 +617,35 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
             {/* Compact header section */}
             <div className="mb-4 space-y-3">
               <h2 className="text-xl md:text-2xl lg:text-3xl font-extrabold text-[#001E80]">
-                {activeFlow === 'offline' ? 'Оффлайн приём' : activeFlow === 'diagnostics' ? 'Диагностика' : 'Консультация'}
+                {activeFlow === 'offline' ? 'Оффлайн приём' : activeFlow === 'diagnostics' ? 'Диагностика' : 'Мои услуги'}
               </h2>
 
               {/* Progress bar — online flow only */}
               {activeFlow === 'online' && (
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className={`h-full transition-all duration-500 rounded-full bg-blue-600 ${
-                      step === 1 ? 'w-1/3' : step === 2 ? 'w-2/3' : 'w-full'
-                    }`}
-                  />
+                <div className="relative w-full">
+                  {/* Track */}
+                  <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden shadow-inner">
+                    <div
+                      className={`h-full transition-all duration-700 ease-in-out rounded-full ${
+                        step === 1 ? 'w-1/3' : step === 2 ? 'w-2/3' : 'w-full'
+                      }`}
+                      style={{ background: 'linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%)' }}
+                    />
+                  </div>
+                  {/* Step dots */}
+                  <div className="flex justify-between mt-1.5 px-0">
+                    {[1, 2, 3].map((s) => (
+                      <div
+                        key={s}
+                        className={`w-2 h-2 rounded-full transition-all duration-500 ${
+                          step >= s
+                            ? 'scale-125 shadow-sm'
+                            : 'bg-gray-300'
+                        }`}
+                        style={step >= s ? { background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)' } : {}}
+                      />
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

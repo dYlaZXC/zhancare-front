@@ -142,27 +142,51 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
     return 'from-green-400 to-emerald-500';
   };
 
+  const serviceButtons = [
+    {
+      label: 'Онлайн',
+      sub: 'видео-консультация',
+      icon: <Video size={20} />,
+      action: 'Начать',
+      onClick: onNext,
+      bg: '#1d4ed8',
+      hover: '#1e40af',
+    },
+    {
+      label: 'Оффлайн',
+      sub: 'приём у врача',
+      icon: <Home size={20} />,
+      action: 'Записаться',
+      onClick: onOffline,
+      bg: '#0f766e',
+      hover: '#0d6b63',
+    },
+    {
+      label: 'Диагностика',
+      sub: 'анализы и обследование',
+      icon: <Stethoscope size={20} />,
+      action: 'Записаться',
+      onClick: onDiagnostics,
+      bg: '#7c3aed',
+      hover: '#6d28d9',
+    },
+  ];
+
   return (
     <div className="flex flex-col sm:flex-row gap-3">
-      {[
-        { label: 'Онлайн',      sub: 'видео-консультация',    icon: <Video size={20} />,       action: 'Начать',     onClick: onNext },
-        { label: 'Оффлайн',     sub: 'приём у врача',          icon: <Home size={20} />,        action: 'Записаться', onClick: onOffline },
-        { label: 'Диагностика', sub: 'анализы и обследование', icon: <Stethoscope size={20} />, action: 'Записаться', onClick: onDiagnostics },
-      ].map(({ label, sub, icon, action, onClick }) => (
+      {serviceButtons.map(({ label, sub, icon, action, onClick, bg }) => (
         <motion.button
           key={label}
           onClick={onClick}
           whileHover={{ y: -3, scale: 1.02 }}
           whileTap={{ scale: 0.97 }}
-          className="group relative flex-1 flex items-center gap-4 px-5 py-4 rounded-2xl overflow-hidden text-white text-left"
-          style={{ background: 'linear-gradient(135deg, #12263a 0%, #1e263e 25%, #29358f 75%, #3772ff 100%)' }}
+          className="group relative flex-1 flex items-center gap-4 px-5 py-4 rounded-2xl overflow-hidden text-white text-left transition-colors duration-200"
+          style={{ backgroundColor: bg }}
         >
-          {/* Top highlight line */}
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
           {/* Hover overlay */}
-          <div className="absolute inset-0 bg-white/0 group-hover:bg-white/5 transition-colors duration-200" />
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 rounded-2xl" />
 
-          <div className="relative w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0">
+          <div className="relative w-10 h-10 rounded-xl bg-white/20 border border-white/25 flex items-center justify-center flex-shrink-0">
             {icon}
           </div>
           <div className="relative flex-1 min-w-0">
