@@ -629,7 +629,7 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
                       className={`h-full transition-all duration-700 ease-in-out rounded-full ${
                         step === 1 ? 'w-1/3' : step === 2 ? 'w-2/3' : 'w-full'
                       }`}
-                      style={{ background: 'linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%)' }}
+                      style={{ background: 'linear-gradient(90deg, #12263a 0%, #29358f 50%, #3772ff 100%)' }}
                     />
                   </div>
                   {/* Step dots */}
@@ -642,7 +642,7 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
                             ? 'scale-125 shadow-sm'
                             : 'bg-gray-300'
                         }`}
-                        style={step >= s ? { background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)' } : {}}
+                        style={step >= s ? { background: 'linear-gradient(135deg, #29358f, #3772ff)' } : {}}
                       />
                     ))}
                   </div>
