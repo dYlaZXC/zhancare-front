@@ -1,7 +1,9 @@
 "use client";
+import { createPortal } from "react-dom";
 
 import Image from "next/image";
 import Logo from "@/assets/logosaas.png";
+import LogoIcon from "../../../public/logo_icon.png";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faUsers,
@@ -20,7 +22,7 @@ import {
   faFunnelDollar,
 } from "@fortawesome/free-solid-svg-icons";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const BACKEND = process.env.NEXT_PUBLIC_API_URL?.replace("/api/v1", "") ?? "http://127.0.0.1:8000";
 const resolveAvatar = (url?: string | null) => {
@@ -79,17 +81,28 @@ export const AdminSidebar = ({
   const isSuperAdmin = !!(user?.profiles?.admin as any)?.is_super_admin;
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [openFlyout, setOpenFlyout] = useState<string | null>(null);
+  const [flyoutAnchor, setFlyoutAnchor] = useState({ top: 0, left: 0 });
+  const flyoutTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mobileSidebarRef = useRef<HTMLElement>(null);
+  const desktopSidebarRef = useRef<HTMLElement>(null);
+  const onSidebarMouseMove = (ref: React.RefObject<HTMLElement>) => (e: React.MouseEvent<HTMLElement>) => {
+    if (ref.current) ref.current.style.background = `radial-gradient(circle at ${e.clientX}px ${e.clientY}px, rgba(55,114,255,0.2) 0%, transparent 50%), linear-gradient(135deg, #12263a 0%, #1e263e 25%, #29358f 75%, #3772ff 100%)`;
+  };
 
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePos({ x: e.clientX, y: e.clientY });
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+  const enterFlyout = (id: string, e?: React.MouseEvent<HTMLElement>) => {
+    if (flyoutTimeout.current) clearTimeout(flyoutTimeout.current);
+    if (e) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setFlyoutAnchor({ top: rect.top + rect.height / 2, left: rect.right });
+    }
+    setOpenFlyout(id);
+  };
+  const leaveFlyout = () => {
+    flyoutTimeout.current = setTimeout(() => setOpenFlyout(null), 150);
+  };
 
   useEffect(() => {
     const toExpand = new Set<string>();
@@ -237,7 +250,6 @@ export const AdminSidebar = ({
         } fixed top-0 left-0 h-screen w-72 xs:w-76 text-white flex flex-col transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] transform z-50 shadow-2xl border-r border-white/10 backdrop-blur-xl will-change-transform overflow-x-hidden xl:hidden`}
         style={{
           background: `
-            radial-gradient(circle at ${mousePos.x}px ${mousePos.y}px, rgba(55, 114, 255, 0.2) 0%, transparent 50%),
             linear-gradient(135deg, #12263a 0%, #1e263e 25%, #29358f 75%, #3772ff 100%)
           `
         }}
@@ -416,10 +428,11 @@ export const AdminSidebar = ({
 
       {/* Desktop Sidebar */}
       <aside
+        ref={desktopSidebarRef as any}
+        onMouseMove={onSidebarMouseMove(desktopSidebarRef)}
         className={`hidden xl:flex fixed top-0 left-0 h-screen ${isCollapsed ? "w-20" : "w-80"} text-white flex-col justify-between overflow-y-hidden transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] z-40 shadow-2xl border-r border-white/10 backdrop-blur-xl will-change-transform overflow-x-hidden`}
         style={{
           background: `
-            radial-gradient(circle at ${mousePos.x}px ${mousePos.y}px, rgba(55, 114, 255, 0.2) 0%, transparent 50%),
             linear-gradient(135deg, #12263a 0%, #1e263e 25%, #29358f 75%, #3772ff 100%)
           `
         }}
@@ -435,7 +448,7 @@ export const AdminSidebar = ({
           <div className={`flex items-center ${isCollapsed ? 'justify-center px-2 py-4' : 'px-6 py-4'} relative z-10`}>
             <Link href="/" className="outline-none focus:outline-none w-full">
               {isCollapsed ? (
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-lg font-bold text-white shadow-md mx-auto" style={{ background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)' }}>Z</div>
+                <Image src={LogoIcon} alt="ZhanCare" width={40} height={40} priority className="w-10 h-10 object-contain drop-shadow-md mx-auto" />
               ) : (
                 <Image src={Logo} alt="Logo" width={280} height={55} priority className="w-full h-auto hover:opacity-90 transition-opacity duration-300 drop-shadow-lg" />
               )}
@@ -495,12 +508,11 @@ export const AdminSidebar = ({
                   <Link
                     href={item.href!}
                     onClick={handleTabChange}
-                    onMouseEnter={() => setHoveredItem(item.id)}
-                    onMouseLeave={() => setHoveredItem(null)}
+                    onMouseEnter={(e) => { setHoveredItem(item.id); if (isCollapsed) enterFlyout(item.id, e); }}
+                    onMouseLeave={() => { setHoveredItem(null); if (isCollapsed) leaveFlyout(); }}
                     className={`w-full relative transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] min-h-[48px] border-0 outline-none focus:outline-none will-change-transform block ${
                       activeTab === item.id ? "transform scale-105" : "hover:scale-102"
                     }`}
-                    title={isCollapsed ? item.title : undefined}
                     aria-label={item.title}
                   >
                     <div
@@ -537,11 +549,15 @@ export const AdminSidebar = ({
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
                     </div>
                   </Link>
-                  {isCollapsed && (
-                    <div className="absolute left-full ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-[9999] whitespace-nowrap top-1/2 -translate-y-1/2">
-                      {item.title}
-                      <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
-                    </div>
+                  {isCollapsed && openFlyout === item.id && typeof document !== "undefined" && createPortal(
+                    <div onMouseEnter={() => enterFlyout(item.id)} onMouseLeave={leaveFlyout}
+                         style={{ position: "fixed", top: flyoutAnchor.top, left: flyoutAnchor.left + 8, transform: "translateY(-50%)", zIndex: 9999 }}>
+                      <div className="bg-white rounded-xl shadow-xl border border-gray-100 flex items-center gap-2.5 pl-1 pr-4 py-2.5 whitespace-nowrap">
+                        <div className="w-1 h-6 rounded-full flex-shrink-0" style={{ background: item.color }} />
+                        <span className="text-sm font-semibold text-gray-900">{item.title}</span>
+                      </div>
+                    </div>,
+                    document.body
                   )}
                 </div>
               );
@@ -552,13 +568,14 @@ export const AdminSidebar = ({
             const hasActiveChild = item.children.some(c => activeTab === c.id);
 
             if (isCollapsed) {
-              // Collapsed: show group icon, tooltip lists children
               return (
-                <div key={`desktop-${item.id}`} className="relative group">
-                  <button
-                    onClick={() => toggleGroup(item.id)}
-                    className={`w-full relative transition-all duration-300 min-h-[48px] border-0 outline-none focus:outline-none will-change-transform ${hasActiveChild ? 'transform scale-105' : 'hover:scale-102'}`}
-                    title={item.title}
+                <div key={`desktop-${item.id}`} className="relative">
+                  <Link
+                    href={item.children[0].href}
+                    onClick={handleTabChange}
+                    onMouseEnter={(e) => enterFlyout(item.id, e)}
+                    onMouseLeave={leaveFlyout}
+                    className={`w-full relative transition-all duration-300 min-h-[48px] block will-change-transform ${hasActiveChild ? 'transform scale-105' : ''}`}
                     aria-label={item.title}
                   >
                     <div
@@ -577,19 +594,28 @@ export const AdminSidebar = ({
                         </div>
                       )}
                     </div>
-                  </button>
-                  {/* Flyout tooltip with children */}
-                  <div className="absolute left-full ml-2 bg-gray-900 text-white text-sm rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-[9999] whitespace-nowrap top-1/2 -translate-y-1/2 min-w-[140px] overflow-hidden">
-                    <div className="px-3 py-2 text-xs font-bold uppercase tracking-wide text-white/60 border-b border-white/10">{item.title}</div>
-                    {item.children.map(child => (
-                      <Link key={child.id} href={child.href} onClick={handleTabChange}
-                            className={`flex items-center gap-2 px-3 py-2 hover:bg-white/10 transition-colors ${activeTab === child.id ? 'text-blue-300 font-semibold' : ''}`}>
-                        <FontAwesomeIcon icon={child.icon} className="text-xs w-3" />
-                        <span>{child.title}</span>
-                      </Link>
-                    ))}
-                    <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
-                  </div>
+                  </Link>
+                  {openFlyout === item.id && typeof document !== "undefined" && createPortal(
+                    <div onMouseEnter={() => enterFlyout(item.id)} onMouseLeave={leaveFlyout}
+                         style={{ position: "fixed", top: flyoutAnchor.top, left: flyoutAnchor.left + 8, transform: "translateY(-50%)", zIndex: 9999 }}>
+                      <div className="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden min-w-[170px]">
+                        <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-100">
+                          <div className="w-1 h-4 rounded-full flex-shrink-0" style={{ background: item.color }} />
+                          <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400">{item.title}</span>
+                        </div>
+                        {item.children.map(child => (
+                          <Link key={child.id} href={child.href} onClick={() => { handleTabChange(); setOpenFlyout(null); }}
+                                className={`flex items-center gap-2.5 px-3 py-2.5 hover:bg-gray-50 transition-colors whitespace-nowrap ${activeTab === child.id ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-700'}`}>
+                            <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
+                                 style={{ background: activeTab === child.id ? `${child.color}20` : '#f3f4f6' }}>
+                              <FontAwesomeIcon icon={child.icon} className="text-xs" style={{ color: child.color }} />
+                            </div>
+                            <span className="text-sm">{child.title}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>, document.body
+                  )}
                 </div>
               );
             }

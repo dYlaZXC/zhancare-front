@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Logo from "@/assets/logosaas.png";
+import LogoIcon from "../../../public/logo_icon.png";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faHome,
@@ -13,7 +14,7 @@ import {
   faUserNurse,
 } from "@fortawesome/free-solid-svg-icons";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const BACKEND = process.env.NEXT_PUBLIC_API_URL?.replace("/api/v1", "") ?? "http://127.0.0.1:8000";
 const resolveAvatar = (url?: string | null) => {
@@ -40,17 +41,13 @@ export const NurseSidebar = ({
   const userRole = computeRole(user?.roles);
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-
-  // Mouse tracking for interactive effects
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePos({ x: e.clientX, y: e.clientY });
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+  const mobileSidebarRef = useRef<HTMLElement>(null);
+  const desktopSidebarRef = useRef<HTMLElement>(null);
+  const GRADIENT_BASE = "linear-gradient(135deg, #12263a 0%, #1e263e 25%, #29358f 75%, #3772ff 100%)";
+  const onSidebarMouseMove = (ref: React.RefObject<HTMLElement>) => (e: React.MouseEvent<HTMLElement>) => {
+    if (ref.current) ref.current.style.background = `radial-gradient(circle at ${e.clientX}px ${e.clientY}px, rgba(55,114,255,0.2) 0%, transparent 50%), ${GRADIENT_BASE}`;
+  };
 
   if (!user) return null;
 
@@ -122,7 +119,6 @@ export const NurseSidebar = ({
         } fixed top-0 left-0 h-screen w-72 xs:w-76 text-white flex flex-col transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] transform z-50 shadow-2xl border-r border-white/10 backdrop-blur-xl will-change-transform overflow-x-hidden xl:hidden`}
         style={{
           background: `
-            radial-gradient(circle at ${mousePos.x}px ${mousePos.y}px, rgba(55, 114, 255, 0.2) 0%, transparent 50%),
             linear-gradient(135deg, #12263a 0%, #1e263e 25%, #29358f 75%, #3772ff 100%)
           `
         }}
@@ -214,10 +210,7 @@ export const NurseSidebar = ({
         <div className={`hidden xl:flex items-center ${isCollapsed ? 'justify-center px-2 py-4' : 'px-4 py-5 md:px-6 md:py-6'} relative z-10`}>
           <Link href="/" className="outline-none focus:outline-none w-full">
             {isCollapsed ? (
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-lg font-bold text-white shadow-md mx-auto"
-                   style={{ background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)' }}>
-                Z
-              </div>
+              <Image src={LogoIcon} alt="ZhanCare" width={40} height={40} priority className="w-10 h-10 object-contain drop-shadow-md mx-auto" />
             ) : (
               <Image
                 src={Logo}
@@ -474,10 +467,11 @@ export const NurseSidebar = ({
 
       {/* Desktop Sidebar - Always visible on XL screens (1280px+) and above */}
       <aside
+        ref={desktopSidebarRef as any}
+        onMouseMove={onSidebarMouseMove(desktopSidebarRef)}
         className={`hidden xl:flex fixed top-0 left-0 h-screen ${isCollapsed ? "w-20" : "w-80"} text-white flex-col justify-between overflow-y-hidden transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] z-40 shadow-2xl border-r border-white/10 backdrop-blur-xl will-change-transform overflow-x-hidden`}
         style={{
           background: `
-            radial-gradient(circle at ${mousePos.x}px ${mousePos.y}px, rgba(55, 114, 255, 0.2) 0%, transparent 50%),
             linear-gradient(135deg, #12263a 0%, #1e263e 25%, #29358f 75%, #3772ff 100%)
           `
         }}
@@ -496,10 +490,7 @@ export const NurseSidebar = ({
         <div className={`flex items-center ${isCollapsed ? 'justify-center px-2 py-4' : 'px-6 py-4'} relative z-10`}>
           <Link href="/" className="outline-none focus:outline-none w-full">
             {isCollapsed ? (
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-lg font-bold text-white shadow-md mx-auto"
-                   style={{ background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)' }}>
-                Z
-              </div>
+              <Image src={LogoIcon} alt="ZhanCare" width={40} height={40} priority className="w-10 h-10 object-contain drop-shadow-md mx-auto" />
             ) : (
               <Image
                 src={Logo}
