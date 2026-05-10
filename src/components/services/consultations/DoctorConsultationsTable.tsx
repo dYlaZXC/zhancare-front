@@ -1,28 +1,30 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   Calendar,
   Clock,
   Eye,
   CheckCircle2,
-  AlertCircle,
   XCircle,
   MoreHorizontal,
-  Stethoscope,
   Video,
   MessageSquare,
   Phone,
-  Filter,
   Search,
   X,
   RefreshCw,
   ChevronLeft,
   ChevronRight,
-  Check,
-  PhoneCall,
   ChevronDown,
-  Edit
+  PhoneCall,
+  Stethoscope,
+  Activity,
+  MapPin,
+  Home,
+  Check,
+  Edit,
 } from "lucide-react";
 import { useConsultationManager } from "./useConsultationManager";
 import type { Consultation } from "@/types/consultation";
@@ -38,25 +40,222 @@ interface DoctorConsultationsTableProps {
 type FilterStatus = "all" | "pending" | "ongoing" | "completed" | "cancelled" | "missed" | "planned" | "scheduled";
 type FilterType = "all" | "video" | "chat" | "phone";
 
+interface SelectOption { value: string; label: string; icon?: React.ReactNode; color?: string; }
+
+function CustomSelect({ value, onChange, options, placeholder }: {
+  value: string;
+  onChange: (v: string) => void;
+  options: SelectOption[];
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+        setQuery("");
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  useEffect(() => {
+    if (open) setTimeout(() => searchRef.current?.focus(), 50);
+    else setQuery("");
+  }, [open]);
+
+  const filtered = options.filter(o =>
+    o.value === "all" || o.label.toLowerCase().includes(query.toLowerCase())
+  );
+  const selected = options.find(o => o.value === value);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 bg-white border rounded-xl text-sm font-medium transition-all ${
+          open ? "border-blue-400 ring-2 ring-blue-500/20 shadow-sm" : "border-gray-200 hover:border-gray-300"
+        }`}
+      >
+        <span className="flex items-center gap-2 min-w-0">
+          {selected?.icon && <span className={selected.color}>{selected.icon}</span>}
+          <span className={selected?.value === "all" ? "text-gray-400" : "text-gray-800"}>
+            {selected?.label || placeholder}
+          </span>
+        </span>
+        <ChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1.5 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden">
+          <div className="p-2 border-b border-gray-100">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+              <input
+                ref={searchRef}
+                type="text"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Поиск..."
+                className="w-full pl-8 pr-3 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+              />
+              {query && (
+                <button onClick={() => setQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="max-h-52 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <div className="px-4 py-3 text-sm text-gray-400 text-center">Ничего не найдено</div>
+            ) : filtered.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => { onChange(opt.value); setOpen(false); }}
+                className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm transition-colors text-left ${
+                  opt.value === value
+                    ? "bg-blue-50 text-blue-700 font-semibold"
+                    : "text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                {opt.icon && <span className={`flex-shrink-0 ${opt.value === value ? "text-blue-600" : opt.color || "text-gray-400"}`}>{opt.icon}</span>}
+                {opt.label}
+                {opt.value === value && <CheckCircle2 className="w-3.5 h-3.5 ml-auto text-blue-500" />}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Status dropdown rendered via portal so it escapes grid overflow clipping
+function StatusDropdown({
+  consultation,
+  onStatusChange,
+}: {
+  consultation: Consultation;
+  onStatusChange?: (meetingId: string, newStatus: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  const handleOpen = () => {
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 6, left: r.left });
+    }
+    setOpen(true);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => {
+      if (btnRef.current && !btnRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+
+  const statuses = [
+    { value: "pending",   label: "Ожидание",      icon: <Clock className="w-3.5 h-3.5" />,       cls: "bg-blue-50 text-blue-600 border-blue-200" },
+    { value: "ongoing",   label: "В процессе",    icon: <Activity className="w-3.5 h-3.5" />,    cls: "bg-amber-50 text-amber-600 border-amber-200" },
+    { value: "completed", label: "Завершена",     icon: <CheckCircle2 className="w-3.5 h-3.5" />,cls: "bg-emerald-50 text-emerald-600 border-emerald-200" },
+    { value: "cancelled", label: "Отменена",      icon: <XCircle className="w-3.5 h-3.5" />,     cls: "bg-red-50 text-red-600 border-red-200" },
+    { value: "missed",    label: "Пропущена",     icon: <XCircle className="w-3.5 h-3.5" />,     cls: "bg-orange-50 text-orange-600 border-orange-200" },
+    { value: "planned",   label: "Запланирована", icon: <Calendar className="w-3.5 h-3.5" />,    cls: "bg-violet-50 text-violet-600 border-violet-200" },
+    { value: "scheduled", label: "Запланирована", icon: <Calendar className="w-3.5 h-3.5" />,    cls: "bg-violet-50 text-violet-600 border-violet-200" },
+  ];
+
+  const current = statuses.find(s => s.value === consultation.status) ?? {
+    label: "Неизвестно", icon: <Clock className="w-3.5 h-3.5" />, cls: "bg-gray-50 text-gray-500 border-gray-200"
+  };
+
+  const unique = statuses.filter(s => s.value !== "scheduled");
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        onClick={onStatusChange ? handleOpen : undefined}
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition-all ${current.cls} ${
+          onStatusChange ? "hover:opacity-80 cursor-pointer" : "cursor-default"
+        }`}
+      >
+        {current.icon}
+        {current.label}
+        {onStatusChange && <ChevronDown className="w-3 h-3 ml-0.5 opacity-60" />}
+      </button>
+
+      {open && typeof document !== "undefined" && createPortal(
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div
+            className="fixed z-50 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden min-w-[200px]"
+            style={{ top: pos.top, left: pos.left }}
+          >
+            <div className="px-3.5 py-2.5 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
+              <Edit className="w-3.5 h-3.5 text-gray-400" />
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Изменить статус</span>
+            </div>
+            <div className="py-1">
+              {unique.map((s) => (
+                <button
+                  key={s.value}
+                  onClick={() => {
+                    onStatusChange!(consultation.meeting_id ?? "", s.value);
+                    setOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm transition-colors text-left ${
+                    consultation.status === s.value
+                      ? "bg-blue-50 text-blue-700 font-semibold"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  <span className={s.cls.split(" ").find(c => c.startsWith("text-"))}>{s.icon}</span>
+                  {s.label}
+                  {consultation.status === s.value && <CheckCircle2 className="w-3.5 h-3.5 ml-auto text-blue-500" />}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
+    </>
+  );
+}
+
 const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
   consultations: propConsultations,
   showFilters = true,
   onAccept,
   onReject,
-  onStatusChange
+  onStatusChange,
 }) => {
   const { consultations: hookConsultations, fetchConsultations } = useConsultationManager();
-  const consultations = useMemo(() => propConsultations || hookConsultations || [], [propConsultations, hookConsultations]);
+  const consultations = useMemo(() =>
+    propConsultations || hookConsultations || [],
+    [propConsultations, hookConsultations]
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
   const [typeFilter, setTypeFilter] = useState<FilterType>("all");
-  const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [showStatusDropdown, setShowStatusDropdown] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [detailsConsultation, setDetailsConsultation] = useState<Consultation | null>(null);
   const itemsPerPage = 10;
 
-  // Real-time updates for scheduled consultations
   useEffect(() => {
     const interval = setInterval(() => {
       setRefreshTrigger(prev => prev + 1);
@@ -64,1001 +263,657 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
     return () => clearInterval(interval);
   }, []);
 
-  // Helper function to check if consultation can be joined (10 minutes before start time)
   const canJoinConsultation = (consultation: Consultation): { canJoin: boolean; timeUntil: string; isReady: boolean } => {
     refreshTrigger;
-    if (!consultation.scheduled_at) {
-      return { canJoin: false, timeUntil: '', isReady: false };
-    }
-
+    if (!consultation.scheduled_at) return { canJoin: false, timeUntil: "", isReady: false };
     const now = new Date();
-    // Parse scheduled_at as local time by removing 'Z' suffix if present
-    // and ensuring it's treated as local time, not UTC
-    let scheduledTimeString = consultation.scheduled_at;
-    if (scheduledTimeString.endsWith('Z')) {
-      scheduledTimeString = scheduledTimeString.slice(0, -1);
-    }
-    // If the string doesn't contain timezone info, append 'T00:00:00' format to ensure local parsing
-    // For datetime strings like "2026-02-06T13:15:00", this will parse as local time
-    const scheduledTime = new Date(scheduledTimeString.replace('Z', ''));
-    const timeDiffMs = scheduledTime.getTime() - now.getTime();
-    const timeDiffMinutes = Math.floor(timeDiffMs / (1000 * 60));
-
-    const canJoin = timeDiffMinutes <= 10 && timeDiffMinutes >= -30;
-    const isReady = timeDiffMinutes <= 0;
-
-    let timeUntil = '';
-    if (timeDiffMinutes > 0) {
-      const hours = Math.floor(timeDiffMinutes / 60);
-      const minutes = timeDiffMinutes % 60;
-      timeUntil = hours > 0 ? `${hours}ч ${minutes}м` : `${minutes}м`;
-    } else if (timeDiffMinutes < 0) {
-      const minutesLate = Math.abs(timeDiffMinutes);
-      timeUntil = minutesLate < 60 ? `опоздание ${minutesLate}м` : 'просрочено';
+    let s = consultation.scheduled_at;
+    if (s.endsWith("Z")) s = s.slice(0, -1);
+    const scheduledTime = new Date(s);
+    const diffMin = Math.floor((scheduledTime.getTime() - now.getTime()) / 60000);
+    const canJoin = diffMin <= 10 && diffMin >= -30;
+    const isReady = diffMin <= 0;
+    let timeUntil = "";
+    if (diffMin > 0) {
+      const h = Math.floor(diffMin / 60), m = diffMin % 60;
+      timeUntil = h > 0 ? `${h}ч ${m}м` : `${m}м`;
+    } else if (diffMin < 0) {
+      timeUntil = Math.abs(diffMin) < 60 ? `опоздание ${Math.abs(diffMin)}м` : "просрочено";
     } else {
-      timeUntil = 'сейчас';
+      timeUntil = "сейчас";
     }
-
     return { canJoin, timeUntil, isReady };
   };
 
-  // Apply filters
   const filteredConsultations = useMemo(() => {
     if (!Array.isArray(consultations)) return [];
-
     let filtered = consultations;
-
-    // Search filter - focus on patient information for doctors
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(consultation => {
-        const patientName = `${consultation.patient_first_name || ''} ${consultation.patient_last_name || ''}`.trim();
-
-        return consultation.patient_name?.toLowerCase().includes(term) ||
-               patientName.toLowerCase().includes(term) ||
-               consultation.patient_email?.toLowerCase().includes(term) ||
-               consultation.meeting_id?.toLowerCase().includes(term) ||
-               consultation.symptoms?.toLowerCase().includes(term);
+      filtered = filtered.filter(c => {
+        const patientName = `${c.patient_first_name || ""} ${c.patient_last_name || ""}`.trim();
+        return (
+          patientName.toLowerCase().includes(term) ||
+          c.patient_name?.toLowerCase().includes(term) ||
+          c.patient_email?.toLowerCase().includes(term) ||
+          c.symptoms?.toLowerCase().includes(term) ||
+          c.meeting_id?.toLowerCase().includes(term)
+        );
       });
     }
-
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(consultation => consultation.status === statusFilter);
-    }
-
-    if (typeFilter !== "all") {
-      filtered = filtered.filter(consultation => {
-        const consultationType = consultation.type || "video";
-        return consultationType === typeFilter;
-      });
-    }
-
+    if (statusFilter !== "all") filtered = filtered.filter(c => c.status === statusFilter);
+    if (typeFilter !== "all") filtered = filtered.filter(c => (c.type || "video") === typeFilter);
     return filtered;
   }, [consultations, searchTerm, statusFilter, typeFilter]);
 
-  // Pagination logic
   const totalPages = Math.ceil(filteredConsultations.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const visibleConsultations = filteredConsultations.slice(startIndex, startIndex + itemsPerPage);
 
-  const goToPage = (page: number) => {
-    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
-  };
+  const goToPage = (page: number) => setCurrentPage(Math.max(1, Math.min(page, totalPages)));
 
-  // Reset to page 1 when filters change
-  React.useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, statusFilter, typeFilter]);
+  React.useEffect(() => { setCurrentPage(1); }, [searchTerm, statusFilter, typeFilter]);
 
-  const getStatusIcon = (status: string) => {
+  const stats = useMemo(() => ({
+    total: consultations.length,
+    pending: consultations.filter(c => c.status === "pending").length,
+    upcoming: consultations.filter(c => c.status === "scheduled" || c.status === "planned").length,
+    ongoing: consultations.filter(c => c.status === "ongoing").length,
+  }), [consultations]);
+
+  const getStatusConfig = (status: string) => {
     switch (status) {
-      case "completed":
-        return <CheckCircle2 className="w-4 h-4 text-green-500" />;
-      case "pending":
-        return <Clock className="w-4 h-4 text-blue-500" />;
-      case "ongoing":
-        return <AlertCircle className="w-4 h-4 text-yellow-500" />;
-      case "cancelled":
-        return <XCircle className="w-4 h-4 text-red-500" />;
-      case "missed":
-        return <XCircle className="w-4 h-4 text-orange-500" />;
+      case "completed":  return { label: "Завершена",     icon: <CheckCircle2 className="w-3.5 h-3.5" />, cls: "bg-emerald-50 text-emerald-600 border-emerald-200" };
+      case "pending":    return { label: "Ожидание",      icon: <Clock className="w-3.5 h-3.5" />,        cls: "bg-blue-50 text-blue-600 border-blue-200" };
+      case "ongoing":    return { label: "В процессе",    icon: <Activity className="w-3.5 h-3.5" />,     cls: "bg-amber-50 text-amber-600 border-amber-200" };
+      case "cancelled":  return { label: "Отменена",      icon: <XCircle className="w-3.5 h-3.5" />,      cls: "bg-red-50 text-red-600 border-red-200" };
+      case "missed":     return { label: "Пропущена",     icon: <XCircle className="w-3.5 h-3.5" />,      cls: "bg-orange-50 text-orange-600 border-orange-200" };
       case "planned":
-      case "scheduled":
-        return <Calendar className="w-4 h-4 text-purple-500" />;
-      default:
-        return <Clock className="w-4 h-4 text-gray-500" />;
+      case "scheduled":  return { label: "Запланирована", icon: <Calendar className="w-3.5 h-3.5" />,     cls: "bg-violet-50 text-violet-600 border-violet-200" };
+      default:           return { label: "Неизвестно",    icon: <Clock className="w-3.5 h-3.5" />,        cls: "bg-gray-50 text-gray-500 border-gray-200" };
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "bg-green-50 text-green-700 border-green-200";
-      case "pending":
-        return "bg-blue-50 text-blue-700 border-blue-200";
-      case "ongoing":
-        return "bg-yellow-50 text-yellow-700 border-yellow-200";
-      case "cancelled":
-        return "bg-red-50 text-red-700 border-red-200";
-      case "missed":
-        return "bg-orange-50 text-orange-700 border-orange-200";
-      case "planned":
-      case "scheduled":
-        return "bg-purple-50 text-purple-700 border-purple-200";
-      default:
-        return "bg-gray-50 text-gray-700 border-gray-200";
+  const getTypeConfig = (type: string) => {
+    switch (type) {
+      case "video":   return { label: "Видео",    icon: <Video className="w-3.5 h-3.5" />,         cls: "bg-cyan-50 text-cyan-600 border-cyan-200" };
+      case "chat":    return { label: "Чат",      icon: <MessageSquare className="w-3.5 h-3.5" />, cls: "bg-indigo-50 text-indigo-600 border-indigo-200" };
+      case "phone":   return { label: "Телефон",  icon: <Phone className="w-3.5 h-3.5" />,         cls: "bg-teal-50 text-teal-600 border-teal-200" };
+      case "offline": return { label: "Оффлайн",  icon: <MapPin className="w-3.5 h-3.5" />,        cls: "bg-emerald-50 text-emerald-600 border-emerald-200" };
+      case "home":    return { label: "На дому",  icon: <Home className="w-3.5 h-3.5" />,          cls: "bg-orange-50 text-orange-600 border-orange-200" };
+      default:        return { label: "Видео",    icon: <Video className="w-3.5 h-3.5" />,         cls: "bg-cyan-50 text-cyan-600 border-cyan-200" };
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "Завершена";
-      case "pending":
-        return "Ожидает";
-      case "ongoing":
-        return "В процессе";
-      case "cancelled":
-        return "Отменена";
-      case "missed":
-        return "Пропущена";
-      case "planned":
-        return "Запланированна";
-      case "scheduled":
-        return "Запланированна";
-      default:
-        return "Неизвестно";
-    }
+  const formatDate = (s: string) => {
+    try { return new Date(s).toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" }); }
+    catch { return s; }
   };
 
-  const availableStatuses = [
-    { value: 'pending', label: 'Ожидает', color: 'text-blue-700' },
-    { value: 'ongoing', label: 'В процессе', color: 'text-yellow-700' },
-    { value: 'completed', label: 'Завершена', color: 'text-green-700' },
-    { value: 'cancelled', label: 'Отменена', color: 'text-red-700' },
-    { value: 'missed', label: 'Пропущена', color: 'text-orange-700' },
-    { value: 'planned', label: 'Запланированна', color: 'text-purple-700' },
-    { value: 'scheduled', label: 'Запланированна', color: 'text-purple-700' }
+  const formatTime = (s: string) => {
+    try { return new Date(s).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }); }
+    catch { return s; }
+  };
+
+  const getPatientName = (c: Consultation) =>
+    c.patient_name ||
+    `${c.patient_first_name || ""} ${c.patient_last_name || ""}`.trim() ||
+    "Пациент не указан";
+
+  const getPatientInitial = (c: Consultation) =>
+    (c.patient_name || c.patient_first_name || "П").charAt(0).toUpperCase();
+
+  const avatarGradients = [
+    "from-emerald-400 to-teal-500",
+    "from-blue-400 to-cyan-500",
+    "from-violet-400 to-purple-500",
+    "from-rose-400 to-pink-500",
+    "from-amber-400 to-orange-500",
+    "from-cyan-400 to-blue-500",
   ];
 
-  const handleStatusChange = (meetingId: string, newStatus: string) => {
-    if (onStatusChange) {
-      onStatusChange(meetingId, newStatus);
-    }
-    setShowStatusDropdown(null);
-  };
-
-  const renderStatusDropdown = (consultation: Consultation, isCompact = false) => {
-    const isOpen = showStatusDropdown === consultation.meeting_id;
-
-    const buttonClasses = isCompact
-      ? "inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold border-2 shadow-sm"
-      : "inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border-2 shadow-sm";
+  const renderActions = (consultation: Consultation) => {
+    const joinInfo = canJoinConsultation(consultation);
+    const isPending = consultation.status === "pending";
+    const isOngoing = consultation.status === "ongoing";
+    const isScheduled = consultation.status === "scheduled" || consultation.status === "planned";
 
     return (
-      <div className="relative">
+      <div className="flex items-center gap-2 flex-wrap">
+        {isPending && onAccept && (
+          <button
+            onClick={() => onAccept(consultation.meeting_id ?? "")}
+            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-emerald-500/20 transition-all duration-200"
+          >
+            <Check className="w-3.5 h-3.5" />
+            <span>Принять</span>
+          </button>
+        )}
+        {isPending && onReject && (
+          <button
+            onClick={() => onReject(consultation.meeting_id ?? "")}
+            className="flex items-center gap-1.5 px-3 py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 text-xs font-semibold rounded-xl transition-all duration-200"
+          >
+            <XCircle className="w-3.5 h-3.5" />
+            <span>Отклонить</span>
+          </button>
+        )}
+        {isOngoing && (
+          <button
+            onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id ?? ""}`}
+            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-blue-500/20 transition-all duration-200"
+          >
+            <PhoneCall className="w-3.5 h-3.5" />
+            <span>Войти</span>
+          </button>
+        )}
+        {isScheduled && consultation.scheduled_at && (
+          joinInfo.canJoin ? (
+            <button
+              onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id ?? ""}`}
+              className={`flex items-center gap-1.5 px-3 py-2 text-white text-xs font-semibold rounded-xl shadow-lg transition-all duration-200 ${
+                joinInfo.isReady
+                  ? "bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 shadow-emerald-500/20"
+                  : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-blue-500/20"
+              }`}
+            >
+              <Video className="w-3.5 h-3.5" />
+              <span>{joinInfo.isReady ? "Войти" : joinInfo.timeUntil}</span>
+            </button>
+          ) : (
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-100 border border-gray-200 rounded-xl">
+              <Clock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+              <span className="text-[11px] text-gray-500 font-medium whitespace-nowrap">{joinInfo.timeUntil || "просрочено"}</span>
+            </div>
+          )
+        )}
         <button
-          onClick={() => setShowStatusDropdown(isOpen ? null : (consultation.meeting_id ?? null))}
-          className={`${buttonClasses} ${getStatusColor(consultation.status)} hover:shadow-md transition-all duration-200 group`}
+          onClick={() => setDetailsConsultation(consultation)}
+          className="p-2 text-gray-400 hover:text-blue-600 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-200 rounded-xl transition-all duration-200"
         >
-          {getStatusIcon(consultation.status)}
-          <span className={isCompact ? "hidden xs:inline" : ""}>{getStatusText(consultation.status)}</span>
-          <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-        </button>
-
-        {isOpen && (
-          <>
-            <div
-              className="fixed inset-0 z-10"
-              onClick={() => setShowStatusDropdown(null)}
-            />
-
-            <div className={`absolute top-full ${isCompact ? 'right-0' : 'left-0'} mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-[180px] overflow-hidden`}>
-              <div className="p-2 border-b border-gray-100 bg-gray-50">
-                <div className="flex items-center gap-2 text-xs font-medium text-gray-600">
-                  <Edit className="w-3 h-3" />
-                  Изменить статус
-                </div>
-              </div>
-              <div className="py-1">
-                {availableStatuses.map((status) => (
-                  <button
-                    key={status.value}
-                    onClick={() => handleStatusChange(consultation.meeting_id ?? '', status.value)}
-                    className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors flex items-center gap-2 ${
-                      consultation.status === status.value
-                        ? 'bg-blue-50 text-blue-700 font-medium'
-                        : 'text-gray-700'
-                    }`}
-                  >
-                    {getStatusIcon(status.value)}
-                    {status.label}
-                    {consultation.status === status.value && (
-                      <Check className="w-4 h-4 ml-auto text-blue-600" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-    );
-  };
-
-  const getTypeText = (type: string) => {
-    switch (type) {
-      case "video":
-        return "Видео";
-      case "chat":
-        return "Чат";
-      case "phone":
-        return "Телефон";
-      default:
-        return type;
-    }
-  };
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case "video":
-        return <Video className="w-4 h-4 text-white" />;
-      case "chat":
-        return <MessageSquare className="w-4 h-4 text-white" />;
-      case "phone":
-        return <Phone className="w-4 h-4 text-white" />;
-      default:
-        return <Video className="w-4 h-4 text-white" />;
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('ru-RU', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
-    } catch {
-      return dateString;
-    }
-  };
-
-  const renderActionButtons = (consultation: Consultation) => {
-    const isPending = consultation.status === 'pending';
-    const canAccept = isPending && onAccept;
-    const canReject = isPending && onReject;
-    const joinInfo = canJoinConsultation(consultation);
-
-    return (
-      <div className="flex items-center justify-center gap-2">
-        {canAccept && (
-          <button
-            onClick={() => onAccept(consultation.meeting_id ?? '')}
-            className="p-3 text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 rounded-xl transition-all duration-200 border border-green-200 hover:border-green-300 shadow-sm group-hover:shadow-md"
-            title="Принять вызов"
-          >
-            <Check className="w-5 h-5" />
-          </button>
-        )}
-
-        {canReject && (
-          <button
-            onClick={() => onReject(consultation.meeting_id ?? '')}
-            className="p-3 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-xl transition-all duration-200 border border-red-200 hover:border-red-300 shadow-sm group-hover:shadow-md"
-            title="Отклонить вызов"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        )}
-
-        {consultation.status === 'ongoing' && (
-          <button
-            onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id ?? ''}`}
-            className="p-3 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all duration-200 border border-blue-200 hover:border-blue-300 shadow-sm group-hover:shadow-md"
-            title="Присоединиться к звонку"
-          >
-            <PhoneCall className="w-5 h-5" />
-          </button>
-        )}
-
-        {(consultation.status === 'scheduled' || consultation.status === 'planned') && consultation.scheduled_at && (
-          joinInfo.canJoin ? (
-            <button
-              onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id ?? ''}`}
-              className={`p-3 text-white rounded-xl transition-all duration-200 shadow-sm group-hover:shadow-md ${
-                joinInfo.isReady
-                  ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 border border-green-500'
-                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 border border-blue-500'
-              }`}
-              title={joinInfo.isReady ? "Подключиться к консультации" : `Подключиться к консультации (через ${joinInfo.timeUntil})`}
-            >
-              <Video className="w-5 h-5" />
-            </button>
-          ) : (
-            <div className="flex flex-col items-center gap-1 p-2">
-              <div className="p-2 text-gray-400 bg-gray-100 rounded-lg border border-gray-200">
-                <Clock className="w-4 h-4" />
-              </div>
-              <span className="text-xs text-gray-500 font-medium">
-                {joinInfo.timeUntil}
-              </span>
-            </div>
-          )
-        )}
-
-        <button className="p-3 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all duration-200 border border-blue-200 hover:border-blue-300 shadow-sm group-hover:shadow-md">
-          <Eye className="w-5 h-5" />
-        </button>
-
-        <button className="p-3 text-gray-600 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all duration-200 border border-gray-200 hover:border-gray-300 shadow-sm group-hover:shadow-md">
-          <MoreHorizontal className="w-5 h-5" />
-        </button>
-      </div>
-    );
-  };
-
-  const renderCompactActionButtons = (consultation: Consultation) => {
-    const isPending = consultation.status === 'pending';
-    const canAccept = isPending && onAccept;
-    const canReject = isPending && onReject;
-    const joinInfo = canJoinConsultation(consultation);
-
-    return (
-      <div className="flex items-center justify-center gap-2">
-        {canAccept && (
-          <button
-            onClick={() => onAccept(consultation.meeting_id ?? '')}
-            className="p-2.5 text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-all duration-200 border border-green-200 hover:border-green-300 shadow-sm"
-            title="Принять вызов"
-          >
-            <Check className="w-4 h-4" />
-          </button>
-        )}
-
-        {canReject && (
-          <button
-            onClick={() => onReject(consultation.meeting_id ?? '')}
-            className="p-2.5 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-all duration-200 border border-red-200 hover:border-red-300 shadow-sm"
-            title="Отклонить вызов"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
-
-        {consultation.status === 'ongoing' && (
-          <button
-            onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id ?? ''}`}
-            className="p-2.5 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all duration-200 border border-blue-200 hover:border-blue-300 shadow-sm"
-            title="Присоединиться к звонку"
-          >
-            <PhoneCall className="w-4 h-4" />
-          </button>
-        )}
-
-        {(consultation.status === 'scheduled' || consultation.status === 'planned') && consultation.scheduled_at && (
-          joinInfo.canJoin ? (
-            <button
-              onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id ?? ''}`}
-              className={`p-2.5 text-white rounded-lg transition-all duration-200 shadow-sm ${
-                joinInfo.isReady
-                  ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 border border-green-500'
-                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 border border-blue-500'
-              }`}
-              title={joinInfo.isReady ? "Подключиться к консультации" : `Подключиться к консультации (через ${joinInfo.timeUntil})`}
-            >
-              <Video className="w-4 h-4" />
-            </button>
-          ) : (
-            <div className="flex flex-col items-center gap-1 p-1.5">
-              <div className="p-1.5 text-gray-400 bg-gray-100 rounded-md border border-gray-200">
-                <Clock className="w-3 h-3" />
-              </div>
-              <span className="text-xs text-gray-500 font-medium">
-                {joinInfo.timeUntil}
-              </span>
-            </div>
-          )
-        )}
-
-        <button className="p-2.5 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all duration-200 border border-blue-200 hover:border-blue-300 shadow-sm">
           <Eye className="w-4 h-4" />
         </button>
-
-        <button className="p-2.5 text-gray-600 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg transition-all duration-200 border border-gray-200 hover:border-gray-300 shadow-sm">
+        <button className="p-2 text-gray-400 hover:text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition-all duration-200">
           <MoreHorizontal className="w-4 h-4" />
         </button>
       </div>
     );
   };
 
-  const renderMobileActionButtons = (consultation: Consultation) => {
-    const isPending = consultation.status === 'pending';
-    const canAccept = isPending && onAccept;
-    const canReject = isPending && onReject;
-    const joinInfo = canJoinConsultation(consultation);
-
-    return (
-      <div className="flex items-center gap-1.5 xs:gap-2 mt-2 xs:mt-2.5 sm:mt-3">
-        {canAccept && (
-          <button
-            onClick={() => onAccept(consultation.meeting_id ?? '')}
-            className="flex-1 flex items-center justify-center gap-1 xs:gap-1.5 sm:gap-2 p-1.5 xs:p-2 sm:p-2.5 text-green-600 bg-green-50 rounded-md xs:rounded-lg transition-colors border border-green-200"
-          >
-            <Check className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4" />
-            <span className="text-[10px] xs:text-xs sm:text-sm font-medium">Принять</span>
-          </button>
-        )}
-
-        {canReject && (
-          <button
-            onClick={() => onReject(consultation.meeting_id ?? '')}
-            className="flex-1 flex items-center justify-center gap-1 xs:gap-1.5 sm:gap-2 p-1.5 xs:p-2 sm:p-2.5 text-red-600 bg-red-50 rounded-md xs:rounded-lg transition-colors border border-red-200"
-          >
-            <X className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4" />
-            <span className="text-[10px] xs:text-xs sm:text-sm font-medium">Отклонить</span>
-          </button>
-        )}
-
-        {consultation.status === 'ongoing' && (
-          <button
-            onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id ?? ''}`}
-            className="flex-1 flex items-center justify-center gap-1 xs:gap-1.5 sm:gap-2 p-1.5 xs:p-2 sm:p-2.5 text-blue-600 bg-blue-50 rounded-md xs:rounded-lg transition-colors border border-blue-200"
-          >
-            <PhoneCall className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4" />
-            <span className="text-[10px] xs:text-xs sm:text-sm font-medium">Подключиться</span>
-          </button>
-        )}
-
-        {(consultation.status === 'scheduled' || consultation.status === 'planned') && consultation.scheduled_at && (
-          joinInfo.canJoin ? (
-            <button
-              onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id ?? ''}`}
-              className={`flex-1 flex items-center justify-center gap-1 xs:gap-1.5 sm:gap-2 p-1.5 xs:p-2 sm:p-2.5 text-white rounded-md xs:rounded-lg transition-colors ${
-                joinInfo.isReady
-                  ? 'bg-gradient-to-r from-green-600 to-emerald-600 border border-green-500'
-                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 border border-blue-500'
-              }`}
-            >
-              <Video className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4" />
-              <span className="text-[10px] xs:text-xs sm:text-sm font-medium">
-                {joinInfo.isReady ? 'Подключиться' : 'Подключиться'}
-              </span>
-            </button>
-          ) : (
-            <div className="flex-1 flex items-center justify-center gap-1 xs:gap-1.5 sm:gap-2 p-1.5 xs:p-2 sm:p-2.5 bg-gray-100 rounded-md xs:rounded-lg border border-gray-200">
-              <Clock className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4 text-gray-400" />
-              <span className="text-[10px] xs:text-xs sm:text-sm font-medium text-gray-500">
-                {joinInfo.timeUntil}
-              </span>
-            </div>
-          )
-        )}
-
-        {!isPending && consultation.status !== 'ongoing' && (
-          <button className="flex-1 flex items-center justify-center gap-1 xs:gap-1.5 sm:gap-2 p-1.5 xs:p-2 sm:p-2.5 text-blue-600 bg-blue-50 rounded-md xs:rounded-lg transition-colors border border-blue-200">
-            <Eye className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4" />
-            <span className="text-[10px] xs:text-xs sm:text-sm font-medium">Детали</span>
-          </button>
-        )}
-
-        <button className="p-1.5 xs:p-2 sm:p-2.5 text-gray-600 bg-gray-50 rounded-md xs:rounded-lg transition-colors border border-gray-200 flex-shrink-0">
-          <MoreHorizontal className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4" />
-        </button>
-      </div>
-    );
-  };
-
   return (
-    <div className="relative w-full mt-4 xs:mt-6 sm:mt-8 space-y-3 xs:space-y-4 sm:space-y-5 md:space-y-6 px-2 xs:px-3 sm:px-4 md:px-6 lg:px-8 overflow-x-hidden">
-      {/* Floating background decorations */}
-      <div className="absolute -top-6 -right-6 w-32 h-32 bg-gradient-to-br from-blue-200/15 to-purple-200/15 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-6 -left-6 w-40 h-40 bg-gradient-to-tr from-indigo-200/15 to-blue-200/15 rounded-full blur-3xl pointer-events-none" />
+    <div className="relative">
+      {/* ── Single unified card ── */}
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-visible">
 
-      {/* Header */}
-      <div className="relative">
-        <div className="hidden sm:flex items-center justify-between">
-          <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
-            <div className="p-2.5 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
-              <Stethoscope className="w-6 h-6 text-white" />
+        {/* Toolbar */}
+        <div className="flex flex-col md:flex-row md:items-center gap-3 px-5 py-4 border-b border-gray-100">
+          {/* Left: icon + title + count */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="relative">
+              <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md shadow-blue-500/20">
+                <Stethoscope className="w-4 h-4 text-white" />
+              </div>
+              <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-white" />
             </div>
-            Мои пациенты
-          </h3>
-          <div className="flex items-center gap-3">
-            {showFilters && (
-              <button
-                onClick={() => setShowFilterPanel(!showFilterPanel)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-xl font-medium text-sm transition-all duration-200 border ${
-                  showFilterPanel
-                    ? 'bg-blue-600 text-white border-blue-600 shadow-md'
-                    : 'bg-white/70 text-blue-600 border-blue-200 hover:bg-blue-50'
-                }`}
-              >
-                <Filter className="w-4 h-4" />
-                Фильтры
-              </button>
-            )}
-
-            <button
-              onClick={() => fetchConsultations()}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl font-medium text-sm bg-white/70 text-gray-600 border border-gray-200 hover:bg-gray-50 transition-all duration-200"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </button>
-
-            <span className="text-sm font-semibold text-gray-600 bg-gradient-to-r from-gray-100 to-gray-200 px-4 py-2 rounded-full border border-gray-300/50 shadow-sm">
-              {filteredConsultations.length} из {consultations.length}
-            </span>
-          </div>
-        </div>
-
-        <div className="sm:hidden space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg shadow-lg">
-              <Stethoscope className="w-5 h-5 text-white" />
+            <div>
+              <h3 className="text-sm font-bold text-gray-900 leading-tight">Мои приёмы</h3>
+              <p className="text-xs text-gray-400">{filteredConsultations.length} из {consultations.length}</p>
             </div>
-            <h3 className="text-lg font-bold text-gray-800 flex-1">
-              Мои пациенты
-            </h3>
           </div>
 
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              {showFilters && (
-                <button
-                  onClick={() => setShowFilterPanel(!showFilterPanel)}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-sm transition-all duration-200 border ${
-                    showFilterPanel
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-md'
-                      : 'bg-white/70 text-blue-600 border-blue-200 hover:bg-blue-50'
-                  }`}
-                >
-                  <Filter className="w-4 h-4" />
-                  <span className="hidden xs:inline">Фильтры</span>
+          {/* Stat chips */}
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              { label: "Всего",      value: stats.total,    bg: "bg-blue-50",    border: "border-blue-100",    text: "text-blue-600" },
+              { label: "Ожидают",    value: stats.pending,  bg: "bg-amber-50",   border: "border-amber-100",   text: "text-amber-600" },
+              { label: "Предстоит",  value: stats.upcoming, bg: "bg-violet-50",  border: "border-violet-100",  text: "text-violet-600" },
+              { label: "В процессе", value: stats.ongoing,  bg: "bg-emerald-50", border: "border-emerald-100", text: "text-emerald-600" },
+            ].map((s, i) => (
+              <span key={i} className={`inline-flex items-center gap-1 ${s.bg} border ${s.border} rounded-lg px-2 py-0.5 text-xs font-semibold ${s.text}`}>
+                {s.value} <span className="font-normal text-gray-400">{s.label}</span>
+              </span>
+            ))}
+          </div>
+
+          <div className="flex-1" />
+
+          {/* Search */}
+          {showFilters && (
+            <div className="relative flex-shrink-0 w-full md:w-52">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Пациент, симптомы..."
+                className="w-full pl-8 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+              />
+              {searchTerm && (
+                <button onClick={() => setSearchTerm("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  <X className="w-3 h-3" />
                 </button>
               )}
-
-              <button
-                onClick={() => fetchConsultations()}
-                className="p-2 bg-white/70 text-gray-600 border border-gray-200 hover:bg-gray-50 rounded-lg transition-all duration-200"
-              >
-                <RefreshCw className="w-4 h-4" />
-              </button>
             </div>
+          )}
 
-            <span className="text-xs font-semibold text-gray-600 bg-gradient-to-r from-gray-100 to-gray-200 px-3 py-1.5 rounded-full border border-gray-300/50 shadow-sm">
-              {filteredConsultations.length}/{consultations.length}
-            </span>
-          </div>
-        </div>
-      </div>
+          {/* Status select */}
+          {showFilters && (
+            <div className="flex-shrink-0 w-full md:w-40">
+              <CustomSelect
+                value={statusFilter}
+                onChange={(v) => setStatusFilter(v as FilterStatus)}
+                options={[
+                  { value: "all",       label: "Все статусы" },
+                  { value: "pending",   label: "Ожидание",      icon: <Clock className="w-3.5 h-3.5" />,        color: "text-blue-500" },
+                  { value: "ongoing",   label: "В процессе",    icon: <Activity className="w-3.5 h-3.5" />,     color: "text-amber-500" },
+                  { value: "completed", label: "Завершена",     icon: <CheckCircle2 className="w-3.5 h-3.5" />, color: "text-emerald-500" },
+                  { value: "cancelled", label: "Отменена",      icon: <XCircle className="w-3.5 h-3.5" />,      color: "text-red-500" },
+                  { value: "missed",    label: "Пропущена",     icon: <XCircle className="w-3.5 h-3.5" />,      color: "text-orange-500" },
+                  { value: "planned",   label: "Запланирована", icon: <Calendar className="w-3.5 h-3.5" />,     color: "text-violet-500" },
+                ]}
+              />
+            </div>
+          )}
 
-      {/* Filters Panel */}
-      {showFilterPanel && showFilters && (
-        <div className="relative bg-white/95 backdrop-blur-sm rounded-2xl border border-blue-200/50 shadow-lg overflow-hidden">
-          <div className="p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="font-semibold text-gray-800">Фильтры</h4>
+          {/* Type select */}
+          {showFilters && (
+            <div className="flex-shrink-0 w-full md:w-36">
+              <CustomSelect
+                value={typeFilter}
+                onChange={(v) => setTypeFilter(v as FilterType)}
+                options={[
+                  { value: "all",   label: "Все типы" },
+                  { value: "video", label: "Видео",   icon: <Video className="w-3.5 h-3.5" />,         color: "text-cyan-500" },
+                  { value: "chat",  label: "Чат",     icon: <MessageSquare className="w-3.5 h-3.5" />, color: "text-indigo-500" },
+                  { value: "phone", label: "Телефон", icon: <Phone className="w-3.5 h-3.5" />,         color: "text-teal-500" },
+                ]}
+              />
+            </div>
+          )}
+
+          {/* Reset + Refresh */}
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {(searchTerm || statusFilter !== "all" || typeFilter !== "all") && (
               <button
-                onClick={() => {
-                  setSearchTerm("");
-                  setStatusFilter("all");
-                  setTypeFilter("all");
-                }}
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                onClick={() => { setSearchTerm(""); setStatusFilter("all"); setTypeFilter("all"); }}
+                className="px-2.5 py-2 rounded-xl text-xs font-medium text-blue-600 hover:bg-blue-50 border border-blue-100 transition-all"
               >
                 Сбросить
               </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Search */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Поиск пациентов</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Имя пациента, email, симптомы..."
-                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                  />
-                  {searchTerm && (
-                    <button
-                      onClick={() => setSearchTerm("")}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Status Filter */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Статус</label>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as FilterStatus)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                >
-                  <option value="all">Все статусы</option>
-                  <option value="pending">Ожидает</option>
-                  <option value="ongoing">В процессе</option>
-                  <option value="completed">Завершена</option>
-                  <option value="cancelled">Отменена</option>
-                  <option value="missed">Пропущена</option>
-                  <option value="planned">Запланированна</option>
-                  <option value="scheduled">Запланированна</option>
-                </select>
-              </div>
-
-              {/* Type Filter */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Тип</label>
-                <select
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value as FilterType)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                >
-                  <option value="all">Все типы</option>
-                  <option value="video">Видео</option>
-                  <option value="chat">Чат</option>
-                  <option value="phone">Телефон</option>
-                </select>
-              </div>
-            </div>
+            )}
+            <button
+              onClick={() => fetchConsultations()}
+              className="p-2 rounded-xl text-gray-400 hover:text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
           </div>
         </div>
-      )}
 
-      {/* Table Container */}
-      <div className="relative space-y-4">
-        {/* No Results State */}
+        {/* ── Empty State ── */}
         {filteredConsultations.length === 0 && (
-          <div className="relative p-8 bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 border-2 border-gray-200/50 rounded-2xl overflow-hidden backdrop-blur-sm">
-            <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-blue-200/20 to-purple-200/20 rounded-full blur-2xl" />
-            <div className="absolute -bottom-4 -left-4 w-32 h-32 bg-gradient-to-tr from-indigo-200/20 to-blue-200/20 rounded-full blur-2xl" />
-
-            <div className="relative text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 mb-4 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg">
-                <Stethoscope className="w-8 h-8 text-white" />
+          <div className="relative bg-gray-50 p-16 text-center overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-violet-50/50" />
+            <div className="relative">
+              <div className="inline-flex items-center justify-center w-16 h-16 mb-5 bg-blue-100 border border-blue-200 rounded-2xl">
+                <Stethoscope className="w-8 h-8 text-blue-500" />
               </div>
-              <h3 className="text-xl font-bold text-gray-800 mb-2">
-                {consultations.length === 0 ? "Нет консультаций" : "Нет результатов"}
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
+                {consultations.length === 0 ? "Нет приёмов" : "Нет результатов"}
               </h3>
-              <p className="text-gray-600 max-w-sm mx-auto">
+              <p className="text-sm text-gray-500 max-w-xs mx-auto">
                 {consultations.length === 0
-                  ? "Консультации с пациентами будут отображаться здесь"
-                  : "Попробуйте изменить критерии фильтрации"
-                }
+                  ? "Записи пациентов будут отображаться здесь"
+                  : "Попробуйте изменить критерии фильтрации"}
               </p>
             </div>
           </div>
         )}
 
-        {/* Desktop Table View */}
+        {/* ── Desktop Table — single grid ── */}
         {filteredConsultations.length > 0 && (
-          <div className="hidden xl:block bg-white/95 backdrop-blur-sm rounded-2xl border border-gray-200/80 shadow-xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-max">
-                <thead className="bg-gradient-to-r from-slate-50 to-blue-50/50 border-b border-gray-200">
-                  <tr>
-                    <th className="text-left p-3 font-semibold text-gray-800 text-sm uppercase tracking-wider">Дата/Время</th>
-                    <th className="text-left p-3 font-semibold text-gray-800 text-sm uppercase tracking-wider">Пациент</th>
-                    <th className="text-left p-3 font-semibold text-gray-800 text-sm uppercase tracking-wider">ID Встречи</th>
-                    <th className="text-left p-3 font-semibold text-gray-800 text-sm uppercase tracking-wider">Статус</th>
-                    <th className="text-center p-3 font-semibold text-gray-800 text-sm uppercase tracking-wider">Действия</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibleConsultations.map((consultation) => (
-                    <tr
-                      key={consultation.id}
-                      className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/30 transition-all duration-300 group"
-                    >
-                      {/* Date/Time */}
-                      <td className="p-3">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-                              <Calendar className="w-4 h-4 text-white" />
-                            </div>
-                            <div>
-                              <div className="text-sm font-semibold text-gray-900">
-                                {consultation.created_at ? formatDate(consultation.created_at) : "Не указано"}
-                              </div>
-                              <div className="text-xs text-gray-500 flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                {consultation.started_at
-                                  ? new Date(consultation.started_at).toLocaleTimeString('ru-RU', {
-                                      hour: '2-digit',
-                                      minute: '2-digit'
-                                    })
-                                  : "Не начата"
-                                }
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Patient */}
-                      <td className="p-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full flex items-center justify-center">
-                            <span className="text-white font-bold text-sm">
-                              {(consultation.patient_name || consultation.patient_first_name || "П").charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                          <div>
-                            <div className="text-sm font-semibold text-gray-900">
-                              {consultation.patient_name || `${consultation.patient_first_name || ''} ${consultation.patient_last_name || ''}`.trim() || "Пациент не указан"}
-                            </div>
-                            <div className="text-xs text-blue-600 font-medium">
-                              {consultation.patient_email || "Email не указан"}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Meeting ID */}
-                      <td className="p-3">
-                        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-200">
-                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                          <span className="text-xs font-mono text-gray-700">
-                            {consultation.meeting_id}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Status */}
-                      <td className="p-3">
-                        {renderStatusDropdown(consultation)}
-                      </td>
-
-                      {/* Actions */}
-                      <td className="p-3">
-                        {renderActionButtons(consultation)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* Tablet Compact Table View */}
-        {filteredConsultations.length > 0 && (
-          <div className="hidden md:block xl:hidden bg-white/95 backdrop-blur-sm rounded-2xl border border-gray-200/80 shadow-xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gradient-to-r from-slate-50 to-blue-50/50 border-b border-gray-200">
-                  <tr>
-                    <th className="text-left p-4 font-semibold text-gray-800 text-sm">Пациент</th>
-                    <th className="text-left p-4 font-semibold text-gray-800 text-sm">Дата</th>
-                    <th className="text-left p-4 font-semibold text-gray-800 text-sm">Статус</th>
-                    <th className="text-center p-4 font-semibold text-gray-800 text-sm">Действия</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibleConsultations.map((consultation) => (
-                    <tr
-                      key={`tablet-${consultation.id}`}
-                      className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/30 transition-all duration-300 group"
-                    >
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full flex items-center justify-center">
-                            <span className="text-white font-bold text-sm">
-                              {(consultation.patient_name || consultation.patient_first_name || "П").charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                          <div className="min-w-0">
-                            <div className="text-sm font-semibold text-gray-900 truncate">
-                              {consultation.patient_name || `${consultation.patient_first_name || ''} ${consultation.patient_last_name || ''}`.trim() || "Пациент не указан"}
-                            </div>
-                            <div className="text-xs text-blue-600 font-medium truncate">
-                              {consultation.patient_email || "Email не указан"}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="p-4">
-                        <div className="space-y-1">
-                          <div className="text-sm font-semibold text-gray-900">
-                            {consultation.created_at ? formatDate(consultation.created_at) : "Не указано"}
-                          </div>
-                          <div className="text-xs text-gray-500 flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {consultation.started_at
-                              ? new Date(consultation.started_at).toLocaleTimeString('ru-RU', {
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })
-                              : "Не начата"
-                            }
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="p-4">
-                        {renderStatusDropdown(consultation, true)}
-                      </td>
-
-                      <td className="p-4">
-                        {renderCompactActionButtons(consultation)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* Mobile Card Layout */}
-        {filteredConsultations.length > 0 && (
-          <div className="md:hidden space-y-2 xs:space-y-2.5 sm:space-y-3 w-full">
-            {visibleConsultations.map((consultation) => (
+          <div className="hidden xl:grid grid-cols-[1.4fr_1.8fr_1fr_1.2fr_1.6fr] overflow-visible">
+            {["ДАТА / ВРЕМЯ", "ПАЦИЕНТ", "ТИП", "СТАТУС", "ДЕЙСТВИЯ"].map((h, i) => (
               <div
-                key={consultation.id}
-                className="bg-white/95 backdrop-blur-sm rounded-lg xs:rounded-xl border border-gray-200 shadow-md overflow-hidden w-full"
+                key={h}
+                className={`py-3.5 px-5 text-[10px] font-semibold text-gray-400 tracking-widest uppercase bg-gray-50 border-b border-gray-200 ${i > 0 ? "border-l border-gray-200" : ""}`}
               >
-                <div className="p-2 xs:p-2.5 sm:p-3">
-                  <div className="flex items-start justify-between mb-2 xs:mb-2.5 sm:mb-3">
-                    <div className="flex items-center gap-1.5 xs:gap-2 flex-1 min-w-0">
-                      <div className="w-8 h-8 xs:w-9 xs:h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-white font-bold text-[10px] xs:text-xs">
-                          {(consultation.patient_name || consultation.patient_first_name || "П").charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-xs xs:text-sm font-semibold text-gray-900 truncate leading-tight">
-                          {consultation.patient_name || `${consultation.patient_first_name || ''} ${consultation.patient_last_name || ''}`.trim() || "Пациент не указан"}
-                        </div>
-                        <div className="text-[10px] xs:text-xs text-blue-600 font-medium truncate">
-                          {consultation.patient_email || "Email не указан"}
-                        </div>
-                      </div>
-                    </div>
+                {h}
+              </div>
+            ))}
 
-                    <div className="flex-shrink-0 ml-1.5 xs:ml-2">
-                      {renderStatusDropdown(consultation, true)}
-                    </div>
-                  </div>
+            {visibleConsultations.map((consultation, idx) => {
+              const type = getTypeConfig(consultation.type || "video");
+              const grad = avatarGradients[idx % avatarGradients.length];
+              const dateStr = consultation.scheduled_at || consultation.created_at;
+              const timeStr = consultation.scheduled_at || consultation.started_at;
+              const rowBorder = idx > 0 ? "border-t border-gray-100" : "";
 
-                  <div className="grid grid-cols-2 gap-2 xs:gap-2.5 sm:gap-3 text-[10px] xs:text-xs">
-                    <div className="flex items-center gap-1.5 xs:gap-2">
-                      <Calendar className="w-2.5 h-2.5 xs:w-3 xs:h-3 text-blue-500 flex-shrink-0" />
-                      <div className="min-w-0">
-                        <div className="font-medium text-gray-900 truncate">
-                          {consultation.created_at ? formatDate(consultation.created_at) : "Не указано"}
-                        </div>
-                        <div className="text-gray-500 flex items-center gap-0.5 xs:gap-1">
-                          <Clock className="w-2 h-2 xs:w-2.5 xs:h-2.5" />
-                          <span className="text-[9px] xs:text-[10px]">
-                            {consultation.started_at
-                              ? new Date(consultation.started_at).toLocaleTimeString('ru-RU', {
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })
-                              : "Не начата"
-                            }
-                          </span>
-                        </div>
-                      </div>
+              return (
+                <React.Fragment key={consultation.id}>
+                  {/* Date/Time */}
+                  <div className={`flex items-center gap-3 px-5 py-4 hover:bg-gray-50/70 transition-colors ${rowBorder}`}>
+                    <div className="w-9 h-9 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <Calendar className="w-4 h-4 text-blue-500" />
                     </div>
-
-                    <div className="flex items-center gap-1.5 xs:gap-2">
-                      <div className="w-5 h-5 xs:w-6 xs:h-6 rounded-md flex items-center justify-center flex-shrink-0 bg-blue-500">
-                        {getTypeIcon(consultation.type || "video")}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="font-medium truncate text-blue-700">
-                          {getTypeText(consultation.type || "video")}
-                        </div>
-                        <div className="text-gray-500 text-[9px] xs:text-[10px]">Консультация</div>
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">{dateStr ? formatDate(dateStr) : "—"}</div>
+                      <div className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                        <Clock className="w-3 h-3" />
+                        {timeStr ? formatTime(timeStr) : "—"}
                       </div>
                     </div>
                   </div>
 
-                  {consultation.symptoms && (
-                    <div className="mt-2 xs:mt-2.5 sm:mt-3 p-1.5 xs:p-2 bg-blue-50 rounded-md xs:rounded-lg border border-blue-200">
-                      <div className="text-[10px] xs:text-xs text-gray-600 mb-0.5 xs:mb-1">Симптомы:</div>
-                      <div className="text-[10px] xs:text-xs text-gray-900 leading-snug">
-                        {consultation.symptoms.length > 80
-                          ? `${consultation.symptoms.substring(0, 80)}...`
-                          : consultation.symptoms}
+                  {/* Patient */}
+                  <div className={`flex items-center gap-3 px-5 py-4 border-l border-gray-100 hover:bg-gray-50/70 transition-colors ${rowBorder}`}>
+                    <div className={`w-10 h-10 bg-gradient-to-br ${grad} rounded-full flex items-center justify-center flex-shrink-0 shadow-md`}>
+                      <span className="text-white font-bold text-sm">{getPatientInitial(consultation)}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-gray-900 leading-tight truncate">{getPatientName(consultation)}</div>
+                      <div className="text-xs text-gray-400 font-medium mt-0.5 truncate">{consultation.patient_email || "—"}</div>
+                    </div>
+                  </div>
+
+                  {/* Type */}
+                  <div className={`px-5 py-4 border-l border-gray-100 hover:bg-gray-50/70 transition-colors ${rowBorder} flex items-center`}>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border ${type.cls}`}>
+                      {type.icon}{type.label}
+                    </span>
+                  </div>
+
+                  {/* Status — clickable dropdown if onStatusChange provided */}
+                  <div className={`px-5 py-4 border-l border-gray-100 hover:bg-gray-50/70 transition-colors ${rowBorder} flex items-center`}>
+                    <StatusDropdown consultation={consultation} onStatusChange={onStatusChange} />
+                  </div>
+
+                  {/* Actions */}
+                  <div className={`px-5 py-4 border-l border-gray-100 hover:bg-gray-50/70 transition-colors ${rowBorder} flex items-center`}>
+                    {renderActions(consultation)}
+                  </div>
+                </React.Fragment>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ── Tablet View — single grid ── */}
+        {filteredConsultations.length > 0 && (
+          <div className="hidden md:grid xl:hidden grid-cols-[1.8fr_1.2fr_1.1fr_1.4fr] overflow-visible border-t border-gray-100">
+            {["ПАЦИЕНТ", "ДАТА", "СТАТУС", "ДЕЙСТВИЯ"].map((h, i) => (
+              <div key={h} className={`py-3.5 px-5 text-[10px] font-semibold text-gray-400 tracking-widest uppercase bg-gray-50 border-b border-gray-200 ${i > 0 ? "border-l border-gray-200" : ""}`}>{h}</div>
+            ))}
+            {visibleConsultations.map((consultation, idx) => {
+              const grad = avatarGradients[idx % avatarGradients.length];
+              const dateStr = consultation.scheduled_at || consultation.created_at;
+              const timeStr = consultation.scheduled_at || consultation.started_at;
+              const rowBorder = idx > 0 ? "border-t border-gray-100" : "";
+              return (
+                <React.Fragment key={`tab-${consultation.id}`}>
+                  <div className={`flex items-center gap-3 px-5 py-4 hover:bg-gray-50/70 transition-colors ${rowBorder}`}>
+                    <div className={`w-9 h-9 bg-gradient-to-br ${grad} rounded-full flex items-center justify-center flex-shrink-0`}>
+                      <span className="text-white font-bold text-xs">{getPatientInitial(consultation)}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-gray-900 truncate">{getPatientName(consultation)}</div>
+                      <div className="text-xs text-gray-400 truncate">{consultation.patient_email || "—"}</div>
+                    </div>
+                  </div>
+                  <div className={`px-5 py-4 border-l border-gray-100 hover:bg-gray-50/70 transition-colors ${rowBorder}`}>
+                    <div className="text-sm font-semibold text-gray-900">{dateStr ? formatDate(dateStr) : "—"}</div>
+                    <div className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><Clock className="w-3 h-3" />{timeStr ? formatTime(timeStr) : "—"}</div>
+                  </div>
+                  <div className={`px-5 py-4 border-l border-gray-100 hover:bg-gray-50/70 transition-colors ${rowBorder} flex items-center`}>
+                    <StatusDropdown consultation={consultation} onStatusChange={onStatusChange} />
+                  </div>
+                  <div className={`px-5 py-4 border-l border-gray-100 hover:bg-gray-50/70 transition-colors ${rowBorder} flex items-center`}>
+                    {renderActions(consultation)}
+                  </div>
+                </React.Fragment>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ── Mobile Cards ── */}
+        {filteredConsultations.length > 0 && (
+          <div className="md:hidden space-y-3 p-4">
+            {visibleConsultations.map((consultation, idx) => {
+              const type = getTypeConfig(consultation.type || "video");
+              const grad = avatarGradients[idx % avatarGradients.length];
+              const joinInfo = canJoinConsultation(consultation);
+              const isPending = consultation.status === "pending";
+              const isOngoing = consultation.status === "ongoing";
+              const isScheduled = consultation.status === "scheduled" || consultation.status === "planned";
+              const dateStr = consultation.scheduled_at || consultation.created_at;
+              const timeStr = consultation.scheduled_at || consultation.started_at;
+
+              return (
+                <div key={`mob-${consultation.id}`} className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-11 h-11 bg-gradient-to-br ${grad} rounded-full flex items-center justify-center flex-shrink-0 shadow-md`}>
+                        <span className="text-white font-bold text-sm">{getPatientInitial(consultation)}</span>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-bold text-gray-900 truncate">{getPatientName(consultation)}</div>
+                        <div className="text-xs text-gray-400">{consultation.patient_email || "—"}</div>
                       </div>
                     </div>
-                  )}
+                    <div className="flex-shrink-0">
+                      <StatusDropdown consultation={consultation} onStatusChange={onStatusChange} />
+                    </div>
+                  </div>
 
-                  <div className="mt-2 xs:mt-2.5 sm:mt-3 p-1.5 xs:p-2 bg-gray-50 rounded-md xs:rounded-lg border border-gray-200">
-                    <div className="flex items-center gap-1.5 xs:gap-2">
-                      <div className="w-1.5 h-1.5 xs:w-2 xs:h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
-                      <span className="text-[9px] xs:text-xs text-gray-600">ID:</span>
-                      <span className="text-[9px] xs:text-xs font-mono text-gray-900 truncate">
-                        {consultation.meeting_id}
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div className="bg-gray-50 border border-gray-100 rounded-xl p-3">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Calendar className="w-3 h-3 text-gray-400" />
+                        <span className="text-[10px] text-gray-400 uppercase tracking-wider">Дата</span>
+                      </div>
+                      <div className="text-sm font-semibold text-gray-900">{dateStr ? formatDate(dateStr) : "—"}</div>
+                      <div className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                        <Clock className="w-2.5 h-2.5" />
+                        {timeStr ? formatTime(timeStr) : "—"}
+                      </div>
+                    </div>
+                    <div className="bg-gray-50 border border-gray-100 rounded-xl p-3">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Video className="w-3 h-3 text-gray-400" />
+                        <span className="text-[10px] text-gray-400 uppercase tracking-wider">Тип</span>
+                      </div>
+                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold border ${type.cls}`}>
+                        {type.icon}{type.label}
                       </span>
                     </div>
                   </div>
 
-                  {renderMobileActionButtons(consultation)}
+                  {consultation.symptoms && (
+                    <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-xl">
+                      <p className="text-[10px] text-blue-400 uppercase tracking-wider mb-1">Симптомы</p>
+                      <p className="text-xs text-gray-700 leading-relaxed line-clamp-2">{consultation.symptoms}</p>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {isPending && onAccept && (
+                      <button
+                        onClick={() => onAccept(consultation.meeting_id ?? "")}
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-emerald-500 to-green-500 text-white text-sm font-semibold rounded-xl shadow-md shadow-emerald-500/20 transition-all"
+                      >
+                        <Check className="w-4 h-4" />
+                        Принять
+                      </button>
+                    )}
+                    {isPending && onReject && (
+                      <button
+                        onClick={() => onReject(consultation.meeting_id ?? "")}
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-red-50 border border-red-200 text-red-600 text-sm font-semibold rounded-xl transition-all"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Отклонить
+                      </button>
+                    )}
+                    {(isOngoing || (isScheduled && joinInfo.canJoin)) && (
+                      <button
+                        onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id}`}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-white text-sm font-semibold rounded-xl shadow-md transition-all ${
+                          joinInfo.isReady || isOngoing
+                            ? "bg-gradient-to-r from-emerald-500 to-green-500 shadow-emerald-500/20"
+                            : "bg-gradient-to-r from-blue-600 to-indigo-600 shadow-blue-500/20"
+                        }`}
+                      >
+                        <Video className="w-4 h-4" />
+                        {joinInfo.isReady || isOngoing ? "Подключиться" : `Через ${joinInfo.timeUntil}`}
+                      </button>
+                    )}
+                    {!isPending && !isOngoing && (!isScheduled || !joinInfo.canJoin) && (
+                      <button
+                        onClick={() => setDetailsConsultation(consultation)}
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-600 text-sm font-medium rounded-xl transition-colors"
+                      >
+                        <Eye className="w-4 h-4" />
+                        Детали
+                      </button>
+                    )}
+                    <button className="p-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-400 rounded-xl transition-colors">
+                      <MoreHorizontal className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
-      </div>
 
-      {/* Pagination Controls */}
-      {totalPages > 1 && (
-        <div className="mt-3 xs:mt-4 sm:mt-5 md:mt-6 p-2 xs:p-3 sm:p-4 bg-white/95 backdrop-blur-sm rounded-lg xs:rounded-xl sm:rounded-2xl border border-gray-200 shadow-lg">
-          <div className="bg-gradient-to-r from-slate-50 to-blue-50/30 p-2 xs:p-3 sm:p-4 rounded-md xs:rounded-lg sm:rounded-xl">
-            <div className="flex flex-col xs:flex-row items-center justify-between gap-2 xs:gap-3">
-              <div className="text-[10px] xs:text-xs sm:text-sm text-gray-600 text-center xs:text-left">
-                Показано {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredConsultations.length)} из {filteredConsultations.length}
-              </div>
-
-              <div className="flex items-center gap-1 xs:gap-1.5 sm:gap-2">
-                <button
-                  onClick={() => goToPage(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className={`p-1.5 xs:p-2 rounded-md xs:rounded-lg transition-all ${
-                    currentPage === 1
-                      ? 'text-gray-400 cursor-not-allowed'
-                      : 'text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-200 hover:border-blue-300'
-                  }`}
-                >
-                  <ChevronLeft className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4" />
-                </button>
-
-                <div className="flex items-center gap-0.5 xs:gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                    if (totalPages <= 5 || page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1) {
-                      return (
-                        <button
-                          key={page}
-                          onClick={() => goToPage(page)}
-                          className={`w-6 h-6 xs:w-7 xs:h-7 sm:w-8 sm:h-8 rounded-md xs:rounded-lg text-[10px] xs:text-xs sm:text-sm font-semibold transition-all ${
-                            page === currentPage
-                              ? 'bg-blue-600 text-white shadow-md'
-                              : 'text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-200 hover:border-blue-300'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      );
-                    } else if (page === 2 && currentPage > 3) {
-                      return <span key={page} className="text-gray-400 px-0.5 xs:px-1 text-xs">...</span>;
-                    } else if (page === totalPages - 1 && currentPage < totalPages - 2) {
-                      return <span key={page} className="text-gray-400 px-0.5 xs:px-1 text-xs">...</span>;
-                    }
-                    return null;
-                  })}
-                </div>
-
-                <button
-                  onClick={() => goToPage(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className={`p-1.5 xs:p-2 rounded-md xs:rounded-lg transition-all ${
-                    currentPage === totalPages
-                      ? 'text-gray-400 cursor-not-allowed'
-                      : 'text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-200 hover:border-blue-300'
-                  }`}
-                >
-                  <ChevronRight className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4" />
-                </button>
-              </div>
+        {/* ── Pagination ── */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3.5">
+            <span className="text-xs text-gray-400">
+              {startIndex + 1}–{Math.min(startIndex + itemsPerPage, filteredConsultations.length)} из {filteredConsultations.length}
+            </span>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="p-2 rounded-xl border border-gray-200 text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                if (totalPages <= 5 || page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1) {
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => goToPage(page)}
+                      className={`w-8 h-8 rounded-xl text-xs font-semibold transition-all border ${
+                        page === currentPage
+                          ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20"
+                          : "border-gray-200 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                } else if (page === 2 && currentPage > 3) {
+                  return <span key={page} className="text-gray-300 text-xs px-1">···</span>;
+                } else if (page === totalPages - 1 && currentPage < totalPages - 2) {
+                  return <span key={page} className="text-gray-300 text-xs px-1">···</span>;
+                }
+                return null;
+              })}
+              <button
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="p-2 rounded-xl border border-gray-200 text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+      </div>{/* end unified card */}
+
+      {/* ── Details Modal ── */}
+      {detailsConsultation && typeof document !== "undefined" && createPortal((() => {
+        const c = detailsConsultation;
+        const status = getStatusConfig(c.status);
+        const type = getTypeConfig(c.type || "video");
+        const dateStr = c.scheduled_at || c.created_at;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setDetailsConsultation(null)}>
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <div
+              className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Детали приёма</h3>
+                  <p className="text-xs text-gray-400 mt-0.5">#{c.id}</p>
+                </div>
+                <button onClick={() => setDetailsConsultation(null)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Patient */}
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                  {getPatientInitial(c)}
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900 text-sm">{getPatientName(c)}</p>
+                  <p className="text-xs text-gray-400">{c.patient_email || "Email не указан"}</p>
+                </div>
+              </div>
+
+              {/* Info grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-gray-50 rounded-xl">
+                  <p className="text-xs text-gray-400 mb-1 flex items-center gap-1"><Calendar className="w-3 h-3" /> Дата</p>
+                  <p className="text-sm font-semibold text-gray-900">{dateStr ? formatDate(dateStr) : "—"}</p>
+                  <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><Clock className="w-3 h-3" />{dateStr ? formatTime(dateStr) : "—"}</p>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-xl">
+                  <p className="text-xs text-gray-400 mb-1">Тип</p>
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold border ${type.cls}`}>
+                    {type.icon}{type.label}
+                  </span>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-xl">
+                  <p className="text-xs text-gray-400 mb-1">Статус</p>
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold border ${status.cls}`}>
+                    {status.icon}{status.label}
+                  </span>
+                </div>
+                {c.meeting_id && (
+                  <div className="p-3 bg-gray-50 rounded-xl">
+                    <p className="text-xs text-gray-400 mb-1">ID встречи</p>
+                    <p className="text-xs font-mono text-gray-700 truncate">{c.meeting_id}</p>
+                  </div>
+                )}
+              </div>
+
+              {c.symptoms && (
+                <div className="p-3 bg-gray-50 rounded-xl">
+                  <p className="text-xs text-gray-400 mb-1">Жалобы / симптомы</p>
+                  <p className="text-sm text-gray-700 leading-relaxed">{c.symptoms}</p>
+                </div>
+              )}
+
+              <button
+                onClick={() => setDetailsConsultation(null)}
+                className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-xl transition-colors"
+              >
+                Закрыть
+              </button>
+            </div>
+          </div>
+        );
+      })(), document.body)}
     </div>
   );
 };
