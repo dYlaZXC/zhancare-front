@@ -27,6 +27,7 @@ import {
   faBolt,
   faHospital,
   faLocationDot,
+  faLocationCrosshairs,
 } from "@fortawesome/free-solid-svg-icons";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
@@ -55,7 +56,7 @@ interface BookingConfirmationData {
 type ConsultationFlow = 'online' | 'offline' | 'diagnostics';
 
 interface Message {
-  role: "user" | "assistant" | "doctor-card" | "doctors-list" | "time-slots" | "booking-confirmation" | "consultation-type-selector";
+  role: "user" | "assistant" | "doctor-card" | "doctors-list" | "time-slots" | "booking-confirmation" | "consultation-type-selector" | "geolocation-prompt";
   content: string;
   doctor?: DoctorRecommendation;
   doctors?: DoctorRecommendation[];
@@ -67,6 +68,8 @@ interface Message {
   bookingConfirmation?: BookingConfirmationData;
   selectedConsultationType?: ConsultationFlow;
   preliminaryDiagnosis?: string;
+  consultationType?: ConsultationFlow;
+  isChoice?: boolean;
 }
 
 // Renders **bold** and *italic* inline markdown within a single text segment.
@@ -614,7 +617,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
     const choiceLabel = typeLabels[type][lang] ?? typeLabels[type].ru;
 
     // Add user's choice as a message
-    setMessages(prev => [...prev, { role: "user", content: `✅ ${choiceLabel}` }]);
+    setMessages(prev => [...prev, { role: "user", content: choiceLabel, isChoice: true }]);
     setIsLoading(true);
 
     try {
@@ -639,18 +642,50 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
           const listLabels = { en: "Available doctors for online consultation:", ru: "Доступные врачи для онлайн-консультации:", kz: "Онлайн кеңеске қолжетімді дәрігерлер:" };
           setMessages(prev => [...prev, { role: "doctors-list", content: listLabels[lang] ?? listLabels.ru, doctors }]);
         }
-      } else {
-        const doctors = await aiService.getRandomDoctors();
-        const listLabels = {
-          offline:     { en: "Available doctors for in-person visit:", ru: "Доступные врачи для приёма:", kz: "Қабылдауға қолжетімді дәрігерлер:" },
-          diagnostics: { en: "Available specialists for diagnostics:", ru: "Специалисты для диагностики:", kz: "Диагностикаға арналған мамандар:" },
+      } else if (type === "offline") {
+        const listLabel = { en: "Nearest doctors for in-person visit:", ru: "Ближайшие врачи для приёма:", kz: "Жақын маңдағы дәрігерлер:" }[lang] ?? "Ближайшие врачи для приёма:";
+        const geoUnavailLabel = { en: "Available doctors for in-person visit:", ru: "Доступные врачи для приёма:", kz: "Қабылдауға қолжетімді дәрігерлер:" }[lang] ?? "Доступные врачи для приёма:";
+        const emptyLabel = { en: "No available doctors at the moment.", ru: "В данный момент нет доступных врачей.", kz: "Қазіргі уақытта дәрігерлер жоқ." }[lang] ?? "В данный момент нет доступных врачей.";
+
+        const fetchOfflineDoctors = async (lat?: number, lng?: number) => {
+          const label = (lat !== undefined) ? listLabel : geoUnavailLabel;
+          const doctors = lat !== undefined
+            ? await aiService.getNearbyOfflineDoctors(lat, lng!)
+            : await aiService.getRandomDoctors();
+          if (doctors.length > 0) {
+            setMessages(prev => [...prev, { role: "doctors-list", content: label, doctors, consultationType: "offline" }]);
+          } else {
+            setMessages(prev => [...prev, { role: "assistant", content: emptyLabel }]);
+          }
+          setIsLoading(false);
         };
-        const label = listLabels[type]?.[lang] ?? listLabels[type]?.ru;
+
+        if (typeof window !== "undefined" && navigator.geolocation) {
+          const geoPromptLabel = { en: "Requesting your location to find the nearest clinic...", ru: "Запрашиваем геолокацию для поиска ближайшей клиники...", kz: "Жақын клиниканы табу үшін геолокация сұралуда..." }[lang] ?? "Запрашиваем геолокацию...";
+          setMessages(prev => [...prev, { role: "geolocation-prompt", content: geoPromptLabel }]);
+          navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+              await fetchOfflineDoctors(pos.coords.latitude, pos.coords.longitude);
+            },
+            async () => {
+              // User denied or error — fall back to random doctors
+              await fetchOfflineDoctors();
+            },
+            { timeout: 8000 }
+          );
+          return; // setIsLoading(false) called inside fetchOfflineDoctors
+        } else {
+          await fetchOfflineDoctors();
+        }
+      } else {
+        // diagnostics
+        const doctors = await aiService.getRandomDoctors();
+        const label = { en: "Available specialists for diagnostics:", ru: "Специалисты для диагностики:", kz: "Диагностикаға арналған мамандар:" }[lang] ?? "Специалисты для диагностики:";
+        const emptyLabel = { en: "No available doctors at the moment. Try again later.", ru: "В данный момент нет доступных врачей. Попробуйте позже.", kz: "Қазіргі уақытта дәрігерлер жоқ. Кейінірек қайталаңыз." }[lang] ?? "В данный момент нет доступных врачей.";
         if (doctors.length > 0) {
           setMessages(prev => [...prev, { role: "doctors-list", content: label, doctors }]);
         } else {
-          const emptyLabels = { en: "No available doctors at the moment. Try again later.", ru: "В данный момент нет доступных врачей. Попробуйте позже.", kz: "Қазіргі уақытта дәрігерлер жоқ. Кейінірек қайталаңыз." };
-          setMessages(prev => [...prev, { role: "assistant", content: emptyLabels[lang] ?? emptyLabels.ru }]);
+          setMessages(prev => [...prev, { role: "assistant", content: emptyLabel }]);
         }
       }
     } catch {
@@ -800,7 +835,37 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                 transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
                 className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
               >
-                {message.role === "assistant" ? (
+                {message.role === "geolocation-prompt" ? (
+                  <div className="max-w-[90%] sm:max-w-[85%] flex gap-2 sm:gap-3">
+                    <div
+                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 mt-1"
+                      style={{ background: "linear-gradient(135deg, #0f766e 0%, #0d9488 100%)" }}
+                    >
+                      <FontAwesomeIcon icon={faLocationCrosshairs} className="text-white text-xs sm:text-sm" />
+                    </div>
+                    <div>
+                      <div className="px-2 py-1 rounded-lg mb-2 inline-block" style={{ background: "#ccfbf1" }}>
+                        <span className="text-xs font-semibold" style={{ color: "#0f766e" }}>
+                          {language === "en" ? "Geolocation" : language === "kz" ? "Геолокация" : "Геолокация"}
+                        </span>
+                      </div>
+                      <div
+                        className="rounded-2xl sm:rounded-3xl px-4 py-3 sm:px-5 sm:py-3.5 shadow-lg border flex items-center gap-3"
+                        style={{ background: "white", borderColor: "#99f6e4" }}
+                      >
+                        <motion.div
+                          animate={{ scale: [1, 1.2, 1] }}
+                          transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}
+                          className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center"
+                          style={{ background: "linear-gradient(135deg, #0f766e 0%, #0d9488 100%)" }}
+                        >
+                          <FontAwesomeIcon icon={faLocationCrosshairs} className="text-white text-xs" />
+                        </motion.div>
+                        <span className="text-sm font-medium" style={{ color: "#134e4a" }}>{message.content}</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : message.role === "assistant" ? (
                   <div className="max-w-[90%] sm:max-w-[85%] flex gap-2 sm:gap-3">
                     <div
                       className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 mt-1"
@@ -1189,10 +1254,14 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                   };
                   const lang = detectLang();
 
+                  const isOffline = message.consultationType === "offline";
                   const labels = {
                     book: { en: "Book", ru: "Записаться", kz: "Жазылу" },
                     experience: { en: "years exp", ru: "лет опыта", kz: "жыл тәжірибе" },
-                    clinic: { en: "Clinic", ru: "Клиника", kz: "Клиника" }
+                    clinic: { en: "Clinic", ru: "Клиника", kz: "Клиника" },
+                    cabinet: { en: "Cabinet", ru: "Кабинет", kz: "Кабинет" },
+                    map: { en: "Open in 2GIS", ru: "Открыть в 2ГИС", kz: "2ГИС-та ашу" },
+                    km: { en: "km away", ru: "км от вас", kz: "км қашықтықта" },
                   };
 
                   return (
@@ -1260,16 +1329,34 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                                 {/* Clinic Info */}
                                 {doctor.clinic && (
                                   <div
-                                    className="rounded-lg p-2.5 mb-3"
+                                    className="rounded-lg p-2.5 mb-3 space-y-1.5"
                                     style={{
                                       background: "rgba(255, 255, 255, 0.1)",
                                       backdropFilter: "blur(10px)",
                                       border: "1px solid rgba(255, 255, 255, 0.15)"
                                     }}
                                   >
-                                    <p className="text-white text-xs font-semibold mb-1.5">{doctor.clinic.name}</p>
+                                    {/* Clinic name + distance badge */}
                                     <div className="flex items-center justify-between gap-2">
-                                      {doctor.clinic.city && (
+                                      <p className="text-white text-xs font-semibold truncate">{doctor.clinic.name}</p>
+                                      {isOffline && doctor.clinic.distance_km != null && (
+                                        <span className="flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(16,185,129,0.25)", color: "#6ee7b7" }}>
+                                          {doctor.clinic.distance_km} {labels.km[lang as keyof typeof labels.km]}
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {/* Address */}
+                                    {isOffline && doctor.clinic.address && (
+                                      <div className="flex items-start gap-1">
+                                        <FontAwesomeIcon icon={faLocationDot} className="text-blue-300 text-[9px] mt-0.5 flex-shrink-0" />
+                                        <span className="text-blue-100 text-xs leading-tight">{doctor.clinic.address}</span>
+                                      </div>
+                                    )}
+
+                                    {/* City (for non-offline) + rating */}
+                                    <div className="flex items-center justify-between gap-2">
+                                      {!isOffline && doctor.clinic.city && (
                                         <div className="flex items-center gap-1">
                                           <FontAwesomeIcon icon={faLocationDot} className="text-blue-300 text-[9px]" />
                                           <span className="text-blue-100 text-xs">{doctor.clinic.city}</span>
@@ -1282,6 +1369,33 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                                         </div>
                                       )}
                                     </div>
+
+                                    {/* Room number */}
+                                    {isOffline && doctor.room_number && (
+                                      <div className="flex items-center gap-1">
+                                        <svg className="w-3 h-3 text-blue-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                        </svg>
+                                        <span className="text-blue-100 text-xs">{labels.cabinet[lang as keyof typeof labels.cabinet]} №{doctor.room_number}</span>
+                                      </div>
+                                    )}
+
+                                    {/* 2GIS link */}
+                                    {isOffline && doctor.clinic.gis2_url && (
+                                      <a
+                                        href={doctor.clinic.gis2_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="flex items-center gap-1.5 mt-1 text-[10px] font-semibold px-2 py-1 rounded-lg w-fit transition-colors"
+                                        style={{ background: "rgba(99,102,241,0.25)", color: "#c7d2fe" }}
+                                      >
+                                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z" />
+                                        </svg>
+                                        {labels.map[lang as keyof typeof labels.map]}
+                                      </a>
+                                    )}
                                   </div>
                                 )}
 
@@ -1504,11 +1618,14 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                 })() : (
                   <div className="max-w-[90%] sm:max-w-[85%]">
                     <div
-                      className="rounded-2xl sm:rounded-3xl px-4 py-3 sm:px-6 sm:py-4 shadow-lg"
+                      className={`rounded-2xl sm:rounded-3xl px-4 py-3 sm:px-6 sm:py-4 shadow-lg ${message.isChoice ? "flex items-center gap-2.5" : ""}`}
                       style={{
                         background: "linear-gradient(135deg, #3772ff 0%, #2956bf 100%)",
                       }}
                     >
+                      {message.isChoice && (
+                        <FontAwesomeIcon icon={faCircleCheck} className="text-white text-sm flex-shrink-0" />
+                      )}
                       {message.imageUrl && (
                         <img
                           src={message.imageUrl}

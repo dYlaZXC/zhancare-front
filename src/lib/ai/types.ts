@@ -23,7 +23,10 @@ export interface DoctorRecommendation {
     address: string;
     city: string | null;
     rating: number | null;
+    gis2_url?: string;
+    distance_km?: number | null;
   };
+  room_number?: string | null;
   language?: string;
   urgency: string;
   nearest_slot?: { date: string; time: string; label: string };

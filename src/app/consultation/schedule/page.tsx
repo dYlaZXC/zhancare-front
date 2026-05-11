@@ -20,13 +20,17 @@ import {
   faSearch,
   faTimes,
   faSortAmountDown,
+  faRightToBracket,
+  faUserPlus,
+  faLock,
 } from "@fortawesome/free-solid-svg-icons";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { api } from "@/utils/api";
+import { useAuth } from "@/context/AuthContext";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
-type ConsultationType = "online" | "offline";
+type ConsultationType = "online" | "offline" | "diagnostics";
 
 interface SlotInfo {
   start: string;
@@ -216,6 +220,8 @@ function StarRating({ rating }: { rating: number }) {
 // ── Component ──────────────────────────────────────────────────────────────────
 export default function SchedulePage() {
   const router = useRouter();
+  const { token, user, openAuth } = useAuth();
+  const isLoggedIn = !!token && !!user;
 
   const [step, setStep] = useState(1);
   const [consultationType, setConsultationType] = useState<ConsultationType>("online");
@@ -265,6 +271,7 @@ export default function SchedulePage() {
   }, [doctors, searchQuery, filterSpec, sortBy]);
   const [result, setResult] = useState<{
     consultation_id: number;
+    meeting_id: string;
     access_code: string;
     scheduled_at: string;
     doctor: { name: string; specialization: string | null };
@@ -282,7 +289,7 @@ export default function SchedulePage() {
     setSortBy("default");
     setLoadingDoctors(true);
     api
-      .get("/schedule/day/", { params: { date: selectedDate, consultation_type: consultationType } })
+      .get("/schedule/day/", { params: { date: selectedDate, consultation_type: consultationType === "diagnostics" ? "offline" : consultationType } })
       .then(({ data }) => {
         const withSlots = (data.doctors || []).filter(
           (d: DoctorWithSlots) => d.slots && d.slots.some((s) => s.status === "free")
@@ -302,7 +309,7 @@ export default function SchedulePage() {
         scheduled_date: selectedDate,
         scheduled_time: selectedSlot.start,
         symptoms,
-        consultation_type: consultationType,
+        consultation_type: consultationType === "diagnostics" ? "offline" : consultationType,
       });
       setResult(data);
       setStep(4);
@@ -370,35 +377,19 @@ export default function SchedulePage() {
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 px-1">
                   Тип консультации
                 </p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
                   {(
                     [
-                      {
-                        key: "online",
-                        icon: faVideo,
-                        label: "Онлайн",
-                        desc: "Видеозвонок",
-                        activeGrad: "from-blue-500 to-indigo-600",
-                        activeRing: "ring-blue-400/40",
-                        activeBg: "from-blue-500/10 to-indigo-500/10",
-                        iconBg: "bg-blue-100 text-blue-600",
-                      },
-                      {
-                        key: "offline",
-                        icon: faHospital,
-                        label: "Офлайн",
-                        desc: "Личный приём",
-                        activeGrad: "from-violet-500 to-purple-600",
-                        activeRing: "ring-violet-400/40",
-                        activeBg: "from-violet-500/10 to-purple-500/10",
-                        iconBg: "bg-violet-100 text-violet-600",
-                      },
+                      { key: "online",      icon: faVideo,        label: "Онлайн",      desc: "Видеозвонок",          bg: "#1d4ed8", activeShadow: "rgba(29,78,216,0.35)" },
+                      { key: "offline",     icon: faHospital,     label: "Офлайн",      desc: "Личный приём",         bg: "#0f766e", activeShadow: "rgba(15,118,110,0.35)" },
+                      { key: "diagnostics", icon: faStethoscope,  label: "Диагностика", desc: "Анализы и обследование", bg: "#7c3aed", activeShadow: "rgba(124,58,237,0.35)" },
                     ] as const
-                  ).map(({ key, icon, label, desc, activeGrad, activeRing, activeBg, iconBg }) => {
+                  ).map(({ key, icon, label, desc, bg, activeShadow }) => {
                     const isActive = consultationType === key;
                     return (
                       <motion.button
                         key={key}
+                        whileHover={!isActive ? { y: -2, scale: 1.02 } : {}}
                         whileTap={{ scale: 0.97 }}
                         onClick={() => {
                           setConsultationType(key);
@@ -406,24 +397,48 @@ export default function SchedulePage() {
                           setSelectedDoctor(null);
                           setSelectedSlot(null);
                         }}
-                        className={`relative flex flex-col items-center gap-3 p-6 rounded-2xl border-2 transition-all duration-200 overflow-hidden ${
+                        className="group relative flex-1 flex items-center gap-4 px-5 py-4 rounded-2xl overflow-hidden text-left transition-all duration-200"
+                        style={
                           isActive
-                            ? `border-transparent bg-gradient-to-br ${activeBg} ring-4 ${activeRing} shadow-lg`
-                            : "border-gray-100 bg-white hover:border-gray-200 hover:shadow-md shadow-sm"
-                        }`}
+                            ? { backgroundColor: bg, boxShadow: `0 8px 24px ${activeShadow}`, outline: "2px solid white", outlineOffset: "2px" }
+                            : { backgroundColor: "#f8fafc", border: "2px solid #e2e8f0" }
+                        }
                       >
-                        {isActive && (
-                          <div className={`absolute top-2 right-2 w-2 h-2 rounded-full bg-gradient-to-br ${activeGrad}`} />
+                        {/* hover overlay for inactive */}
+                        {!isActive && (
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/[0.03] transition-colors duration-200 rounded-2xl" />
                         )}
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl ${isActive ? iconBg : "bg-gray-50 text-gray-400"} transition-colors`}>
-                          <FontAwesomeIcon icon={icon} />
-                        </div>
-                        <div className="text-center">
-                          <p className={`font-bold text-sm ${isActive ? "text-gray-900" : "text-gray-600"}`}>{label}</p>
-                          <p className={`text-xs mt-0.5 ${isActive ? "text-gray-500" : "text-gray-400"}`}>{desc}</p>
-                        </div>
+                        {/* active overlay shimmer */}
                         {isActive && (
-                          <div className={`absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r ${activeGrad}`} />
+                          <div className="absolute inset-0 bg-white/[0.06] rounded-2xl" />
+                        )}
+
+                        <div
+                          className="relative w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-200"
+                          style={
+                            isActive
+                              ? { background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.25)" }
+                              : { background: "#eff6ff", border: "1px solid #dbeafe" }
+                          }
+                        >
+                          <FontAwesomeIcon
+                            icon={icon}
+                            className="text-lg"
+                            style={{ color: isActive ? "#fff" : bg }}
+                          />
+                        </div>
+
+                        <div className="relative flex-1 min-w-0">
+                          <p className="text-sm font-bold leading-tight" style={{ color: isActive ? "#fff" : "#1e293b" }}>{label}</p>
+                          <p className="text-xs mt-0.5 truncate" style={{ color: isActive ? "rgba(255,255,255,0.65)" : "#94a3b8" }}>{desc}</p>
+                        </div>
+
+                        {isActive && (
+                          <div className="relative flex-shrink-0">
+                            <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
+                              <div className="w-2 h-2 rounded-full bg-white" />
+                            </div>
+                          </div>
                         )}
                       </motion.button>
                     );
@@ -436,55 +451,61 @@ export default function SchedulePage() {
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 px-1">
                   Выберите дату
                 </p>
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-                  <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
-                    {days.map((day) => {
-                      const isSelected = selectedDate === day.value;
-                      return (
-                        <motion.button
-                          key={day.value}
-                          whileTap={{ scale: 0.93 }}
-                          onClick={() => setSelectedDate(day.value)}
-                          className={`relative flex flex-col items-center py-3 px-1 rounded-xl transition-all duration-200 ${
-                            isSelected
-                              ? "bg-gradient-to-b from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-200"
-                              : day.isWeekend
-                              ? "bg-gray-50/60 text-gray-400 hover:bg-blue-50 hover:text-blue-600"
-                              : "bg-transparent text-gray-600 hover:bg-blue-50 hover:text-blue-600"
-                          }`}
-                        >
-                          <span className={`text-[10px] font-semibold uppercase ${isSelected ? "text-blue-100" : "text-gray-400"}`}>
-                            {day.dayLabel}
-                          </span>
-                          <span className={`text-sm font-bold mt-0.5 leading-tight ${isSelected ? "text-white" : ""}`}>
-                            {day.dateLabel.split(" ")[0]}
-                          </span>
-                          <span className={`text-[9px] mt-0.5 ${isSelected ? "text-blue-100" : "text-gray-400"}`}>
-                            {day.dateLabel.split(" ")[1]}
-                          </span>
-                          {day.isToday && (
-                            <span className={`absolute -top-1 left-1/2 -translate-x-1/2 text-[8px] font-bold px-1.5 py-0.5 rounded-full ${
-                              isSelected ? "bg-white text-blue-600 border border-black" : "bg-blue-100 text-blue-600 border border-black"
-                            }`}>
-                              сег
+                <div className="rounded-2xl border border-gray-100 shadow-sm overflow-hidden" style={{ background: "#f8fafc" }}>
+                  {/* Week rows */}
+                  {[days.slice(0, 7), days.slice(7)].map((week, wi) => (
+                    <div key={wi} className={`grid grid-cols-7 gap-1 p-2 ${wi === 0 ? "border-b border-gray-100" : ""}`}>
+                      {week.map((day) => {
+                        const isSelected = selectedDate === day.value;
+                        return (
+                          <motion.button
+                            key={day.value}
+                            whileHover={!isSelected ? { scale: 1.08 } : {}}
+                            whileTap={{ scale: 0.93 }}
+                            onClick={() => setSelectedDate(day.value)}
+                            className="relative flex flex-col items-center py-2.5 px-1 rounded-xl transition-all duration-200"
+                            style={
+                              isSelected
+                                ? { background: "linear-gradient(135deg, #1d4ed8 0%, #4f46e5 100%)", boxShadow: "0 4px 12px rgba(29,78,216,0.4)" }
+                                : day.isWeekend
+                                ? { background: "transparent" }
+                                : { background: "transparent" }
+                            }
+                          >
+                            {day.isToday && !isSelected && (
+                              <span className="absolute top-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-blue-500" />
+                            )}
+                            <span className="text-[9px] font-bold uppercase" style={{ color: isSelected ? "rgba(255,255,255,0.7)" : day.isWeekend ? "#cbd5e1" : "#94a3b8" }}>
+                              {day.dayLabel}
                             </span>
-                          )}
-                        </motion.button>
-                      );
-                    })}
-                  </div>
+                            <span className="text-sm font-extrabold mt-0.5 leading-none" style={{ color: isSelected ? "#fff" : day.isWeekend ? "#cbd5e1" : "#1e293b" }}>
+                              {day.dateLabel.split(" ")[0]}
+                            </span>
+                            <span className="text-[9px] mt-0.5" style={{ color: isSelected ? "rgba(255,255,255,0.6)" : "#cbd5e1" }}>
+                              {day.dateLabel.split(" ")[1]}
+                            </span>
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  ))}
                 </div>
               </div>
 
               <motion.button
+                whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setStep(2)}
                 disabled={!selectedDate}
-                className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-bold text-sm shadow-xl shadow-blue-200/60 hover:shadow-2xl hover:shadow-blue-300/60 transition-all hover:scale-[1.01] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none flex items-center justify-center gap-2.5"
+                className="w-full py-4 text-white rounded-2xl font-bold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2.5"
+                style={selectedDate
+                  ? { background: "linear-gradient(135deg, #1d4ed8 0%, #4f46e5 100%)", boxShadow: "0 8px 24px rgba(29,78,216,0.35)" }
+                  : { background: "#e2e8f0" }
+                }
               >
                 <FontAwesomeIcon icon={faUserMd} />
                 Показать врачей
-                <FontAwesomeIcon icon={faChevronRight} className="text-blue-200" />
+                <FontAwesomeIcon icon={faChevronRight} className="opacity-70" />
               </motion.button>
             </motion.div>
           )}
@@ -502,12 +523,12 @@ export default function SchedulePage() {
               {/* Context bar */}
               <div className="flex items-center gap-2 flex-wrap">
                 <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold ${
-                  consultationType === "online"
-                    ? "bg-blue-100 text-blue-700"
-                    : "bg-violet-100 text-violet-700"
+                  consultationType === "online" ? "bg-blue-100 text-blue-700"
+                  : consultationType === "offline" ? "bg-teal-100 text-teal-700"
+                  : "bg-purple-100 text-purple-700"
                 }`}>
-                  <FontAwesomeIcon icon={consultationType === "online" ? faVideo : faHospital} />
-                  {consultationType === "online" ? "Онлайн" : "Офлайн"}
+                  <FontAwesomeIcon icon={consultationType === "online" ? faVideo : consultationType === "offline" ? faHospital : faStethoscope} />
+                  {consultationType === "online" ? "Онлайн" : consultationType === "offline" ? "Офлайн" : "Диагностика"}
                 </div>
                 <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-gray-100 text-gray-600">
                   <FontAwesomeIcon icon={faCalendar} />
@@ -806,10 +827,10 @@ export default function SchedulePage() {
                       color: "text-blue-500",
                     },
                     {
-                      icon: consultationType === "online" ? faVideo : faHospital,
+                      icon: consultationType === "online" ? faVideo : consultationType === "offline" ? faHospital : faStethoscope,
                       label: "Формат",
-                      value: `${consultationType === "online" ? "Онлайн-консультация" : "Личный приём"} · ${selectedDoctor.preferred_consultation_duration} мин`,
-                      color: consultationType === "online" ? "text-blue-500" : "text-violet-500",
+                      value: `${consultationType === "online" ? "Онлайн-консультация" : consultationType === "offline" ? "Личный приём" : "Диагностика"} · ${selectedDoctor.preferred_consultation_duration} мин`,
+                      color: consultationType === "online" ? "text-blue-500" : consultationType === "offline" ? "text-teal-500" : "text-purple-500",
                     },
                   ].map(({ icon, label, value, color }) => (
                     <div key={label} className="flex items-start gap-3">
@@ -841,27 +862,60 @@ export default function SchedulePage() {
                 />
               </div>
 
-              <button
-                onClick={handleSubmit}
-                disabled={submitting}
-                className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-bold text-sm shadow-xl shadow-blue-200/60 hover:scale-[1.01] transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2.5"
-              >
-                {submitting ? (
-                  <>
-                    <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
-                    Создаём запись...
-                  </>
-                ) : (
-                  <>
-                    <FontAwesomeIcon icon={faCheckCircle} />
-                    Подтвердить запись
-                  </>
-                )}
-              </button>
-
-              <p className="text-center text-xs text-gray-400 px-4">
-                После подтверждения вы получите код доступа на email
-              </p>
+              {isLoggedIn ? (
+                <>
+                  <button
+                    onClick={handleSubmit}
+                    disabled={submitting}
+                    className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-bold text-sm shadow-xl shadow-blue-200/60 hover:scale-[1.01] transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2.5"
+                  >
+                    {submitting ? (
+                      <>
+                        <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                        Создаём запись...
+                      </>
+                    ) : (
+                      <>
+                        <FontAwesomeIcon icon={faCheckCircle} />
+                        Подтвердить запись
+                      </>
+                    )}
+                  </button>
+                  <p className="text-center text-xs text-gray-400 px-4">
+                    После подтверждения вы получите код доступа на email
+                  </p>
+                </>
+              ) : (
+                /* ── Auth gate ── */
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 text-center space-y-4">
+                  <div className="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #eff6ff, #dbeafe)" }}>
+                    <FontAwesomeIcon icon={faLock} className="text-xl text-blue-500" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-base">Войдите в аккаунт</h3>
+                    <p className="text-sm text-gray-500 mt-1">Для записи к врачу необходимо войти или зарегистрироваться</p>
+                  </div>
+                  <div className="space-y-2.5">
+                    <button
+                      onClick={() => openAuth("login", true)}
+                      className="w-full py-3.5 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:scale-[1.01]"
+                      style={{ background: "linear-gradient(135deg, #1d4ed8, #4f46e5)", boxShadow: "0 6px 20px rgba(29,78,216,0.3)" }}
+                    >
+                      <FontAwesomeIcon icon={faRightToBracket} />
+                      Войти
+                    </button>
+                    <button
+                      onClick={() => openAuth("register", true)}
+                      className="w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all hover:bg-gray-50"
+                      style={{ border: "2px solid #1d4ed8", color: "#1d4ed8" }}
+                    >
+                      <FontAwesomeIcon icon={faUserPlus} />
+                      Зарегистрироваться
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-400">Вход по Email или номеру телефона</p>
+                </div>
+              )}
             </motion.div>
           )}
 
@@ -922,6 +976,29 @@ export default function SchedulePage() {
                       {result.access_code}
                     </span>
                   </div>
+
+                  {/* Consultation link */}
+                  {result.meeting_id && (
+                    <div className="pt-3 border-t border-gray-50">
+                      <p className="text-xs text-gray-400 font-medium mb-2">Ссылка на консультацию</p>
+                      <a
+                        href={`/video-call/patient?meetingId=${result.meeting_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all hover:scale-[1.01]"
+                        style={{ background: "linear-gradient(135deg, #eff6ff, #dbeafe)", border: "1px solid #bfdbfe" }}
+                      >
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg, #1d4ed8, #4f46e5)" }}>
+                          <FontAwesomeIcon icon={faVideo} className="text-white text-sm" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-blue-700">Перейти к консультации</p>
+                          <p className="text-xs text-blue-400 truncate">/video-call/patient?meetingId={result.meeting_id.slice(0, 8)}...</p>
+                        </div>
+                        <FontAwesomeIcon icon={faChevronRight} className="text-blue-400 text-xs group-hover:translate-x-0.5 transition-transform" />
+                      </a>
+                    </div>
+                  )}
                 </div>
 
                 <div className="bg-amber-50/60 border-t border-amber-100 px-5 py-3">

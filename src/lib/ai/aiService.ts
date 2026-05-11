@@ -100,4 +100,21 @@ export const aiService = {
     const data = await res.json();
     return data.success ? (data.doctors as DoctorRecommendation[]) : [];
   },
+
+  /** Fetch available offline doctors sorted by distance to the patient's coordinates. */
+  async getNearbyOfflineDoctors(
+    lat: number,
+    lng: number,
+    specialty?: string
+  ): Promise<DoctorRecommendation[]> {
+    const params = new URLSearchParams({ lat: String(lat), lng: String(lng) });
+    if (specialty) params.set("specialty", specialty);
+    const res = await fetch(
+      `${API}/consultations/nearby-doctors/?${params.toString()}`,
+      { credentials: "include" }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.success ? (data.doctors as DoctorRecommendation[]) : [];
+  },
 };
