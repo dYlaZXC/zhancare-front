@@ -67,12 +67,15 @@ export const ChatSection = () => {
     doctorType: string;
     scheduledTime: string;
     isGuest?: boolean;
+    meetingId?: string;
+    consultationId?: number;
   }) => {
     const confirmationText = getBookingConfirmationText(
       bookingDetails.doctorName,
       bookingDetails.doctorType,
       bookingDetails.scheduledTime,
-      language
+      language,
+      bookingDetails.meetingId
     );
     const confirmationMessage: Message = {
       id: `booking_${Date.now()}`,
@@ -88,7 +91,8 @@ export const ChatSection = () => {
     doctorName: string,
     doctorType: string,
     scheduledTime: string,
-    lang: string
+    lang: string,
+    meetingId?: string
   ): string => {
     const date = new Date(scheduledTime);
     const formattedDate = date.toLocaleDateString(
@@ -99,13 +103,20 @@ export const ChatSection = () => {
       lang === "kz" ? "kk-KZ" : lang === "en" ? "en-US" : "ru-RU",
       { hour: "2-digit", minute: "2-digit" }
     );
+    const videoLine = meetingId
+      ? lang === "en"
+        ? `\n🔗 **Video link:** [Join consultation](/video-call/patient?meetingId=${meetingId})`
+        : lang === "kz"
+        ? `\n🔗 **Бейне сілтеме:** [Кеңеске кіру](/video-call/patient?meetingId=${meetingId})`
+        : `\n🔗 **Ссылка на консультацию:** [Войти в кабинет](/video-call/patient?meetingId=${meetingId})`
+      : "";
     switch (lang) {
       case "en":
-        return `✅ **Appointment Confirmed!**\n\nYou have successfully booked an appointment with **${doctorName}** (${doctorType}).\n\n📅 **Date:** ${formattedDate}\n🕐 **Time:** ${formattedTime}\n💻 **Type:** Online video consultation\n\nYou will receive a reminder before your appointment. Make sure you have a stable internet connection and your camera/microphone ready.`;
+        return `✅ **Appointment Confirmed!**\n\nYou have successfully booked an appointment with **${doctorName}** (${doctorType}).\n\n📅 **Date:** ${formattedDate}\n🕐 **Time:** ${formattedTime}\n💻 **Type:** Online video consultation${videoLine}\n\nYou will receive a reminder before your appointment. Make sure you have a stable internet connection and your camera/microphone ready.`;
       case "kz":
-        return `✅ **Жазылу расталды!**\n\n**${doctorName}** (${doctorType}) дәрігеріне сәтті жазылдыңыз.\n\n📅 **Күні:** ${formattedDate}\n🕐 **Уақыты:** ${formattedTime}\n💻 **Түрі:** Онлайн бейне кеңес\n\nКеңес алдында еске салу аласыз. Тұрақты интернет байланысы мен камера/микрофон дайын екеніне көз жеткізіңіз.`;
+        return `✅ **Жазылу расталды!**\n\n**${doctorName}** (${doctorType}) дәрігеріне сәтті жазылдыңыз.\n\n📅 **Күні:** ${formattedDate}\n🕐 **Уақыты:** ${formattedTime}\n💻 **Түрі:** Онлайн бейне кеңес${videoLine}\n\nКеңес алдында еске салу аласыз. Тұрақты интернет байланысы мен камера/микрофон дайын екеніне көз жеткізіңіз.`;
       default:
-        return `✅ **Запись подтверждена!**\n\nВы успешно записались к врачу **${doctorName}** (${doctorType}).\n\n📅 **Дата:** ${formattedDate}\n🕐 **Время:** ${formattedTime}\n💻 **Тип:** Онлайн видеоконсультация\n\nВы получите напоминание перед консультацией. Убедитесь, что у вас стабильное интернет-соединение и готовы камера/микрофон.`;
+        return `✅ **Запись подтверждена!**\n\nВы успешно записались к врачу **${doctorName}** (${doctorType}).\n\n📅 **Дата:** ${formattedDate}\n🕐 **Время:** ${formattedTime}\n💻 **Тип:** Онлайн видеоконсультация${videoLine}\n\nВы получите напоминание перед консультацией. Убедитесь, что у вас стабильное интернет-соединение и готовы камера/микрофон.`;
     }
   };
 

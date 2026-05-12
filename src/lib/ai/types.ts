@@ -21,9 +21,12 @@ export interface DoctorRecommendation {
   clinic?: {
     name: string;
     address: string;
+    address_comment?: string;
     city: string | null;
     rating: number | null;
     gis2_url?: string;
+    lat?: number | null;
+    lng?: number | null;
     distance_km?: number | null;
   };
   room_number?: string | null;

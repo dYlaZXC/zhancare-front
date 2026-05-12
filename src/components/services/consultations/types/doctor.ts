@@ -2,9 +2,15 @@ export interface Clinic {
   id: number;
   name: string;
   address?: string;
+  address_comment?: string;
   phone?: string;
+  phones?: Array<{ value?: string; number?: string } | string> | null;
   city?: string;
   logo?: string | null;
+  gis2_url?: string;
+  lat?: number | null;
+  lng?: number | null;
+  distance_km?: number | null;
 }
 
 export interface WorkScheduleDay {
@@ -42,6 +48,7 @@ export interface Doctor {
   work_schedule?: Record<string, WorkScheduleDay> | null;
   is_active?: boolean;
   is_deleted?: boolean;
+  room_number?: string | null;
 }
 
 export interface TimeSlot {

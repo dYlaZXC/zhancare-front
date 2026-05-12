@@ -5,13 +5,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, ArrowRight, CheckCircle2, Calendar, Clock,
   FlaskConical, Scan, Heart, Brain, Bone, Eye, Baby, Microscope,
-  Loader2, MapPin, Phone, Sparkles, ChevronDown, ChevronUp, Send,
+  Loader2, MapPin, Phone, Sparkles, RefreshCw,
 } from "lucide-react";
 import { api as axiosInstance } from "@/utils/axiosInstance";
 
 interface DiagnosticsFlowProps {
   onBack: () => void;
   onComplete?: () => void;
+  onStepChange?: (step: number) => void;
 }
 
 interface DiagnosticsService {
@@ -46,8 +47,11 @@ const CATEGORIES = [
 
 type Step = 1 | 2 | 3;
 
-const DiagnosticsFlow: React.FC<DiagnosticsFlowProps> = ({ onBack, onComplete }) => {
+const DiagnosticsFlow: React.FC<DiagnosticsFlowProps> = ({ onBack, onComplete, onStepChange }) => {
   const [step, setStep] = useState<Step>(1);
+
+  const goToStep = (s: Step) => { setStep(s); onStepChange?.(s); };
+  const goBack = () => { if (step === 1) onBack(); else goToStep((step - 1) as Step); };
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedService, setSelectedService] = useState<DiagnosticsService | null>(null);
   const [selectedDate, setSelectedDate] = useState('');
@@ -60,12 +64,11 @@ const DiagnosticsFlow: React.FC<DiagnosticsFlowProps> = ({ onBack, onComplete })
   const [bookedAppointment, setBookedAppointment] = useState<any>(null);
 
   // AI suggestion state
-  const [aiOpen, setAiOpen] = useState(true);
   const [aiInput, setAiInput] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<AISuggestion | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const category = CATEGORIES.find(c => c.id === selectedCategory);
 
@@ -121,7 +124,7 @@ const DiagnosticsFlow: React.FC<DiagnosticsFlowProps> = ({ onBack, onComplete })
         scheduled_time: scheduledTime,
       });
       setBookedAppointment(res.data.appointment ?? res.data);
-      setStep(3);
+      goToStep(3);
     } catch (err: any) {
       const msg = err?.response?.data?.error || 'Ошибка при записи. Попробуйте ещё раз.';
       setBookingError(msg);
@@ -132,30 +135,6 @@ const DiagnosticsFlow: React.FC<DiagnosticsFlowProps> = ({ onBack, onComplete })
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-3 p-3 bg-white rounded-2xl border border-gray-100 shadow-sm">
-        <button
-          onClick={step === 1 ? onBack : () => setStep((step - 1) as Step)}
-          className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors flex-shrink-0"
-        >
-          <ArrowLeft className="w-4 h-4 text-gray-600" />
-        </button>
-        <div className="flex-1 min-w-0">
-          <p className="font-bold text-gray-900 text-sm">Диагностика</p>
-          <div className="flex items-center gap-2 mt-1">
-            <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-              <motion.div
-                className="h-full rounded-full"
-                style={{ background: 'linear-gradient(90deg, #3772ff, #1d4ed8)' }}
-                animate={{ width: progressWidth }}
-                transition={{ duration: 0.4 }}
-              />
-            </div>
-            <span className="text-[10px] text-gray-400 font-medium flex-shrink-0">Шаг {step} / 3</span>
-          </div>
-        </div>
-      </div>
-
       <AnimatePresence mode="wait">
 
         {/* Step 1 — Category */}
@@ -166,136 +145,114 @@ const DiagnosticsFlow: React.FC<DiagnosticsFlowProps> = ({ onBack, onComplete })
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -30 }}
             transition={{ duration: 0.22 }}
-            className="space-y-3"
           >
-            {/* AI Suggestion block */}
-            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-              <button
-                onClick={() => {
-                  setAiOpen(v => !v);
-                  if (!aiOpen) setTimeout(() => inputRef.current?.focus(), 150);
-                }}
-                className="w-full flex items-center justify-between px-4 py-3 text-left"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center flex-shrink-0">
-                    <Sparkles className="w-4 h-4 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">AI-подбор диагностики</p>
-                    <p className="text-[11px] text-gray-400">Опишите симптомы — ИИ подберёт нужные анализы</p>
-                  </div>
-                </div>
-                {aiOpen
-                  ? <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                  : <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />}
-              </button>
+            {/* Unified card — same style as Step2 */}
+            <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-visible">
 
-              <AnimatePresence>
-                {aiOpen && (
-                  <motion.div
-                    key="ai-panel"
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="px-4 pb-4 space-y-3 border-t border-gray-50 pt-3">
-                      <div className="flex gap-2">
-                        <textarea
-                          ref={inputRef}
-                          value={aiInput}
-                          onChange={e => setAiInput(e.target.value)}
-                          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); requestAISuggestion(); } }}
-                          placeholder="Например: болит голова и шея, головокружение по утрам..."
-                          rows={2}
-                          className="flex-1 resize-none rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-100"
-                        />
-                        <button
-                          onClick={requestAISuggestion}
-                          disabled={!aiInput.trim() || aiLoading}
-                          className="self-end w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 disabled:opacity-40 transition-all"
-                          style={{ background: 'linear-gradient(135deg, #7c3aed, #3772ff)' }}
-                        >
-                          {aiLoading
-                            ? <Loader2 className="w-4 h-4 text-white animate-spin" />
-                            : <Send className="w-4 h-4 text-white" />}
-                        </button>
-                      </div>
+            {/* Toolbar */}
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
+              <span className="text-sm font-bold text-gray-800 flex-1">Выберите тип диагностики</span>
+              <span className="text-xs text-gray-400">{CATEGORIES.length} категорий</span>
+            </div>
 
-                      {aiError && (
-                        <p className="text-xs text-red-500 px-1">{aiError}</p>
-                      )}
-
-                      <AnimatePresence>
-                        {aiSuggestion && (
-                          <motion.div
-                            key="ai-result"
-                            initial={{ opacity: 0, y: 6 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0 }}
-                            className="space-y-3"
-                          >
-                            {/* Summary */}
-                            <div className="px-3 py-2.5 rounded-xl bg-violet-50 border border-violet-100">
-                              <p className="text-xs text-violet-700 leading-relaxed">{aiSuggestion.summary}</p>
-                            </div>
-
-                            {/* Suggested categories as quick-select chips */}
-                            {aiSuggestion.suggested_categories.length > 0 && (
-                              <div>
-                                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
-                                  Рекомендуемые разделы
-                                </p>
-                                <div className="flex flex-wrap gap-1.5">
-                                  {aiSuggestion.suggested_categories.map(cat => {
-                                    const meta = CATEGORIES.find(c => c.id === cat.id);
-                                    const Icon = meta?.icon ?? FlaskConical;
-                                    return (
-                                      <button
-                                        key={cat.id}
-                                        onClick={() => { setSelectedCategory(cat.id); setStep(2); }}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${meta ? `${meta.iconBg} ${meta.iconColor} border-transparent` : 'bg-gray-100 text-gray-700 border-gray-200'} hover:shadow-sm`}
-                                      >
-                                        <Icon className="w-3.5 h-3.5" />
-                                        {cat.label}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Suggested tests */}
-                            {aiSuggestion.suggested_tests.length > 0 && (
-                              <div>
-                                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
-                                  Рекомендуемые анализы и исследования
-                                </p>
-                                <div className="space-y-1">
-                                  {aiSuggestion.suggested_tests.map((test, i) => (
-                                    <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border border-gray-100">
-                                      <div className="w-1 h-1 rounded-full bg-blue-400 flex-shrink-0" />
-                                      <span className="text-xs text-gray-700">{test}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
+            {/* ── AI section — same design as Step2 ── */}
+            <AnimatePresence mode="wait">
+              {aiLoading ? (
+                <motion.div key="ai-loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="flex items-center gap-3 px-4 py-3 border-b border-blue-100 bg-blue-50">
+                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}>
+                    <Sparkles className="w-4 h-4 text-blue-600 flex-shrink-0" />
                   </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+                  <div>
+                    <p className="text-sm font-semibold text-blue-900">ИИ подбирает диагностику...</p>
+                    <p className="text-xs text-blue-600">Анализируем симптомы и подбираем нужные исследования</p>
+                  </div>
+                </motion.div>
+              ) : aiSuggestion ? (
+                <motion.div key="ai-result" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="px-4 py-4 border-b border-emerald-100 bg-emerald-50">
+                  <div className="flex items-start gap-3">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
+                      style={{ background: 'linear-gradient(135deg, #059669, #10b981)' }}>
+                      <Sparkles className="w-3.5 h-3.5 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-emerald-900">ИИ подобрал диагностику</p>
+                      <p className="text-xs text-emerald-700 mt-1 leading-relaxed">{aiSuggestion.summary}</p>
+                      {aiSuggestion.suggested_categories.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-2.5">
+                          {aiSuggestion.suggested_categories.map(cat => {
+                            const meta = CATEGORIES.find(c => c.id === cat.id);
+                            const Icon = meta?.icon ?? FlaskConical;
+                            return (
+                              <button key={cat.id}
+                                onClick={() => { setSelectedCategory(cat.id); goToStep(2); }}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all hover:shadow-sm ${meta ? `${meta.iconBg} ${meta.iconColor} border-transparent` : 'bg-gray-100 text-gray-700 border-gray-200'}`}>
+                                <Icon className="w-3.5 h-3.5" />{cat.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {aiSuggestion.suggested_tests.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {aiSuggestion.suggested_tests.map((test, i) => (
+                            <span key={i} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white border border-emerald-100 text-xs text-emerald-700">
+                              <div className="w-1 h-1 rounded-full bg-emerald-400 flex-shrink-0" />{test}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <motion.button onClick={() => { setAiSuggestion(null); setAiInput(''); }}
+                      whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-white flex-shrink-0 self-start"
+                      style={{ background: 'linear-gradient(135deg, #29358f, #3772ff)' }}>
+                      <RefreshCw className="w-3 h-3" /> Написать заново
+                    </motion.button>
+                  </div>
+                  {aiError && <p className="text-xs text-red-500 mt-2">{aiError}</p>}
+                </motion.div>
+              ) : (
+                <motion.div key="ai-input" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="px-4 py-4 border-b border-indigo-100 bg-gradient-to-r from-indigo-50 to-blue-50">
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <motion.div
+                      animate={{ scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] }}
+                      transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 1.5 }}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: 'linear-gradient(135deg, #29358f, #3772ff)' }}>
+                      <Sparkles className="w-3.5 h-3.5 text-white" />
+                    </motion.div>
+                    <div>
+                      <p className="text-sm font-bold text-indigo-900 leading-tight">Подобрать диагностику с ИИ</p>
+                      <p className="text-xs text-indigo-500">Опишите симптомы — ИИ подберёт нужные анализы</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center rounded-xl border border-indigo-200 bg-white focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-500/15 transition-all overflow-hidden shadow-sm">
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      value={aiInput}
+                      onChange={e => setAiInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter' && aiInput.trim()) requestAISuggestion(); }}
+                      placeholder="Например: болит голова и шея, головокружение по утрам..."
+                      className="flex-1 pl-3.5 py-4 text-sm bg-transparent border-none outline-none placeholder-indigo-300 text-gray-700 min-w-0"
+                    />
+                    <motion.button onClick={requestAISuggestion} disabled={!aiInput.trim()}
+                      whileHover={{ opacity: 0.9 }} whileTap={{ scale: 0.98 }}
+                      className="px-5 py-4 text-sm font-semibold text-white disabled:opacity-30 flex-shrink-0 whitespace-nowrap self-stretch flex items-center gap-1.5"
+                      style={{ background: 'linear-gradient(135deg, #29358f, #3772ff)' }}>
+                      <Sparkles className="w-3.5 h-3.5" /> Спросить ИИ
+                    </motion.button>
+                  </div>
+                  {aiError && <p className="text-xs text-red-500 mt-2">{aiError}</p>}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            <div>
-              <h3 className="font-bold text-gray-900 text-base">Выберите тип диагностики</h3>
-              <p className="text-xs text-gray-400 mt-0.5">Выберите нужный раздел для записи</p>
-            </div>
+            <div className="p-4">
+
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               {CATEGORIES.map((cat) => {
                 const Icon = cat.icon;
@@ -305,7 +262,7 @@ const DiagnosticsFlow: React.FC<DiagnosticsFlowProps> = ({ onBack, onComplete })
                     key={cat.id}
                     whileHover={{ y: -2, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}
                     whileTap={{ scale: 0.97 }}
-                    onClick={() => { setSelectedCategory(cat.id); setStep(2); }}
+                    onClick={() => { setSelectedCategory(cat.id); goToStep(2); }}
                     className={`group relative flex flex-col items-start gap-3 px-4 py-4 rounded-2xl border shadow-sm cursor-pointer text-left transition-all ${isAISuggested ? 'bg-violet-50/70 border-violet-200 ring-1 ring-violet-100' : `${cat.cardBg} ${cat.border}`}`}
                   >
                     <div className={`absolute top-3 right-3 w-1.5 h-1.5 rounded-full ${cat.dot} opacity-60`} />
@@ -325,6 +282,8 @@ const DiagnosticsFlow: React.FC<DiagnosticsFlowProps> = ({ onBack, onComplete })
                 );
               })}
             </div>
+            </div>{/* end p-4 */}
+            </div>{/* end unified card */}
           </motion.div>
         )}
 
@@ -336,20 +295,30 @@ const DiagnosticsFlow: React.FC<DiagnosticsFlowProps> = ({ onBack, onComplete })
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -30 }}
             transition={{ duration: 0.22 }}
-            className="space-y-3"
-          >
-            {/* Category badge */}
-            {category && (() => {
-              const Icon = category.icon;
-              return (
-                <div className="flex items-center gap-2.5 px-4 py-3 bg-white rounded-2xl border border-gray-100 shadow-sm">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${category.iconBg}`}>
-                    <Icon className={`w-4 h-4 ${category.iconColor}`} />
-                  </div>
-                  <span className="font-semibold text-gray-800 text-sm">{category.label}</span>
-                </div>
-              );
-            })()}
+            >
+            {/* Unified card */}
+            <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-visible">
+
+            {/* Toolbar */}
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
+              <button onClick={() => goBack()} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold text-gray-600 bg-gray-50 border border-gray-200 hover:bg-gray-100 transition-all flex-shrink-0">
+                <ArrowLeft className="w-4 h-4" /> Назад
+              </button>
+              {category && (() => {
+                const Icon = category.icon;
+                return (
+                  <>
+                    <div className="w-px h-4 bg-gray-200 flex-shrink-0" />
+                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 ${category.iconBg}`}>
+                      <Icon className={`w-3.5 h-3.5 ${category.iconColor}`} />
+                    </div>
+                    <span className="text-sm font-bold text-gray-800 flex-1">{category.label}</span>
+                  </>
+                );
+              })()}
+            </div>
+
+            <div className="p-4 space-y-3">
 
             {/* Booking error */}
             {bookingError && (
@@ -466,6 +435,8 @@ const DiagnosticsFlow: React.FC<DiagnosticsFlowProps> = ({ onBack, onComplete })
             >
               {booking ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Подтвердить запись <ArrowRight className="w-4 h-4" /></>}
             </motion.button>
+            </div>{/* end p-4 */}
+            </div>{/* end unified card */}
           </motion.div>
         )}
 

@@ -20,9 +20,17 @@ const YandexMap = dynamic(() => import("@/components/maps/YandexMap"), {
 
 interface Step1Props {
   address: string;
+  apartment: string;
+  entrance: string;
+  intercom: string;
+  addressComment: string;
   symptoms: string;
   appointmentTime: string;
   onChangeAddress: (val: string) => void;
+  onChangeApartment: (val: string) => void;
+  onChangeEntrance: (val: string) => void;
+  onChangeIntercom: (val: string) => void;
+  onChangeAddressComment: (val: string) => void;
   onChangeSymptoms: (val: string) => void;
   onChangeTime: (val: string) => void;
   onChangeCoordinates: (lat: number | null, lng: number | null) => void;
@@ -53,9 +61,17 @@ const DEFAULT_CENTER: [number, number] = [43.238293, 76.889709];
 
 const Step1: React.FC<Step1Props> = ({
   address,
+  apartment,
+  entrance,
+  intercom,
+  addressComment,
   symptoms,
   appointmentTime,
   onChangeAddress,
+  onChangeApartment,
+  onChangeEntrance,
+  onChangeIntercom,
+  onChangeAddressComment,
   onChangeSymptoms,
   onChangeTime,
   onChangeCoordinates,
@@ -65,6 +81,7 @@ const Step1: React.FC<Step1Props> = ({
   const [showMap, setShowMap] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationPermission, setLocationPermission] = useState<"prompt" | "granted" | "denied">("prompt");
+  const [locating, setLocating] = useState(false);
   const [mapCenter, setMapCenter] = useState<[number, number]>(DEFAULT_CENTER);
 
   // Address autocomplete states
@@ -217,6 +234,7 @@ const Step1: React.FC<Step1Props> = ({
   // Request user's current location and reverse geocode
   const requestLocation = async () => {
     if ("geolocation" in navigator) {
+      setLocating(true);
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const coords = {
@@ -237,9 +255,7 @@ const Step1: React.FC<Step1Props> = ({
 
             const geoObject = data.response?.GeoObjectCollection?.featureMember?.[0]?.GeoObject;
             if (geoObject) {
-              // Mark that we're setting address programmatically
               isSelectingRef.current = true;
-
               const detectedAddress = geoObject.metaDataProperty.GeocoderMetaData.text;
               onChangeAddress(detectedAddress);
             }
@@ -247,12 +263,13 @@ const Step1: React.FC<Step1Props> = ({
             console.error("Error reverse geocoding:", error);
           }
 
-          // Automatically show map when location is granted
+          setLocating(false);
           setShowMap(true);
         },
         (error) => {
           console.error("Geolocation error:", error);
           setLocationPermission("denied");
+          setLocating(false);
         }
       );
     }
@@ -394,10 +411,12 @@ const Step1: React.FC<Step1Props> = ({
             <button
               type="button"
               onClick={requestLocation}
-              disabled={locationPermission === "granted"}
+              disabled={locationPermission === "granted" || locating}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                 locationPermission === "granted"
                   ? "bg-green-50 text-green-700 border border-green-200"
+                  : locating
+                  ? "bg-[#3772ff]/10 text-[#3772ff] border border-[#3772ff]/30 cursor-wait"
                   : "bg-[#3772ff]/5 text-[#3772ff] border border-[#3772ff]/20 hover:bg-[#3772ff]/10"
               }`}
             >
@@ -405,6 +424,11 @@ const Step1: React.FC<Step1Props> = ({
                 <>
                   <CheckCircle className="w-4 h-4" />
                   Местоположение получено
+                </>
+              ) : locating ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Ищем вас на карте...
                 </>
               ) : (
                 <>
@@ -446,6 +470,55 @@ const Step1: React.FC<Step1Props> = ({
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Sub-address details */}
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Уточнение адреса</p>
+          <div className="grid grid-cols-3 gap-3 mb-3">
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Квартира</label>
+              <input
+                type="text"
+                placeholder="кв. 45"
+                value={apartment}
+                onChange={(e) => onChangeApartment(e.target.value)}
+                className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3772ff]/20 focus:border-[#3772ff] transition-all"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Подъезд</label>
+              <input
+                type="text"
+                placeholder="1"
+                value={entrance}
+                onChange={(e) => onChangeEntrance(e.target.value)}
+                className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3772ff]/20 focus:border-[#3772ff] transition-all"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Домофон</label>
+              <input
+                type="text"
+                placeholder="1234#"
+                value={intercom}
+                onChange={(e) => onChangeIntercom(e.target.value)}
+                className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3772ff]/20 focus:border-[#3772ff] transition-all"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-600 mb-1 block">
+              Комментарий к адресу <span className="text-gray-400 font-normal">(необязательно)</span>
+            </label>
+            <input
+              type="text"
+              placeholder="Например: 2-й этаж, квартира справа от лифта..."
+              value={addressComment}
+              onChange={(e) => onChangeAddressComment(e.target.value)}
+              className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3772ff]/20 focus:border-[#3772ff] transition-all"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Date and Time Section */}
@@ -454,7 +527,7 @@ const Step1: React.FC<Step1Props> = ({
           <svg className="w-5 h-5 text-[#3772ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          Дата и время визита <span className="text-red-500">*</span>
+          Дата и время заявки/визита<span className="text-red-500">*</span>
         </label>
         <input
           type="datetime-local"

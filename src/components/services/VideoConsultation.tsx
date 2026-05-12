@@ -11,6 +11,7 @@ import Step3 from "./consultations/VideoConsultationStep3";
 import TipsPanel from "./consultations/TipsPanel";
 import OfflineBookingFlow from "./consultations/OfflineBookingFlow";
 import DiagnosticsFlow from "./consultations/DiagnosticsFlow";
+import HomeAppointments from "./HomeAppointments";
 import PatientConsultationsTable from "./consultations/PatientConsultationsTable";
 import type { Doctor } from "./consultations/types/doctor";
 // import WebSocketTester from "../debug/WebSocketTester";
@@ -51,8 +52,9 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
     return 'online';
   })();
 
-  const [activeFlow, setActiveFlow] = useState<'online' | 'offline' | 'diagnostics'>(initialFlow);
+  const [activeFlow, setActiveFlow] = useState<'online' | 'offline' | 'diagnostics' | 'home'>(initialFlow);
   const [step, setStep] = useState<1 | 2 | 3>(skipAI ? 2 : 1);
+  const [diagStep, setDiagStep] = useState<number>(1);
   const [symptoms, setSymptoms] = useState("");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [selectedDoctorId, setSelectedDoctorId] = useState<number | null>(null);
@@ -616,33 +618,62 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
           <div ref={containerRef} className="flex-1 min-w-0 p-3 sm:p-4 lg:p-6">
             {/* Compact header section */}
             <div className="mb-4 space-y-3">
-              <h2 className="text-xl md:text-2xl lg:text-3xl font-extrabold text-[#001E80]">
-                {activeFlow === 'offline' ? 'Оффлайн приём' : activeFlow === 'diagnostics' ? 'Диагностика' : 'Мои услуги'}
-              </h2>
+              <div className="flex items-center gap-3">
+                {/* Back button for all non-root flows */}
+                {(activeFlow !== 'online' || step > 1) && (
+                  <button
+                    onClick={() => {
+                      if (activeFlow !== 'online') {
+                        setActiveFlow('online'); setStep(1); setDiagStep(1);
+                      } else {
+                        setStep((s) => Math.max(1, s - 1) as 1 | 2 | 3);
+                      }
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 transition-all shadow-sm flex-shrink-0"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Назад
+                  </button>
+                )}
+                <h2 className="text-xl md:text-2xl lg:text-3xl font-extrabold text-[#001E80]">
+                  {activeFlow === 'offline' ? 'Оффлайн приём'
+                    : activeFlow === 'diagnostics' ? `Диагностика`
+                    : activeFlow === 'home' ? 'Вызов на дом'
+                    : step === 1 ? 'Мои услуги'
+                    : step === 2 ? 'Онлайн консультация'
+                    : 'Подтверждение'}
+                </h2>
+                {activeFlow === 'diagnostics' && (
+                  <span className="text-xs font-semibold text-gray-400 ml-auto flex-shrink-0">Шаг {diagStep} / 3</span>
+                )}
+              </div>
 
-              {/* Progress bar — online flow only */}
-              {activeFlow === 'online' && (
+              {/* Progress bar — all flows */}
+              {activeFlow !== 'home' && (
                 <div className="relative w-full">
-                  {/* Track */}
                   <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden shadow-inner">
                     <div
-                      className={`h-full transition-all duration-700 ease-in-out rounded-full ${
-                        step === 1 ? 'w-1/3' : step === 2 ? 'w-2/3' : 'w-full'
-                      }`}
-                      style={{ background: 'linear-gradient(90deg, #12263a 0%, #29358f 50%, #3772ff 100%)' }}
+                      className="h-full transition-all duration-700 ease-in-out rounded-full"
+                      style={{
+                        background: 'linear-gradient(90deg, #12263a 0%, #29358f 50%, #3772ff 100%)',
+                        width: activeFlow === 'offline' ? '50%'
+                          : activeFlow === 'diagnostics' ? '33%'
+                          : step === 1 ? '33%' : step === 2 ? '66%' : '100%',
+                      }}
                     />
                   </div>
-                  {/* Step dots */}
                   <div className="flex justify-between mt-1.5 px-0">
-                    {[1, 2, 3].map((s) => (
+                    {(activeFlow === 'online'
+                      ? [1, 2, 3]
+                      : activeFlow === 'offline' ? [1, 2]
+                      : [1, 2, 3]
+                    ).map((s) => (
                       <div
                         key={s}
-                        className={`w-2 h-2 rounded-full transition-all duration-500 ${
-                          step >= s
-                            ? 'scale-125 shadow-sm'
-                            : 'bg-gray-300'
-                        }`}
-                        style={step >= s ? { background: 'linear-gradient(135deg, #29358f, #3772ff)' } : {}}
+                        className="w-2 h-2 rounded-full transition-all duration-500"
+                        style={{ background: s === 1 ? 'linear-gradient(135deg, #29358f, #3772ff)' : '#d1d5db' }}
                       />
                     ))}
                   </div>
@@ -671,8 +702,16 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
               {/* Diagnostics flow */}
               {activeFlow === 'diagnostics' && (
                 <DiagnosticsFlow
+                  onBack={() => { setActiveFlow('online'); setStep(1); setDiagStep(1); }}
+                  onComplete={() => { setActiveFlow('online'); setStep(1); setDiagStep(1); }}
+                  onStepChange={setDiagStep}
+                />
+              )}
+
+              {/* Home visit flow */}
+              {activeFlow === 'home' && (
+                <HomeAppointments
                   onBack={() => { setActiveFlow('online'); setStep(1); }}
-                  onComplete={() => { setActiveFlow('online'); setStep(1); }}
                 />
               )}
 
@@ -686,6 +725,7 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
                     onNext={handleAIRecommend}
                     onOffline={() => setActiveFlow('offline')}
                     onDiagnostics={() => setActiveFlow('diagnostics')}
+                    onHome={() => setActiveFlow('home')}
                     loading={loadingAI}
                   />
                   {/* Consultation list below */}

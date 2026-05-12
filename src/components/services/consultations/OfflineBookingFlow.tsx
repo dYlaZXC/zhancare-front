@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, CheckCircle2, Calendar, MapPin, Phone, Building2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Calendar, MapPin, Phone, Building2, Navigation, DoorOpen } from "lucide-react";
 import { api } from "@/utils/api";
 import { useAuth } from "@/context/AuthContext";
 import Step2 from "./VideoConsultationStep2";
@@ -23,7 +23,12 @@ interface BookedInfo {
   time: string;
   clinicName?: string;
   clinicAddress?: string;
+  clinicAddressComment?: string;
   clinicPhone?: string;
+  clinicGis2Url?: string;
+  clinicLat?: number | null;
+  clinicLng?: number | null;
+  roomNumber?: string | null;
 }
 
 const OfflineBookingFlow: React.FC<OfflineBookingFlowProps> = ({
@@ -59,12 +64,15 @@ const OfflineBookingFlow: React.FC<OfflineBookingFlowProps> = ({
     }
 
     const clinic = doc.clinic;
-    const phoneRaw = clinic?.phone;
+
+    // Resolve phone: prefer phones JSON array, fall back to phone string
     let clinicPhone: string | undefined;
-    if (Array.isArray(phoneRaw) && phoneRaw.length > 0) {
-      clinicPhone = phoneRaw[0]?.number || phoneRaw[0];
-    } else if (typeof phoneRaw === 'string') {
-      clinicPhone = phoneRaw;
+    const phonesRaw = clinic?.phones;
+    if (Array.isArray(phonesRaw) && phonesRaw.length > 0) {
+      const first = phonesRaw[0];
+      clinicPhone = (typeof first === 'object' ? (first.value || first.number) : first) as string | undefined;
+    } else if (typeof clinic?.phone === 'string') {
+      clinicPhone = clinic.phone;
     }
 
     setBookedInfo({
@@ -72,7 +80,12 @@ const OfflineBookingFlow: React.FC<OfflineBookingFlowProps> = ({
       time: scheduledTime,
       clinicName: clinic?.name,
       clinicAddress: clinic?.address,
+      clinicAddressComment: clinic?.address_comment,
       clinicPhone,
+      clinicGis2Url: clinic?.gis2_url,
+      clinicLat: clinic?.lat,
+      clinicLng: clinic?.lng,
+      roomNumber: doc.room_number,
     });
     setStep(2);
   };
@@ -87,19 +100,6 @@ const OfflineBookingFlow: React.FC<OfflineBookingFlowProps> = ({
           exit={{ opacity: 0, x: -30 }}
           transition={{ duration: 0.25 }}
         >
-          {/* Flow header */}
-          <div className="flex items-center gap-3 mb-4 p-3 bg-white rounded-2xl border border-gray-100 shadow-sm">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center flex-shrink-0">
-              <MapPin className="w-4 h-4 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-gray-900 text-sm">Оффлайн приём</p>
-              <p className="text-xs text-gray-400">Выберите врача и запишитесь на приём</p>
-            </div>
-            <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
-              Очный визит
-            </span>
-          </div>
 
           {bookingError && (
             <div className="mb-3 px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">
@@ -204,15 +204,52 @@ const OfflineBookingFlow: React.FC<OfflineBookingFlowProps> = ({
                 </div>
               )}
 
-              {/* Clinic address row */}
-              {bookedInfo.clinicAddress && (
-                <div className="flex items-center gap-3 px-4 py-3.5 border-b border-gray-50">
-                  <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0">
-                    <MapPin className="w-4 h-4 text-gray-500" />
+              {/* Clinic address row with 2GIS link */}
+              {bookedInfo.clinicAddress && (() => {
+                // Build 2GIS route URL: prefer stored gis2_url, else build search URL
+                const gisUrl = bookedInfo.clinicGis2Url
+                  || (bookedInfo.clinicLat && bookedInfo.clinicLng
+                    ? `https://2gis.kz/geo/${bookedInfo.clinicLng},${bookedInfo.clinicLat}`
+                    : `https://2gis.kz/search/${encodeURIComponent(bookedInfo.clinicAddress)}`);
+                return (
+                  <div className="border-b border-gray-50">
+                    <div className="flex items-start gap-3 px-4 pt-3.5 pb-2">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <MapPin className="w-4 h-4 text-emerald-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-gray-400 font-medium mb-0.5">Адрес</p>
+                        <p className="text-sm font-semibold text-gray-900 leading-snug">{bookedInfo.clinicAddress}</p>
+                        {bookedInfo.clinicAddressComment && (
+                          <p className="text-xs text-gray-500 mt-0.5">{bookedInfo.clinicAddressComment}</p>
+                        )}
+                      </div>
+                    </div>
+                    {/* Route button */}
+                    <div className="px-4 pb-3.5">
+                      <a
+                        href={gisUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 w-full px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 text-white text-sm font-semibold shadow-sm hover:from-emerald-400 hover:to-green-500 transition-all"
+                      >
+                        <Navigation className="w-4 h-4 flex-shrink-0" />
+                        Маршрут на 2ГИС
+                      </a>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-gray-400 font-medium">Адрес</p>
-                    <p className="text-sm font-semibold text-gray-900">{bookedInfo.clinicAddress}</p>
+                );
+              })()}
+
+              {/* Cabinet row */}
+              {bookedInfo.roomNumber && (
+                <div className="flex items-center gap-3 px-4 py-3.5 border-b border-gray-50">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
+                    <DoorOpen className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400 font-medium">Кабинет врача</p>
+                    <p className="text-sm font-semibold text-gray-900">№ {bookedInfo.roomNumber}</p>
                   </div>
                 </div>
               )}
@@ -225,7 +262,9 @@ const OfflineBookingFlow: React.FC<OfflineBookingFlowProps> = ({
                   </div>
                   <div>
                     <p className="text-xs text-gray-400 font-medium">Телефон клиники</p>
-                    <p className="text-sm font-semibold text-gray-900">{bookedInfo.clinicPhone}</p>
+                    <a href={`tel:${bookedInfo.clinicPhone}`} className="text-sm font-semibold text-blue-600 hover:underline">
+                      {bookedInfo.clinicPhone}
+                    </a>
                   </div>
                 </div>
               )}

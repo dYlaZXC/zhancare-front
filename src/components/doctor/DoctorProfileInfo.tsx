@@ -9,10 +9,12 @@ import {
   User, Mail, Phone, Stethoscope, GraduationCap,
   MapPin, Save, Camera, Trash2, CheckCircle2,
   Loader2, Lock, AlignLeft, Award, Building2, Clock,
+  DoorOpen, CreditCard, Globe,
 } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUserMd } from "@fortawesome/free-solid-svg-icons";
 import PhoneInput from "@/components/ui/PhoneInput";
+import BannerPicker, { useBanner } from "@/components/profile/BannerPicker";
 
 const BACKEND = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') ?? 'http://127.0.0.1:8000';
 const resolveAvatar = (url?: string | null) => {
@@ -26,12 +28,24 @@ interface DoctorProfile {
   last_name: string;
   email: string;
   phone?: string;
-  specialization?: string;
-  experience?: number;
-  education?: string;
-  bio?: string;
+  language?: string;
   avatar?: string | null;
-  clinic?: { name: string; city?: string; address?: string; working_hours?: string };
+  profiles?: {
+    doctor?: {
+      doctor_type?: string;
+      specialization?: string;
+      specializations?: string[];
+      years_of_experience?: number;
+      online_consultation_price?: string;
+      offline_consultation_price?: string;
+      room_number?: string;
+      education?: string;
+      bio?: string;
+      rating?: number;
+      reviews_count?: number;
+      clinic?: { id: number; name: string; address?: string; city?: string; gis2_url?: string };
+    };
+  };
 }
 
 const InputField = ({ label, value, onChange, icon: Icon, placeholder, type = "text", readOnly = false }: {
@@ -98,7 +112,12 @@ const CardHeader = ({ icon: Icon, title, subtitle, iconBg, badge }: {
 export default function DoctorProfileInfo() {
   const { user: authUser } = useAuth();
   const [profile, setProfile] = useState<DoctorProfile | null>(null);
-  const [form, setForm] = useState({ first_name: "", last_name: "", phone: "", specialization: "", experience: "", education: "", bio: "" });
+  const [form, setForm] = useState({
+    first_name: "", last_name: "", phone: "", language: "",
+    doctor_type: "", years_of_experience: "",
+    online_consultation_price: "", offline_consultation_price: "",
+    room_number: "", education: "", bio: "",
+  });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -113,14 +132,19 @@ export default function DoctorProfileInfo() {
       const res = await api.get("/user-profile/profile/");
       const d = res.data;
       setProfile(d);
+      const dp = d.profiles?.doctor;
       setForm({
         first_name: d.first_name || "",
         last_name: d.last_name || "",
         phone: d.phone || "",
-        specialization: d.specialization || "",
-        experience: d.experience?.toString() || "",
-        education: d.education || "",
-        bio: d.bio || "",
+        language: d.language || "",
+        doctor_type: dp?.doctor_type || "",
+        years_of_experience: dp?.years_of_experience?.toString() || "",
+        online_consultation_price: dp?.online_consultation_price || "",
+        offline_consultation_price: dp?.offline_consultation_price || "",
+        room_number: dp?.room_number || "",
+        education: dp?.education || "",
+        bio: dp?.bio || "",
       });
       setAvatarPreview(resolveAvatar(d.avatar));
     } catch { toast.error("Не удалось загрузить профиль"); }
@@ -132,9 +156,22 @@ export default function DoctorProfileInfo() {
   const handleSave = async () => {
     setSaving(true);
     try {
+      const isClinicDoctor = !!profile?.profiles?.doctor?.clinic;
       await api.patch("/user-profile/profile/", cleanPayload({
-        ...form,
-        experience: form.experience ? parseInt(form.experience) : "",
+        first_name: form.first_name,
+        last_name: form.last_name,
+        phone: form.phone,
+        language: form.language,
+        doctor_type: form.doctor_type,
+        years_of_experience: form.years_of_experience ? parseInt(form.years_of_experience) : null,
+        // Only independent doctors can change prices
+        ...(!isClinicDoctor && {
+          online_consultation_price: form.online_consultation_price ? parseFloat(form.online_consultation_price) : null,
+          offline_consultation_price: form.offline_consultation_price ? parseFloat(form.offline_consultation_price) : null,
+        }),
+        room_number: form.room_number,
+        education: form.education,
+        bio: form.bio,
       }));
       toast.success("Профиль обновлён");
       setSaved(true);
@@ -166,6 +203,8 @@ export default function DoctorProfileInfo() {
     catch { toast.error("Не удалось удалить"); } finally { setDeleting(false); }
   };
 
+  const { banner, saveBanner } = useBanner(authUser?.id);
+
   if (!profile) return (
     <div className="flex items-center justify-center py-20">
       <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
@@ -173,20 +212,27 @@ export default function DoctorProfileInfo() {
   );
 
   const initials = `${form.first_name?.[0] ?? ""}${form.last_name?.[0] ?? ""}`.toUpperCase();
+  const hasClinic = !!profile?.profiles?.doctor?.clinic;
 
   return (
     <div className="w-full space-y-6">
 
       {/* ── HERO ── */}
-      <div className="relative rounded-3xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #12263a 0%, #1e263e 30%, #29358f 70%, #3772ff 100%)' }}>
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute -top-16 -left-16 w-72 h-72 rounded-full blur-3xl opacity-30" style={{ background: 'radial-gradient(circle, #3772ff, transparent)' }} />
-          <div className="absolute -bottom-20 right-10 w-64 h-64 rounded-full blur-3xl opacity-20" style={{ background: 'radial-gradient(circle, #6048f5, transparent)' }} />
-          <svg className="absolute right-0 top-0 h-full opacity-5" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice">
-            <defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="white" strokeWidth="0.5"/></pattern></defs>
-            <rect width="200" height="200" fill="url(#grid)" />
-          </svg>
-        </div>
+      <div className="relative rounded-3xl overflow-hidden"
+        style={banner
+          ? { backgroundImage: `url(${banner})`, backgroundSize: "cover", backgroundPosition: "center" }
+          : { background: 'linear-gradient(135deg, #12263a 0%, #1e263e 30%, #29358f 70%, #3772ff 100%)' }}>
+        {banner && <div className="absolute inset-0 bg-black/50 pointer-events-none" />}
+        {!banner && (
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute -top-16 -left-16 w-72 h-72 rounded-full blur-3xl opacity-30" style={{ background: 'radial-gradient(circle, #3772ff, transparent)' }} />
+            <div className="absolute -bottom-20 right-10 w-64 h-64 rounded-full blur-3xl opacity-20" style={{ background: 'radial-gradient(circle, #6048f5, transparent)' }} />
+            <svg className="absolute right-0 top-0 h-full opacity-5" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice">
+              <defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="white" strokeWidth="0.5"/></pattern></defs>
+              <rect width="200" height="200" fill="url(#grid)" />
+            </svg>
+          </div>
+        )}
 
         <div className="relative flex flex-col sm:flex-row items-center sm:items-end gap-6 px-8 py-8 sm:py-10">
           {/* Avatar */}
@@ -216,10 +262,10 @@ export default function DoctorProfileInfo() {
                     style={{ background: 'rgba(55,114,255,0.3)' }}>
                 <FontAwesomeIcon icon={faUserMd} className="text-xs" /> Доктор
               </span>
-              {form.specialization && (
+              {(form.doctor_type || profile?.profiles?.doctor?.specialization) && (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold text-indigo-200 border border-indigo-400/30"
                       style={{ background: 'rgba(96,72,245,0.2)' }}>
-                  <Stethoscope className="w-3 h-3" /> {form.specialization}
+                  <Stethoscope className="w-3 h-3" /> {form.doctor_type || profile?.profiles?.doctor?.specialization}
                 </span>
               )}
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold text-emerald-300 border border-emerald-400/30"
@@ -230,7 +276,7 @@ export default function DoctorProfileInfo() {
           </div>
 
           {/* Avatar buttons */}
-          <div className="flex gap-2 flex-shrink-0">
+          <div className="flex flex-wrap gap-2 flex-shrink-0">
             <button onClick={() => fileRef.current?.click()} disabled={uploading || deleting}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white border border-white/20 hover:bg-white/10 transition-all disabled:opacity-40"
               style={{ background: 'rgba(55,114,255,0.3)' }}>
@@ -242,6 +288,7 @@ export default function DoctorProfileInfo() {
                 <Trash2 className="w-3.5 h-3.5" /> Удалить
               </button>
             )}
+            <BannerPicker userId={authUser?.id ?? 0} onBannerChange={saveBanner} />
           </div>
         </div>
         <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
@@ -276,8 +323,28 @@ export default function DoctorProfileInfo() {
         <CardHeader icon={Stethoscope} title="Профессиональная информация" subtitle="Специализация, опыт и образование"
           iconBg="linear-gradient(135deg, #ede9fe, #ddd6fe)" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <InputField label="Специализация" value={form.specialization} onChange={v => setForm(p => ({ ...p, specialization: v }))} icon={Stethoscope} placeholder="Кардиология" />
-          <InputField label="Опыт работы (лет)" value={form.experience} onChange={v => setForm(p => ({ ...p, experience: v }))} icon={Award} placeholder="5" type="number" />
+          <InputField label="Тип врача / Должность" value={form.doctor_type} onChange={v => setForm(p => ({ ...p, doctor_type: v }))} icon={Stethoscope} placeholder="Кардиолог, Терапевт..." />
+          <InputField label="Опыт работы (лет)" value={form.years_of_experience} onChange={v => setForm(p => ({ ...p, years_of_experience: v }))} icon={Award} placeholder="5" type="number" />
+          {(() => {
+            const specs = profile?.profiles?.doctor?.specializations;
+            const primary = profile?.profiles?.doctor?.specialization;
+            const all = specs && specs.length > 0 ? specs : primary ? [primary] : [];
+            return all.length > 0 ? (
+              <div className="sm:col-span-2 flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Специализации</label>
+                <div className="flex flex-wrap gap-2 px-3 py-2.5 rounded-xl border border-dashed border-gray-200 bg-gray-50 min-h-[44px]">
+                  {all.map((s, i) => (
+                    <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      <Stethoscope className="w-3 h-3" />{s}
+                    </span>
+                  ))}
+                  <span className="ml-auto text-[10px] text-gray-300 font-semibold self-center">Не изменяется</span>
+                </div>
+                <p className="text-[10px] text-gray-400">Специализации устанавливаются администратором клиники</p>
+              </div>
+            ) : null;
+          })()}
+          <InputField label="Кабинет №" value={form.room_number} onChange={v => setForm(p => ({ ...p, room_number: v }))} icon={DoorOpen} placeholder="101" />
           <div className="sm:col-span-2">
             <TextareaField label="Образование" value={form.education} onChange={v => setForm(p => ({ ...p, education: v }))} icon={GraduationCap} placeholder="Укажите ваше образование..." />
           </div>
@@ -290,20 +357,81 @@ export default function DoctorProfileInfo() {
         </div>
       </Card>
 
-      {/* ── CLINIC INFO (read-only) ── */}
-      {profile.clinic && (
-        <Card accentColor="linear-gradient(to bottom, #10b981, #059669)" delay={0.15}>
-          <CardHeader icon={Building2} title="Клиника" subtitle="Информация о вашем месте работы"
-            iconBg="linear-gradient(135deg, #d1fae5, #a7f3d0)" />
+      {/* ── PRICING ── */}
+      <Card accentColor="linear-gradient(to bottom, #f59e0b, #d97706)" delay={0.15}>
+        <CardHeader
+          icon={CreditCard}
+          title="Стоимость консультаций"
+          subtitle={hasClinic ? "Цены устанавливаются клиникой" : "Укажите ваши цены на приёмы"}
+          iconBg="linear-gradient(135deg, #fef3c7, #fde68a)"
+          badge={
+            hasClinic
+              ? <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold text-amber-600 bg-amber-50 border border-amber-100"><Lock className="w-3 h-3" /> Только чтение</div>
+              : undefined
+          }
+        />
+
+        {hasClinic && (
+          <div className="mb-4 flex items-start gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
+            <Lock className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-700 leading-relaxed">
+              Вы прикреплены к клинике <span className="font-bold">{profile.profiles!.doctor!.clinic!.name}</span>. Стоимость консультаций устанавливается администратором клиники и недоступна для редактирования.
+            </p>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <InputField
+            label="Онлайн консультация (₸)"
+            value={form.online_consultation_price}
+            onChange={hasClinic ? undefined : v => setForm(p => ({ ...p, online_consultation_price: v }))}
+            icon={CreditCard}
+            placeholder="5000"
+            type="number"
+            readOnly={hasClinic}
+          />
+          <InputField
+            label="Оффлайн приём (₸)"
+            value={form.offline_consultation_price}
+            onChange={hasClinic ? undefined : v => setForm(p => ({ ...p, offline_consultation_price: v }))}
+            icon={CreditCard}
+            placeholder="8000"
+            type="number"
+            readOnly={hasClinic}
+          />
+        </div>
+
+        {profile?.profiles?.doctor?.rating != null && (
+          <div className="mt-4 flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-100 rounded-xl">
+            <Award className="w-4 h-4 text-amber-500 flex-shrink-0" />
+            <span className="text-sm text-amber-700 font-semibold">Рейтинг: {profile.profiles.doctor.rating.toFixed(1)}</span>
+            {profile.profiles.doctor.reviews_count != null && (
+              <span className="text-xs text-amber-500">· {profile.profiles.doctor.reviews_count} отзывов</span>
+            )}
+          </div>
+        )}
+
+        {!hasClinic && (
+          <div className="mt-6 flex justify-end">
+            <SaveButton saving={saving} saved={saved} onClick={handleSave} color="linear-gradient(135deg, #f59e0b 0%, #d97706 100%)" />
+          </div>
+        )}
+      </Card>
+
+      {/* ── CLINIC INFO (read-only, set by admin) ── */}
+      {profile?.profiles?.doctor?.clinic && (
+        <Card accentColor="linear-gradient(to bottom, #10b981, #059669)" delay={0.2}>
+          <CardHeader icon={Building2} title="Клиника" subtitle="Информация о вашем месте работы — устанавливается администратором"
+            iconBg="linear-gradient(135deg, #d1fae5, #a7f3d0)"
+            badge={<div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-100"><Lock className="w-3 h-3" /> Только чтение</div>} />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
-              <InputField label="Название клиники" value={profile.clinic.name} icon={Building2} readOnly />
+              <InputField label="Название клиники" value={profile.profiles.doctor.clinic.name} icon={Building2} readOnly />
             </div>
-            {profile.clinic.city && <InputField label="Город" value={profile.clinic.city} icon={MapPin} readOnly />}
-            {profile.clinic.working_hours && <InputField label="Часы работы" value={profile.clinic.working_hours} icon={Clock} readOnly />}
-            {profile.clinic.address && (
+            {profile.profiles.doctor.clinic.city && <InputField label="Город" value={profile.profiles.doctor.clinic.city} icon={MapPin} readOnly />}
+            {profile.profiles.doctor.clinic.address && (
               <div className="sm:col-span-2">
-                <InputField label="Адрес" value={profile.clinic.address} icon={MapPin} readOnly />
+                <InputField label="Адрес" value={profile.profiles.doctor.clinic.address} icon={MapPin} readOnly />
               </div>
             )}
           </div>

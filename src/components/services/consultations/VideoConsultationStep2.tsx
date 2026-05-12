@@ -255,17 +255,8 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
       {/* ── Single unified card ── */}
       <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-visible">
 
-        {/* Top bar: Back · title · status · CTA */}
+        {/* Top bar: title · status · CTA */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
-          <motion.button
-            onClick={onBack}
-            whileHover={{ x: -2 }}
-            whileTap={{ scale: 0.96 }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold text-gray-600 bg-gray-50 border border-gray-200 hover:border-gray-300 hover:bg-gray-100 transition-all flex-shrink-0"
-          >
-            <ArrowLeft size={14} /> Назад
-          </motion.button>
-
           <span className="text-sm font-bold text-gray-800 flex-1">Выбор врача</span>
 
           <div className={`w-2 h-2 rounded-full flex-shrink-0 ${websocketConnected ? 'bg-emerald-400' : 'bg-orange-400'} animate-pulse`} />

@@ -10,7 +10,7 @@ interface AuthRedirectProps {
 }
 
 export default function AuthRedirect({ children }: AuthRedirectProps) {
-  const { user, loading, setIsAuthOpen, isDoctor } = useAuth();
+  const { user, loading, isDoctor } = useAuth();
   const router = useRouter();
   const [hasShownLoadingScreen, setHasShownLoadingScreen] = useState(false);
   const [showLoading, setShowLoading] = useState(false);
@@ -40,8 +40,6 @@ export default function AuthRedirect({ children }: AuthRedirectProps) {
 
   useEffect(() => {
     if (!loading && !user) {
-      // User is not authenticated, show auth popup and redirect
-      setIsAuthOpen(true);
       router.replace('/');
       return;
     }

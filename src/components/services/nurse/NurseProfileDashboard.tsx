@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUserNurse } from "@fortawesome/free-solid-svg-icons";
+import BannerPicker, { useBanner } from "@/components/profile/BannerPicker";
 
 const BACKEND = process.env.NEXT_PUBLIC_API_URL?.replace("/api/v1", "") ?? "http://127.0.0.1:8000";
 const resolveAvatar = (url?: string | null) => {
@@ -198,6 +199,8 @@ export default function NurseProfileDashboard() {
     }
   };
 
+  const { banner, saveBanner } = useBanner(profile?.id);
+
   if (!profile) return (
     <div className="flex items-center justify-center py-20">
       <Loader2 className="w-8 h-8 animate-spin text-teal-500" />
@@ -212,19 +215,26 @@ export default function NurseProfileDashboard() {
       {/* ── HERO ── */}
       <div
         className="relative rounded-3xl overflow-hidden"
-        style={{ background: "linear-gradient(135deg, #0f2027 0%, #1a2a35 30%, #0e6b6b 70%, #06b6d4 100%)" }}
+        style={banner
+          ? { backgroundImage: `url(${banner})`, backgroundSize: "cover", backgroundPosition: "center" }
+          : { background: "linear-gradient(135deg, #0f2027 0%, #1a2a35 30%, #0e6b6b 70%, #06b6d4 100%)" }}
       >
+        {/* Overlay for banner readability */}
+        {banner && <div className="absolute inset-0 bg-black/50 pointer-events-none" />}
+
         {/* Ambient blobs */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute -top-16 -left-16 w-72 h-72 rounded-full blur-3xl opacity-30"
-               style={{ background: "radial-gradient(circle, #06b6d4, transparent)" }} />
-          <div className="absolute -bottom-20 right-10 w-64 h-64 rounded-full blur-3xl opacity-20"
-               style={{ background: "radial-gradient(circle, #0e9b8a, transparent)" }} />
-          <svg className="absolute right-0 top-0 h-full opacity-5" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice">
-            <defs><pattern id="grid-nurse" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="white" strokeWidth="0.5" /></pattern></defs>
-            <rect width="200" height="200" fill="url(#grid-nurse)" />
-          </svg>
-        </div>
+        {!banner && (
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute -top-16 -left-16 w-72 h-72 rounded-full blur-3xl opacity-30"
+                 style={{ background: "radial-gradient(circle, #06b6d4, transparent)" }} />
+            <div className="absolute -bottom-20 right-10 w-64 h-64 rounded-full blur-3xl opacity-20"
+                 style={{ background: "radial-gradient(circle, #0e9b8a, transparent)" }} />
+            <svg className="absolute right-0 top-0 h-full opacity-5" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice">
+              <defs><pattern id="grid-nurse" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="white" strokeWidth="0.5" /></pattern></defs>
+              <rect width="200" height="200" fill="url(#grid-nurse)" />
+            </svg>
+          </div>
+        )}
 
         <div className="relative flex flex-col sm:flex-row items-center sm:items-end gap-6 px-8 py-8 sm:py-10">
           {/* Avatar */}
@@ -276,8 +286,8 @@ export default function NurseProfileDashboard() {
             </div>
           </div>
 
-          {/* Avatar buttons */}
-          <div className="flex gap-2 flex-shrink-0">
+          {/* Avatar + banner buttons */}
+          <div className="flex flex-wrap gap-2 flex-shrink-0">
             <button
               onClick={() => fileRef.current?.click()} disabled={uploading || deleting}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white border border-white/20 hover:bg-white/10 transition-all disabled:opacity-40"
@@ -293,6 +303,7 @@ export default function NurseProfileDashboard() {
                 <Trash2 className="w-3.5 h-3.5" /> Удалить
               </button>
             )}
+            <BannerPicker userId={profile.id} onBannerChange={saveBanner} />
           </div>
         </div>
         <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />

@@ -13,6 +13,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUserInjured } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context/AuthContext";
+import BannerPicker, { useBanner } from "@/components/profile/BannerPicker";
 import PhoneInput from "@/components/ui/PhoneInput";
 
 const BACKEND = process.env.NEXT_PUBLIC_API_URL?.replace("/api/v1", "") ?? "http://127.0.0.1:8000";
@@ -380,6 +381,8 @@ export default function PatientProfileDashboard() {
     finally { setDeleting(false); }
   };
 
+  const { banner, saveBanner } = useBanner(profile?.id);
+
   if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>;
   if (!profile) return <div className="flex items-center justify-center py-20"><p className="text-red-500 text-sm">Ошибка загрузки профиля</p></div>;
 
@@ -442,17 +445,22 @@ export default function PatientProfileDashboard() {
 
       {/* ── HERO ── */}
       <div className="relative rounded-3xl overflow-hidden"
-           style={{ background: "linear-gradient(135deg, #12263a 0%, #1e263e 30%, #29358f 70%, #3772ff 100%)" }}>
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute -top-16 -left-16 w-72 h-72 rounded-full blur-3xl opacity-30"
-               style={{ background: "radial-gradient(circle, #3772ff, transparent)" }} />
-          <div className="absolute -bottom-20 right-10 w-64 h-64 rounded-full blur-3xl opacity-20"
-               style={{ background: "radial-gradient(circle, #8b5cf6, transparent)" }} />
-          <svg className="absolute right-0 top-0 h-full opacity-5" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice">
-            <defs><pattern id="grid-patient" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="white" strokeWidth="0.5" /></pattern></defs>
-            <rect width="200" height="200" fill="url(#grid-patient)" />
-          </svg>
-        </div>
+        style={banner
+          ? { backgroundImage: `url(${banner})`, backgroundSize: "cover", backgroundPosition: "center" }
+          : { background: "linear-gradient(135deg, #12263a 0%, #1e263e 30%, #29358f 70%, #3772ff 100%)" }}>
+        {banner && <div className="absolute inset-0 bg-black/50 pointer-events-none" />}
+        {!banner && (
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute -top-16 -left-16 w-72 h-72 rounded-full blur-3xl opacity-30"
+                 style={{ background: "radial-gradient(circle, #3772ff, transparent)" }} />
+            <div className="absolute -bottom-20 right-10 w-64 h-64 rounded-full blur-3xl opacity-20"
+                 style={{ background: "radial-gradient(circle, #8b5cf6, transparent)" }} />
+            <svg className="absolute right-0 top-0 h-full opacity-5" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice">
+              <defs><pattern id="grid-patient" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="white" strokeWidth="0.5" /></pattern></defs>
+              <rect width="200" height="200" fill="url(#grid-patient)" />
+            </svg>
+          </div>
+        )}
 
         <div className="relative flex flex-col sm:flex-row items-center sm:items-end gap-6 px-8 py-8 sm:py-10">
           <div className="relative flex-shrink-0 group">
@@ -494,7 +502,7 @@ export default function PatientProfileDashboard() {
             </div>
           </div>
 
-          <div className="flex gap-2 flex-shrink-0">
+          <div className="flex flex-wrap gap-2 flex-shrink-0">
             <button onClick={() => fileRef.current?.click()} disabled={uploading || deleting}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white border border-white/20 hover:bg-white/10 transition-all disabled:opacity-40"
               style={{ background: "rgba(55,114,255,0.3)" }}>
@@ -506,6 +514,7 @@ export default function PatientProfileDashboard() {
                 <Trash2 className="w-3.5 h-3.5" /> Удалить
               </button>
             )}
+            <BannerPicker userId={profile?.id ?? 0} onBannerChange={saveBanner} />
           </div>
         </div>
         <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />

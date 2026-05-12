@@ -18,7 +18,7 @@ import ProfileDetails from "@/components/services/ProfileDetails";
 import { ActivityLog } from "@/components/services/ActivityLog";
 
 const ProfilePage = () => {
-  const { user, loading, setIsAuthOpen, isDoctor } = useAuth();
+  const { user, loading, isDoctor } = useAuth();
   const { userProfile, loading: profileLoading, error: profileError, refetch } = useUserProfile();
   const router = useRouter();
 
@@ -39,8 +39,6 @@ const ProfilePage = () => {
 
   useEffect(() => {
     if (!loading && !user) {
-      // User is not authenticated, show auth popup immediately and redirect
-      setIsAuthOpen(true);
       router.replace('/');
       return;
     }
@@ -49,7 +47,7 @@ const ProfilePage = () => {
       router.replace("/doctor-profile");
       return;
     }
-  }, [loading, user, isDoctor, router, setIsAuthOpen]);
+  }, [loading, user, isDoctor, router]);
 
   if (loading || profileLoading) {
     return null; // Don't show loading screen, let auth popup handle it

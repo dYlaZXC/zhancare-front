@@ -182,6 +182,8 @@ export default function DoctorSchedule() {
   // ── "История" tab state ──
   const [historyData, setHistoryData] = useState<HistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyPage, setHistoryPage] = useState(1);
+  const HISTORY_PER_PAGE = 10;
 
   // ── Load week ──────────────────────────────────────────────────────────────
   const fetchWeek = useCallback(
@@ -258,6 +260,7 @@ export default function DoctorSchedule() {
   useEffect(() => {
     if (activeTab === "history") {
       fetchHistory();
+      setHistoryPage(1);
     }
   }, [activeTab, fetchHistory]);
 
@@ -265,7 +268,10 @@ export default function DoctorSchedule() {
 
   // ── Week navigation ────────────────────────────────────────────────────────
   const handleWeekNav = async (offset: number) => {
-    // Auto-save dirty week
+    if (plannerConflictDates.size > 0) {
+      toast.error(`⛔ Исправьте ${plannerConflictDates.size} ${plannerConflictDates.size === 1 ? "конфликт" : "конфликта"} расписания перед переходом на другую неделю`);
+      return;
+    }
     if (plannerDirty && plannerDays.length > 0) {
       try {
         await Promise.all(
@@ -291,6 +297,11 @@ export default function DoctorSchedule() {
   };
 
   const handleTypeChange = async (cType: ConsultationType) => {
+    if (cType === plannerType) return;
+    if (plannerConflictDates.size > 0) {
+      toast.error(`⛔ Исправьте ${plannerConflictDates.size} ${plannerConflictDates.size === 1 ? "конфликт" : "конфликта"} расписания перед переключением типа`);
+      return;
+    }
     if (plannerDirty && plannerDays.length > 0) {
       try {
         await Promise.all(
@@ -402,7 +413,7 @@ export default function DoctorSchedule() {
         dst_week_start: nextWeek,
         consultation_type: plannerType,
       });
-      toast.success("Неделя скопирована");
+      toast.success(`Неделя скопирована на ${formatWeekLabel(nextWeek)}`);
     } catch {
       toast.error("Ошибка копирования");
     }
@@ -545,12 +556,15 @@ export default function DoctorSchedule() {
       {/* ═══════════════════ TAB: По датам ═══════════════════ */}
       {activeTab === "schedule" && (
         <div className="space-y-4">
-          {/* Online / Offline toggle with conflict badges */}
-          <div className="flex rounded-2xl overflow-hidden border-2 border-gray-200 bg-white">
+          {/* Online / Offline toggle */}
+          <div className={`flex rounded-2xl overflow-hidden border-2 bg-white transition-colors ${plannerConflictDates.size > 0 ? "border-red-200" : "border-gray-200"}`}>
             <button
               onClick={() => handleTypeChange("online")}
+              title={plannerConflictDates.size > 0 && plannerType !== "online" ? "Исправьте конфликты перед переключением" : undefined}
               className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 font-semibold text-sm transition-all ${
-                plannerType === "online" ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-50"
+                plannerType === "online" ? "bg-blue-500 text-white" :
+                plannerConflictDates.size > 0 ? "text-red-400 bg-red-50 cursor-not-allowed" :
+                "text-gray-600 hover:bg-gray-50"
               }`}
             >
               <Video className="w-4 h-4" />
@@ -563,8 +577,11 @@ export default function DoctorSchedule() {
             </button>
             <button
               onClick={() => handleTypeChange("offline")}
+              title={plannerConflictDates.size > 0 && plannerType !== "offline" ? "Исправьте конфликты перед переключением" : undefined}
               className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 font-semibold text-sm transition-all ${
-                plannerType === "offline" ? "bg-purple-500 text-white" : "text-gray-600 hover:bg-gray-50"
+                plannerType === "offline" ? "bg-purple-500 text-white" :
+                plannerConflictDates.size > 0 ? "text-red-400 bg-red-50 cursor-not-allowed" :
+                "text-gray-600 hover:bg-gray-50"
               }`}
             >
               <Home className="w-4 h-4" />
@@ -588,30 +605,33 @@ export default function DoctorSchedule() {
           )}
 
           {/* Week navigation */}
-          <div className="flex items-center justify-between bg-indigo-50 border-2 border-indigo-100 rounded-2xl px-4 py-3">
+          <div className={`flex items-center justify-between border-2 rounded-2xl px-4 py-3 transition-colors ${plannerConflictDates.size > 0 ? "bg-red-50 border-red-200" : "bg-indigo-50 border-indigo-100"}`}>
             <button
               onClick={() => handleWeekNav(-1)}
-              className="p-2 rounded-lg bg-white hover:bg-indigo-100 text-indigo-600 border border-indigo-200 transition-all"
+              disabled={plannerConflictDates.size > 0}
+              title={plannerConflictDates.size > 0 ? "Исправьте конфликты перед переходом" : undefined}
+              className={`p-2 rounded-lg border transition-all ${plannerConflictDates.size > 0 ? "bg-red-100 border-red-200 text-red-300 cursor-not-allowed" : "bg-white hover:bg-indigo-100 text-indigo-600 border-indigo-200"}`}
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <div className="flex items-center gap-2 text-sm font-bold text-gray-800">
+            <div className="flex items-center gap-2 text-sm font-bold text-gray-800 flex-wrap justify-center">
               <span className="text-base">📅</span>
               {formatWeekLabel(plannerWeekStart)}
               {isCurrentWeek(plannerWeekStart) && (
-                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded-full">
-                  Текущая
-                </span>
+                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded-full">Текущая</span>
               )}
-              {plannerDirty && (
-                <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">
-                  Изменено
-                </span>
+              {plannerDirty && plannerConflictDates.size === 0 && (
+                <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">Изменено</span>
+              )}
+              {plannerConflictDates.size > 0 && (
+                <span className="px-2 py-0.5 bg-red-100 text-red-600 text-xs font-bold rounded-full">⚠ {plannerConflictDates.size} конфл.</span>
               )}
             </div>
             <button
               onClick={() => handleWeekNav(1)}
-              className="p-2 rounded-lg bg-white hover:bg-indigo-100 text-indigo-600 border border-indigo-200 transition-all"
+              disabled={plannerConflictDates.size > 0}
+              title={plannerConflictDates.size > 0 ? "Исправьте конфликты перед переходом" : undefined}
+              className={`p-2 rounded-lg border transition-all ${plannerConflictDates.size > 0 ? "bg-red-100 border-red-200 text-red-300 cursor-not-allowed" : "bg-white hover:bg-indigo-100 text-indigo-600 border-indigo-200"}`}
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -756,8 +776,9 @@ export default function DoctorSchedule() {
                       <div className="flex gap-1">
                         <button
                           onClick={() => handleSaveDay(day)}
-                          className="p-1.5 rounded-lg bg-indigo-100 hover:bg-indigo-200 text-indigo-600 transition-colors"
-                          title="Сохранить"
+                          disabled={hasConflict}
+                          className={`p-1.5 rounded-lg transition-colors ${hasConflict ? "bg-red-100 text-red-300 cursor-not-allowed" : "bg-indigo-100 hover:bg-indigo-200 text-indigo-600"}`}
+                          title={hasConflict ? "Исправьте конфликт времени" : "Сохранить"}
                         >
                           <CheckCircle className="w-4 h-4" />
                         </button>
@@ -809,19 +830,24 @@ export default function DoctorSchedule() {
               </button>
               <button
                 onClick={handleSaveWeek}
-                disabled={plannerSaving}
-                className="flex items-center gap-2 px-8 py-2.5 rounded-xl text-white text-sm font-semibold shadow-lg hover:shadow-xl active:scale-95 transition-all disabled:opacity-60"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #3772ff 0%, #29358f 100%)",
+                disabled={plannerSaving || plannerConflictDates.size > 0}
+                title={plannerConflictDates.size > 0 ? `Исправьте ${plannerConflictDates.size} конфликта перед сохранением` : undefined}
+                className={`flex items-center gap-2 px-8 py-2.5 rounded-xl text-white text-sm font-semibold shadow-lg transition-all ${
+                  plannerConflictDates.size > 0
+                    ? "bg-red-400 cursor-not-allowed opacity-70"
+                    : "hover:shadow-xl active:scale-95"
+                }`}
+                style={plannerConflictDates.size > 0 ? {} : {
+                  background: "linear-gradient(135deg, #3772ff 0%, #29358f 100%)",
                 }}
               >
                 {plannerSaving ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
+                ) : plannerConflictDates.size > 0 ? (
+                  <><span>⛔</span> {plannerConflictDates.size} {plannerConflictDates.size === 1 ? "конфликт" : "конфликта"}</>
                 ) : (
-                  <CheckCircle className="w-4 h-4" />
+                  <><CheckCircle className="w-4 h-4" /> Сохранить неделю</>
                 )}
-                Сохранить неделю
               </button>
             </div>
           )}
@@ -1030,127 +1056,240 @@ export default function DoctorSchedule() {
       )}
 
       {/* ═══════════════════ TAB: История ═══════════════════ */}
-      {activeTab === "history" && (
-        <div className="space-y-3">
-          {historyLoading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="w-7 h-7 animate-spin text-indigo-400" />
-            </div>
-          ) : historyData.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">
-              <History className="w-10 h-10 mx-auto mb-3 opacity-30" />
-              <p className="text-sm">История изменений пуста</p>
-            </div>
-          ) : (
-            historyData.map((entry) => {
-              const actionColor =
-                entry.action === "create"
-                  ? "text-green-600 bg-green-50 border-green-200"
-                  : entry.action === "delete"
-                  ? "text-red-600 bg-red-50 border-red-200"
-                  : "text-blue-600 bg-blue-50 border-blue-200";
-              const actionLabel =
-                entry.action === "create"
-                  ? "Создано"
-                  : entry.action === "delete"
-                  ? "Удалено"
-                  : "Изменено";
-              const entityLabel =
-                entry.entity_type === "base"
-                  ? "Шаблон"
-                  : entry.entity_type === "availability"
-                  ? "По датам"
-                  : "Исключение";
-              const changedAt = new Date(entry.changed_at).toLocaleString(
-                "ru-RU",
-                {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                }
-              );
+      {activeTab === "history" && (() => {
+          const WEEKDAYS_RU = ["Воскресенье","Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"];
+          const CONS_TYPE_RU: Record<string, string> = { online: "Онлайн", offline: "Оффлайн" };
 
-              return (
-                <div
-                  key={entry.id}
-                  className={`p-4 rounded-xl border-2 ${actionColor}`}
-                >
-                  <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`text-xs font-bold px-2 py-0.5 rounded-full border ${actionColor}`}
-                      >
-                        {actionLabel}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {entityLabel}
-                      </span>
-                    </div>
-                    <span className="text-xs text-gray-400">{changedAt}</span>
+          const formatFieldValue = (key: string, val: unknown): string => {
+            if (val === null || val === undefined) return "—";
+            if (key === "date") {
+              const d = new Date(String(val) + "T00:00:00");
+              return d.toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+            }
+            if (key === "weekday") return WEEKDAYS_RU[Number(val)] ?? String(val);
+            if (key === "is_day_off") return val ? "Выходной" : "Рабочий день";
+            if (key === "is_active") return val ? "Включено" : "Отключено";
+            if (key === "consultation_type") return CONS_TYPE_RU[String(val)] ?? String(val);
+            if ((key === "start_time" || key === "end_time") && val) return String(val);
+            return String(val);
+          };
+
+          const FIELD_LABELS: Record<string, string> = {
+            date: "Дата",
+            start_time: "Начало",
+            end_time: "Конец",
+            is_day_off: "Статус дня",
+            is_active: "Активность",
+            weekday: "День недели",
+            consultation_type: "Тип",
+            note: "Заметка",
+          };
+
+          const RELEVANT_KEYS = ["date","weekday","consultation_type","is_day_off","is_active","start_time","end_time","note"];
+
+          const buildSummary = (entry: HistoryEntry): string => {
+            const after = entry.after || {};
+            const before = entry.before || {};
+            const data = entry.action === "delete" ? before : after;
+
+            if (entry.entity_type === "availability" && data.date) {
+              const d = new Date(String(data.date) + "T00:00:00");
+              const dateStr = d.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+              const type = data.consultation_type ? ` · ${CONS_TYPE_RU[String(data.consultation_type)] ?? ""}` : "";
+              if (data.is_day_off) return `${dateStr}${type} — выходной`;
+              if (data.start_time && data.end_time) return `${dateStr}${type} · ${String(data.start_time)} – ${String(data.end_time)}`;
+              return dateStr + type;
+            }
+            if (entry.entity_type === "base" && data.weekday !== undefined) {
+              const wd = WEEKDAYS_RU[Number(data.weekday)] ?? "";
+              const type = data.consultation_type ? ` · ${CONS_TYPE_RU[String(data.consultation_type)] ?? ""}` : "";
+              if (!data.is_active) return `${wd}${type} — отключён`;
+              if (data.start_time && data.end_time) return `${wd}${type} · ${String(data.start_time)} – ${String(data.end_time)}`;
+              return wd + type;
+            }
+            return "";
+          };
+
+          const ACTION_CONFIG = {
+            create: { label: "Добавлено", dot: "bg-emerald-500", badge: "bg-emerald-50 text-emerald-700 border-emerald-200", bar: "bg-emerald-500" },
+            update: { label: "Изменено",  dot: "bg-blue-500",    badge: "bg-blue-50 text-blue-700 border-blue-200",       bar: "bg-blue-500" },
+            delete: { label: "Удалено",   dot: "bg-red-500",     badge: "bg-red-50 text-red-700 border-red-200",           bar: "bg-red-500" },
+          };
+          const ENTITY_CONFIG: Record<string, { label: string; icon: string }> = {
+            availability: { label: "По датам",    icon: "📅" },
+            base:         { label: "Шаблон",      icon: "🔄" },
+            exception:    { label: "Исключение",  icon: "⚡" },
+          };
+
+          const totalPages = Math.ceil(historyData.length / HISTORY_PER_PAGE);
+          const pagedHistory = historyData.slice(
+            (historyPage - 1) * HISTORY_PER_PAGE,
+            historyPage * HISTORY_PER_PAGE
+          );
+
+          return (
+            <div className="space-y-3">
+              {historyLoading ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="w-7 h-7 animate-spin text-indigo-400" />
+                </div>
+              ) : historyData.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
+                    <History className="w-8 h-8 text-gray-300" />
                   </div>
-                  {entry.changed_by_name && (
-                    <p className="text-xs text-gray-500 mb-2">
-                      Изменил: {entry.changed_by_name}
-                    </p>
-                  )}
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    {entry.before && (
-                      <div className="bg-white/60 rounded-lg p-2">
-                        <p className="text-xs font-semibold text-gray-500 mb-1">
-                          До
-                        </p>
-                        {Object.entries(entry.before)
-                          .filter(([k]) =>
-                            [
-                              "start_time",
-                              "end_time",
-                              "is_day_off",
-                              "is_active",
-                              "weekday",
-                              "date",
-                            ].includes(k)
-                          )
-                          .map(([k, v]) => (
-                            <p key={k} className="text-xs text-gray-700">
-                              <span className="text-gray-400">{k}:</span>{" "}
-                              {String(v)}
-                            </p>
-                          ))}
+                  <p className="text-sm font-semibold text-gray-400">История изменений пуста</p>
+                  <p className="text-xs text-gray-300 mt-1">Здесь появятся все правки расписания</p>
+                </div>
+              ) : (
+                pagedHistory.map((entry) => {
+                  const ac = ACTION_CONFIG[entry.action as keyof typeof ACTION_CONFIG] ?? ACTION_CONFIG.update;
+                  const ec = ENTITY_CONFIG[entry.entity_type] ?? { label: entry.entity_type, icon: "📋" };
+                  const summary = buildSummary(entry);
+                  const changedAt = new Date(entry.changed_at).toLocaleString("ru-RU", {
+                    day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+                  });
+
+                  const changedFields = entry.before && entry.after
+                    ? RELEVANT_KEYS.filter(k =>
+                        String((entry.before as any)[k] ?? "") !== String((entry.after as any)[k] ?? "") &&
+                        ((entry.before as any)[k] !== undefined || (entry.after as any)[k] !== undefined)
+                      )
+                    : RELEVANT_KEYS.filter(k =>
+                        entry.action === "delete"
+                          ? (entry.before as any)?.[k] !== undefined
+                          : (entry.after as any)?.[k] !== undefined
+                      );
+
+                  return (
+                    <div key={entry.id} className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                      {/* Color accent bar */}
+                      <div className={`h-1 w-full ${ac.bar}`} />
+
+                      <div className="p-5">
+                        {/* Header */}
+                        <div className="flex items-start justify-between gap-3 mb-4">
+                          <div className="flex items-center gap-3 min-w-0">
+                            {/* Action dot */}
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${ac.bar} bg-opacity-10`}
+                              style={{ background: ac.bar.includes("emerald") ? "#ecfdf5" : ac.bar.includes("red") ? "#fef2f2" : "#eff6ff" }}>
+                              <span className={`w-2.5 h-2.5 rounded-full ${ac.dot}`} style={{ display: "block" }} />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`text-xs font-bold px-2.5 py-1 rounded-lg border ${ac.badge}`}>{ac.label}</span>
+                                <span className="text-xs font-medium text-gray-500 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-lg">
+                                  {ec.icon} {ec.label}
+                                </span>
+                              </div>
+                              {summary && (
+                                <p className="text-sm font-semibold text-gray-800 mt-1.5 leading-snug">{summary}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-xs text-gray-400 whitespace-nowrap">{changedAt}</p>
+                            {entry.changed_by_name && (
+                              <p className="text-xs text-gray-500 mt-0.5 font-medium">{entry.changed_by_name}</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Changes grid */}
+                        {changedFields.length > 0 && (
+                          <div className="bg-gray-50 rounded-xl p-4 space-y-2.5">
+                            {changedFields.map((key) => {
+                              const beforeVal = (entry.before as any)?.[key];
+                              const afterVal = (entry.after as any)?.[key];
+                              const label = FIELD_LABELS[key] ?? key;
+                              const isDelete = entry.action === "delete";
+                              const isCreate = entry.action === "create";
+
+                              return (
+                                <div key={key} className="flex items-center gap-3">
+                                  <span className="text-xs font-semibold text-gray-400 w-24 flex-shrink-0">{label}</span>
+                                  {isDelete ? (
+                                    <span className="text-xs text-red-600 font-medium bg-red-50 px-2.5 py-1 rounded-lg border border-red-100 line-through">
+                                      {formatFieldValue(key, beforeVal)}
+                                    </span>
+                                  ) : isCreate ? (
+                                    <span className="text-xs text-emerald-700 font-semibold bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100">
+                                      {formatFieldValue(key, afterVal)}
+                                    </span>
+                                  ) : (
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="text-xs text-gray-500 bg-white px-2.5 py-1 rounded-lg border border-gray-200 line-through">
+                                        {formatFieldValue(key, beforeVal)}
+                                      </span>
+                                      <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                      </svg>
+                                      <span className="text-xs text-blue-700 font-semibold bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100">
+                                        {formatFieldValue(key, afterVal)}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
-                    )}
-                    {entry.after && (
-                      <div className="bg-white/60 rounded-lg p-2">
-                        <p className="text-xs font-semibold text-gray-500 mb-1">
-                          После
-                        </p>
-                        {Object.entries(entry.after)
-                          .filter(([k]) =>
-                            [
-                              "start_time",
-                              "end_time",
-                              "is_day_off",
-                              "is_active",
-                              "weekday",
-                              "date",
-                            ].includes(k)
-                          )
-                          .map(([k, v]) => (
-                            <p key={k} className="text-xs text-gray-700">
-                              <span className="text-gray-400">{k}:</span>{" "}
-                              {String(v)}
-                            </p>
-                          ))}
-                      </div>
-                    )}
+                    </div>
+                  );
+                })
+              )}
+
+              {/* Pagination */}
+              {!historyLoading && totalPages > 1 && (
+                <div className="flex items-center justify-between bg-white border border-gray-100 rounded-2xl px-5 py-3.5 shadow-sm">
+                  <span className="text-xs text-gray-400">
+                    {(historyPage - 1) * HISTORY_PER_PAGE + 1}–{Math.min(historyPage * HISTORY_PER_PAGE, historyData.length)} из {historyData.length}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
+                      disabled={historyPage === 1}
+                      className="p-2 rounded-xl border border-gray-200 text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                      if (totalPages <= 5 || page === 1 || page === totalPages || Math.abs(page - historyPage) <= 1) {
+                        return (
+                          <button
+                            key={page}
+                            onClick={() => setHistoryPage(page)}
+                            className={`w-8 h-8 rounded-xl text-xs font-semibold transition-all border ${
+                              page === historyPage
+                                ? "text-white border-blue-600 shadow-md"
+                                : "border-gray-200 text-gray-500 hover:bg-gray-100"
+                            }`}
+                            style={page === historyPage ? { background: "linear-gradient(135deg, #3772ff 0%, #29358f 100%)" } : {}}
+                          >
+                            {page}
+                          </button>
+                        );
+                      } else if (page === 2 && historyPage > 3) {
+                        return <span key={page} className="text-gray-300 text-xs px-1">···</span>;
+                      } else if (page === totalPages - 1 && historyPage < totalPages - 2) {
+                        return <span key={page} className="text-gray-300 text-xs px-1">···</span>;
+                      }
+                      return null;
+                    })}
+                    <button
+                      onClick={() => setHistoryPage(p => Math.min(totalPages, p + 1))}
+                      disabled={historyPage === totalPages}
+                      className="p-2 rounded-xl border border-gray-200 text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
-              );
-            })
-          )}
-        </div>
-      )}
+              )}
+            </div>
+          );
+        })()}
     </div>
   );
 }

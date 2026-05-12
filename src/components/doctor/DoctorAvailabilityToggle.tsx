@@ -22,6 +22,8 @@ interface DoctorAvailabilityToggleProps {
   lastSeen?: string;
   availabilityNote?: string;
   doctorId?: number;
+  /** When true, renders the status list inline (no button+dropdown wrapper) */
+  inline?: boolean;
 }
 
 type AvailabilityStatus = 'available' | 'busy' | 'offline' | 'break';
@@ -42,6 +44,7 @@ const DoctorAvailabilityToggle: React.FC<DoctorAvailabilityToggleProps> = ({
   lastSeen,
   availabilityNote: initialNote,
   doctorId,
+  inline = false,
 }) => {
   const [status, setStatus] = useState<AvailabilityStatus>(currentStatus);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -169,6 +172,68 @@ const DoctorAvailabilityToggle: React.FC<DoctorAvailabilityToggleProps> = ({
   };
 
   const isOnline = status === 'available' || status === 'busy' || status === 'break';
+
+  // ── Inline mode: render options list directly, no nested dropdown ──
+  if (inline) {
+    return (
+      <div>
+        {!showNoteInput ? (
+          <>
+            <div className="px-3 py-2 flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100 mb-1">
+              <Power className="w-3.5 h-3.5" />
+              Изменить статус доступности
+            </div>
+            {statusOptions.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => handleStatusSelect(option.value)}
+                disabled={isUpdating}
+                className={`w-full px-3 py-2.5 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 rounded-lg disabled:opacity-50 ${
+                  status === option.value ? 'bg-blue-50' : ''
+                }`}
+              >
+                <div className={`${option.color} ${option.bgColor} p-1.5 rounded-lg border ${option.borderColor} flex-shrink-0`}>
+                  {option.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-sm text-gray-900">{option.label}</div>
+                  <div className="text-xs text-gray-400">{option.description}</div>
+                </div>
+                {status === option.value && <CheckCircle className="w-4 h-4 text-blue-500 flex-shrink-0" />}
+                {isUpdating && status !== option.value && null}
+              </button>
+            ))}
+          </>
+        ) : (
+          <div className="p-3">
+            <p className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-500" /> Добавить заметку (необязательно)
+            </p>
+            <textarea
+              value={availabilityNote}
+              onChange={(e) => setAvailabilityNote(e.target.value)}
+              placeholder="Причина недоступности..."
+              className="w-full p-2.5 border border-gray-200 rounded-lg resize-none text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              rows={2}
+              maxLength={255}
+              autoFocus
+            />
+            <div className="flex justify-end gap-2 mt-2">
+              <button
+                onClick={() => { setShowNoteInput(false); setAvailabilityNote(initialNote || ''); }}
+                className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+              >Отмена</button>
+              <button
+                onClick={handleNoteSubmit}
+                disabled={isUpdating}
+                className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >Сохранить</button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="relative">

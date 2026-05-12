@@ -12,7 +12,6 @@ import {
   Shield,
   Info,
   AlertCircle,
-  ArrowLeft,
   Phone,
   Calendar,
   FileText,
@@ -688,16 +687,6 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
 
       {/* ── Action buttons ── */}
       <div className="flex gap-2.5">
-        <motion.button
-          onClick={onBack}
-          whileHover={{ x: -2 }}
-          whileTap={{ scale: 0.97 }}
-          className="group flex items-center gap-1.5 px-4 py-3 rounded-xl font-semibold bg-white border border-gray-200 hover:border-gray-300 text-gray-600 text-sm transition-all shadow-sm flex-shrink-0"
-        >
-          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
-          Назад
-        </motion.button>
-
         <motion.button
           onClick={() => onScheduleConsultation ? onScheduleConsultation() : setShowConfirmDialog(true)}
           disabled={loading || !selectedDoctorId || waiting || connecting}

@@ -7,6 +7,10 @@ import { Loader2, MapPin, Calendar, FileText } from "lucide-react";
 interface Step3Props {
   appointmentTime: string;
   address: string;
+  apartment: string;
+  entrance: string;
+  intercom: string;
+  addressComment: string;
   symptoms: string;
   notes: string;
   onBack: () => void;
@@ -17,6 +21,10 @@ interface Step3Props {
 const Step3: React.FC<Step3Props> = ({
   appointmentTime,
   address,
+  apartment,
+  entrance,
+  intercom,
+  addressComment,
   symptoms,
   notes,
   onBack,
@@ -48,6 +56,22 @@ const Step3: React.FC<Step3Props> = ({
           <div className="flex-1">
             <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Адрес приёма</p>
             <p className="text-sm font-medium text-gray-900">{address}</p>
+            {(apartment || entrance || intercom) && (
+              <div className="flex flex-wrap gap-2 mt-1.5">
+                {apartment && (
+                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md">кв. {apartment}</span>
+                )}
+                {entrance && (
+                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md">подъезд {entrance}</span>
+                )}
+                {intercom && (
+                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md">домофон {intercom}</span>
+                )}
+              </div>
+            )}
+            {addressComment && (
+              <p className="text-xs text-gray-500 mt-1 italic">{addressComment}</p>
+            )}
           </div>
         </div>
 

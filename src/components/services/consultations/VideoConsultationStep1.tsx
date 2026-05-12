@@ -18,7 +18,8 @@ import {
   Video,
   Home,
   Stethoscope,
-  ArrowRight
+  ArrowRight,
+  MapPin
 } from "lucide-react";
 
 interface Step1Props {
@@ -27,6 +28,7 @@ interface Step1Props {
   onNext: () => void;
   onOffline?: () => void;
   onDiagnostics?: () => void;
+  onHome?: () => void;
   loading?: boolean;
 }
 
@@ -36,6 +38,7 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
   onNext,
   onOffline,
   onDiagnostics,
+  onHome,
   loading = false,
 }) => {
   const [isRecording, setIsRecording] = useState(false);
@@ -150,7 +153,6 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
       action: 'Начать',
       onClick: onNext,
       bg: '#1d4ed8',
-      hover: '#1e40af',
     },
     {
       label: 'Оффлайн',
@@ -159,7 +161,14 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
       action: 'Записаться',
       onClick: onOffline,
       bg: '#0f766e',
-      hover: '#0d6b63',
+    },
+    {
+      label: 'Вызов на дом',
+      sub: 'медсестра к вам',
+      icon: <MapPin size={20} />,
+      action: 'Вызвать',
+      onClick: onHome,
+      bg: '#b45309',
     },
     {
       label: 'Диагностика',
@@ -168,19 +177,18 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
       action: 'Записаться',
       onClick: onDiagnostics,
       bg: '#7c3aed',
-      hover: '#6d28d9',
     },
   ];
 
   return (
-    <div className="flex flex-col sm:flex-row gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
       {serviceButtons.map(({ label, sub, icon, action, onClick, bg }) => (
         <motion.button
           key={label}
           onClick={onClick}
           whileHover={{ y: -3, scale: 1.02 }}
           whileTap={{ scale: 0.97 }}
-          className="group relative flex-1 flex items-center gap-4 px-5 py-4 rounded-2xl overflow-hidden text-white text-left transition-colors duration-200"
+          className="group relative flex flex-col gap-3 px-4 py-4 rounded-2xl overflow-hidden text-white text-left transition-colors duration-200"
           style={{ backgroundColor: bg }}
         >
           {/* Hover overlay */}
@@ -191,9 +199,9 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
           </div>
           <div className="relative flex-1 min-w-0">
             <p className="text-sm font-bold leading-tight">{label}</p>
-            <p className="text-xs opacity-60 mt-0.5 truncate">{sub}</p>
+            <p className="text-xs opacity-60 mt-0.5">{sub}</p>
           </div>
-          <div className="relative flex items-center gap-1 text-xs font-semibold opacity-70 group-hover:opacity-100 transition-opacity flex-shrink-0">
+          <div className="relative flex items-center gap-1 text-xs font-semibold opacity-70 group-hover:opacity-100 transition-opacity">
             {action} <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
           </div>
         </motion.button>

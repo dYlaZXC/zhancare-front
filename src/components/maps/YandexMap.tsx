@@ -9,6 +9,7 @@ interface YandexMapProps {
   initialAddress?: string;
   center?: [number, number];
   zoom?: number;
+  controls?: string[];
 }
 
 declare global {
@@ -20,8 +21,9 @@ declare global {
 const YandexMap: React.FC<YandexMapProps> = ({
   onAddressSelect,
   initialAddress,
-  center = [43.238293, 76.889709], // Almaty, Kazakhstan by default
+  center = [43.238293, 76.889709],
   zoom = 12,
+  controls = ["zoomControl", "geolocationControl", "searchControl"],
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -29,6 +31,22 @@ const YandexMap: React.FC<YandexMapProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [scriptLoaded, setScriptLoaded] = useState(false);
 
+  // If ymaps was already loaded by a prior render, mark script as ready immediately
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.ymaps) {
+      setScriptLoaded(true);
+    }
+  }, []);
+
+  // Keep latest callback in a ref so map init doesn't re-run when parent re-renders
+  const onAddressSelectRef = useRef(onAddressSelect);
+  useEffect(() => { onAddressSelectRef.current = onAddressSelect; }, [onAddressSelect]);
+
+  const centerRef = useRef(center);
+  const zoomRef = useRef(zoom);
+  const initialAddressRef = useRef(initialAddress);
+
+  // Initialize map once when script becomes ready
   useEffect(() => {
     if (!scriptLoaded || !mapRef.current) return;
 
@@ -36,18 +54,21 @@ const YandexMap: React.FC<YandexMapProps> = ({
       if (!window.ymaps || !mapRef.current) return;
 
       window.ymaps.ready(() => {
-        // Create map instance
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.destroy();
+          mapInstanceRef.current = null;
+        }
+
         const map = new window.ymaps.Map(mapRef.current, {
-          center: center,
-          zoom: zoom,
-          controls: ["zoomControl", "geolocationControl", "searchControl"],
+          center: centerRef.current,
+          zoom: zoomRef.current,
+          controls,
         });
 
         mapInstanceRef.current = map;
 
-        // Create initial placemark
         const placemark = new window.ymaps.Placemark(
-          center,
+          centerRef.current,
           {
             balloonContent: "Переместите метку на нужный адрес",
             iconCaption: "Ваш адрес",
@@ -61,44 +82,37 @@ const YandexMap: React.FC<YandexMapProps> = ({
         placemarkRef.current = placemark;
         map.geoObjects.add(placemark);
 
-        // Handle placemark drag end
+        const getAddress = (coords: number[]) => {
+          window.ymaps.geocode(coords).then((res: any) => {
+            const firstGeoObject = res.geoObjects.get(0);
+            const addr = firstGeoObject.getAddressLine();
+            placemark.properties.set({
+              balloonContent: addr,
+              iconCaption: addr.split(",")[0],
+            });
+            onAddressSelectRef.current(addr, [coords[0], coords[1]]);
+          });
+        };
+
         placemark.events.add("dragend", () => {
-          const coords = placemark.geometry.getCoordinates();
-          getAddress(coords);
+          getAddress(placemark.geometry.getCoordinates());
         });
 
-        // Handle map click
         map.events.add("click", (e: any) => {
           const coords = e.get("coords");
           placemark.geometry.setCoordinates(coords);
           getAddress(coords);
         });
 
-        // Get address from coordinates
-        const getAddress = (coords: number[]) => {
-          window.ymaps.geocode(coords).then((res: any) => {
-            const firstGeoObject = res.geoObjects.get(0);
-            const address = firstGeoObject.getAddressLine();
-
-            placemark.properties.set({
-              balloonContent: address,
-              iconCaption: address.split(",")[0],
-            });
-
-            onAddressSelect(address, [coords[0], coords[1]]);
-          });
-        };
-
-        // If initial address provided, geocode it
-        if (initialAddress) {
-          window.ymaps.geocode(initialAddress).then((res: any) => {
+        if (initialAddressRef.current) {
+          window.ymaps.geocode(initialAddressRef.current).then((res: any) => {
             const firstGeoObject = res.geoObjects.get(0);
             if (firstGeoObject) {
               const coords = firstGeoObject.geometry.getCoordinates();
-              map.setCenter(coords, zoom);
+              map.setCenter(coords, zoomRef.current);
               placemark.geometry.setCoordinates(coords);
               placemark.properties.set({
-                iconCaption: initialAddress.split(",")[0],
+                iconCaption: initialAddressRef.current!.split(",")[0],
               });
             }
           });
@@ -113,9 +127,22 @@ const YandexMap: React.FC<YandexMapProps> = ({
     return () => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.destroy();
+        mapInstanceRef.current = null;
       }
     };
-  }, [scriptLoaded, center, zoom, initialAddress, onAddressSelect]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scriptLoaded]);
+
+  // Pan map when center prop changes (address selected from autocomplete)
+  useEffect(() => {
+    centerRef.current = center;
+    if (mapInstanceRef.current && center) {
+      mapInstanceRef.current.setCenter(center, zoom, { duration: 300 });
+      if (placemarkRef.current) {
+        placemarkRef.current.geometry.setCoordinates(center);
+      }
+    }
+  }, [center, zoom]);
 
   return (
     <>

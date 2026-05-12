@@ -38,6 +38,7 @@ import LanguageSwitcher from "@/sections/Hero/LanguageSwitcher";
 import type { Doctor } from "@/components/services/consultations/types/doctor";
 import { aiService, isInjectionAttempt, CHAT_ENDPOINT, CHAT_UPLOAD_ENDPOINT } from "@/lib/ai";
 import type { ClinicContext, DoctorRecommendation } from "@/lib/ai";
+import { buildWhatsAppLink, consultationWhatsAppMessage } from "@/lib/whatsapp";
 
 interface TimeSlot {
   id: string;
@@ -51,6 +52,8 @@ interface BookingConfirmationData {
   doctorType: string;
   formattedDate: string;
   formattedTime: string;
+  meetingId?: string;
+  consultationId?: number;
 }
 
 type ConsultationFlow = 'online' | 'offline' | 'diagnostics';
@@ -257,6 +260,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [preselectedDoctor, setPreselectedDoctor] = useState<Doctor | null>(null);
+  const [bookingConsultationType, setBookingConsultationType] = useState<'online' | 'offline'>('online');
   const [streamingText, setStreamingText] = useState("");
   const [accumulatedSymptoms, setAccumulatedSymptoms] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -509,7 +513,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
     // Implement voice recording logic here
   };
 
-  const handleBookAppointment = async (doctorId: number, doctorName: string, doctorRec?: DoctorRecommendation) => {
+  const handleBookAppointment = async (doctorId: number, doctorName: string, doctorRec?: DoctorRecommendation, type: 'online' | 'offline' = 'online') => {
     if (doctorRec) {
       // Map DoctorRecommendation → Doctor so the modal can skip the doctor-selection step
       const mapped: Doctor = {
@@ -520,8 +524,18 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
           ? doctorRec.specialization[language as keyof typeof doctorRec.specialization] || doctorRec.doctor_type || ""
           : doctorRec.doctor_type || "",
         years_of_experience: doctorRec.years_of_experience,
+        room_number: doctorRec.room_number ?? null,
         clinic: doctorRec.clinic
-          ? { id: 0, name: doctorRec.clinic.name, address: doctorRec.clinic.address, city: doctorRec.clinic.city ?? undefined }
+          ? {
+              id: 0,
+              name: doctorRec.clinic.name,
+              address: doctorRec.clinic.address,
+              address_comment: doctorRec.clinic.address_comment,
+              city: doctorRec.clinic.city ?? undefined,
+              gis2_url: doctorRec.clinic.gis2_url,
+              lat: doctorRec.clinic.lat,
+              lng: doctorRec.clinic.lng,
+            }
           : null,
         availability_status: "available",
         language: doctorRec.language ?? null,
@@ -530,6 +544,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
     } else {
       setPreselectedDoctor(null);
     }
+    setBookingConsultationType(type);
     setIsBookingModalOpen(true);
   };
 
@@ -538,6 +553,8 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
     doctorType: string;
     scheduledTime: string;
     isGuest?: boolean;
+    meetingId?: string;
+    consultationId?: number;
   }) => {
     const date = new Date(bookingDetails.scheduledTime);
     const locale = language === "kz" ? "kk-KZ" : language === "en" ? "en-US" : "ru-RU";
@@ -554,6 +571,8 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
           doctorType: bookingDetails.doctorType,
           formattedDate,
           formattedTime,
+          meetingId: bookingDetails.meetingId,
+          consultationId: bookingDetails.consultationId,
         },
       }
     ]);
@@ -993,6 +1012,47 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                               <FontAwesomeIcon icon={faBell} className="text-xs mt-0.5 flex-shrink-0" style={{ color: "#10b981" }} />
                               <p className="text-xs text-green-800">{labels.remind[l]}</p>
                             </div>
+
+                            {/* Action buttons */}
+                            <div className="flex flex-col gap-2 pt-1">
+                              {bc.meetingId && (
+                                <button
+                                  onClick={() => router.push(`/video-call/patient?meetingId=${bc.meetingId}`)}
+                                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold text-white transition-all"
+                                  style={{ background: "linear-gradient(135deg, #3772ff 0%, #2956bf 100%)" }}
+                                >
+                                  <FontAwesomeIcon icon={faVideo} className="text-xs" />
+                                  {l === "en" ? "Join Video Consultation" : l === "kz" ? "Бейне кеңеске кіру" : "Перейти к видеоконсультации"}
+                                </button>
+                              )}
+                              <button
+                                onClick={() => router.push("/patient/appointments")}
+                                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                                style={{ background: "#f0f4ff", color: "#2956bf", border: "1px solid #c7d8ff" }}
+                              >
+                                <FontAwesomeIcon icon={faArrowRight} className="text-xs" />
+                                {l === "en" ? "My Appointments" : l === "kz" ? "Менің кабинетім" : "Мои записи"}
+                              </button>
+                              {bc.consultationId && (
+                                <a
+                                  href={buildWhatsAppLink(consultationWhatsAppMessage({
+                                    id: bc.consultationId,
+                                    doctorName: bc.doctorName,
+                                    meetingId: bc.meetingId,
+                                    lang: l,
+                                  }))}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                                  style={{ background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0" }}
+                                >
+                                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current flex-shrink-0" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                                  </svg>
+                                  {l === "en" ? "Ask via WhatsApp" : l === "kz" ? "WhatsApp арқылы сұрау" : "Спросить в WhatsApp"}
+                                </a>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1409,7 +1469,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
 
                                 {/* Book Button */}
                                 <button
-                                  onClick={() => handleBookAppointment(doctor.id, doctor.name, doctor)}
+                                  onClick={() => handleBookAppointment(doctor.id, doctor.name, doctor, isOffline ? 'offline' : 'online')}
                                   disabled={isLoading}
                                   className="w-full py-2.5 sm:py-3 font-bold rounded-lg sm:rounded-xl transition-all relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
                                   style={{
@@ -1823,10 +1883,11 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
       {/* Booking Modal */}
       <BookingModal
         isOpen={isBookingModalOpen}
-        onClose={() => { setIsBookingModalOpen(false); setPreselectedDoctor(null); }}
+        onClose={() => { setIsBookingModalOpen(false); setPreselectedDoctor(null); setBookingConsultationType('online'); }}
         onBookingComplete={handleBookingComplete}
         language={language}
         preselectedDoctor={preselectedDoctor}
+        consultationType={bookingConsultationType}
       />
     </div>
   );

@@ -70,13 +70,22 @@ export const useConsultationManager = () => {
           homeList.forEach(a =>
             results.push({
               id: a.id + 200000,
+              home_appointment_id: a.id,           // real DB id for tracking
               type: "home" as const,
               status: a.status,
               scheduled_at: a.appointment_time,
               appointment_time: a.appointment_time,
               created_at: a.created_at,
-              doctor_first_name: a.doctor_first_name || "",
-              doctor_last_name: a.doctor_last_name || "",
+              doctor_first_name: a.nurse_name ? a.nurse_name.split(" ")[0] : (a.doctor_first_name || ""),
+              doctor_last_name: a.nurse_name ? a.nurse_name.split(" ").slice(1).join(" ") : (a.doctor_last_name || ""),
+              doctor_type: "Медицинская сестра",
+              address: a.address,
+              latitude: a.latitude,
+              longitude: a.longitude,
+              nurse_name: a.nurse_name || null,
+              nurse_phone: a.nurse_phone || null,
+              nurse_photo: a.nurse_photo || null,
+              symptoms: a.symptoms,
             } as Consultation)
           );
         } catch { /* endpoint may not exist */ }

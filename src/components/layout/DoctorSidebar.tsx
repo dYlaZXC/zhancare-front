@@ -18,6 +18,7 @@ import {
   faChartLine,
   faChevronDown,
   faChevronRight,
+  faBriefcaseMedical,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useState, useEffect, useRef } from "react";
@@ -38,25 +39,17 @@ type MenuItem = { id: string; icon: any; title: string; color: string; href?: st
 const doctorMenu: MenuItem[] = [
   { id: "profile", icon: faUser, title: "Профиль", color: "#1e40af", href: "/doctor/profile" },
   {
-    id: "schedule-group",
-    icon: faCalendarAlt,
-    title: "Расписание",
-    color: "#059669",
-    children: [
-      { id: "schedule", icon: faCalendarAlt, title: "Мое расписание", color: "#059669", href: "/doctor/schedule" },
-      { id: "consultations", icon: faVideo, title: "Консультация", color: "#295bbf", href: "/doctor/consultations" },
-    ],
-  },
-  {
-    id: "patients-group",
-    icon: faNotesMedical,
-    title: "Пациенты",
+    id: "services-group",
+    icon: faBriefcaseMedical,
+    title: "Мои услуги",
     color: "#3267e6",
     children: [
+      { id: "consultations", icon: faVideo, title: "Консультации", color: "#295bbf", href: "/doctor/consultations" },
       { id: "appointments", icon: faCalendar, title: "Вызовы на дом", color: "#3772ff", href: "/doctor/appointments" },
-      { id: "patients", icon: faNotesMedical, title: "История Пациентов", color: "#3267e6", href: "/doctor/patients" },
+      { id: "patients", icon: faNotesMedical, title: "История пациентов", color: "#3267e6", href: "/doctor/patients" },
     ],
   },
+  { id: "schedule", icon: faCalendarAlt, title: "Расписание", color: "#059669", href: "/doctor/schedule" },
   { id: "analytics", icon: faChartLine, title: "Аналитика", color: "#8b5cf6", href: "/doctor/analytics" },
 ];
 

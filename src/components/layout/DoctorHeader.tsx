@@ -290,9 +290,10 @@ export const DoctorHeader = ({
                       </div>
                     </div>
 
-                    {/* Availability Toggle Content */}
+                    {/* Availability options — inline, no nested dropdown */}
                     <div className="p-2">
                       <DoctorAvailabilityToggle
+                        inline
                         currentStatus={availabilityStatus}
                         doctorId={user?.id}
                         onStatusChange={(newStatus) => {

@@ -24,6 +24,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBolt } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context/AuthContext";
+import BannerPicker, { useBanner } from "@/components/profile/BannerPicker";
 import PhoneInput from "@/components/ui/PhoneInput";
 
 const BACKEND = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') ?? 'http://127.0.0.1:8000';
@@ -86,7 +87,7 @@ const InputField = ({
 );
 
 export default function AdminProfileDashboard({ user }: AdminProfileDashboardProps) {
-  const { updateUser } = useAuth();
+  const { updateUser, user: authUser } = useAuth();
   const [stats, setStats] = useState<ClinicStats | null>(null);
   const [personalForm, setPersonalForm] = useState({
     first_name: user.first_name,
@@ -241,23 +242,28 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
   };
 
   const initials = `${personalForm.first_name?.[0] ?? ""}${personalForm.last_name?.[0] ?? ""}`.toUpperCase();
+  const { banner, saveBanner } = useBanner(authUser?.id);
 
   return (
     <div className="w-full space-y-6">
 
       {/* ── HERO CARD ─────────────────────────────────────────── */}
-      <div className="relative rounded-3xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #12263a 0%, #1e263e 30%, #29358f 70%, #3772ff 100%)' }}>
-        {/* Ambient blobs */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute -top-16 -left-16 w-72 h-72 rounded-full blur-3xl opacity-30" style={{ background: 'radial-gradient(circle, #3772ff 0%, transparent 70%)' }} />
-          <div className="absolute -bottom-20 right-10 w-64 h-64 rounded-full blur-3xl opacity-20" style={{ background: 'radial-gradient(circle, #8b5cf6 0%, transparent 70%)' }} />
-          <div className="absolute top-8 right-1/3 w-40 h-40 rounded-full blur-2xl opacity-10" style={{ background: 'radial-gradient(circle, #60a5fa 0%, transparent 70%)' }} />
-          {/* Decorative grid */}
-          <svg className="absolute right-0 top-0 h-full opacity-5" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice">
-            <defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="white" strokeWidth="0.5"/></pattern></defs>
-            <rect width="200" height="200" fill="url(#grid)" />
-          </svg>
-        </div>
+      <div className="relative rounded-3xl overflow-hidden"
+        style={banner
+          ? { backgroundImage: `url(${banner})`, backgroundSize: "cover", backgroundPosition: "center" }
+          : { background: 'linear-gradient(135deg, #12263a 0%, #1e263e 30%, #29358f 70%, #3772ff 100%)' }}>
+        {banner && <div className="absolute inset-0 bg-black/50 pointer-events-none" />}
+        {!banner && (
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute -top-16 -left-16 w-72 h-72 rounded-full blur-3xl opacity-30" style={{ background: 'radial-gradient(circle, #3772ff 0%, transparent 70%)' }} />
+            <div className="absolute -bottom-20 right-10 w-64 h-64 rounded-full blur-3xl opacity-20" style={{ background: 'radial-gradient(circle, #8b5cf6 0%, transparent 70%)' }} />
+            <div className="absolute top-8 right-1/3 w-40 h-40 rounded-full blur-2xl opacity-10" style={{ background: 'radial-gradient(circle, #60a5fa 0%, transparent 70%)' }} />
+            <svg className="absolute right-0 top-0 h-full opacity-5" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice">
+              <defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="white" strokeWidth="0.5"/></pattern></defs>
+              <rect width="200" height="200" fill="url(#grid)" />
+            </svg>
+          </div>
+        )}
 
         <div className="relative flex flex-col sm:flex-row items-center sm:items-end gap-6 px-8 py-8 sm:py-10">
           {/* Avatar */}
@@ -339,6 +345,7 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
                 Удалить
               </button>
             )}
+            <BannerPicker userId={authUser?.id ?? 0} onBannerChange={saveBanner} />
           </div>
         </div>
 

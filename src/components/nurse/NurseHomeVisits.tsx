@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faHome, faMapMarkerAlt, faClock, faUser, faPhone, faCheck, faSpinner,
   faFileLines, faXmark, faCommentMedical, faHistory, faFlask, faPrescription,
-  faDiagnoses, faNotesMedical, faClipboardList
+  faDiagnoses, faNotesMedical, faClipboardList, faRoute, faCar
 } from "@fortawesome/free-solid-svg-icons";
 import { api } from "@/utils/api";
 import { toast } from "react-toastify";
+import dynamic from "next/dynamic";
+
+const NurseRouteMap = dynamic(() => import("@/components/maps/NurseRouteMap"), { ssr: false });
 
 interface HomeVisit {
   id: number;
@@ -17,6 +20,8 @@ interface HomeVisit {
   patient_last_name: string;
   patient_phone: string | null;
   address: string;
+  latitude?: number | null;
+  longitude?: number | null;
   appointment_time: string;
   status: string;
   symptoms?: string;
@@ -101,6 +106,53 @@ export default function NurseHomeVisits() {
     } catch (error: any) {
       console.error("Error completing appointment:", error);
       toast.error("Ошибка при завершении вызова");
+    }
+  };
+
+  const [routeVisit, setRouteVisit] = useState<HomeVisit | null>(null);
+  const [routeEta, setRouteEta] = useState<{ distance: string; duration: string; nurseLat: number; nurseLng: number } | null>(null);
+
+  const [startingId, setStartingId] = useState<number | null>(null);
+  const [updatingRouteId, setUpdatingRouteId] = useState<number | null>(null);
+
+  const handleStartAppointment = async (appointmentId: number, eta?: { distance: string; duration: string; nurseLat: number; nurseLng: number }) => {
+    const info = eta ?? routeEta;
+    setStartingId(appointmentId);
+    try {
+      await api.post(`/appointments/${appointmentId}/start-by-nurse/`, {
+        eta_duration: info?.duration ?? null,
+        eta_distance: info?.distance ?? null,
+        nurse_lat: info?.nurseLat ?? null,
+        nurse_lng: info?.nurseLng ?? null,
+      });
+      toast.success("🚗 Статус обновлён — вы в пути!");
+      setRouteVisit(null);
+      setRouteEta(null);
+      await fetchAppointments();
+    } catch (error: any) {
+      toast.error("Ошибка при обновлении статуса");
+    } finally {
+      setStartingId(null);
+    }
+  };
+
+  const handleUpdateRoute = async (appointmentId: number) => {
+    if (!routeEta) return;
+    setUpdatingRouteId(appointmentId);
+    try {
+      await api.post(`/appointments/${appointmentId}/update-route/`, {
+        eta_duration: routeEta.duration,
+        eta_distance: routeEta.distance,
+        nurse_lat: routeEta.nurseLat,
+        nurse_lng: routeEta.nurseLng,
+      });
+      toast.success("📍 Маршрут обновлён!");
+      setRouteVisit(null);
+      setRouteEta(null);
+    } catch {
+      toast.error("Ошибка при обновлении маршрута");
+    } finally {
+      setUpdatingRouteId(null);
     }
   };
 
@@ -431,118 +483,174 @@ export default function NurseHomeVisits() {
     );
   };
 
+  const splitAddress = (full: string) => {
+    const detailRe = /,?\s*(кв\.\s*\S+|подъезд\s*\S+|домофон\s*\S+|комментарий:.+)/gi;
+    const details: string[] = [];
+    const base = full.replace(detailRe, (m) => { details.push(m.replace(/^,?\s*/, "")); return ""; }).trim().replace(/,\s*$/, "");
+    return { base, details };
+  };
+
   const renderVisitCard = (visit: HomeVisit, showAcceptButton: boolean = false) => {
     const { date, time } = formatDateTime(visit.appointment_time);
     const patientName = `${visit.patient_first_name} ${visit.patient_last_name}`;
+    const initial = (visit.patient_first_name || "П").charAt(0).toUpperCase();
+    const { base: addressBase, details: addressDetails } = splitAddress(visit.address || "");
+
+    const accentColor: Record<string, string> = {
+      scheduled: "#3b82f6",
+      assigned: "#8b5cf6",
+      in_progress: "#f59e0b",
+      completed: "#10b981",
+      cancelled: "#ef4444",
+    };
+    const accent = accentColor[visit.status] || "#94a3b8";
 
     return (
       <div
         key={visit.id}
-        className="bg-white rounded-2xl shadow-lg border border-gray-200 p-4 sm:p-6 hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+        className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-200"
+        style={{ borderLeft: `4px solid ${accent}` }}
       >
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          {/* Left side - Visit Info */}
-          <div className="flex-1 space-y-3">
-            {/* Patient Name */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold shadow-md"
-                   style={{ background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)' }}>
-                <FontAwesomeIcon icon={faUser} className="text-sm" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">{patientName}</h3>
-                <p className="text-sm text-gray-500">Пациент</p>
-              </div>
+        {/* ── Header row ── */}
+        <div className="px-5 pt-5 pb-3 flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            {/* Avatar */}
+            <div
+              className="w-11 h-11 rounded-xl flex items-center justify-center text-white text-base font-extrabold flex-shrink-0 shadow-sm"
+              style={{ background: `linear-gradient(135deg, ${accent}cc 0%, ${accent} 100%)` }}
+            >
+              {initial}
             </div>
-
-            {/* Address */}
-            <div className="flex items-start gap-3 pl-13">
-              <FontAwesomeIcon icon={faMapMarkerAlt} className="text-blue-600 mt-1" />
-              <div>
-                <p className="text-gray-700 font-medium">{visit.address}</p>
-              </div>
+            <div>
+              <p className="text-base font-bold text-gray-900 leading-tight">{patientName}</p>
+              <p className="text-xs text-gray-400 mt-0.5">Пациент</p>
             </div>
+          </div>
+          {/* Status pill */}
+          <span
+            className="text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap flex-shrink-0"
+            style={{ background: `${accent}18`, color: accent }}
+          >
+            {getStatusText(visit.status)}
+          </span>
+        </div>
 
-            {/* Time */}
-            <div className="flex items-center gap-3 pl-13">
-              <FontAwesomeIcon icon={faClock} className="text-blue-600" />
-              <p className="text-gray-700">
-                <span className="font-semibold">{time}</span> • {date}
-              </p>
-            </div>
-
-            {/* Phone */}
-            {visit.patient_phone && (
-              <div className="flex items-center gap-3 pl-13">
-                <FontAwesomeIcon icon={faPhone} className="text-blue-600" />
-                <a href={`tel:${visit.patient_phone}`} className="text-blue-600 hover:text-blue-700 font-medium transition-colors">
-                  {visit.patient_phone}
-                </a>
-              </div>
-            )}
-
-            {/* Symptoms */}
-            {visit.symptoms && (
-              <div className="pl-13 mt-2">
-                <p className="text-sm text-gray-600"><strong>Симптомы:</strong> {visit.symptoms}</p>
-              </div>
-            )}
-
-            {/* View Patient History Button */}
-            <div className="pl-13 mt-3">
-              <button
-                onClick={() => fetchPatientConsultationHistory(visit.patient)}
-                className="px-4 py-2 rounded-lg text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-300"
-                style={{
-                  background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
-                  color: 'white'
-                }}
-              >
-                <FontAwesomeIcon icon={faFileLines} className="mr-2" />
-                История консультаций
-              </button>
+        {/* ── Info grid ── */}
+        <div className="px-5 pb-3 space-y-2">
+          {/* Address */}
+          <div className="flex items-start gap-2.5">
+            <FontAwesomeIcon icon={faMapMarkerAlt} className="mt-0.5 flex-shrink-0 text-sm" style={{ color: accent }} />
+            <div className="space-y-1.5">
+              <p className="text-sm text-gray-700 leading-snug">{addressBase}</p>
+              {addressDetails.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {addressDetails.map((d, i) => (
+                    <span key={i} className="text-xs font-medium px-2 py-0.5 rounded-lg bg-gray-100 text-gray-600">
+                      {d}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Right side - Status & Actions */}
-          <div className="flex sm:flex-col items-center sm:items-end gap-3">
-            {/* Status Badge */}
-            <div className={`px-4 py-2 rounded-xl border font-semibold text-sm ${getStatusColor(visit.status)}`}>
-              {getStatusText(visit.status)}
+          {/* Time + Phone row */}
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
+            <div className="flex items-center gap-2">
+              <FontAwesomeIcon icon={faClock} className="text-xs flex-shrink-0" style={{ color: accent }} />
+              <span className="text-sm font-semibold text-gray-800">{time}</span>
+              <span className="text-sm text-gray-400">·</span>
+              <span className="text-sm text-gray-500">{date}</span>
             </div>
+            {visit.patient_phone && (
+              <a href={`tel:${visit.patient_phone}`} className="flex items-center gap-2 group">
+                <FontAwesomeIcon icon={faPhone} className="text-xs flex-shrink-0" style={{ color: accent }} />
+                <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600 transition-colors">{visit.patient_phone}</span>
+              </a>
+            )}
+          </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-2">
-              {showAcceptButton && (
+          {/* Symptoms */}
+          {visit.symptoms && (
+            <div className="mt-1 px-3 py-2 rounded-xl text-sm text-gray-600 leading-relaxed"
+              style={{ background: `${accent}0d` }}>
+              <span className="font-semibold text-gray-700">Симптомы: </span>{visit.symptoms}
+            </div>
+          )}
+        </div>
+
+        {/* ── Divider ── */}
+        <div className="mx-5 border-t border-gray-100" />
+
+        {/* ── Actions row ── */}
+        <div className="px-5 py-3 flex items-center justify-between gap-3">
+          {/* History button */}
+          <button
+            onClick={() => fetchPatientConsultationHistory(visit.patient)}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 transition-colors"
+          >
+            <FontAwesomeIcon icon={faFileLines} />
+            История
+          </button>
+
+          {/* Right-side action buttons */}
+          <div className="flex items-center gap-2">
+            {showAcceptButton && (
+              <button
+                onClick={() => handleAcceptAppointment(visit.id)}
+                disabled={acceptingId === visit.id}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}
+              >
+                {acceptingId === visit.id
+                  ? <><FontAwesomeIcon icon={faSpinner} className="animate-spin" /> Принятие...</>
+                  : <><FontAwesomeIcon icon={faCheck} /> Принять</>}
+              </button>
+            )}
+
+            {!showAcceptButton && visit.status === 'assigned' && (
+              <>
                 <button
-                  onClick={() => handleAcceptAppointment(visit.id)}
-                  disabled={acceptingId === visit.id}
-                  className="px-4 py-2 rounded-xl text-white font-semibold shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
+                  onClick={() => { setRouteVisit(visit); setRouteEta(null); }}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold text-white shadow-sm hover:shadow-md transition-all"
+                  style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}
                 >
-                  {acceptingId === visit.id ? (
-                    <>
-                      <FontAwesomeIcon icon={faSpinner} className="animate-spin mr-2" />
-                      Принятие...
-                    </>
-                  ) : (
-                    <>
-                      <FontAwesomeIcon icon={faCheck} className="mr-2" />
-                      Принять
-                    </>
-                  )}
+                  <FontAwesomeIcon icon={faRoute} />
+                  Маршрут
                 </button>
-              )}
-              {!showAcceptButton && visit.status === 'assigned' && (
+                <button
+                  onClick={() => handleStartAppointment(visit.id)}
+                  disabled={startingId === visit.id}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ background: 'linear-gradient(135deg, #3b82f6, #2563eb)' }}
+                >
+                  {startingId === visit.id
+                    ? <><FontAwesomeIcon icon={faSpinner} className="animate-spin" /> Обновление...</>
+                    : <><FontAwesomeIcon icon={faCar} /> В пути</>}
+                </button>
+              </>
+            )}
+
+            {!showAcceptButton && visit.status === 'in_progress' && (
+              <>
+                <button
+                  onClick={() => { setRouteVisit(visit); setRouteEta(null); }}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold text-white shadow-sm hover:shadow-md transition-all"
+                  style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}
+                >
+                  <FontAwesomeIcon icon={faRoute} />
+                  Карта
+                </button>
                 <button
                   onClick={() => handleCompleteAppointment(visit.id)}
-                  className="px-4 py-2 rounded-xl text-white font-semibold shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105"
-                  style={{ background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)' }}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white shadow-sm hover:shadow-md transition-all"
+                  style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}
                 >
+                  <FontAwesomeIcon icon={faCheck} />
                   Завершить
                 </button>
-              )}
-            </div>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -551,6 +659,71 @@ export default function NurseHomeVisits() {
 
   return (
     <>
+      {/* Route Modal */}
+      {routeVisit && (
+        <div className="fixed inset-0 z-50 flex flex-col sm:items-center sm:justify-center"
+          style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}>
+          <div className="bg-white w-full sm:max-w-2xl sm:rounded-3xl sm:h-[85vh] h-full flex flex-col overflow-hidden shadow-2xl">
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-gray-100 flex-shrink-0">
+              {/* Top row: icon + title + close */}
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                  <FontAwesomeIcon icon={faRoute} className="text-amber-600" />
+                </div>
+                <p className="text-sm font-bold text-gray-900 flex-1">Маршрут к пациенту</p>
+                <button
+                  onClick={() => setRouteVisit(null)}
+                  className="w-8 h-8 flex items-center justify-center rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all flex-shrink-0"
+                >
+                  <FontAwesomeIcon icon={faXmark} />
+                </button>
+              </div>
+              {/* Address — full, no truncation */}
+              <p className="text-xs text-gray-500 mt-2 leading-relaxed pl-12">{routeVisit.address}</p>
+              {/* В пути button — full width below address */}
+              {routeVisit.status === 'assigned' && (
+                <button
+                  onClick={() => handleStartAppointment(routeVisit.id, routeEta ?? undefined)}
+                  disabled={startingId === routeVisit.id || !routeEta}
+                  title={!routeEta ? "Сначала постройте маршрут" : undefined}
+                  className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' }}
+                >
+                  {startingId === routeVisit.id
+                    ? <><FontAwesomeIcon icon={faSpinner} className="animate-spin" /> Обновление...</>
+                    : <><FontAwesomeIcon icon={faCar} /> В пути</>
+                  }
+                </button>
+              )}
+              {routeVisit.status === 'in_progress' && (
+                <button
+                  onClick={() => handleUpdateRoute(routeVisit.id)}
+                  disabled={updatingRouteId === routeVisit.id || !routeEta}
+                  title={!routeEta ? "Сначала постройте маршрут" : undefined}
+                  className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}
+                >
+                  {updatingRouteId === routeVisit.id
+                    ? <><FontAwesomeIcon icon={faSpinner} className="animate-spin" /> Обновление...</>
+                    : <><FontAwesomeIcon icon={faRoute} /> Обновить маршрут</>
+                  }
+                </button>
+              )}
+            </div>
+            {/* Map */}
+            <div className="flex-1 overflow-hidden">
+              <NurseRouteMap
+                patientAddress={routeVisit.address}
+                patientLat={routeVisit.latitude}
+                patientLng={routeVisit.longitude}
+                onRouteReady={(info) => setRouteEta(info)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Consultation History Modal */}
       {renderConsultationModal()}
 

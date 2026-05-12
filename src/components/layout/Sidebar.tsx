@@ -34,27 +34,10 @@ type SubMenuItem = { id: string; icon: any; title: string; color: string; href: 
 type MenuItem = { id: string; icon: any; title: string; color: string; href?: string; children?: SubMenuItem[] };
 
 const menuItems: MenuItem[] = [
-  {
-    id: "profile-group",
-    icon: faUser,
-    title: "Профиль",
-    color: "#3772ff",
-    children: [
-      { id: "profile", icon: faUser, title: "Профиль", color: "#3772ff", href: "/patient/profile" },
-      { id: "documents", icon: faFileMedical, title: "Документы", color: "#12263a", href: "/patient/documents" },
-    ],
-  },
-  {
-    id: "services-group",
-    icon: faVideo,
-    title: "Услуги",
-    color: "#3267e6",
-    children: [
-      { id: "video", icon: faVideo, title: "Мед. услуги", color: "#3267e6", href: "/patient/video" },
-      { id: "appointments", icon: faCalendar, title: "Вызов на дом", color: "#295bbf", href: "/patient/appointments" },
-    ],
-  },
-  { id: "activity", icon: faHistory, title: "Активность", color: "#29358f", href: "/patient/activity" },
+  { id: "profile",    icon: faUser,        title: "Профиль",    color: "#3772ff", href: "/patient/profile"    },
+  { id: "documents",  icon: faFileMedical, title: "Документы",  color: "#12263a", href: "/patient/documents"  },
+  { id: "video",      icon: faVideo,       title: "Услуги",     color: "#3267e6", href: "/patient/video"      },
+  { id: "activity",   icon: faHistory,     title: "Активность", color: "#29358f", href: "/patient/activity"   },
 ];
 
 export const Sidebar = ({

@@ -28,9 +28,12 @@ import {
   Activity,
   MapPin,
   Home,
+  Navigation,
 } from "lucide-react";
+import AppointmentStatus from "../homeAppointments/AppointmentStatus";
 import { useConsultationManager } from "./useConsultationManager";
 import type { Consultation } from "@/types/consultation";
+import { buildWhatsAppLink, consultationWhatsAppMessage } from "@/lib/whatsapp";
 
 interface PatientConsultationsTableProps {
   consultations?: Consultation[];
@@ -158,6 +161,7 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [detailsConsultation, setDetailsConsultation] = useState<Consultation | null>(null);
+  const [trackingConsultation, setTrackingConsultation] = useState<Consultation | null>(null);
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -226,7 +230,29 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
     ongoing: consultations.filter(c => c.status === 'ongoing').length,
   }), [consultations]);
 
-  const getStatusConfig = (status: string) => {
+  const getStatusConfig = (status: string, type?: string) => {
+    // Home appointment statuses
+    if (type === "home") {
+      switch (status) {
+        // backend raw statuses
+        case "scheduled":
+        case "pending":
+          return { label: "Ожидает медсестру", icon: <Clock className="w-3.5 h-3.5" />, cls: "bg-amber-50 text-amber-600 border-amber-200" };
+        case "viewed":
+          return { label: "Просматривают", icon: <Eye className="w-3.5 h-3.5" />, cls: "bg-blue-50 text-blue-600 border-blue-200" };
+        case "assigned":
+        case "accepted":
+          return { label: "Принята ✓", icon: <CheckCircle2 className="w-3.5 h-3.5" />, cls: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+        case "in_progress":
+          return { label: "Медсестра в пути", icon: <Navigation className="w-3.5 h-3.5" />, cls: "bg-blue-50 text-blue-700 border-blue-200" };
+        case "completed":
+          return { label: "Визит завершён", icon: <CheckCircle2 className="w-3.5 h-3.5" />, cls: "bg-emerald-50 text-emerald-600 border-emerald-200" };
+        case "cancelled":
+          return { label: "Отменена", icon: <XCircle className="w-3.5 h-3.5" />, cls: "bg-red-50 text-red-600 border-red-200" };
+        default:
+          return { label: "Ожидает", icon: <Clock className="w-3.5 h-3.5" />, cls: "bg-amber-50 text-amber-600 border-amber-200" };
+      }
+    }
     switch (status) {
       case "completed":
         return { label: "Завершена", icon: <CheckCircle2 className="w-3.5 h-3.5" />, cls: "bg-emerald-50 text-emerald-600 border-emerald-200" };
@@ -297,6 +323,31 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
     const isScheduled = consultation.status === 'scheduled' || consultation.status === 'planned' || consultation.status === 'confirmed';
     const isOffline = consultation.type === 'offline' || consultation.type === 'home';
 
+    if (consultation.type === "home") {
+      const isActive = consultation.status !== "completed" && consultation.status !== "cancelled";
+      return (
+        <div className="flex items-center gap-2">
+          {consultation.nurse_name && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-50 border border-emerald-200 rounded-xl">
+              <User className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+              <span className="text-xs text-emerald-700 font-medium truncate max-w-[120px]">{consultation.nurse_name}</span>
+            </div>
+          )}
+          <button
+            onClick={() => setTrackingConsultation(consultation)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all duration-200 ${
+              isActive
+                ? "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100"
+                : "bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100"
+            }`}
+          >
+            <Navigation className="w-3.5 h-3.5" />
+            {isActive ? "Отследить" : "Детали"}
+          </button>
+        </div>
+      );
+    }
+
     if (isOffline) {
       return (
         <div className="flex items-center gap-2">
@@ -350,6 +401,24 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
             </div>
           )
         )}
+        <a
+          href={buildWhatsAppLink(consultationWhatsAppMessage({
+            id: consultation.id,
+            doctorName: consultation.doctor_first_name
+              ? `${consultation.doctor_first_name} ${consultation.doctor_last_name ?? ""}`.trim()
+              : undefined,
+            scheduledAt: consultation.scheduled_at,
+            meetingId: consultation.meeting_id,
+          }))}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Написать в WhatsApp"
+          className="p-2 text-gray-400 hover:text-green-600 bg-gray-50 hover:bg-green-50 border border-gray-200 hover:border-green-300 rounded-xl transition-all duration-200 flex items-center"
+        >
+          <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+          </svg>
+        </a>
         <button className="p-2 text-gray-400 hover:text-blue-600 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-200 rounded-xl transition-all duration-200">
           <Eye className="w-4 h-4" />
         </button>
@@ -509,7 +578,7 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
 
           {/* Data cells — subsequent rows */}
           {visibleConsultations.map((consultation, idx) => {
-            const status = getStatusConfig(consultation.status);
+            const status = getStatusConfig(consultation.status, consultation.type);
             const type = getTypeConfig(consultation.type || "video");
             const grad = avatarGradients[idx % avatarGradients.length];
             const dateStr = consultation.scheduled_at || consultation.created_at;
@@ -581,7 +650,7 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
             <div key={h} className={`py-3.5 px-5 text-[10px] font-semibold text-gray-400 tracking-widest uppercase bg-gray-50 border-b border-gray-200 ${i > 0 ? "border-l border-gray-200" : ""}`}>{h}</div>
           ))}
           {visibleConsultations.map((consultation, idx) => {
-            const status = getStatusConfig(consultation.status);
+            const status = getStatusConfig(consultation.status, consultation.type);
             const grad = avatarGradients[idx % avatarGradients.length];
             const dateStr = consultation.scheduled_at || consultation.created_at;
             const timeStr = consultation.scheduled_at || consultation.started_at;
@@ -617,7 +686,7 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
       {filteredConsultations.length > 0 && (
         <div className="md:hidden space-y-3">
           {visibleConsultations.map((consultation, idx) => {
-            const status = getStatusConfig(consultation.status);
+            const status = getStatusConfig(consultation.status, consultation.type);
             const type = getTypeConfig(consultation.type || "video");
             const grad = avatarGradients[idx % avatarGradients.length];
             const joinInfo = canJoinConsultation(consultation);
@@ -671,30 +740,36 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {(isOngoing || (isScheduled && joinInfo.canJoin)) && (
-                    <button
-                      onClick={() => window.location.href = `/video-call/patient?meetingId=${consultation.meeting_id}`}
-                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-white text-sm font-semibold rounded-xl shadow-md transition-all ${
-                        joinInfo.isReady || isOngoing
-                          ? 'bg-gradient-to-r from-emerald-500 to-green-500 shadow-emerald-500/20'
-                          : 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-blue-500/20'
-                      }`}
-                    >
-                      <Video className="w-4 h-4" />
-                      {joinInfo.isReady || isOngoing ? 'Подключиться' : `Через ${joinInfo.timeUntil}`}
-                    </button>
+                  {consultation.type === "home" ? (
+                    renderActions(consultation)
+                  ) : (
+                    <>
+                      {(isOngoing || (isScheduled && joinInfo.canJoin)) && (
+                        <button
+                          onClick={() => window.location.href = `/video-call/patient?meetingId=${consultation.meeting_id}`}
+                          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-white text-sm font-semibold rounded-xl shadow-md transition-all ${
+                            joinInfo.isReady || isOngoing
+                              ? 'bg-gradient-to-r from-emerald-500 to-green-500 shadow-emerald-500/20'
+                              : 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-blue-500/20'
+                          }`}
+                        >
+                          <Video className="w-4 h-4" />
+                          {joinInfo.isReady || isOngoing ? 'Подключиться' : `Через ${joinInfo.timeUntil}`}
+                        </button>
+                      )}
+                      {!isOngoing && (!isScheduled || !joinInfo.canJoin) && (
+                        <button
+                          onClick={() => setDetailsConsultation(consultation)}
+                          className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-600 text-sm font-medium rounded-xl transition-colors">
+                          <Eye className="w-4 h-4" />
+                          Детали
+                        </button>
+                      )}
+                      <button className="p-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-400 rounded-xl transition-colors">
+                        <MoreHorizontal className="w-4 h-4" />
+                      </button>
+                    </>
                   )}
-                  {!isOngoing && (!isScheduled || !joinInfo.canJoin) && (
-                    <button
-                      onClick={() => setDetailsConsultation(consultation)}
-                      className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-600 text-sm font-medium rounded-xl transition-colors">
-                      <Eye className="w-4 h-4" />
-                      Детали
-                    </button>
-                  )}
-                  <button className="p-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-400 rounded-xl transition-colors">
-                    <MoreHorizontal className="w-4 h-4" />
-                  </button>
                 </div>
               </div>
             );
@@ -833,6 +908,42 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
           </div>
         );
       })(), document.body)}
+
+    {/* Home appointment tracking modal — full-screen map style */}
+    {trackingConsultation && typeof document !== "undefined" && createPortal(
+      <div className="fixed inset-0 z-50">
+        {/* Full-screen container */}
+        <div className="absolute inset-0 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[420px] sm:h-[88vh] sm:rounded-3xl bg-white overflow-hidden shadow-2xl flex flex-col">
+
+          {/* Close button — floats top-right over map */}
+          <button
+            onClick={() => setTrackingConsultation(null)}
+            className="absolute top-4 right-4 z-20 w-9 h-9 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-sm shadow-lg text-gray-600 hover:text-gray-900 transition-all"
+          >
+            <X className="w-4 h-4" />
+          </button>
+
+          {/* Map fills everything */}
+          <div className="flex-1 relative overflow-hidden">
+            <AppointmentStatus
+              appointmentId={trackingConsultation.home_appointment_id ?? trackingConsultation.id}
+              address={trackingConsultation.address || trackingConsultation.clinic_address || ""}
+              latitude={trackingConsultation.latitude ?? null}
+              longitude={trackingConsultation.longitude ?? null}
+              onNewAppointment={() => setTrackingConsultation(null)}
+            />
+          </div>
+        </div>
+
+        {/* Dim backdrop only on desktop (mobile = full screen) */}
+        <div
+          className="hidden sm:block absolute inset-0 -z-10"
+          style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+          onClick={() => setTrackingConsultation(null)}
+        />
+      </div>,
+      document.body
+    )}
     </div>
   );
 };

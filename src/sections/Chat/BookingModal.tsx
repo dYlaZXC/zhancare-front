@@ -36,9 +36,12 @@ interface BookingModalProps {
     doctorType: string;
     scheduledTime: string;
     isGuest?: boolean;
+    meetingId?: string;
+    consultationId?: number;
   }) => void;
   language: string;
   preselectedDoctor?: Doctor | null;
+  consultationType?: 'online' | 'offline';
 }
 
 interface GuestInfo {
@@ -103,6 +106,7 @@ const translations = {
     busy: "Занят",
     experience: "лет опыта",
     online: "Онлайн консультация",
+    offline: "Очный приём в клинике",
     bookingSuccess: "Консультация успешно назначена!",
     scheduledFor: "Запланировано на",
     doctor: "Врач",
@@ -145,6 +149,7 @@ const translations = {
     busy: "Busy",
     experience: "years experience",
     online: "Online consultation",
+    offline: "In-person visit at clinic",
     bookingSuccess: "Appointment booked successfully!",
     scheduledFor: "Scheduled for",
     doctor: "Doctor",
@@ -187,6 +192,7 @@ const translations = {
     busy: "Бос емес",
     experience: "жыл тәжірибе",
     online: "Онлайн кеңес",
+    offline: "Клиникада жеке қабылдау",
     bookingSuccess: "Кеңес сәтті тағайындалды!",
     scheduledFor: "Жоспарланған",
     doctor: "Дәрігер",
@@ -220,6 +226,7 @@ export default function BookingModal({
   onBookingComplete,
   language,
   preselectedDoctor,
+  consultationType = 'online',
 }: BookingModalProps) {
   const { token, user, openAuth } = useAuth();
   const t = translations[language as keyof typeof translations] || translations.ru;
@@ -336,7 +343,7 @@ export default function BookingModal({
     setTimeslots([]);
     try {
       const { data } = await api.get("/schedule/day/", {
-        params: { date: targetDate, consultation_type: "online", doctor_id: doctorId },
+        params: { date: targetDate, consultation_type: consultationType, doctor_id: doctorId },
       });
 
       const doctorData = (data.doctors || []).find(
@@ -482,6 +489,8 @@ export default function BookingModal({
           doctorType: selectedDoctor.doctor_type,
           scheduledTime: selectedTimeslot.start_time,
           isGuest: !isLoggedIn,
+          meetingId: res.data?.meeting_id ?? res.data?.consultation?.meeting_id ?? undefined,
+          consultationId: res.data?.consultation?.id ?? undefined,
         });
         onClose();
       }
@@ -940,11 +949,17 @@ export default function BookingModal({
                         </div>
 
                         <div className="border-t border-gray-200 pt-3 flex items-center gap-3">
-                          <Video className="w-5 h-5 text-blue-600" />
+                          {consultationType === 'offline'
+                            ? <MapPin className="w-5 h-5 text-emerald-600" />
+                            : <Video className="w-5 h-5 text-blue-600" />
+                          }
                           <div>
                             <p className="font-medium text-gray-900">
-                              {t.online}
+                              {consultationType === 'offline' ? (t as any).offline : t.online}
                             </p>
+                            {consultationType === 'offline' && preselectedDoctor?.clinic?.address && (
+                              <p className="text-sm text-gray-500 mt-0.5">{preselectedDoctor.clinic.address}</p>
+                            )}
                           </div>
                         </div>
 

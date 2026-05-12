@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 
 interface TipsPanelProps {
   step: 1 | 2 | 3;
+  compact?: boolean;
 }
 
 const tipsByStep: Record<1 | 2 | 3, { title: string; tips: string[] }> = {
@@ -41,8 +42,33 @@ const tipsByStep: Record<1 | 2 | 3, { title: string; tips: string[] }> = {
   },
 };
 
-const TipsPanel: React.FC<TipsPanelProps> = ({ step }) => {
+const TipsPanel: React.FC<TipsPanelProps> = ({ step, compact }) => {
   const { title, tips } = tipsByStep[step];
+
+  if (compact) {
+    return (
+      <motion.div
+        key={step}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.25 }}
+        className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3"
+      >
+        <div className="flex items-center gap-2 mb-2">
+          <Lightbulb className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+          <span className="text-xs font-semibold text-amber-800">{title}</span>
+        </div>
+        <div className="flex flex-wrap gap-x-4 gap-y-1">
+          {tips.slice(0, 3).map((tip, i) => (
+            <span key={i} className="text-xs text-amber-700 leading-relaxed">
+              {tip}
+            </span>
+          ))}
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div

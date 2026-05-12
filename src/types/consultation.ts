@@ -33,4 +33,12 @@ export interface Consultation {
   // Clinic appointment extras
   clinic_name?: string;
   clinic_address?: string;
+  // Home appointment extras
+  home_appointment_id?: number;  // real DB id (before +200000 offset)
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+  nurse_name?: string;
+  nurse_photo?: string;
+  nurse_phone?: string;
 }
