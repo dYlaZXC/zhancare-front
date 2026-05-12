@@ -23,6 +23,7 @@ const resolveAvatar = (url?: string | null) => {
 };
 
 interface NurseProfile {
+  id?: number;
   first_name: string;
   last_name: string;
   email: string;
@@ -303,7 +304,7 @@ export default function NurseProfileDashboard() {
                 <Trash2 className="w-3.5 h-3.5" /> Удалить
               </button>
             )}
-            <BannerPicker userId={profile.id} onBannerChange={saveBanner} />
+            <BannerPicker userId={profile.id!} onBannerChange={saveBanner} />
           </div>
         </div>
         <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
