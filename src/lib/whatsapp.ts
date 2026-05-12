@@ -1,4 +1,4 @@
-const WHATSAPP_PHONE = process.env.NEXT_PUBLIC_WHATSAPP_PHONE ?? "";
+const WHATSAPP_PHONE = "77772962424";
 
 export function buildWhatsAppLink(message: string, phone = WHATSAPP_PHONE): string {
   const cleaned = phone.replace(/\D/g, "");
