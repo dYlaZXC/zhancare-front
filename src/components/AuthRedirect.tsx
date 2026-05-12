@@ -52,7 +52,7 @@ export default function AuthRedirect({ children }: AuthRedirectProps) {
     if (!loading && minTimeElapsed && showLoading) {
       setShowLoading(false);
     }
-  }, [loading, user, isDoctor, router, setIsAuthOpen, minTimeElapsed, showLoading]);
+  }, [loading, user, isDoctor, router, minTimeElapsed, showLoading]);
 
   // Show loading screen only on first CRM entry
   if (showLoading && !minTimeElapsed) {
