@@ -27,6 +27,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useVoiceGuide } from "@/hooks/useVoiceGuide";
 import type { Doctor, TimeSlot } from "@/components/services/consultations/types/doctor";
 import PhoneInput from "@/components/ui/PhoneInput";
+import { useSlotWebSocket } from "@/hooks/useSlotWebSocket";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -289,6 +290,22 @@ export default function BookingModal({
     }
   }, [selectedDate]); // eslint-disable-line
 
+  // Real-time slot removal via WebSocket
+  useSlotWebSocket({
+    doctorId: selectedDoctor?.id ?? null,
+    date: selectedDate,
+    enabled: step === "timeslots",
+    onSlotBooked: useCallback(({ scheduled_time }) => {
+      setTimeslots((prev) =>
+        prev.map((slot) =>
+          slot.start_time.slice(0, 16) === scheduled_time.slice(0, 16)
+            ? { ...slot, is_booked: true, available_spots: 0 }
+            : slot
+        )
+      );
+    }, []),
+  });
+
   // Reset state when modal closes
   useEffect(() => {
     if (!isOpen) {
@@ -386,9 +403,14 @@ export default function BookingModal({
 
   const handleTimeslotSelect = (timeslot: TimeSlot) => {
     setSelectedTimeslot(timeslot);
-    // Logged-in users go to email collection, guests fill in their info first
     if (isLoggedIn) {
-      setStep("emailcollect");
+      // Skip email step if user email is already known
+      if (user?.email) {
+        setConsultationEmail(user.email);
+        setStep("confirmation");
+      } else {
+        setStep("emailcollect");
+      }
     } else {
       setStep("guestinfo");
     }
@@ -499,6 +521,17 @@ export default function BookingModal({
       const errorMessage = error?.response?.data?.error ||
         error?.response?.data?.message ||
         "Ошибка при записи. Попробуйте снова.";
+
+      // Slot was taken — refresh and send user back to pick another time
+      const isSlotTaken = error?.response?.status === 409 ||
+        errorMessage.toLowerCase().includes("занято") ||
+        errorMessage.toLowerCase().includes("taken") ||
+        errorMessage.toLowerCase().includes("slot");
+      if (isSlotTaken && selectedDoctor) {
+        setSelectedTimeslot(null);
+        setStep("timeslots");
+        fetchTimeslots(selectedDoctor.id, selectedDate);
+      }
       setBookingError(errorMessage);
     } finally {
       setBookingLoading(false);
