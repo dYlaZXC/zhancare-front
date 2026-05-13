@@ -75,6 +75,8 @@ export default function WhatsAppInbox() {
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [wsStatus, setWsStatus] = useState<"connecting" | "connected" | "disconnected">("connecting");
+  const [unread, setUnread] = useState<Map<string, number>>(new Map());
+  const [filter, setFilter] = useState<"all" | "unread" | "read">("all");
   const bottomRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const selectedRef = useRef<string | null>(null);
@@ -127,6 +129,13 @@ export default function WhatsAppInbox() {
             return updated;
           });
           const contactNumber = msg.direction === "in" ? msg.from_number : msg.to_number;
+          if (msg.direction === "in" && contactNumber !== selectedRef.current) {
+            setUnread(prev => {
+              const next = new Map(prev);
+              next.set(contactNumber, (next.get(contactNumber) ?? 0) + 1);
+              return next;
+            });
+          }
           if (contactNumber === selectedRef.current) {
             setThread(prev => {
               if (prev.some(m => m.id === msg.id)) return prev;
@@ -253,6 +262,34 @@ export default function WhatsAppInbox() {
               <p className="text-white font-bold text-lg leading-none mt-0.5">{incomingMsgs.length}</p>
             </div>
           </div>
+
+          {/* Filter tabs */}
+          <div className="flex gap-1 mt-3 p-1 rounded-xl" style={{ background: "rgba(255,255,255,0.05)" }}>
+            {(["all", "unread", "read"] as const).map(f => {
+              const labels = { all: "Все", unread: "Непрочит.", read: "Прочит." };
+              const isActive = filter === f;
+              const unreadCount = f === "unread" ? [...unread.values()].filter(v => v > 0).length : 0;
+              return (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-medium transition-all duration-200"
+                  style={isActive ? {
+                    background: "linear-gradient(135deg, #25d366 0%, #128c7e 100%)",
+                    color: "#fff",
+                    boxShadow: "0 2px 8px rgba(37,211,102,0.3)"
+                  } : { color: "rgba(255,255,255,0.4)" }}
+                >
+                  {labels[f]}
+                  {f === "unread" && unreadCount > 0 && (
+                    <span className="w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Contact list */}
@@ -266,11 +303,27 @@ export default function WhatsAppInbox() {
               <WaIcon className="w-10 h-10 fill-white/10" />
               <p className="text-white/30 text-sm">Нет сообщений</p>
             </div>
-          ) : (
-            contacts.map(c => (
+          ) : (() => {
+            const filtered = contacts.filter(c =>
+              filter === "all" ? true :
+              filter === "unread" ? (unread.get(c.number) ?? 0) > 0 :
+              (unread.get(c.number) ?? 0) === 0
+            );
+            if (filtered.length === 0) return (
+              <div className="flex flex-col items-center justify-center h-40 gap-2">
+                <p className="text-white/20 text-xs">
+                  {filter === "unread" ? "Нет непрочитанных" : "Нет прочитанных"}
+                </p>
+              </div>
+            );
+            return filtered.map(c => (
               <button
                 key={c.number}
-                onClick={() => { setSelected(c.number); setReplyText(""); }}
+                onClick={() => {
+                  setSelected(c.number);
+                  setReplyText("");
+                  setUnread(prev => { const next = new Map(prev); next.delete(c.number); return next; });
+                }}
                 className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
                   selected === c.number
                     ? "shadow-lg"
@@ -290,13 +343,22 @@ export default function WhatsAppInbox() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-1">
                     <span className="text-sm font-semibold text-white truncate">+{c.number}</span>
-                    <span className="text-[10px] text-white/30 flex-shrink-0">{formatTime(c.lastAt)}</span>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {(unread.get(c.number) ?? 0) > 0 && (
+                        <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center shadow-md">
+                          {unread.get(c.number)! > 99 ? "99+" : unread.get(c.number)}
+                        </span>
+                      )}
+                      <span className="text-[10px] text-white/30">{formatTime(c.lastAt)}</span>
+                    </div>
                   </div>
-                  <p className="text-xs text-white/40 truncate mt-0.5">{c.lastMessage}</p>
+                  <p className={`text-xs truncate mt-0.5 ${(unread.get(c.number) ?? 0) > 0 ? "text-white/70 font-medium" : "text-white/40"}`}>
+                    {c.lastMessage}
+                  </p>
                 </div>
               </button>
-            ))
-          )}
+            ));
+          })()}
         </div>
       </div>
 
