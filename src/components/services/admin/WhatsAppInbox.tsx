@@ -44,15 +44,20 @@ function formatFullTime(iso: string) {
 function buildContacts(msgs: WaMessage[]): Contact[] {
   const map = new Map<string, WaMessage>();
   msgs.forEach(m => {
-    if (m.direction !== "in") return;
-    const existing = map.get(m.from_number);
+    const number = m.direction === "in" ? m.from_number : m.to_number;
+    if (!number) return;
+    const existing = map.get(number);
     if (!existing || new Date(m.received_at) > new Date(existing.received_at)) {
-      map.set(m.from_number, m);
+      map.set(number, m);
     }
   });
   return [...map.values()]
     .sort((a, b) => new Date(b.received_at).getTime() - new Date(a.received_at).getTime())
-    .map(m => ({ number: m.from_number, lastMessage: m.body, lastAt: m.received_at }));
+    .map(m => ({
+      number: m.direction === "in" ? m.from_number : m.to_number,
+      lastMessage: (m.direction === "out" ? "Вы: " : "") + m.body,
+      lastAt: m.received_at,
+    }));
 }
 
 const WaIcon = ({ className }: { className?: string }) => (
@@ -115,13 +120,12 @@ export default function WhatsAppInbox() {
           const payload = JSON.parse(event.data);
           if (payload.type !== "whatsapp_message") return;
           const msg: WaMessage = payload.data;
-          if (msg.direction === "in") {
-            setIncomingMsgs(prev => {
-              const updated = [...prev, msg];
-              setContacts(buildContacts(updated));
-              return updated;
-            });
-          }
+          setIncomingMsgs(prev => {
+            if (prev.some(m => m.id === msg.id)) return prev;
+            const updated = [...prev, msg];
+            setContacts(buildContacts(updated));
+            return updated;
+          });
           const contactNumber = msg.direction === "in" ? msg.from_number : msg.to_number;
           if (contactNumber === selectedRef.current) {
             setThread(prev => {
@@ -172,8 +176,17 @@ export default function WhatsAppInbox() {
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.message && wsStatus !== "connected") {
-          setThread(prev => [...prev, data.message]);
+        if (data.message) {
+          const msg: WaMessage = data.message;
+          setIncomingMsgs(prev => {
+            if (prev.some(m => m.id === msg.id)) return prev;
+            const updated = [...prev, msg];
+            setContacts(buildContacts(updated));
+            return updated;
+          });
+          if (wsStatus !== "connected") {
+            setThread(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
+          }
         }
         toast.success("Отправлено");
       } else {
