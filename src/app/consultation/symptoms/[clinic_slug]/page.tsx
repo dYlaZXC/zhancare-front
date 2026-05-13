@@ -10,6 +10,7 @@ interface AgentConfig {
   welcome_message: string;
   primary_color: string;
   logo_url?: string;
+  quick_links?: { label: string; message: string }[];
   clinic: {
     id: number;
     name: string;
@@ -89,6 +90,7 @@ export default function ClinicAgentPage() {
         primaryColor: config.primary_color,
         logoUrl: config.logo_url || config.clinic.logo || undefined,
         clinicName: config.clinic.name,
+        quickLinks: config.quick_links?.length ? config.quick_links : undefined,
       }}
     />
   );

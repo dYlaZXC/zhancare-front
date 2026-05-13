@@ -1,3 +1,8 @@
+export interface QuickLink {
+  label: string;
+  message: string;
+}
+
 export interface ClinicContext {
   clinicId: number;
   clinicSlug: string;
@@ -7,6 +12,7 @@ export interface ClinicContext {
   primaryColor: string;
   logoUrl?: string;
   clinicName: string;
+  quickLinks?: QuickLink[];
 }
 
 export interface DoctorRecommendation {

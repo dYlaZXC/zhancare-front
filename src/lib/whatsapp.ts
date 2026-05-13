@@ -22,24 +22,24 @@ export function consultationWhatsAppMessage(params: {
     : "";
 
   if (lang === "en") {
-    let msg = `Hello! I'd like to get information about my consultation:\n📋 Consultation #${id}\n`;
-    if (doctorName) msg += `👨‍⚕️ Doctor: ${doctorName}\n`;
-    if (dateStr) msg += `📅 Date: ${dateStr}\n`;
-    if (meetingId) msg += `🔗 Meeting ID: ${meetingId}\n`;
+    let msg = `Hello! I'd like to get information about my consultation:\n• Consultation #${id}\n`;
+    if (doctorName) msg += `• Doctor: ${doctorName}\n`;
+    if (dateStr) msg += `• Date: ${dateStr}\n`;
+    if (meetingId) msg += `• Meeting ID: ${meetingId}\n`;
     return msg;
   }
 
   if (lang === "kz") {
-    let msg = `Сәлем! Кеңес туралы ақпарат алғым келеді:\n📋 Кеңес №${id}\n`;
-    if (doctorName) msg += `👨‍⚕️ Дәрігер: ${doctorName}\n`;
-    if (dateStr) msg += `📅 Күні: ${dateStr}\n`;
-    if (meetingId) msg += `🔗 Meeting ID: ${meetingId}\n`;
+    let msg = `Сәлем! Кеңес туралы ақпарат алғым келеді:\n• Кеңес №${id}\n`;
+    if (doctorName) msg += `• Дәрігер: ${doctorName}\n`;
+    if (dateStr) msg += `• Күні: ${dateStr}\n`;
+    if (meetingId) msg += `• Meeting ID: ${meetingId}\n`;
     return msg;
   }
 
-  let msg = `Здравствуйте! Хочу узнать информацию по моей консультации:\n📋 Консультация №${id}\n`;
-  if (doctorName) msg += `👨‍⚕️ Врач: ${doctorName}\n`;
-  if (dateStr) msg += `📅 Дата: ${dateStr}\n`;
-  if (meetingId) msg += `🔗 Meeting ID: ${meetingId}\n`;
+  let msg = `Здравствуйте! Хочу узнать информацию по моей консультации:\n• Консультация №${id}\n`;
+  if (doctorName) msg += `• Врач: ${doctorName}\n`;
+  if (dateStr) msg += `• Дата: ${dateStr}\n`;
+  if (meetingId) msg += `• Meeting ID: ${meetingId}\n`;
   return msg;
 }

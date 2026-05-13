@@ -22,6 +22,7 @@ import {
   faFunnelDollar,
   faUserShield,
   faHospital,
+  faComments,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useState, useEffect, useRef } from "react";
@@ -66,6 +67,7 @@ const adminMenu: MenuItem[] = [
     ],
   },
   { id: "ai-agents", icon: faRobot, title: "AI Агенты", color: "#8b5cf6", href: "/admin/ai-agents" },
+  { id: "whatsapp", icon: faComments, title: "WhatsApp", color: "#25d366", href: "/admin/whatsapp", superOnly: true },
   { id: "pipeline", icon: faFunnelDollar, title: "Pipeline клиник", color: "#10b981", href: "/admin/pipeline", superOnly: true },
 ];
 

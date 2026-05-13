@@ -75,6 +75,30 @@ interface Message {
   isChoice?: boolean;
 }
 
+// ─── Color utilities ──────────────────────────────────────────────────────────
+
+function darkenHex(hex: string, factor = 0.72): string {
+  const h = hex.replace('#', '').padEnd(6, '0');
+  return '#' + [0, 2, 4]
+    .map(i => Math.round(parseInt(h.slice(i, i + 2), 16) * factor).toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const h = hex.replace('#', '').padEnd(6, '0');
+  return `rgba(${parseInt(h.slice(0, 2), 16)},${parseInt(h.slice(2, 4), 16)},${parseInt(h.slice(4, 6), 16)},${alpha})`;
+}
+
+/** Returns '#1a1a1a' for light backgrounds and '#ffffff' for dark ones. */
+function getContrastColor(hex: string): string {
+  const h = hex.replace('#', '').padEnd(6, '0');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  // YIQ perceived brightness — threshold 135 works for all preset brand colors
+  return (r * 299 + g * 587 + b * 114) / 1000 > 135 ? '#1a1a1a' : '#ffffff';
+}
+
 // Renders **bold** and *italic* inline markdown within a single text segment.
 function renderInline(text: string, key?: number): React.ReactNode {
   const parts: React.ReactNode[] = [];
@@ -92,7 +116,7 @@ function renderInline(text: string, key?: number): React.ReactNode {
 }
 
 // Parses the AI response into paragraphs, numbered lists, and bullet lists.
-const formatAIMessage = (content: string) => {
+const formatAIMessage = (content: string, accentColor = "#3772ff") => {
   if (!content) return null;
 
   const lines = content.split("\n");
@@ -119,7 +143,7 @@ const formatAIMessage = (content: string) => {
         <ol key={key++} className="space-y-2 list-none">
           {list.items.map((item, i) => (
             <li key={i} className="flex items-start gap-2">
-              <span className="font-semibold flex-shrink-0 w-5 text-right" style={{ color: "#3772ff" }}>
+              <span className="font-semibold flex-shrink-0 w-5 text-right" style={{ color: accentColor }}>
                 {i + 1}.
               </span>
               <span className="leading-relaxed flex-1">{renderInline(item)}</span>
@@ -134,7 +158,7 @@ const formatAIMessage = (content: string) => {
             <li key={i} className="flex items-start gap-2">
               <span
                 className="flex-shrink-0 rounded-full mt-[7px]"
-                style={{ width: 6, height: 6, background: "#3772ff" }}
+                style={{ width: 6, height: 6, background: accentColor }}
               />
               <span className="leading-relaxed flex-1">{renderInline(item)}</span>
             </li>
@@ -231,6 +255,12 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
   const router = useRouter();
   const { language, setLanguage } = useLanguage();
   const accentColor = clinic?.primaryColor ?? "#3772ff";
+  const accentDark = darkenHex(accentColor);
+  const accentGrad = `linear-gradient(135deg, ${accentColor} 0%, ${accentDark} 100%)`;
+  const accentLight = hexToRgba(accentColor, 0.1);
+  const accentPageBg = `linear-gradient(135deg, ${hexToRgba(accentColor, 0.07)} 0%, #ffffff 50%, ${hexToRgba(accentColor, 0.07)} 100%)`;
+  // text color to use on accent-colored backgrounds (black for bright colors, white for dark)
+  const onAccent = getContrastColor(accentColor);
 
   const ui = UI[language as keyof typeof UI] ?? UI.ru;
 
@@ -751,7 +781,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "linear-gradient(135deg, #ebf1ff 0%, #ffffff 50%, #ebf1ff 100%)" }}>
+    <div className="min-h-screen flex flex-col" style={{ background: accentPageBg }}>
       {/* Header — matches landing page scrolled style */}
       <header className="bg-[#1D1D2F]/95 backdrop-blur-xl shadow-xl border-b border-white/[0.07]">
         <div className="container mx-auto max-w-5xl px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
@@ -768,12 +798,12 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
 
               <div className="w-px h-6 bg-white/15 hidden sm:block" />
 
-              <Image
-                src={Logo}
-                alt="ZhanCare logo"
-                height={32}
-                className="h-6 sm:h-8 w-auto"
-              />
+              {clinic?.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={clinic.logoUrl} alt={clinic.clinicName} className="h-6 sm:h-8 w-auto rounded-lg object-contain" />
+              ) : (
+                <Image src={Logo} alt="ZhanCare logo" height={32} className="h-6 sm:h-8 w-auto" />
+              )}
 
               <div className="w-px h-6 bg-white/15 hidden md:block" />
 
@@ -784,18 +814,18 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                     animate={{ scale: [1, 1.1, 1] }}
                     transition={{ duration: 2, repeat: Infinity }}
                     className="absolute inset-0 rounded-xl blur-lg opacity-40"
-                    style={{ background: "#3772ff" }}
+                    style={{ background: accentColor }}
                   />
                   <div
                     className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center"
-                    style={{ background: "linear-gradient(135deg, #3772ff 0%, #2956bf 100%)" }}
+                    style={{ background: accentGrad }}
                   >
-                    <FontAwesomeIcon icon={faRobot} className="text-white text-xs sm:text-sm" />
+                    <FontAwesomeIcon icon={faRobot} className="text-xs sm:text-sm" style={{ color: onAccent }} />
                   </div>
                 </div>
                 <div>
                   <p className="font-bold text-sm text-white leading-tight">{ui.title}</p>
-                  <p className="text-[11px] flex items-center gap-1 text-[#6aa2ff] leading-tight">
+                  <p className="text-[11px] flex items-center gap-1 leading-tight" style={{ color: hexToRgba(accentColor, 0.75) }}>
                     <FontAwesomeIcon icon={faHeartPulse} className="text-[10px]" />
                     {ui.subtitle}
                   </p>
@@ -825,15 +855,15 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
             animate={{ opacity: 1, y: 0 }}
             className="rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl border"
             style={{
-              background: "linear-gradient(135deg, #3772ff 0%, #2956bf 100%)",
-              borderColor: "#2956bf"
+              background: accentGrad,
+              borderColor: accentDark
             }}
           >
             <div className="flex items-start gap-3 sm:gap-4">
               <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
-                <FontAwesomeIcon icon={faCircleCheck} className="text-white text-base sm:text-xl" />
+                <FontAwesomeIcon icon={faCircleCheck} className="text-base sm:text-xl" style={{ color: onAccent }} />
               </div>
-              <div className="text-white">
+              <div style={{ color: onAccent }}>
                 <h3 className="font-bold text-base sm:text-lg lg:text-xl mb-1 sm:mb-2">
                   {clinic ? ui.welcomeClinic(clinic.clinicName) : ui.welcomeTitle}
                 </h3>
@@ -843,6 +873,31 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
               </div>
             </div>
           </motion.div>
+
+          {/* Quick links chips */}
+          {clinic?.quickLinks && clinic.quickLinks.length > 0 && messages.length === 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="flex flex-wrap gap-2"
+            >
+              {clinic.quickLinks.map((ql, i) => (
+                <button
+                  key={i}
+                  onClick={() => setInput(ql.message)}
+                  className="px-3 py-2 rounded-xl text-sm font-medium border transition-all hover:scale-105 hover:shadow-md"
+                  style={{
+                    background: accentLight,
+                    color: accentDark,
+                    borderColor: hexToRgba(accentColor, 0.25),
+                  }}
+                >
+                  {ql.label}
+                </button>
+              ))}
+            </motion.div>
+          )}
 
           <AnimatePresence>
             {messages.map((message, index) => (
@@ -888,13 +943,13 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                   <div className="max-w-[90%] sm:max-w-[85%] flex gap-2 sm:gap-3">
                     <div
                       className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 mt-1"
-                      style={{ background: "linear-gradient(135deg, #3772ff 0%, #2956bf 100%)" }}
+                      style={{ background: accentGrad }}
                     >
-                      <FontAwesomeIcon icon={faRobot} className="text-white text-xs sm:text-sm" />
+                      <FontAwesomeIcon icon={faRobot} className="text-xs sm:text-sm" style={{ color: onAccent }} />
                     </div>
                     <div>
-                      <div className="px-2 py-1 rounded-lg mb-2 inline-block" style={{ background: "#ebf1ff" }}>
-                        <span className="text-xs font-semibold" style={{ color: "#2956bf" }}>{ui.aiLabel}</span>
+                      <div className="px-2 py-1 rounded-lg mb-2 inline-block" style={{ background: accentLight }}>
+                        <span className="text-xs font-semibold" style={{ color: accentDark }}>{ui.aiLabel}</span>
                       </div>
                       {message.preliminaryDiagnosis && (
                         <motion.div
@@ -922,7 +977,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                         }}
                       >
                         <div className="text-sm sm:text-base break-words" style={{ color: "#283353", overflowWrap: "break-word", wordBreak: "break-word" }}>
-                          {formatAIMessage(message.content)}
+                          {formatAIMessage(message.content, accentColor)}
                         </div>
                       </div>
                     </div>
@@ -963,13 +1018,13 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                           <div className="px-5 py-4 space-y-3">
                             {/* Doctor row */}
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "#ebf1ff" }}>
-                                <FontAwesomeIcon icon={faUserMd} className="text-sm" style={{ color: "#2956bf" }} />
+                              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: accentLight }}>
+                                <FontAwesomeIcon icon={faUserMd} className="text-sm" style={{ color: accentDark }} />
                               </div>
                               <div>
                                 <p className="text-xs text-gray-500">{labels.booked[l]}</p>
                                 <p className="font-bold text-gray-900 text-sm">{bc.doctorName}</p>
-                                <p className="text-xs" style={{ color: "#3772ff" }}>{bc.doctorType}</p>
+                                <p className="text-xs" style={{ color: accentColor }}>{bc.doctorType}</p>
                               </div>
                             </div>
 
@@ -977,8 +1032,8 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
 
                             {/* Date row */}
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "#ebf1ff" }}>
-                                <FontAwesomeIcon icon={faCalendarDays} className="text-sm" style={{ color: "#2956bf" }} />
+                              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: accentLight }}>
+                                <FontAwesomeIcon icon={faCalendarDays} className="text-sm" style={{ color: accentDark }} />
                               </div>
                               <div>
                                 <p className="text-xs text-gray-500">{labels.date[l]}</p>
@@ -988,8 +1043,8 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
 
                             {/* Time row */}
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "#ebf1ff" }}>
-                                <FontAwesomeIcon icon={faClock} className="text-sm" style={{ color: "#2956bf" }} />
+                              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: accentLight }}>
+                                <FontAwesomeIcon icon={faClock} className="text-sm" style={{ color: accentDark }} />
                               </div>
                               <div>
                                 <p className="text-xs text-gray-500">{labels.time[l]}</p>
@@ -1001,8 +1056,8 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
 
                             {/* Type row */}
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "#ebf1ff" }}>
-                                <FontAwesomeIcon icon={faVideo} className="text-sm" style={{ color: "#2956bf" }} />
+                              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: accentLight }}>
+                                <FontAwesomeIcon icon={faVideo} className="text-sm" style={{ color: accentDark }} />
                               </div>
                               <p className="text-sm font-medium text-gray-700">{labels.type[l]}</p>
                             </div>
@@ -1018,8 +1073,8 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                               {bc.meetingId && (
                                 <button
                                   onClick={() => router.push(`/video-call/patient?meetingId=${bc.meetingId}`)}
-                                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold text-white transition-all"
-                                  style={{ background: "linear-gradient(135deg, #3772ff 0%, #2956bf 100%)" }}
+                                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all"
+                                  style={{ background: accentGrad, color: onAccent }}
                                 >
                                   <FontAwesomeIcon icon={faVideo} className="text-xs" />
                                   {l === "en" ? "Join Video Consultation" : l === "kz" ? "Бейне кеңеске кіру" : "Перейти к видеоконсультации"}
@@ -1028,7 +1083,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                               <button
                                 onClick={() => router.push("/patient/appointments")}
                                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all"
-                                style={{ background: "#f0f4ff", color: "#2956bf", border: "1px solid #c7d8ff" }}
+                                style={{ background: accentLight, color: accentDark, border: `1px solid ${hexToRgba(accentColor, 0.3)}` }}
                               >
                                 <FontAwesomeIcon icon={faArrowRight} className="text-xs" />
                                 {l === "en" ? "My Appointments" : l === "kz" ? "Менің кабинетім" : "Мои записи"}
@@ -1098,13 +1153,13 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                   <div className="max-w-[90%] sm:max-w-[85%] flex gap-2 sm:gap-3">
                     <div
                       className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 mt-1"
-                      style={{ background: "linear-gradient(135deg, #3772ff 0%, #2956bf 100%)" }}
+                      style={{ background: accentGrad }}
                     >
-                      <FontAwesomeIcon icon={faRobot} className="text-white text-xs sm:text-sm" />
+                      <FontAwesomeIcon icon={faRobot} className="text-xs sm:text-sm" style={{ color: onAccent }} />
                     </div>
                     <div className="flex-1">
-                      <div className="px-2 py-1 rounded-lg mb-2 inline-block" style={{ background: "#ebf1ff" }}>
-                        <span className="text-xs font-semibold" style={{ color: "#2956bf" }}>{labels.doctorRecommendation[lang as keyof typeof labels.doctorRecommendation]}</span>
+                      <div className="px-2 py-1 rounded-lg mb-2 inline-block" style={{ background: accentLight }}>
+                        <span className="text-xs font-semibold" style={{ color: accentDark }}>{labels.doctorRecommendation[lang as keyof typeof labels.doctorRecommendation]}</span>
                       </div>
 
                       {/* ── BEST MATCH card ── */}
@@ -1328,13 +1383,13 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                   <div className="max-w-[90%] sm:max-w-[85%] flex gap-2 sm:gap-3">
                     <div
                       className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 mt-1"
-                      style={{ background: "linear-gradient(135deg, #3772ff 0%, #2956bf 100%)" }}
+                      style={{ background: accentGrad }}
                     >
-                      <FontAwesomeIcon icon={faRobot} className="text-white text-xs sm:text-sm" />
+                      <FontAwesomeIcon icon={faRobot} className="text-xs sm:text-sm" style={{ color: onAccent }} />
                     </div>
                     <div className="flex-1">
-                      <div className="px-2 py-1 rounded-lg mb-2 inline-block" style={{ background: "#ebf1ff" }}>
-                        <span className="text-xs font-semibold" style={{ color: "#2956bf" }}>{message.content}</span>
+                      <div className="px-2 py-1 rounded-lg mb-2 inline-block" style={{ background: accentLight }}>
+                        <span className="text-xs font-semibold" style={{ color: accentDark }}>{message.content}</span>
                       </div>
                       <div className="space-y-3">
                         {message.doctors.map((doctor, idx) => {
@@ -1543,21 +1598,21 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                   <div className="max-w-[90%] sm:max-w-[85%] flex gap-2 sm:gap-3">
                     <div
                       className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 mt-1"
-                      style={{ background: "linear-gradient(135deg, #3772ff 0%, #2956bf 100%)" }}
+                      style={{ background: accentGrad }}
                     >
-                      <FontAwesomeIcon icon={faRobot} className="text-white text-xs sm:text-sm" />
+                      <FontAwesomeIcon icon={faRobot} className="text-xs sm:text-sm" style={{ color: onAccent }} />
                     </div>
                     <div className="flex-1">
-                      <div className="px-2 py-1 rounded-lg mb-2 inline-block" style={{ background: "#ebf1ff" }}>
-                        <span className="text-xs font-semibold" style={{ color: "#2956bf" }}>{message.content}</span>
+                      <div className="px-2 py-1 rounded-lg mb-2 inline-block" style={{ background: accentLight }}>
+                        <span className="text-xs font-semibold" style={{ color: accentDark }}>{message.content}</span>
                       </div>
 
                       {Object.keys(slotsByDate).length > 0 ? (
                         <div className="space-y-4">
                           {Object.entries(slotsByDate).map(([date, slots]) => (
                             <div key={date}>
-                              <div className="mb-2 px-3 py-1.5 rounded-lg inline-block" style={{ background: "#ebf1ff" }}>
-                                <span className="text-sm font-bold" style={{ color: "#2956bf" }}>{formatDate(date)}</span>
+                              <div className="mb-2 px-3 py-1.5 rounded-lg inline-block" style={{ background: accentLight }}>
+                                <span className="text-sm font-bold" style={{ color: accentDark }}>{formatDate(date)}</span>
                               </div>
                               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                                 {slots.map((slot) => (
@@ -1570,10 +1625,10 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                                       background: slot.available
                                         ? "linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)"
                                         : "rgba(203, 213, 225, 0.3)",
-                                      color: slot.available ? "#1e40af" : "#94a3b8",
-                                      border: slot.available ? "2px solid #3772ff" : "2px solid transparent",
+                                      color: slot.available ? accentDark : "#94a3b8",
+                                      border: slot.available ? `2px solid ${accentColor}` : "2px solid transparent",
                                       cursor: slot.available ? "pointer" : "not-allowed",
-                                      boxShadow: slot.available ? "0 2px 8px rgba(37, 99, 235, 0.2)" : "none"
+                                      boxShadow: slot.available ? `0 2px 8px ${hexToRgba(accentColor, 0.2)}` : "none"
                                     }}
                                     onMouseEnter={(e) => {
                                       if (slot.available) {
@@ -1591,7 +1646,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                                     <FontAwesomeIcon
                                       icon={faClock}
                                       className="mr-1.5 text-xs"
-                                      style={{ color: slot.available ? "#3772ff" : "#94a3b8" }}
+                                      style={{ color: slot.available ? accentColor : "#94a3b8" }}
                                     />
                                     {slot.time}
                                   </button>
@@ -1603,9 +1658,9 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                       ) : (
                         <div
                           className="rounded-2xl px-4 py-3 text-center"
-                          style={{ background: "#ebf1ff" }}
+                          style={{ background: accentLight }}
                         >
-                          <p className="text-sm font-semibold" style={{ color: "#2956bf" }}>
+                          <p className="text-sm font-semibold" style={{ color: accentDark }}>
                             {labels.noSlots[lang as keyof typeof labels.noSlots]}
                           </p>
                         </div>
@@ -1628,8 +1683,8 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                         <FontAwesomeIcon icon={faRobot} className="text-white text-xs sm:text-sm" />
                       </div>
                       <div className="flex-1">
-                        <div className="px-2 py-1 rounded-lg mb-3 inline-block" style={{ background: "#ebf1ff" }}>
-                          <span className="text-xs font-semibold" style={{ color: "#2956bf" }}>{message.content}</span>
+                        <div className="px-2 py-1 rounded-lg mb-3 inline-block" style={{ background: accentLight }}>
+                          <span className="text-xs font-semibold" style={{ color: accentDark }}>{message.content}</span>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-2">
                           {typeConfig.map(({ type, label, sub, icon, bg }) => {
@@ -1680,11 +1735,11 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                     <div
                       className={`rounded-2xl sm:rounded-3xl px-4 py-3 sm:px-6 sm:py-4 shadow-lg ${message.isChoice ? "flex items-center gap-2.5" : ""}`}
                       style={{
-                        background: "linear-gradient(135deg, #3772ff 0%, #2956bf 100%)",
+                        background: accentGrad,
                       }}
                     >
                       {message.isChoice && (
-                        <FontAwesomeIcon icon={faCircleCheck} className="text-white text-sm flex-shrink-0" />
+                        <FontAwesomeIcon icon={faCircleCheck} className="text-sm flex-shrink-0" style={{ color: onAccent }} />
                       )}
                       {message.imageUrl && (
                         <img
@@ -1694,7 +1749,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                           style={{ maxHeight: "300px", objectFit: "contain" }}
                         />
                       )}
-                      <p className="text-white text-sm sm:text-base leading-relaxed break-words" style={{ overflowWrap: "break-word", wordBreak: "break-word" }}>{message.content}</p>
+                      <p className="text-sm sm:text-base leading-relaxed break-words" style={{ color: onAccent, overflowWrap: "break-word", wordBreak: "break-word" }}>{message.content}</p>
                     </div>
                   </div>
                 )}
@@ -1711,18 +1766,18 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
               <div className="flex gap-2 sm:gap-3 max-w-[90%] sm:max-w-[85%]">
                 <div
                   className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: "linear-gradient(135deg, #3772ff 0%, #2956bf 100%)" }}
+                  style={{ background: accentGrad }}
                 >
-                  <FontAwesomeIcon icon={faRobot} className="text-white text-xs sm:text-sm" />
+                  <FontAwesomeIcon icon={faRobot} className="text-xs sm:text-sm" style={{ color: onAccent }} />
                 </div>
                 <div className="rounded-2xl sm:rounded-3xl px-4 py-3 sm:px-6 sm:py-4 shadow-lg border" style={{ background: "white", borderColor: "#e1eaff" }}>
                   {streamingText ? (
                     <div className="text-sm sm:text-base break-words" style={{ color: "#283353", overflowWrap: "break-word", wordBreak: "break-word" }}>
-                      {formatAIMessage(streamingText)}
+                      {formatAIMessage(streamingText, accentColor)}
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 sm:gap-3">
-                      <FontAwesomeIcon icon={faSpinner} className="animate-spin text-sm sm:text-base" style={{ color: "#3772ff" }} />
+                      <FontAwesomeIcon icon={faSpinner} className="animate-spin text-sm sm:text-base" style={{ color: accentColor }} />
                       <span className="text-sm sm:text-base" style={{ color: "#283353" }}>
                         {{ ru: "Анализирую симптомы...", en: "Analysing symptoms...", kz: "Симптомдарды талдаймын..." }[language as "ru" | "en" | "kz"] ?? "Анализирую симптомы..."}
                       </span>
@@ -1747,7 +1802,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                 src={imagePreview}
                 alt="Preview"
                 className="max-w-[200px] max-h-[200px] rounded-xl border-2"
-                style={{ borderColor: "#3772ff" }}
+                style={{ borderColor: accentColor }}
               />
               <button
                 onClick={removeImage}
@@ -1762,7 +1817,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
             {/* Combined Input Container */}
             <div className="relative rounded-3xl border-2 transition-all shadow-lg"
               style={{
-                borderColor: "#3772ff",
+                borderColor: accentColor,
                 background: "#ffffff"
               }}
             >
@@ -1813,8 +1868,8 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                   disabled={isLoading}
                   className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
-                    background: imagePreview ? "#3772ff" : "transparent",
-                    color: imagePreview ? "white" : "#3772ff"
+                    background: imagePreview ? accentColor : "transparent",
+                    color: imagePreview ? "white" : accentColor
                   }}
                 >
                   <FontAwesomeIcon
@@ -1829,7 +1884,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                   className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all hover:scale-110"
                   style={{
                     background: isRecording ? "#ef4444" : "transparent",
-                    color: isRecording ? "white" : "#3772ff"
+                    color: isRecording ? "white" : accentColor
                   }}
                 >
                   <FontAwesomeIcon
@@ -1842,11 +1897,12 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                 <button
                   onClick={handleSendMessage}
                   disabled={(!input.trim() && !imagePreview) || isLoading}
-                  className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full text-white flex items-center justify-center transition-all disabled:cursor-not-allowed group"
+                  className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all disabled:cursor-not-allowed group"
                   style={{
                     background: (input.trim() || imagePreview) && !isLoading
-                      ? "linear-gradient(135deg, #3772ff 0%, #2956bf 100%)"
-                      : "#bcc0ca"
+                      ? accentGrad
+                      : "#bcc0ca",
+                    color: (input.trim() || imagePreview) && !isLoading ? onAccent : "#ffffff"
                   }}
                   onMouseEnter={(e) => {
                     if ((input.trim() || imagePreview) && !isLoading) {
@@ -1861,7 +1917,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                   {(input.trim() || imagePreview) && !isLoading && (
                     <div
                       className="absolute inset-0 rounded-full blur-md opacity-50 -z-10"
-                      style={{ background: "#3772ff" }}
+                      style={{ background: accentColor }}
                     />
                   )}
                   <FontAwesomeIcon icon={faArrowUp} className="text-xs sm:text-sm" />
@@ -1872,7 +1928,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
           </div>
 
           {/* Helper Text */}
-          <div className="mt-2 sm:mt-3 flex items-center justify-center gap-0.5 xs:gap-1 sm:gap-1.5 text-[8px] xs:text-[9px] sm:text-xs px-2" style={{ color: "#3772ff" }}>
+          <div className="mt-2 sm:mt-3 flex items-center justify-center gap-0.5 xs:gap-1 sm:gap-1.5 text-[8px] xs:text-[9px] sm:text-xs px-2" style={{ color: accentColor }}>
             <span className="font-medium whitespace-nowrap">{ui.enterHint}</span>
             <span className="whitespace-nowrap" style={{ color: "#bcc0ca" }}>•</span>
             <span className="font-medium whitespace-nowrap">{ui.shiftHint}</span>

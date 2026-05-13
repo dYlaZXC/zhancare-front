@@ -199,8 +199,17 @@ function Section({
 
 /* ── Live preview ──────────────────────────────────────── */
 
+function getContrastColor(hex: string): string {
+  const h = hex.replace('#', '').padEnd(6, '0');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 135 ? '#1a1a1a' : '#ffffff';
+}
+
 function ChatPreview({ form }: { form: FormState }) {
   const color = form.primary_color || "#8b5cf6";
+  const onColor = getContrastColor(color);
   const name = form.agent_name || "AI Ассистент";
   const welcome =
     form.welcome_message ||
@@ -222,17 +231,17 @@ function ChatPreview({ form }: { form: FormState }) {
               }}
             />
           ) : (
-            <Bot className="w-4 h-4 text-white" />
+            <Bot className="w-4 h-4" style={{ color: onColor }} />
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-white font-bold text-sm leading-none truncate">{name}</p>
-          <p className="text-white/70 text-[10px] mt-0.5 flex items-center gap-1">
+          <p className="font-bold text-sm leading-none truncate" style={{ color: onColor }}>{name}</p>
+          <p className="text-[10px] mt-0.5 flex items-center gap-1" style={{ color: onColor, opacity: 0.7 }}>
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 inline-block animate-pulse" />
             Онлайн
           </p>
         </div>
-        <Sparkles className="w-4 h-4 text-white/50 flex-shrink-0" />
+        <Sparkles className="w-4 h-4 flex-shrink-0" style={{ color: onColor, opacity: 0.5 }} />
       </div>
 
       {/* Messages */}
@@ -243,7 +252,7 @@ function ChatPreview({ form }: { form: FormState }) {
             className="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm"
             style={{ background: color }}
           >
-            <Bot className="w-3.5 h-3.5 text-white" />
+            <Bot className="w-3.5 h-3.5" style={{ color: onColor }} />
           </div>
           <div
             className="max-w-[80%] px-3.5 py-2.5 rounded-2xl rounded-bl-sm text-sm text-gray-700 leading-relaxed shadow-sm"
@@ -256,8 +265,8 @@ function ChatPreview({ form }: { form: FormState }) {
         {/* User bubble */}
         <div className="flex justify-end">
           <div
-            className="max-w-[70%] px-3.5 py-2.5 rounded-2xl rounded-br-sm text-sm text-white leading-relaxed shadow-sm"
-            style={{ background: color }}
+            className="max-w-[70%] px-3.5 py-2.5 rounded-2xl rounded-br-sm text-sm leading-relaxed shadow-sm"
+            style={{ background: color, color: onColor }}
           >
             У меня болит голова и температура 38°
           </div>
@@ -269,7 +278,7 @@ function ChatPreview({ form }: { form: FormState }) {
             className="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm"
             style={{ background: color }}
           >
-            <Bot className="w-3.5 h-3.5 text-white" />
+            <Bot className="w-3.5 h-3.5" style={{ color: onColor }} />
           </div>
           <div className="px-4 py-3 rounded-2xl rounded-bl-sm bg-white border border-gray-100 shadow-sm flex items-center gap-1.5">
             {[0, 1, 2].map((i) => (

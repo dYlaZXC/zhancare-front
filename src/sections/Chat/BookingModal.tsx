@@ -478,6 +478,7 @@ export default function BookingModal({
       const bookingData: any = {
         doctor_id: selectedDoctor.id,
         scheduled_time: selectedTimeslot.start_time, // "YYYY-MM-DDTHH:MM:00" local, no offset
+        consultation_type: consultationType ?? "online",
       };
 
       // Add guest info if not logged in
