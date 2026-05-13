@@ -57,7 +57,7 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
+    <div className="flex h-screen overflow-hidden bg-gray-100">
       {/* Sidebar */}
       <AdminSidebar
         isOpen={sidebarOpen}
@@ -66,7 +66,7 @@ export default function AdminLayout({
       />
 
       {/* Main */}
-      <div className={`flex-1 min-w-0 flex flex-col transition-all duration-500 ${sidebarCollapsed ? 'xl:ml-20' : 'xl:ml-80'}`}>
+      <div className={`flex-1 min-w-0 flex flex-col overflow-hidden transition-all duration-500 ${sidebarCollapsed ? 'xl:ml-20' : 'xl:ml-80'}`}>
         {/* Header */}
         <AdminHeader
           onMenuClick={() => setSidebarOpen(true)}
@@ -75,12 +75,12 @@ export default function AdminLayout({
         />
 
         {/* Main Content */}
-        <main className="flex-1 bg-gray-50">
+        <main className="flex-1 bg-gray-50 overflow-hidden flex flex-col">
           {/* Breadcrumb */}
           <AdminBreadcrumb />
 
-          {/* Page Content */}
-          <div className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4 sm:pb-6">
+          {/* Page Content — scrollable for normal pages */}
+          <div className="flex-1 overflow-y-auto min-h-0 flex flex-col px-4 sm:px-6 pt-4 sm:pt-6 pb-4 sm:pb-6">
             {children}
           </div>
         </main>

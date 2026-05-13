@@ -2,12 +2,15 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "react-toastify";
+import { getWebSocketURL } from "@/utils/api";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000/api/v1";
 
 interface WaMessage {
   id: number;
   from_number: string;
+  to_number: string;
+  direction: "in" | "out";
   body: string;
   received_at: string;
   message_id: string;
@@ -17,7 +20,6 @@ interface Contact {
   number: string;
   lastMessage: string;
   lastAt: string;
-  unread: number;
 }
 
 function authHeaders() {
@@ -27,10 +29,10 @@ function authHeaders() {
 
 function formatTime(iso: string) {
   const d = new Date(iso);
-  const now = new Date();
-  const isToday = d.toDateString() === now.toDateString();
-  if (isToday) return d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
-  return d.toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
+  const isToday = d.toDateString() === new Date().toDateString();
+  return isToday
+    ? d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })
+    : d.toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
 }
 
 function formatFullTime(iso: string) {
@@ -39,77 +41,129 @@ function formatFullTime(iso: string) {
   });
 }
 
+function buildContacts(msgs: WaMessage[]): Contact[] {
+  const map = new Map<string, WaMessage>();
+  msgs.forEach(m => {
+    if (m.direction !== "in") return;
+    const existing = map.get(m.from_number);
+    if (!existing || new Date(m.received_at) > new Date(existing.received_at)) {
+      map.set(m.from_number, m);
+    }
+  });
+  return [...map.values()]
+    .sort((a, b) => new Date(b.received_at).getTime() - new Date(a.received_at).getTime())
+    .map(m => ({ number: m.from_number, lastMessage: m.body, lastAt: m.received_at }));
+}
+
+const WaIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} xmlns="http://www.w3.org/2000/svg">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+  </svg>
+);
+
 export default function WhatsAppInbox() {
-  const [allMessages, setAllMessages] = useState<WaMessage[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [incomingMsgs, setIncomingMsgs] = useState<WaMessage[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [thread, setThread] = useState<WaMessage[]>([]);
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [outgoing, setOutgoing] = useState<{ body: string; at: string }[]>([]);
+  const [wsStatus, setWsStatus] = useState<"connecting" | "connected" | "disconnected">("connecting");
   const bottomRef = useRef<HTMLDivElement>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const selectedRef = useRef<string | null>(null);
+  selectedRef.current = selected;
 
-  const fetchMessages = useCallback(async () => {
+  const fetchContacts = useCallback(async () => {
     try {
       const res = await fetch(`${API}/whatsapp/messages/`, { headers: authHeaders() });
       if (!res.ok) return;
       const data = await res.json();
       const msgs: WaMessage[] = data.messages ?? [];
-      setAllMessages(msgs);
-
-      // Build contacts list: one entry per unique number, latest message first
-      const byNumber = new Map<string, WaMessage[]>();
-      msgs.forEach(m => {
-        if (!byNumber.has(m.from_number)) byNumber.set(m.from_number, []);
-        byNumber.get(m.from_number)!.push(m);
-      });
-      const contactList: Contact[] = [];
-      byNumber.forEach((mList, number) => {
-        const sorted = [...mList].sort((a, b) => new Date(b.received_at).getTime() - new Date(a.received_at).getTime());
-        contactList.push({
-          number,
-          lastMessage: sorted[0].body,
-          lastAt: sorted[0].received_at,
-          unread: 0,
-        });
-      });
-      contactList.sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
-      setContacts(contactList);
+      setIncomingMsgs(msgs);
+      setContacts(buildContacts(msgs));
     } finally {
       setLoading(false);
     }
   }, []);
 
+  const fetchThread = useCallback(async (number: string) => {
+    try {
+      const res = await fetch(`${API}/whatsapp/messages/?from_number=${encodeURIComponent(number)}`, {
+        headers: authHeaders(),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setThread(data.messages ?? []);
+    } catch { /* ignore */ }
+  }, []);
+
   useEffect(() => {
-    fetchMessages();
-    pollRef.current = setInterval(fetchMessages, 15000);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [fetchMessages]);
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+    const base = getWebSocketURL().replace(/\/$/, "");
+    const wsUrl = `${base}/whatsapp/?token=${encodeURIComponent(token)}`;
+
+    const connect = () => {
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+      setWsStatus("connecting");
+      ws.onopen = () => setWsStatus("connected");
+      ws.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.type !== "whatsapp_message") return;
+          const msg: WaMessage = payload.data;
+          if (msg.direction === "in") {
+            setIncomingMsgs(prev => {
+              const updated = [...prev, msg];
+              setContacts(buildContacts(updated));
+              return updated;
+            });
+          }
+          const contactNumber = msg.direction === "in" ? msg.from_number : msg.to_number;
+          if (contactNumber === selectedRef.current) {
+            setThread(prev => {
+              if (prev.some(m => m.id === msg.id)) return prev;
+              return [...prev, msg].sort((a, b) =>
+                new Date(a.received_at).getTime() - new Date(b.received_at).getTime()
+              );
+            });
+          }
+        } catch { /* ignore */ }
+      };
+      ws.onclose = () => { setWsStatus("disconnected"); setTimeout(connect, 3000); };
+      ws.onerror = () => ws.close();
+    };
+
+    connect();
+    return () => { wsRef.current?.close(); };
+  }, []);
+
+  useEffect(() => { fetchContacts(); }, [fetchContacts]);
+
+  useEffect(() => {
+    if (wsStatus !== "disconnected") return;
+    const id = setInterval(fetchContacts, 15000);
+    return () => clearInterval(id);
+  }, [wsStatus, fetchContacts]);
 
   useEffect(() => {
     if (!selected) return;
-    const msgs = allMessages
-      .filter(m => m.from_number === selected)
-      .sort((a, b) => new Date(a.received_at).getTime() - new Date(b.received_at).getTime());
-    setThread(msgs);
-  }, [selected, allMessages]);
+    setThread([]);
+    fetchThread(selected);
+  }, [selected, fetchThread]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [thread, outgoing]);
-
-  const selectContact = (number: string) => {
-    setSelected(number);
-    setOutgoing([]);
-    setReplyText("");
-  };
+  }, [thread]);
 
   const sendReply = async () => {
     if (!selected || !replyText.trim() || sending) return;
     const body = replyText.trim();
     setSending(true);
+    setReplyText("");
     try {
       const res = await fetch(`${API}/whatsapp/reply/`, {
         method: "POST",
@@ -117,15 +171,19 @@ export default function WhatsAppInbox() {
         body: JSON.stringify({ to: selected, body }),
       });
       if (res.ok) {
-        setOutgoing(prev => [...prev, { body, at: new Date().toISOString() }]);
-        setReplyText("");
-        toast.success("Сообщение отправлено");
+        const data = await res.json();
+        if (data.message && wsStatus !== "connected") {
+          setThread(prev => [...prev, data.message]);
+        }
+        toast.success("Отправлено");
       } else {
         const err = await res.json().catch(() => ({}));
         toast.error(err.error ?? "Ошибка отправки");
+        setReplyText(body);
       }
     } catch {
       toast.error("Ошибка соединения");
+      setReplyText(body);
     } finally {
       setSending(false);
     }
@@ -135,63 +193,93 @@ export default function WhatsAppInbox() {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendReply(); }
   };
 
-  // Merge thread + outgoing for display
-  type DisplayMsg = { key: string; body: string; at: string; dir: "in" | "out" };
-  const displayThread: DisplayMsg[] = [
-    ...thread.map(m => ({ key: `in-${m.id}`, body: m.body, at: m.received_at, dir: "in" as const })),
-    ...outgoing.map((o, i) => ({ key: `out-${i}`, body: o.body, at: o.at, dir: "out" as const })),
-  ].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
+  const selectedContact = contacts.find(c => c.number === selected);
 
   return (
-    <div className="flex h-[calc(100vh-80px)] bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="flex h-full overflow-hidden rounded-none" style={{ background: "#f0f2f5" }}>
 
-      {/* Left: Contact list */}
-      <div className="w-80 flex-shrink-0 border-r border-gray-100 flex flex-col">
-        <div className="px-5 py-4 border-b border-gray-100">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "#25d366" }}>
-              <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white" xmlns="http://www.w3.org/2000/svg">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-              </svg>
+      {/* ── LEFT SIDEBAR ─────────────────────────────────── */}
+      <div
+        className="w-[300px] flex-shrink-0 flex flex-col overflow-hidden"
+        style={{ background: "linear-gradient(180deg, #1e263e 0%, #12263a 100%)" }}
+      >
+        {/* Sidebar header */}
+        <div className="px-5 pt-5 pb-4 flex-shrink-0">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg" style={{ background: "#25d366" }}>
+                <WaIcon className="w-5 h-5 fill-white" />
+              </div>
+              <div>
+                <p className="text-white font-bold text-sm leading-none">WhatsApp</p>
+                <p className="text-white/50 text-xs mt-0.5">Входящие сообщения</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-sm font-bold text-gray-900">WhatsApp Inbox</h2>
-              <p className="text-xs text-gray-400">{contacts.length} контактов</p>
+            {/* WS status dot */}
+            <div className="flex items-center gap-1.5">
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  wsStatus === "connected" ? "bg-green-400 shadow-[0_0_6px_#4ade80]" :
+                  wsStatus === "connecting" ? "bg-yellow-400 animate-pulse" : "bg-red-400"
+                }`}
+              />
+              <span className="text-[10px] text-white/40">
+                {wsStatus === "connected" ? "Live" : wsStatus === "connecting" ? "..." : "Офлайн"}
+              </span>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-xl px-3 py-2" style={{ background: "rgba(255,255,255,0.05)" }}>
+              <p className="text-white/40 text-[10px] uppercase tracking-wide">Контактов</p>
+              <p className="text-white font-bold text-lg leading-none mt-0.5">{contacts.length}</p>
+            </div>
+            <div className="rounded-xl px-3 py-2" style={{ background: "rgba(255,255,255,0.05)" }}>
+              <p className="text-white/40 text-[10px] uppercase tracking-wide">Сообщений</p>
+              <p className="text-white font-bold text-lg leading-none mt-0.5">{incomingMsgs.length}</p>
             </div>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        {/* Contact list */}
+        <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-1">
           {loading ? (
             <div className="flex items-center justify-center h-32">
-              <div className="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+              <div className="w-5 h-5 border-2 border-green-400 border-t-transparent rounded-full animate-spin" />
             </div>
           ) : contacts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-40 text-gray-400 text-sm gap-2">
-              <svg viewBox="0 0 24 24" className="w-10 h-10 fill-gray-200" xmlns="http://www.w3.org/2000/svg">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-              </svg>
-              Нет сообщений
+            <div className="flex flex-col items-center justify-center h-40 gap-3">
+              <WaIcon className="w-10 h-10 fill-white/10" />
+              <p className="text-white/30 text-sm">Нет сообщений</p>
             </div>
           ) : (
             contacts.map(c => (
               <button
                 key={c.number}
-                onClick={() => selectContact(c.number)}
-                className={`w-full px-4 py-3 text-left flex items-start gap-3 transition-all border-b border-gray-50 ${
-                  selected === c.number ? "bg-green-50" : "hover:bg-gray-50"
+                onClick={() => { setSelected(c.number); setReplyText(""); }}
+                className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
+                  selected === c.number
+                    ? "shadow-lg"
+                    : "hover:bg-white/5"
                 }`}
+                style={selected === c.number ? {
+                  background: "linear-gradient(135deg, rgba(37,211,102,0.2) 0%, rgba(18,140,126,0.2) 100%)",
+                  border: "1px solid rgba(37,211,102,0.3)"
+                } : { border: "1px solid transparent" }}
               >
-                <div className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-white text-sm font-bold"
-                     style={{ background: "linear-gradient(135deg, #25d366 0%, #128c7e 100%)" }}>
+                <div
+                  className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-bold shadow-md"
+                  style={{ background: "linear-gradient(135deg, #25d366 0%, #128c7e 100%)" }}
+                >
                   {c.number.slice(-2)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-semibold text-gray-900 truncate">+{c.number}</span>
-                    <span className="text-[11px] text-gray-400 flex-shrink-0">{formatTime(c.lastAt)}</span>
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-sm font-semibold text-white truncate">+{c.number}</span>
+                    <span className="text-[10px] text-white/30 flex-shrink-0">{formatTime(c.lastAt)}</span>
                   </div>
-                  <p className="text-xs text-gray-500 truncate mt-0.5">{c.lastMessage}</p>
+                  <p className="text-xs text-white/40 truncate mt-0.5">{c.lastMessage}</p>
                 </div>
               </button>
             ))
@@ -199,22 +287,28 @@ export default function WhatsAppInbox() {
         </div>
       </div>
 
-      {/* Right: Thread */}
+      {/* ── RIGHT: THREAD ────────────────────────────────── */}
       {selected ? (
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+
           {/* Thread header */}
-          <div className="px-5 py-3.5 border-b border-gray-100 flex items-center gap-3 bg-white">
-            <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                 style={{ background: "linear-gradient(135deg, #25d366 0%, #128c7e 100%)" }}>
+          <div
+            className="flex-shrink-0 px-5 py-3 flex items-center gap-3 shadow-sm"
+            style={{ background: "linear-gradient(135deg, #1e263e 0%, #29358f 100%)" }}
+          >
+            <div
+              className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-white text-sm font-bold shadow-lg"
+              style={{ background: "linear-gradient(135deg, #25d366 0%, #128c7e 100%)" }}
+            >
               {selected.slice(-2)}
             </div>
-            <div>
-              <p className="text-sm font-bold text-gray-900">+{selected}</p>
-              <p className="text-xs text-gray-400">{thread.length} сообщений</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-bold text-sm leading-none">+{selected}</p>
+              <p className="text-white/40 text-xs mt-0.5">{thread.length} сообщений</p>
             </div>
             <button
-              onClick={fetchMessages}
-              className="ml-auto p-2 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-all"
+              onClick={() => fetchThread(selected)}
+              className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/10 transition-all"
               title="Обновить"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -223,24 +317,41 @@ export default function WhatsAppInbox() {
             </button>
           </div>
 
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3 bg-gray-50">
-            {displayThread.length === 0 ? (
-              <div className="text-center text-gray-400 text-sm py-12">Нет сообщений</div>
+          {/* Messages area — chat background */}
+          <div
+            className="flex-1 overflow-y-auto px-5 py-5 space-y-3 min-h-0"
+            style={{
+              background: `
+                radial-gradient(circle at 20% 50%, rgba(37,211,102,0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(18,140,126,0.04) 0%, transparent 50%),
+                #f0f2f5
+              `
+            }}
+          >
+            {thread.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-400">
+                <WaIcon className="w-12 h-12 fill-gray-200" />
+                <p className="text-sm">Нет сообщений</p>
+              </div>
             ) : (
-              displayThread.map(msg => (
-                <div key={msg.key} className={`flex ${msg.dir === "out" ? "justify-end" : "justify-start"}`}>
+              thread.map(msg => (
+                <div key={`${msg.direction}-${msg.id}`} className={`flex ${msg.direction === "out" ? "justify-end" : "justify-start"}`}>
                   <div
-                    className={`max-w-[72%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm ${
-                      msg.dir === "out"
-                        ? "text-white rounded-br-sm"
-                        : "bg-white text-gray-800 rounded-bl-sm border border-gray-100"
+                    className={`relative max-w-[68%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm ${
+                      msg.direction === "out"
+                        ? "text-white rounded-br-none"
+                        : "bg-white text-gray-800 rounded-bl-none"
                     }`}
-                    style={msg.dir === "out" ? { background: "linear-gradient(135deg, #25d366 0%, #128c7e 100%)" } : {}}
+                    style={msg.direction === "out" ? {
+                      background: "linear-gradient(135deg, #25d366 0%, #128c7e 100%)",
+                      boxShadow: "0 1px 8px rgba(37,211,102,0.25)"
+                    } : {
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.06)"
+                    }}
                   >
                     <p className="whitespace-pre-wrap break-words">{msg.body}</p>
-                    <p className={`text-[10px] mt-1 text-right ${msg.dir === "out" ? "text-green-100" : "text-gray-400"}`}>
-                      {formatFullTime(msg.at)}
+                    <p className={`text-[10px] mt-1 text-right ${msg.direction === "out" ? "text-green-100/70" : "text-gray-400"}`}>
+                      {formatFullTime(msg.received_at)}
                     </p>
                   </div>
                 </div>
@@ -250,37 +361,52 @@ export default function WhatsAppInbox() {
           </div>
 
           {/* Reply box */}
-          <div className="px-4 py-3 border-t border-gray-100 bg-white flex items-end gap-3">
+          <div
+            className="flex-shrink-0 px-4 py-3 flex items-end gap-3 border-t"
+            style={{ background: "#ffffff", borderColor: "#e9edef" }}
+          >
             <textarea
               value={replyText}
               onChange={e => setReplyText(e.target.value)}
               onKeyDown={handleKey}
-              placeholder="Написать сообщение... (Enter — отправить, Shift+Enter — новая строка)"
+              placeholder="Написать сообщение... (Enter — отправить)"
               rows={2}
-              className="flex-1 resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400 transition-all"
+              className="flex-1 resize-none rounded-2xl border-0 bg-gray-100 px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-300 transition-all"
             />
             <button
               onClick={sendReply}
               disabled={!replyText.trim() || sending}
-              className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-white transition-all disabled:opacity-40"
-              style={{ background: "linear-gradient(135deg, #25d366 0%, #128c7e 100%)" }}
+              className="flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center text-white transition-all hover:scale-105 active:scale-95 disabled:opacity-40"
+              style={{ background: "linear-gradient(135deg, #25d366 0%, #128c7e 100%)", boxShadow: "0 4px 12px rgba(37,211,102,0.4)" }}
             >
               {sending ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                 </svg>
               )}
             </button>
           </div>
         </div>
+
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center text-gray-400 gap-3">
-          <svg viewBox="0 0 24 24" className="w-16 h-16 fill-gray-200" xmlns="http://www.w3.org/2000/svg">
-            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-          </svg>
-          <p className="text-sm">Выберите контакт для переписки</p>
+        /* Empty state */
+        <div className="flex-1 flex flex-col items-center justify-center gap-4" style={{ background: "#f0f2f5" }}>
+          <div
+            className="w-24 h-24 rounded-3xl flex items-center justify-center shadow-2xl"
+            style={{ background: "linear-gradient(135deg, #25d366 0%, #128c7e 100%)" }}
+          >
+            <WaIcon className="w-12 h-12 fill-white" />
+          </div>
+          <div className="text-center">
+            <p className="text-gray-700 font-semibold text-lg">WhatsApp Inbox</p>
+            <p className="text-gray-400 text-sm mt-1">Выберите контакт для переписки</p>
+          </div>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full text-xs" style={{ background: "rgba(37,211,102,0.1)", color: "#128c7e" }}>
+            <span className={`w-2 h-2 rounded-full ${wsStatus === "connected" ? "bg-green-500" : wsStatus === "connecting" ? "bg-yellow-400 animate-pulse" : "bg-red-400"}`} />
+            {wsStatus === "connected" ? "Подключено в реальном времени" : wsStatus === "connecting" ? "Подключение..." : "Работает в режиме поллинга"}
+          </div>
         </div>
       )}
     </div>
