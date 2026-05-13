@@ -56,25 +56,25 @@ export const AdminBreadcrumb = ({
     },
     staff: {
       key: "staff",
-      title: "Управление Персоналом",
+      title: "Персонал",
       icon: <FontAwesomeIcon icon={faUsers} className="w-4 h-4" />,
       href: "/admin/staff",
     },
     patients: {
       key: "patients",
-      title: "Управление Пациентами",
+      title: "Пациенты",
       icon: <FontAwesomeIcon icon={faUserMd} className="w-4 h-4" />,
       href: "/admin/patients",
     },
     schedule: {
       key: "schedule",
-      title: "Просмотр Расписания",
+      title: "Расписание",
       icon: <FontAwesomeIcon icon={faCalendarCheck} className="w-4 h-4" />,
       href: "/admin/schedule",
     },
     reports: {
       key: "reports",
-      title: "Просмотр Отчетов",
+      title: "Отчёты",
       icon: <FontAwesomeIcon icon={faChartLine} className="w-4 h-4" />,
       href: "/admin/reports",
     },
@@ -183,7 +183,7 @@ export const AdminBreadcrumb = ({
                 <div className="flex items-center justify-center w-4 h-4">
                   {item.icon}
                 </div>
-                <span className="text-xs font-semibold max-w-[120px] truncate tracking-wide">
+                <span className="text-xs font-semibold tracking-wide">
                   {item.title}
                 </span>
               </button>

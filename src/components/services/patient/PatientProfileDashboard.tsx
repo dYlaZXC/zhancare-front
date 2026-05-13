@@ -546,8 +546,7 @@ export default function PatientProfileDashboard() {
             <PhoneInput
               value={personalForm.phone ?? ""}
               onChange={(e164) => setPersonalForm((p) => ({ ...p, phone: e164 }))}
-              placeholder="+7 (___) ___-__-__"
-              inputClassName="pl-10 pr-4 py-3 text-sm border-gray-200 bg-white text-gray-800 placeholder-gray-300 hover:border-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm rounded-xl"
+              defaultCountry="KZ"
             />
           </div>
           <InputField label="Дата рождения" value={personalForm.birth_date} onChange={(v) => setPersonalForm((p) => ({ ...p, birth_date: v }))} icon={Calendar} type="date" />

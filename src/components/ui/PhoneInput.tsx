@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Search, X } from "lucide-react";
 import {
@@ -45,7 +46,6 @@ function formatNational(digits: string, iso2: string): string {
     const full = `+${code}${digits}`;
     const ayt = new AsYouType(iso2 as CountryCode);
     const formatted = ayt.input(full);
-    // Strip leading "+XX " or "+XXX " to show only national part
     const prefix = `+${code} `;
     return formatted.startsWith(prefix) ? formatted.slice(prefix.length) : formatted;
   } catch {
@@ -64,11 +64,10 @@ interface PhoneInputProps {
   className?: string;
   inputClassName?: string;
   placeholder?: string;
-  /** Kept for backwards-compat — ignored; country flag replaces the icon */
+  /** Kept for backwards-compat — ignored */
   showIcon?: boolean;
   name?: string;
   required?: boolean;
-  /** Fired on blur with validity */
   onValidate?: (valid: boolean) => void;
 }
 
@@ -94,10 +93,15 @@ export default function PhoneInput({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [blurred, setBlurred] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 288 });
 
   const wrapRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const internalChange = useRef(false);
+
+  useEffect(() => { setIsMounted(true); }, []);
 
   // Sync from outside (e.g. form reset / prefill)
   useEffect(() => {
@@ -106,10 +110,37 @@ export default function PhoneInput({
     setDigits(initialDigits(value));
   }, [value, defaultCountry]);
 
-  // Close on outside click
+  // Compute fixed dropdown position from the wrapper's bounding rect
+  const updateDropdownPos = useCallback(() => {
+    if (!wrapRef.current) return;
+    const rect = wrapRef.current.getBoundingClientRect();
+    setDropdownPos({
+      top: rect.bottom + 6,
+      left: rect.left,
+      width: Math.max(288, rect.width),
+    });
+  }, []);
+
+  // Re-position on scroll / resize while open
+  useEffect(() => {
+    if (!open) return;
+    const handle = () => updateDropdownPos();
+    window.addEventListener("scroll", handle, true);
+    window.addEventListener("resize", handle);
+    return () => {
+      window.removeEventListener("scroll", handle, true);
+      window.removeEventListener("resize", handle);
+    };
+  }, [open, updateDropdownPos]);
+
+  // Close on outside click (must check both wrapRef and the portal dropdownRef)
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+      const t = e.target as Node;
+      if (
+        !wrapRef.current?.contains(t) &&
+        !dropdownRef.current?.contains(t)
+      ) {
         setOpen(false);
         setSearch("");
       }
@@ -128,8 +159,7 @@ export default function PhoneInput({
     [digits, country.iso2]
   );
 
-  // Probe national-only digits (no dial prefix) to find the country's max length.
-  // Using national-only avoids +7 ambiguity between KZ and RU.
+  // Find max national digits via national-only probe (avoids +7 KZ/RU ambiguity)
   const maxNationalDigits = useMemo(() => {
     try {
       for (let len = 15; len >= 4; len--) {
@@ -142,7 +172,6 @@ export default function PhoneInput({
 
   const internalError = useMemo(() => {
     if (!digits) return null;
-    // Use national-only validation to avoid +7 ambiguity
     const lengthResult = validatePhoneNumberLength(digits, country.iso2 as CountryCode);
     if (!blurred) return null;
     if (lengthResult === "TOO_SHORT") return "Номер слишком короткий";
@@ -177,15 +206,12 @@ export default function PhoneInput({
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newDigits = e.target.value.replace(/\D/g, "");
-    // Hard cap: never accept more digits than the country's maximum
     if (newDigits.length > maxNationalDigits) return;
     setDigits(newDigits);
     emit(newDigits, country.iso2);
-    // Live validation: trigger immediately when field reaches max length
     if (newDigits.length === maxNationalDigits) {
       setBlurred(true);
     } else if (newDigits.length < digits.length) {
-      // Clear blur state when user deletes back so errors disappear
       setBlurred(false);
     }
   };
@@ -208,7 +234,6 @@ export default function PhoneInput({
     } catch { onValidate(false); }
   };
 
-  // Filtered dropdown list
   const filteredFeatured = useMemo(() => {
     const q = search.toLowerCase().trim();
     if (!q) return featuredCountries;
@@ -235,13 +260,110 @@ export default function PhoneInput({
 
   const hasResults = filteredFeatured.length + filteredAll.length > 0;
 
+  // ── Dropdown rendered via portal so it escapes any parent overflow:hidden ──
+  const dropdown = (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          ref={dropdownRef}
+          initial={{ opacity: 0, y: -6, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -6, scale: 0.98 }}
+          transition={{ duration: 0.14 }}
+          style={{
+            position: "fixed",
+            top: dropdownPos.top,
+            left: dropdownPos.left,
+            width: dropdownPos.width,
+            zIndex: 9999,
+          }}
+          className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden"
+        >
+          {/* Search */}
+          <div className="p-2.5 border-b border-gray-100">
+            <div className="flex items-center gap-2 px-2.5 py-2 bg-gray-50 rounded-xl">
+              <Search className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+              <input
+                ref={searchRef}
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Поиск страны..."
+                className="flex-1 text-sm bg-transparent outline-none text-gray-700 placeholder:text-gray-400"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* List */}
+          <div className="max-h-64 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200">
+            {!hasResults ? (
+              <div className="py-8 text-center text-sm text-gray-400">
+                Страна не найдена
+              </div>
+            ) : (
+              <>
+                {filteredFeatured.length > 0 && (
+                  <>
+                    {!search && (
+                      <div className="px-3.5 pt-2.5 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
+                        Основные
+                      </div>
+                    )}
+                    {filteredFeatured.map((c) => (
+                      <CountryRow
+                        key={c.iso2}
+                        country={c}
+                        selected={country.iso2 === c.iso2}
+                        onSelect={handleCountrySelect}
+                      />
+                    ))}
+                    {filteredAll.length > 0 && (
+                      <div className="mx-3 my-1.5 border-t border-gray-100" />
+                    )}
+                  </>
+                )}
+                {!search && filteredAll.length > 0 && (
+                  <div className="px-3.5 pt-1 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
+                    Все страны
+                  </div>
+                )}
+                {filteredAll.map((c) => (
+                  <CountryRow
+                    key={c.iso2}
+                    country={c}
+                    selected={country.iso2 === c.iso2}
+                    onSelect={handleCountrySelect}
+                  />
+                ))}
+              </>
+            )}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
   return (
-    <div className={`relative ${className}`} ref={wrapRef}>
-      <div className="flex">
-        {/* ── Country button ── */}
+    <div className={`relative w-full ${className}`} ref={wrapRef}>
+      {/* ── Input row ── */}
+      <div className="flex w-full">
+        {/* Country button */}
         <button
           type="button"
-          onClick={() => !disabled && setOpen((o) => !o)}
+          onClick={() => {
+            if (disabled) return;
+            if (!open) updateDropdownPos();
+            setOpen((o) => !o);
+          }}
           disabled={disabled}
           className={`flex items-center gap-1.5 shrink-0 px-3 py-2.5 border border-r-0 rounded-l-xl bg-gray-50 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
             activeError
@@ -264,7 +386,7 @@ export default function PhoneInput({
           />
         </button>
 
-        {/* ── Number input ── */}
+        {/* Number input */}
         <div className="relative flex-1 min-w-0">
           <input
             type="tel"
@@ -276,7 +398,7 @@ export default function PhoneInput({
             placeholder={placeholder}
             disabled={disabled}
             maxLength={22}
-            className={`w-full px-3 py-2.5 border rounded-r-xl text-sm focus:outline-none focus:ring-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+            className={`w-full px-3 py-2.5 border rounded-r-xl !rounded-l-none text-sm focus:outline-none focus:ring-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
               isValidNumber ? "pr-8" : ""
             } ${
               activeError
@@ -293,94 +415,13 @@ export default function PhoneInput({
           )}
         </div>
       </div>
+
       {activeError && (
         <p className="mt-1 text-xs text-red-500">{activeError}</p>
       )}
 
-      {/* ── Dropdown ── */}
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -6, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.98 }}
-            transition={{ duration: 0.14 }}
-            className="absolute top-full left-0 mt-1.5 z-[60] bg-white rounded-2xl shadow-xl border border-gray-100 w-72 overflow-hidden"
-          >
-            {/* Search */}
-            <div className="p-2.5 border-b border-gray-100">
-              <div className="flex items-center gap-2 px-2.5 py-2 bg-gray-50 rounded-xl">
-                <Search className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                <input
-                  ref={searchRef}
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Поиск страны..."
-                  className="flex-1 text-sm bg-transparent outline-none text-gray-700 placeholder:text-gray-400"
-                />
-                {search && (
-                  <button
-                    type="button"
-                    onClick={() => setSearch("")}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* List */}
-            <div className="max-h-64 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200">
-              {!hasResults ? (
-                <div className="py-8 text-center text-sm text-gray-400">
-                  Страна не найдена
-                </div>
-              ) : (
-                <>
-                  {/* Featured */}
-                  {filteredFeatured.length > 0 && (
-                    <>
-                      {!search && (
-                        <div className="px-3.5 pt-2.5 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
-                          Основные
-                        </div>
-                      )}
-                      {filteredFeatured.map((c) => (
-                        <CountryRow
-                          key={c.iso2}
-                          country={c}
-                          selected={country.iso2 === c.iso2}
-                          onSelect={handleCountrySelect}
-                        />
-                      ))}
-                      {filteredAll.length > 0 && (
-                        <div className="mx-3 my-1.5 border-t border-gray-100" />
-                      )}
-                    </>
-                  )}
-
-                  {/* All others */}
-                  {!search && filteredAll.length > 0 && (
-                    <div className="px-3.5 pt-1 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
-                      Все страны
-                    </div>
-                  )}
-                  {filteredAll.map((c) => (
-                    <CountryRow
-                      key={c.iso2}
-                      country={c}
-                      selected={country.iso2 === c.iso2}
-                      onSelect={handleCountrySelect}
-                    />
-                  ))}
-                </>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Portal: renders outside any overflow:hidden parent */}
+      {isMounted && createPortal(dropdown, document.body)}
     </div>
   );
 }

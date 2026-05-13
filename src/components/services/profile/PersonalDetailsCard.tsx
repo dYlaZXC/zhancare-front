@@ -396,8 +396,7 @@ export const PersonalDetailsCard = ({
               value={editValue}
               onChange={(e164) => handleFieldChange(field.key, e164)}
               error={errors[field.key] || undefined}
-              inputClassName="px-4 py-3 font-medium"
-              showIcon={false}
+              defaultCountry="KZ"
             />
           ) : field.type === 'select' ? (
             <select

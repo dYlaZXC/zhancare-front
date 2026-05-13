@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZhanCare.AI — Брендбук</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary:    #001E80;
+      --secondary:  #3772FF;
+      --accent:     #3A50FF;
+      --mid-blue:   #2956BF;
+      --light-blue: #EBF1FF;
+      --border-blue:#C1D3FF;
+      --dark:       #1B1B1B;
+      --muted:      #6B7280;
+      --bg:         #F5F8FF;
+      --white:      #FFFFFF;
+      --success:    #059669;
+      --danger:     #DC2626;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--dark);
+      line-height: 1.6;
+    }
+
+    /* ── SIDEBAR NAV ─────────────────────────────────────────────── */
+    .nav {
+      position: fixed;
+      top: 0; left: 0;
+      width: 220px; height: 100vh;
+      background: var(--primary);
+      display: flex; flex-direction: column;
+      padding: 32px 0;
+      z-index: 100;
+      overflow-y: auto;
+    }
+    .nav-logo {
+      padding: 0 24px 28px;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .nav-logo-mark {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .nav-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, #3772FF, #3A50FF);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .nav-brand { font-size: 15px; font-weight: 700; color: #fff; }
+    .nav-sub   { font-size: 11px; color: rgba(255,255,255,0.45); letter-spacing: .5px; }
+    .nav-items { padding: 20px 0; }
+    .nav-section {
+      font-size: 9px; font-weight: 700; letter-spacing: 1.5px;
+      color: rgba(255,255,255,.3); text-transform: uppercase;
+      padding: 12px 24px 4px;
+    }
+    .nav-link {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 24px;
+      color: rgba(255,255,255,.6);
+      font-size: 13px; font-weight: 500;
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: all .2s;
+    }
+    .nav-link:hover, .nav-link.active {
+      color: #fff;
+      background: rgba(255,255,255,.06);
+      border-left-color: #3772FF;
+    }
+    .nav-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .5; }
+
+    /* ── MAIN CONTENT ────────────────────────────────────────────── */
+    .main { margin-left: 220px; }
+
+    /* ── HERO ────────────────────────────────────────────────────── */
+    .hero {
+      background: linear-gradient(135deg, #001E80 0%, #0029A3 40%, #1E34A0 70%, #132859 100%);
+      padding: 100px 80px 80px;
+      position: relative; overflow: hidden;
+      min-height: 480px; display: flex; align-items: center;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 60% 70% at 80% 50%, rgba(55,114,255,.25) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 50% at 20% 80%, rgba(0,212,255,.1) 0%, transparent 50%);
+    }
+    .hero-grid {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    .hero-content { position: relative; z-index: 1; max-width: 600px; }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(55,114,255,.2);
+      border: 1px solid rgba(55,114,255,.4);
+      border-radius: 100px;
+      padding: 5px 14px;
+      font-size: 11px; font-weight: 600; letter-spacing: 1.5px;
+      text-transform: uppercase; color: #a8c4ff;
+      margin-bottom: 24px;
+    }
+    .hero-title {
+      font-size: 56px; font-weight: 800; color: #fff;
+      line-height: 1.1; margin-bottom: 16px;
+      letter-spacing: -1px;
+    }
+    .hero-title span { color: #3772FF; }
+    .hero-tagline {
+      font-size: 18px; color: rgba(255,255,255,.6);
+      margin-bottom: 40px; font-weight: 400;
+    }
+    .hero-meta {
+      display: flex; gap: 32px;
+    }
+    .hero-meta-item { text-align: left; }
+    .hero-meta-label { font-size: 10px; color: rgba(255,255,255,.35); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+    .hero-meta-value { font-size: 14px; font-weight: 600; color: rgba(255,255,255,.85); }
+
+    /* ── SECTION ─────────────────────────────────────────────────── */
+    section {
+      padding: 80px 80px;
+      border-bottom: 1px solid #e8edf8;
+    }
+    section:last-child { border-bottom: none; }
+
+    .section-header { margin-bottom: 48px; }
+    .section-eyebrow {
+      font-size: 11px; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--secondary);
+      margin-bottom: 8px;
+    }
+    .section-title {
+      font-size: 32px; font-weight: 800; color: var(--primary);
+      letter-spacing: -.5px; margin-bottom: 12px;
+    }
+    .section-desc {
+      font-size: 15px; color: var(--muted); max-width: 560px;
+    }
+
+    /* ── LOGO SECTION ────────────────────────────────────────────── */
+    .logo-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .logo-card {
+      border-radius: 20px; overflow: hidden;
+      border: 1px solid var(--border-blue);
+    }
+    .logo-display {
+      height: 200px; display: flex; align-items: center; justify-content: center;
+      font-family: 'Inter', sans-serif;
+    }
+    .logo-display.light { background: var(--white); }
+    .logo-display.dark  { background: var(--primary); }
+    .logo-display.blue  {
+      background: linear-gradient(135deg, #001E80 0%, #3772FF 100%);
+    }
+    .logo-caption {
+      padding: 14px 18px;
+      background: var(--white);
+      border-top: 1px solid #eef2ff;
+      font-size: 12px; color: var(--muted); font-weight: 500;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .logo-caption span { font-weight: 600; color: var(--dark); font-size: 13px; }
+
+    /* Inline SVG logo */
+    .brand-logo {
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+    }
+    .brand-logo-text {
+      font-size: 22px; font-weight: 800; letter-spacing: -.5px;
+    }
+    .brand-logo-sub {
+      font-size: 10px; font-weight: 500; letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+    .logo-icon-wrap {
+      width: 48px; height: 48px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+    }
+
+    /* ── COLOR SECTION ───────────────────────────────────────────── */
+    .color-grid {
+      display: grid; grid-template-columns: repeat(5, 1fr);
+      gap: 16px; margin-bottom: 40px;
+    }
+    .color-row-2 { grid-template-columns: repeat(4, 1fr); }
+
+    .color-swatch {
+      border-radius: 16px; overflow: hidden;
+      border: 1px solid rgba(0,0,0,.07);
+    }
+    .color-block {
+      height: 120px; position: relative;
+      display: flex; align-items: flex-end; padding: 14px;
+    }
+    .color-block .badge {
+      background: rgba(255,255,255,.18);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,.25);
+      border-radius: 8px;
+      padding: 3px 8px;
+      font-size: 11px; font-weight: 600; color: #fff;
+      font-family: 'Courier New', monospace;
+    }
+    .color-info {
+      background: var(--white); padding: 14px;
+    }
+    .color-name { font-size: 13px; font-weight: 700; color: var(--dark); margin-bottom: 2px; }
+    .color-hex  { font-size: 11px; color: var(--muted); font-family: 'Courier New', monospace; }
+    .color-desc { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+    /* ── TYPOGRAPHY ──────────────────────────────────────────────── */
+    .type-showcase {
+      background: var(--white); border-radius: 20px;
+      padding: 48px; border: 1px solid var(--border-blue);
+      margin-bottom: 24px;
+    }
+    .type-row {
+      display: flex; align-items: baseline; gap: 24px;
+      padding: 20px 0; border-bottom: 1px solid #f0f3ff;
+    }
+    .type-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .type-meta { width: 120px; shrink: 0; }
+    .type-meta .label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+    .type-meta .spec  { font-size: 11px; color: #aaa; margin-top: 2px; font-family: 'Courier New', monospace; }
+    .type-sample { flex: 1; }
+
+    .font-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .font-card {
+      background: var(--white); border-radius: 16px;
+      padding: 32px; border: 1px solid var(--border-blue);
+    }
+    .font-card-name  { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--secondary); margin-bottom: 8px; }
+    .font-card-title { font-size: 36px; font-weight: 700; color: var(--primary); margin-bottom: 12px; }
+    .font-card-weights { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .weight-pill {
+      padding: 3px 10px; border-radius: 100px;
+      background: var(--light-blue); font-size: 11px;
+      color: var(--primary); font-weight: 600;
+    }
+    .font-card-sample { font-size: 13px; color: var(--muted); line-height: 1.7; }
+
+    /* ── GRADIENT ────────────────────────────────────────────────── */
+    .gradient-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .gradient-card {
+      border-radius: 20px; overflow: hidden;
+      border: 1px solid rgba(0,0,0,.07);
+    }
+    .gradient-swatch {
+      height: 160px;
+    }
+    .gradient-info { background: var(--white); padding: 16px 18px; }
+    .gradient-name { font-size: 13px; font-weight: 700; color: var(--dark); margin-bottom: 4px; }
+    .gradient-code { font-size: 11px; color: var(--muted); font-family: 'Courier New', monospace; }
+
+    /* ── COMPONENTS ──────────────────────────────────────────────── */
+    .comp-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 32px;
+    }
+    .comp-panel {
+      background: var(--white); border-radius: 20px;
+      padding: 32px; border: 1px solid var(--border-blue);
+    }
+    .comp-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 20px;
+    }
+    .comp-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 20px; border-radius: 10px;
+      font-size: 14px; font-weight: 600; border: none; cursor: pointer;
+      font-family: 'Inter', sans-serif; letter-spacing: -.1px;
+      transition: all .15s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #3772FF, #2956BF);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(55,114,255,.35);
+    }
+    .btn-secondary {
+      background: var(--light-blue); color: var(--primary);
+    }
+    .btn-dark {
+      background: var(--primary); color: #fff;
+      box-shadow: 0 4px 14px rgba(0,30,128,.25);
+    }
+    .btn-ghost {
+      background: transparent; color: var(--secondary);
+      border: 1.5px solid var(--border-blue);
+    }
+    .btn-danger { background: #FEE2E2; color: #DC2626; }
+    .btn-success{ background: #D1FAE5; color: #059669; }
+    .btn-lg { padding: 14px 28px; font-size: 16px; border-radius: 12px; }
+    .btn-sm { padding: 7px 14px; font-size: 12px; border-radius: 8px; }
+
+    /* Badges */
+    .badge-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 100px;
+      font-size: 11px; font-weight: 700;
+    }
+    .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .badge-blue    { background: var(--light-blue); color: var(--primary); }
+    .badge-green   { background: #D1FAE5; color: #065F46; }
+    .badge-red     { background: #FEE2E2; color: #991B1B; }
+    .badge-yellow  { background: #FEF3C7; color: #92400E; }
+    .badge-purple  { background: #EDE9FE; color: #5B21B6; }
+    .badge-outline { background: transparent; border: 1.5px solid var(--border-blue); color: var(--primary); }
+
+    /* Inputs */
+    .input-demo {
+      width: 100%; padding: 11px 14px;
+      border: 1.5px solid #E5E7EB; border-radius: 10px;
+      font-family: 'Inter', sans-serif; font-size: 14px; color: var(--dark);
+      background: #fff; outline: none; margin-bottom: 10px;
+    }
+    .input-demo.focused { border-color: var(--secondary); box-shadow: 0 0 0 3px rgba(55,114,255,.12); }
+    .input-demo.error   { border-color: #EF4444; box-shadow: 0 0 0 3px rgba(239,68,68,.1); }
+    .input-demo.success { border-color: #10B981; box-shadow: 0 0 0 3px rgba(16,185,129,.1); }
+    .input-label { font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px; }
+
+    /* Card demo */
+    .demo-card {
+      background: var(--white); border-radius: 16px;
+      border: 1px solid var(--border-blue);
+      overflow: hidden;
+    }
+    .demo-card-header {
+      padding: 16px 20px;
+      background: linear-gradient(135deg, #001E80, #3772FF);
+      color: #fff;
+    }
+    .demo-card-title { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+    .demo-card-sub   { font-size: 12px; color: rgba(255,255,255,.6); }
+    .demo-card-body  { padding: 20px; }
+    .demo-stat-row   { display: flex; gap: 16px; margin-bottom: 16px; }
+    .demo-stat { flex: 1; background: var(--light-blue); border-radius: 12px; padding: 14px; text-align: center; }
+    .demo-stat-val { font-size: 22px; font-weight: 800; color: var(--primary); }
+    .demo-stat-lab { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* ── ICONS ───────────────────────────────────────────────────── */
+    .icon-grid {
+      display: flex; gap: 16px; flex-wrap: wrap;
+    }
+    .icon-item {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      width: 80px;
+    }
+    .icon-wrap {
+      width: 52px; height: 52px; border-radius: 14px;
+      background: var(--light-blue); display: flex;
+      align-items: center; justify-content: center;
+      font-size: 22px;
+    }
+    .icon-label { font-size: 10px; color: var(--muted); text-align: center; font-weight: 500; }
+
+    /* ── SPACING ─────────────────────────────────────────────────── */
+    .spacing-row {
+      display: flex; align-items: flex-end; gap: 20px;
+      padding: 20px 0; border-bottom: 1px solid #f0f3ff;
+    }
+    .spacing-row:last-child { border-bottom: none; }
+    .spacing-block {
+      background: linear-gradient(135deg, #3772FF, #001E80);
+      border-radius: 4px; flex-shrink: 0;
+    }
+    .spacing-meta { font-size: 13px; }
+    .spacing-size { font-weight: 700; color: var(--dark); margin-bottom: 2px; }
+    .spacing-use  { font-size: 12px; color: var(--muted); }
+
+    /* ── DO / DON'T ──────────────────────────────────────────────── */
+    .rules-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .rules-card { border-radius: 16px; overflow: hidden; border: 1px solid; }
+    .rules-card.do   { border-color: #A7F3D0; }
+    .rules-card.dont { border-color: #FECACA; }
+    .rules-header {
+      padding: 12px 20px; display: flex; align-items: center; gap: 8px;
+      font-size: 13px; font-weight: 700;
+    }
+    .rules-card.do   .rules-header { background: #D1FAE5; color: #065F46; }
+    .rules-card.dont .rules-header { background: #FEE2E2; color: #991B1B; }
+    .rules-body { background: var(--white); padding: 20px; }
+    .rules-body ul { padding-left: 20px; }
+    .rules-body li { font-size: 13px; color: var(--muted); margin-bottom: 6px; line-height: 1.5; }
+
+    /* ── VOICE & TONE ────────────────────────────────────────────── */
+    .voice-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .voice-card {
+      background: var(--white); border-radius: 16px;
+      padding: 28px; border: 1px solid var(--border-blue);
+    }
+    .voice-icon { font-size: 28px; margin-bottom: 14px; }
+    .voice-title { font-size: 16px; font-weight: 700; color: var(--primary); margin-bottom: 8px; }
+    .voice-desc  { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 14px; }
+    .voice-examples { list-style: none; }
+    .voice-examples li {
+      font-size: 12px; padding: 8px 12px;
+      background: var(--light-blue); border-radius: 8px;
+      color: var(--primary); margin-bottom: 6px; font-weight: 500;
+    }
+    .voice-examples li::before { content: '↳ '; opacity: .6; }
+
+    /* ── MOTION ──────────────────────────────────────────────────── */
+    .motion-grid { display: grid; grid-template-columns: repeat(4,1fr); gap:16px; }
+    .motion-card {
+      background: var(--white); border-radius: 16px;
+      padding: 24px; border: 1px solid var(--border-blue);
+      text-align: center;
+    }
+    .motion-demo {
+      width: 48px; height: 48px; border-radius: 12px;
+      background: linear-gradient(135deg, #3772FF, #001E80);
+      margin: 0 auto 16px;
+    }
+    .motion-card:nth-child(1) .motion-demo { animation: pulse 2s ease-in-out infinite; }
+    .motion-card:nth-child(2) .motion-demo { animation: spin .5s linear; }
+    .motion-card:nth-child(3) .motion-demo { animation: slideIn .4s ease-out forwards; }
+    .motion-card:nth-child(4) .motion-demo { animation: pop .3s cubic-bezier(.34,1.56,.64,1) forwards; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(.95)} }
+    @keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+    @keyframes slideIn { from{transform:translateY(12px);opacity:0} to{transform:translateY(0);opacity:1} }
+    @keyframes pop { from{transform:scale(.7);opacity:0} to{transform:scale(1);opacity:1} }
+    .motion-name { font-size: 13px; font-weight: 700; color: var(--dark); margin-bottom: 4px; }
+    .motion-spec { font-size: 11px; color: var(--muted); font-family: 'Courier New', monospace; }
+
+    /* ── FOOTER ──────────────────────────────────────────────────── */
+    .brand-footer {
+      background: var(--primary); padding: 60px 80px;
+      display: flex; justify-content: space-between; align-items: center;
+      margin-left: 0;
+    }
+    .brand-footer-left .title { font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 4px; }
+    .brand-footer-left .sub   { font-size: 13px; color: rgba(255,255,255,.4); }
+    .brand-footer-right       { font-size: 12px; color: rgba(255,255,255,.35); text-align: right; }
+
+    /* ── DIVIDER ─────────────────────────────────────────────────── */
+    .divider {
+      width: 48px; height: 4px; border-radius: 2px;
+      background: linear-gradient(90deg, #3772FF, #3A50FF);
+      margin-bottom: 20px;
+    }
+
+    /* scrollbar */
+    .nav::-webkit-scrollbar { width: 4px; }
+    .nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════ SIDEBAR ═══════════ -->
+<nav class="nav">
+  <div class="nav-logo">
+    <div class="nav-logo-mark">
+      <div class="nav-icon">🏥</div>
+      <div>
+        <div class="nav-brand">ZhanCare.AI</div>
+        <div class="nav-sub">Брендбук v1.0</div>
+      </div>
+    </div>
+  </div>
+  <div class="nav-items">
+    <div class="nav-section">Основы</div>
+    <a class="nav-link active" href="#intro"><span class="nav-dot"></span>Введение</a>
+    <a class="nav-link" href="#logo"><span class="nav-dot"></span>Логотип</a>
+    <a class="nav-link" href="#colors"><span class="nav-dot"></span>Цвета</a>
+    <a class="nav-link" href="#typography"><span class="nav-dot"></span>Типографика</a>
+    <a class="nav-link" href="#gradients"><span class="nav-dot"></span>Градиенты</a>
+    <div class="nav-section">Компоненты</div>
+    <a class="nav-link" href="#buttons"><span class="nav-dot"></span>Кнопки</a>
+    <a class="nav-link" href="#badges"><span class="nav-dot"></span>Бейджи</a>
+    <a class="nav-link" href="#inputs"><span class="nav-dot"></span>Инпуты</a>
+    <a class="nav-link" href="#cards"><span class="nav-dot"></span>Карточки</a>
+    <div class="nav-section">Стиль</div>
+    <a class="nav-link" href="#icons"><span class="nav-dot"></span>Иконки</a>
+    <a class="nav-link" href="#spacing"><span class="nav-dot"></span>Сетка</a>
+    <a class="nav-link" href="#motion"><span class="nav-dot"></span>Анимация</a>
+    <a class="nav-link" href="#voice"><span class="nav-dot"></span>Тон голоса</a>
+    <a class="nav-link" href="#rules"><span class="nav-dot"></span>Правила</a>
+  </div>
+</nav>
+
+<!-- ═══════════ MAIN ═══════════ -->
+<main class="main">
+
+  <!-- HERO -->
+  <div class="hero" id="intro">
+    <div class="hero-grid"></div>
+    <div class="hero-content">
+      <div class="hero-eyebrow">
+        <span>📋</span> Официальный Брендбук
+      </div>
+      <h1 class="hero-title">ZhanCare<span>.</span>AI</h1>
+      <p class="hero-tagline">Здоровье в один клик — визуальная идентичность платформы</p>
+      <div class="hero-meta">
+        <div class="hero-meta-item">
+          <div class="hero-meta-label">Версия</div>
+          <div class="hero-meta-value">1.0.0</div>
+        </div>
+        <div class="hero-meta-item">
+          <div class="hero-meta-label">Год</div>
+          <div class="hero-meta-value">2025</div>
+        </div>
+        <div class="hero-meta-item">
+          <div class="hero-meta-label">Шрифт</div>
+          <div class="hero-meta-value">Inter</div>
+        </div>
+        <div class="hero-meta-item">
+          <div class="hero-meta-label">Рынок</div>
+          <div class="hero-meta-value">KZ · UZ · RU</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───── LOGO ───── -->
+  <section id="logo">
+    <div class="section-header">
+      <div class="section-eyebrow">01 · Логотип</div>
+      <div class="divider"></div>
+      <h2 class="section-title">Идентификация бренда</h2>
+      <p class="section-desc">
+        Логотип — главный элемент идентичности. Используется только в одобренных вариантах и пропорциях.
+      </p>
+    </div>
+
+    <div class="logo-grid">
+      <!-- Light -->
+      <div class="logo-card">
+        <div class="logo-display light">
+          <div class="brand-logo">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="logo-icon-wrap" style="background:linear-gradient(135deg,#3772FF,#001E80);">
+                <span style="font-size:22px;">🏥</span>
+              </div>
+              <div>
+                <div class="brand-logo-text" style="color:#001E80;">ZhanCare<span style="color:#3772FF;">.AI</span></div>
+                <div class="brand-logo-sub" style="color:#6B7280;">Здоровье в один клик</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="logo-caption">
+          <span>Светлый фон</span>
+          <span style="color:#3772FF;font-size:11px;">Основной</span>
+        </div>
+      </div>
+      <!-- Dark -->
+      <div class="logo-card">
+        <div class="logo-display dark">
+          <div class="brand-logo">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="logo-icon-wrap" style="background:rgba(55,114,255,.2);border:1px solid rgba(55,114,255,.3);">
+                <span style="font-size:22px;">🏥</span>
+              </div>
+              <div>
+                <div class="brand-logo-text" style="color:#fff;">ZhanCare<span style="color:#3772FF;">.AI</span></div>
+                <div class="brand-logo-sub" style="color:rgba(255,255,255,.45);">Здоровье в один клик</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="logo-caption">
+          <span>Тёмный фон</span>
+          <span style="color:#6B7280;font-size:11px;">Вариант</span>
+        </div>
+      </div>
+      <!-- Gradient -->
+      <div class="logo-card">
+        <div class="logo-display blue">
+          <div class="brand-logo" style="padding:28px 36px;background:rgba(255,255,255,.1);border-radius:20px;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.15);">
+            <div class="brand-logo-text" style="color:#fff;font-size:26px;">ZhanCare<span style="color:#a8c4ff;">.AI</span></div>
+            <div class="brand-logo-sub" style="color:rgba(255,255,255,.6);">Здоровье в один клик</div>
+          </div>
+        </div>
+        <div class="logo-caption">
+          <span>Градиентный фон</span>
+          <span style="color:#6B7280;font-size:11px;">Промо</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Icon only -->
+    <div style="display:flex;gap:16px;margin-top:20px;align-items:center;">
+      <div style="width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,#3772FF,#001E80);display:flex;align-items:center;justify-content:center;font-size:34px;box-shadow:0 8px 24px rgba(55,114,255,.35);">🏥</div>
+      <div style="width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#3772FF,#001E80);display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 6px 18px rgba(55,114,255,.35);">🏥</div>
+      <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#3772FF,#001E80);display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 4px 12px rgba(55,114,255,.35);">🏥</div>
+      <div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#3772FF,#001E80);display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 3px 8px rgba(55,114,255,.35);">🏥</div>
+      <div style="margin-left:16px;">
+        <div style="font-size:12px;font-weight:700;color:#6B7280;margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;">Иконка · Масштаб</div>
+        <div style="font-size:12px;color:#aaa;">72px · 56px · 44px · 32px</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── COLORS ───── -->
+  <section id="colors" style="background:#fff;">
+    <div class="section-header">
+      <div class="section-eyebrow">02 · Цветовая палитра</div>
+      <div class="divider"></div>
+      <h2 class="section-title">Цвета бренда</h2>
+      <p class="section-desc">Синяя палитра отражает доверие, профессионализм и инновации в медицине.</p>
+    </div>
+
+    <!-- Primary -->
+    <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#6B7280;margin-bottom:16px;">Основные</div>
+    <div class="color-grid">
+      <div class="color-swatch">
+        <div class="color-block" style="background:#001E80;">
+          <div class="badge">#001E80</div>
+        </div>
+        <div class="color-info">
+          <div class="color-name">Primary</div>
+          <div class="color-hex">#001E80</div>
+          <div class="color-desc">Главный синий — заголовки, навигация</div>
+        </div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#3772FF;">
+          <div class="badge">#3772FF</div>
+        </div>
+        <div class="color-info">
+          <div class="color-name">Secondary</div>
+          <div class="color-hex">#3772FF</div>
+          <div class="color-desc">Основной акцент — кнопки, ссылки</div>
+        </div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#3A50FF;">
+          <div class="badge">#3A50FF</div>
+        </div>
+        <div class="color-info">
+          <div class="color-name">Accent</div>
+          <div class="color-hex">#3A50FF</div>
+          <div class="color-desc">Яркий акцент — градиенты, CTA</div>
+        </div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#2956BF;">
+          <div class="badge">#2956BF</div>
+        </div>
+        <div class="color-info">
+          <div class="color-name">Mid Blue</div>
+          <div class="color-hex">#2956BF</div>
+          <div class="color-desc">Hover-состояния кнопок</div>
+        </div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#132859;">
+          <div class="badge">#132859</div>
+        </div>
+        <div class="color-info">
+          <div class="color-name">Deep Blue</div>
+          <div class="color-hex">#132859</div>
+          <div class="color-desc">Тёмные фоны, overlay</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Neutrals -->
+    <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#6B7280;margin:28px 0 16px;">Нейтральные</div>
+    <div class="color-grid color-row-2">
+      <div class="color-swatch">
+        <div class="color-block" style="background:#1B1B1B;">
+          <div class="badge">#1B1B1B</div>
+        </div>
+        <div class="color-info">
+          <div class="color-name">Dark</div>
+          <div class="color-hex">#1B1B1B</div>
+          <div class="color-desc">Основной текст</div>
+        </div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#6B7280;">
+          <div class="badge">#6B7280</div>
+        </div>
+        <div class="color-info">
+          <div class="color-name">Muted</div>
+          <div class="color-hex">#6B7280</div>
+          <div class="color-desc">Второстепенный текст</div>
+        </div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#C1D3FF;">
+          <div class="badge" style="color:#001E80;">#C1D3FF</div>
+        </div>
+        <div class="color-info">
+          <div class="color-name">Border Blue</div>
+          <div class="color-hex">#C1D3FF</div>
+          <div class="color-desc">Границы, разделители</div>
+        </div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#EBF1FF;">
+          <div class="badge" style="color:#001E80;">#EBF1FF</div>
+        </div>
+        <div class="color-info">
+          <div class="color-name">Light Blue</div>
+          <div class="color-hex">#EBF1FF</div>
+          <div class="color-desc">Фоны блоков, теги</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Semantic -->
+    <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#6B7280;margin:28px 0 16px;">Семантические</div>
+    <div class="color-grid" style="grid-template-columns:repeat(4,1fr)">
+      <div class="color-swatch">
+        <div class="color-block" style="background:#059669;">
+          <div class="badge">#059669</div>
+        </div>
+        <div class="color-info">
+          <div class="color-name">Success</div>
+          <div class="color-hex">#059669</div>
+          <div class="color-desc">Успех, онлайн, активен</div>
+        </div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#DC2626;">
+          <div class="badge">#DC2626</div>
+        </div>
+        <div class="color-info">
+          <div class="color-name">Danger</div>
+          <div class="color-hex">#DC2626</div>
+          <div class="color-desc">Ошибки, отмена, деактивация</div>
+        </div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#D97706;">
+          <div class="badge">#D97706</div>
+        </div>
+        <div class="color-info">
+          <div class="color-name">Warning</div>
+          <div class="color-hex">#D97706</div>
+          <div class="color-desc">Предупреждения, ожидание</div>
+        </div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#00D4FF;">
+          <div class="badge">#00D4FF</div>
+        </div>
+        <div class="color-info">
+          <div class="color-name">Cyan</div>
+          <div class="color-hex">#00D4FF</div>
+          <div class="color-desc">AI-фичи, иллюстрации</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── TYPOGRAPHY ───── -->
+  <section id="typography">
+    <div class="section-header">
+      <div class="section-eyebrow">03 · Типографика</div>
+      <div class="divider"></div>
+      <h2 class="section-title">Шрифтовая система</h2>
+      <p class="section-desc">Inter — единственный шрифт бренда. Чистый, читаемый, современный.</p>
+    </div>
+
+    <div class="font-grid" style="margin-bottom:32px;">
+      <div class="font-card">
+        <div class="font-card-name">Основной шрифт</div>
+        <div class="font-card-title" style="font-weight:800;">Inter</div>
+        <div class="font-card-weights">
+          <span class="weight-pill">300 Light</span>
+          <span class="weight-pill">400 Regular</span>
+          <span class="weight-pill">500 Medium</span>
+          <span class="weight-pill">600 Semibold</span>
+          <span class="weight-pill">700 Bold</span>
+          <span class="weight-pill">800 Extrabold</span>
+          <span class="weight-pill">900 Black</span>
+        </div>
+        <div class="font-card-sample">
+          ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>
+          abcdefghijklmnopqrstuvwxyz<br>
+          0123456789 .,!?@#$%&
+        </div>
+      </div>
+      <div class="font-card">
+        <div class="font-card-name">Моноширинный (данные)</div>
+        <div class="font-card-title" style="font-family:'Courier New',monospace;font-weight:700;font-size:28px;">Courier New</div>
+        <div class="font-card-weights">
+          <span class="weight-pill">Hex-коды</span>
+          <span class="weight-pill">Номера телефонов</span>
+          <span class="weight-pill">ID пациентов</span>
+        </div>
+        <div class="font-card-sample" style="font-family:'Courier New',monospace;">
+          #3772FF · +7 (701) 234-56-78<br>
+          ID: PAT-2025-00419<br>
+          font-weight: 400/700
+        </div>
+      </div>
+    </div>
+
+    <div class="type-showcase">
+      <div class="type-row">
+        <div class="type-meta">
+          <div class="label">Display</div>
+          <div class="spec">56px / 800 / -1px</div>
+        </div>
+        <div class="type-sample">
+          <span style="font-size:56px;font-weight:800;letter-spacing:-1px;color:#001E80;line-height:1.1;">Здоровье в один клик</span>
+        </div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">
+          <div class="label">H1</div>
+          <div class="spec">40px / 800 / -0.8px</div>
+        </div>
+        <div class="type-sample">
+          <span style="font-size:40px;font-weight:800;letter-spacing:-.8px;color:#001E80;line-height:1.15;">Запись к врачу онлайн</span>
+        </div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">
+          <div class="label">H2</div>
+          <div class="spec">32px / 700 / -0.5px</div>
+        </div>
+        <div class="type-sample">
+          <span style="font-size:32px;font-weight:700;letter-spacing:-.5px;color:#001E80;">Управление клиникой</span>
+        </div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">
+          <div class="label">H3</div>
+          <div class="spec">24px / 700 / -0.3px</div>
+        </div>
+        <div class="type-sample">
+          <span style="font-size:24px;font-weight:700;letter-spacing:-.3px;color:#001E80;">Расписание приёмов</span>
+        </div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">
+          <div class="label">Body Large</div>
+          <div class="spec">16px / 400 / 1.7</div>
+        </div>
+        <div class="type-sample">
+          <span style="font-size:16px;line-height:1.7;color:#374151;">ZhanCare.AI — цифровая медицинская платформа, объединяющая пациентов с врачами. Быстро, удобно и безопасно.</span>
+        </div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">
+          <div class="label">Body</div>
+          <div class="spec">14px / 400 / 1.6</div>
+        </div>
+        <div class="type-sample">
+          <span style="font-size:14px;line-height:1.6;color:#6B7280;">Для записи на приём выберите специалиста из списка, укажите удобное время и подтвердите бронирование через SMS.</span>
+        </div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">
+          <div class="label">Caption</div>
+          <div class="spec">12px / 500 / 1.4</div>
+        </div>
+        <div class="type-sample">
+          <span style="font-size:12px;font-weight:500;line-height:1.4;color:#9CA3AF;">Последнее обновление: 13 мая 2025 · Все данные защищены SSL</span>
+        </div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">
+          <div class="label">Overline</div>
+          <div class="spec">11px / 700 / 2px spacing</div>
+        </div>
+        <div class="type-sample">
+          <span style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#3772FF;">Модуль записи · Версия 2.4</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── GRADIENTS ───── -->
+  <section id="gradients" style="background:#fff;">
+    <div class="section-header">
+      <div class="section-eyebrow">04 · Градиенты</div>
+      <div class="divider"></div>
+      <h2 class="section-title">Фирменные градиенты</h2>
+      <p class="section-desc">Использовать только в одобренных сочетаниях. Не смешивать произвольно.</p>
+    </div>
+
+    <div class="gradient-grid">
+      <div class="gradient-card">
+        <div class="gradient-swatch" style="background:linear-gradient(135deg,#001E80 0%,#3772FF 100%);"></div>
+        <div class="gradient-info">
+          <div class="gradient-name">Primary Gradient</div>
+          <div class="gradient-code">135deg · #001E80 → #3772FF</div>
+        </div>
+      </div>
+      <div class="gradient-card">
+        <div class="gradient-swatch" style="background:linear-gradient(135deg,#3772FF 0%,#3A50FF 100%);"></div>
+        <div class="gradient-info">
+          <div class="gradient-name">Button Gradient</div>
+          <div class="gradient-code">135deg · #3772FF → #3A50FF</div>
+        </div>
+      </div>
+      <div class="gradient-card">
+        <div class="gradient-swatch" style="background:linear-gradient(135deg,#001E80 0%,#0029A3 40%,#1E34A0 70%,#132859 100%);"></div>
+        <div class="gradient-info">
+          <div class="gradient-name">Hero Gradient</div>
+          <div class="gradient-code">135deg · #001E80 → #132859</div>
+        </div>
+      </div>
+      <div class="gradient-card">
+        <div class="gradient-swatch" style="background:linear-gradient(135deg,#3267E6 0%,#214499 100%);"></div>
+        <div class="gradient-info">
+          <div class="gradient-name">Hover Gradient</div>
+          <div class="gradient-code">135deg · #3267E6 → #214499</div>
+        </div>
+      </div>
+      <div class="gradient-card">
+        <div class="gradient-swatch" style="background:linear-gradient(180deg,#EBF1FF 0%,#ffffff 100%);"></div>
+        <div class="gradient-info">
+          <div class="gradient-name">Page Background</div>
+          <div class="gradient-code">180deg · #EBF1FF → #FFFFFF</div>
+        </div>
+      </div>
+      <div class="gradient-card">
+        <div class="gradient-swatch" style="background:linear-gradient(135deg,#00D4FF 0%,#3772FF 50%,#001E80 100%);"></div>
+        <div class="gradient-info">
+          <div class="gradient-name">AI Accent Gradient</div>
+          <div class="gradient-code">135deg · #00D4FF → #001E80</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── BUTTONS ───── -->
+  <section id="buttons">
+    <div class="section-header">
+      <div class="section-eyebrow">05 · Кнопки</div>
+      <div class="divider"></div>
+      <h2 class="section-title">Кнопки и действия</h2>
+      <p class="section-desc">Иерархия кнопок отражает важность действия. Primary — одна на экране.</p>
+    </div>
+
+    <div class="comp-grid">
+      <div class="comp-panel">
+        <div class="comp-label">Типы кнопок</div>
+        <div class="comp-row">
+          <button class="btn btn-primary">🛡 Войти</button>
+          <button class="btn btn-dark">Записаться</button>
+          <button class="btn btn-secondary">Подробнее</button>
+          <button class="btn btn-ghost">Отмена</button>
+        </div>
+        <div class="comp-row">
+          <button class="btn btn-success">✓ Активен</button>
+          <button class="btn btn-danger">✕ Деактивировать</button>
+        </div>
+      </div>
+      <div class="comp-panel">
+        <div class="comp-label">Размеры</div>
+        <div class="comp-row" style="align-items:center;">
+          <button class="btn btn-primary btn-lg">Большой</button>
+          <button class="btn btn-primary">Средний</button>
+          <button class="btn btn-primary btn-sm">Малый</button>
+        </div>
+        <div style="margin-top:16px;padding:14px;background:var(--light-blue);border-radius:10px;">
+          <div style="font-size:12px;color:var(--primary);font-weight:600;">Радиус скругления</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">sm: 8px · md: 10px · lg: 12px · xl: 14px</div>
+        </div>
+      </div>
+      <div class="comp-panel">
+        <div class="comp-label">С иконками</div>
+        <div class="comp-row">
+          <button class="btn btn-primary">🏥 Найти врача</button>
+          <button class="btn btn-secondary">📅 Расписание</button>
+        </div>
+        <div class="comp-row">
+          <button class="btn btn-dark">⚕️ Консультация</button>
+          <button class="btn btn-ghost">📋 История</button>
+        </div>
+      </div>
+      <div class="comp-panel">
+        <div class="comp-label">Состояния</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <button class="btn btn-primary" style="width:100%;justify-content:center;">Обычное</button>
+          <button class="btn btn-primary" style="width:100%;justify-content:center;opacity:.5;cursor:not-allowed;">Неактивное (disabled)</button>
+          <button class="btn btn-primary" style="width:100%;justify-content:center;">
+            <span style="width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;display:inline-block;animation:spin .7s linear infinite;"></span>
+            Загрузка...
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── BADGES ───── -->
+  <section id="badges" style="background:#fff;">
+    <div class="section-header">
+      <div class="section-eyebrow">06 · Бейджи и метки</div>
+      <div class="divider"></div>
+      <h2 class="section-title">Статусы и теги</h2>
+    </div>
+
+    <div class="comp-panel" style="max-width:700px;">
+      <div class="comp-label">Статусы</div>
+      <div class="badge-row" style="margin-bottom:20px;">
+        <span class="badge badge-green"><span class="badge-dot"></span>Активен</span>
+        <span class="badge badge-red"><span class="badge-dot"></span>Неактивен</span>
+        <span class="badge badge-yellow"><span class="badge-dot"></span>Ожидание</span>
+        <span class="badge badge-blue"><span class="badge-dot"></span>В процессе</span>
+        <span class="badge badge-purple"><span class="badge-dot"></span>Верифицирован</span>
+      </div>
+      <div class="comp-label">Роли</div>
+      <div class="badge-row" style="margin-bottom:20px;">
+        <span class="badge badge-blue">Администратор</span>
+        <span class="badge badge-purple">Врач</span>
+        <span class="badge badge-green">Медсестра</span>
+        <span class="badge" style="background:#FEF3C7;color:#92400E;">Преподаватель</span>
+        <span class="badge badge-outline">Пациент</span>
+      </div>
+      <div class="comp-label">Числовые</div>
+      <div class="badge-row">
+        <span class="badge badge-red" style="min-width:20px;height:20px;padding:0 6px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;border-radius:100px;">3</span>
+        <span class="badge badge-blue" style="min-width:20px;height:20px;padding:0 6px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;border-radius:100px;">12</span>
+        <span class="badge badge-green" style="min-width:20px;height:20px;padding:0 6px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;border-radius:100px;">99+</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── INPUTS ───── -->
+  <section id="inputs">
+    <div class="section-header">
+      <div class="section-eyebrow">07 · Инпуты и формы</div>
+      <div class="divider"></div>
+      <h2 class="section-title">Поля ввода</h2>
+    </div>
+
+    <div class="comp-grid">
+      <div class="comp-panel">
+        <div class="comp-label">Состояния</div>
+        <div>
+          <div class="input-label">Default</div>
+          <input class="input-demo" type="text" placeholder="Введите имя пациента..." />
+          <div class="input-label">Focused</div>
+          <input class="input-demo focused" type="text" value="Айгерим Сейткали" />
+          <div class="input-label">Error</div>
+          <input class="input-demo error" type="text" value="неверный@" />
+          <div style="font-size:11px;color:#EF4444;margin-top:-6px;margin-bottom:10px;">Введите корректный email адрес</div>
+          <div class="input-label">Success</div>
+          <input class="input-demo success" type="text" value="+7 775 824 96 86" />
+        </div>
+      </div>
+      <div class="comp-panel">
+        <div class="comp-label">Форма авторизации</div>
+        <div style="background:#0f1e5a;padding:28px;border-radius:16px;">
+          <div style="text-align:center;margin-bottom:20px;">
+            <div style="font-size:20px;font-weight:800;color:#fff;">ZhanCare<span style="color:#3772FF;">.AI</span></div>
+            <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:2px;">Здоровье в один клик</div>
+          </div>
+          <input style="width:100%;padding:11px 14px;border:1.5px solid rgba(55,114,255,.3);border-radius:10px;background:rgba(255,255,255,.06);color:#fff;font-family:Inter;font-size:14px;outline:none;margin-bottom:10px;" placeholder="Email или телефон" />
+          <input style="width:100%;padding:11px 14px;border:1.5px solid rgba(55,114,255,.3);border-radius:10px;background:rgba(255,255,255,.06);color:#fff;font-family:Inter;font-size:14px;outline:none;margin-bottom:16px;" type="password" placeholder="Пароль" />
+          <button class="btn btn-primary" style="width:100%;justify-content:center;">🛡 Войти</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── CARDS ───── -->
+  <section id="cards" style="background:#fff;">
+    <div class="section-header">
+      <div class="section-eyebrow">08 · Карточки</div>
+      <div class="divider"></div>
+      <h2 class="section-title">Карточки и панели</h2>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;">
+      <!-- Patient card -->
+      <div class="demo-card">
+        <div class="demo-card-header">
+          <div class="demo-card-title">👤 Профиль пациента</div>
+          <div class="demo-card-sub">Карточка пациента</div>
+        </div>
+        <div class="demo-card-body">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#3772FF,#001E80);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px;">АС</div>
+            <div>
+              <div style="font-weight:700;font-size:14px;color:#1B1B1B;">Айгерим Сейткали</div>
+              <div style="font-size:12px;color:#6B7280;">+7 775 824 96 86</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <span class="badge badge-green"><span class="badge-dot"></span>Активен</span>
+            <span class="badge badge-blue">Пациент</span>
+          </div>
+        </div>
+      </div>
+      <!-- Stats card -->
+      <div class="demo-card">
+        <div class="demo-card-header" style="background:linear-gradient(135deg,#065F46,#059669);">
+          <div class="demo-card-title">📊 Статистика</div>
+          <div class="demo-card-sub">Клиника · Май 2025</div>
+        </div>
+        <div class="demo-card-body">
+          <div class="demo-stat-row">
+            <div class="demo-stat">
+              <div class="demo-stat-val">248</div>
+              <div class="demo-stat-lab">Записей</div>
+            </div>
+            <div class="demo-stat">
+              <div class="demo-stat-val">94%</div>
+              <div class="demo-stat-lab">Явка</div>
+            </div>
+          </div>
+          <div style="font-size:12px;color:#6B7280;text-align:center;">↑ +12% к прошлому месяцу</div>
+        </div>
+      </div>
+      <!-- Appointment -->
+      <div class="demo-card">
+        <div class="demo-card-header" style="background:linear-gradient(135deg,#1E34A0,#3772FF);">
+          <div class="demo-card-title">📅 Запись</div>
+          <div class="demo-card-sub">14 мая 2025 · 10:30</div>
+        </div>
+        <div class="demo-card-body">
+          <div style="font-size:13px;color:#1B1B1B;font-weight:600;margin-bottom:6px;">Терапевт · Иванов Д.А.</div>
+          <div style="font-size:12px;color:#6B7280;margin-bottom:14px;">Городская поликлиника №5</div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-primary btn-sm">Подтвердить</button>
+            <button class="btn btn-ghost btn-sm">Перенести</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── ICONS ───── -->
+  <section id="icons">
+    <div class="section-header">
+      <div class="section-eyebrow">09 · Иконки</div>
+      <div class="divider"></div>
+      <h2 class="section-title">Иконографика</h2>
+      <p class="section-desc">Используется библиотека Lucide Icons. Размеры: 16px / 20px / 24px.</p>
+    </div>
+
+    <div class="icon-grid">
+      <div class="icon-item"><div class="icon-wrap">🏥</div><div class="icon-label">Клиника</div></div>
+      <div class="icon-item"><div class="icon-wrap">👨‍⚕️</div><div class="icon-label">Врач</div></div>
+      <div class="icon-item"><div class="icon-wrap">👤</div><div class="icon-label">Пациент</div></div>
+      <div class="icon-item"><div class="icon-wrap">📅</div><div class="icon-label">Запись</div></div>
+      <div class="icon-item"><div class="icon-wrap">💊</div><div class="icon-label">Лечение</div></div>
+      <div class="icon-item"><div class="icon-wrap">📋</div><div class="icon-label">История</div></div>
+      <div class="icon-item"><div class="icon-wrap">🔔</div><div class="icon-label">Уведомления</div></div>
+      <div class="icon-item"><div class="icon-wrap">🔒</div><div class="icon-label">Безопасность</div></div>
+      <div class="icon-item"><div class="icon-wrap">💬</div><div class="icon-label">Чат</div></div>
+      <div class="icon-item"><div class="icon-wrap">📊</div><div class="icon-label">Аналитика</div></div>
+      <div class="icon-item"><div class="icon-wrap">⚙️</div><div class="icon-label">Настройки</div></div>
+      <div class="icon-item"><div class="icon-wrap">🌐</div><div class="icon-label">Геолокация</div></div>
+      <div class="icon-item"><div class="icon-wrap">🤖</div><div class="icon-label">AI-ассистент</div></div>
+      <div class="icon-item"><div class="icon-wrap">📱</div><div class="icon-label">Телефон</div></div>
+      <div class="icon-item"><div class="icon-wrap">✉️</div><div class="icon-label">Email</div></div>
+      <div class="icon-item"><div class="icon-wrap">🔍</div><div class="icon-label">Поиск</div></div>
+    </div>
+  </section>
+
+  <!-- ───── SPACING ───── -->
+  <section id="spacing" style="background:#fff;">
+    <div class="section-header">
+      <div class="section-eyebrow">10 · Сетка и отступы</div>
+      <div class="divider"></div>
+      <h2 class="section-title">Пространство и сетка</h2>
+      <p class="section-desc">Базовая единица — 4px. Все отступы кратны 4.</p>
+    </div>
+
+    <div style="background:var(--white);border-radius:20px;padding:40px;border:1px solid var(--border-blue);">
+      <div class="spacing-row">
+        <div class="spacing-block" style="width:4px;height:16px;"></div>
+        <div class="spacing-meta"><div class="spacing-size">4px — xs</div><div class="spacing-use">Иконка-текст, Badge-dot</div></div>
+      </div>
+      <div class="spacing-row">
+        <div class="spacing-block" style="width:8px;height:16px;"></div>
+        <div class="spacing-meta"><div class="spacing-size">8px — sm</div><div class="spacing-use">Внутри компонентов, badge padding</div></div>
+      </div>
+      <div class="spacing-row">
+        <div class="spacing-block" style="width:12px;height:16px;"></div>
+        <div class="spacing-meta"><div class="spacing-size">12px — md-</div><div class="spacing-use">Gap между элементами списка</div></div>
+      </div>
+      <div class="spacing-row">
+        <div class="spacing-block" style="width:16px;height:16px;"></div>
+        <div class="spacing-meta"><div class="spacing-size">16px — md</div><div class="spacing-use">Padding кнопок, отступ строк таблицы</div></div>
+      </div>
+      <div class="spacing-row">
+        <div class="spacing-block" style="width:24px;height:16px;"></div>
+        <div class="spacing-meta"><div class="spacing-size">24px — lg</div><div class="spacing-use">Padding карточек, gap сетки</div></div>
+      </div>
+      <div class="spacing-row">
+        <div class="spacing-block" style="width:32px;height:16px;"></div>
+        <div class="spacing-meta"><div class="spacing-size">32px — xl</div><div class="spacing-use">Padding панелей, section gap</div></div>
+      </div>
+      <div class="spacing-row">
+        <div class="spacing-block" style="width:48px;height:16px;"></div>
+        <div class="spacing-meta"><div class="spacing-size">48px — 2xl</div><div class="spacing-use">Section header margin-bottom</div></div>
+      </div>
+      <div class="spacing-row">
+        <div class="spacing-block" style="width:80px;height:16px;"></div>
+        <div class="spacing-meta"><div class="spacing-size">80px — page</div><div class="spacing-use">Padding страниц, секций</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── MOTION ───── -->
+  <section id="motion">
+    <div class="section-header">
+      <div class="section-eyebrow">11 · Анимация</div>
+      <div class="divider"></div>
+      <h2 class="section-title">Движение и переходы</h2>
+      <p class="section-desc">Анимации быстрые и целенаправленные. Используется Framer Motion.</p>
+    </div>
+
+    <div class="motion-grid">
+      <div class="motion-card">
+        <div class="motion-demo"></div>
+        <div class="motion-name">Pulse</div>
+        <div class="motion-spec">2s · ease-in-out · infinite<br>Уведомления, статусы</div>
+      </div>
+      <div class="motion-card">
+        <div class="motion-demo" style="animation:spin .6s linear infinite;"></div>
+        <div class="motion-name">Spin</div>
+        <div class="motion-spec">0.7s · linear · infinite<br>Состояния загрузки</div>
+      </div>
+      <div class="motion-card" style="cursor:pointer;" onclick="this.querySelector('.motion-demo').style.animation='none'; setTimeout(()=>{this.querySelector('.motion-demo').style.animation='slideIn .4s ease-out forwards';},10)">
+        <div class="motion-demo"></div>
+        <div class="motion-name">Slide In ↑</div>
+        <div class="motion-spec">0.4s · ease-out<br>Модалки, дропдауны</div>
+      </div>
+      <div class="motion-card" style="cursor:pointer;" onclick="this.querySelector('.motion-demo').style.animation='none'; setTimeout(()=>{this.querySelector('.motion-demo').style.animation='pop .3s cubic-bezier(.34,1.56,.64,1) forwards';},10)">
+        <div class="motion-demo"></div>
+        <div class="motion-name">Pop Scale</div>
+        <div class="motion-spec">0.3s · spring<br>Hover кнопок, success</div>
+      </div>
+    </div>
+
+    <div style="margin-top:24px;background:var(--white);border-radius:16px;padding:24px;border:1px solid var(--border-blue);">
+      <div style="font-size:12px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:16px;">Easing tokens</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
+        <div style="background:var(--light-blue);border-radius:10px;padding:14px;">
+          <div style="font-size:12px;font-weight:700;color:var(--primary);">ease-out</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;font-family:monospace;">cubic-bezier(.2,0,.0,1)</div>
+          <div style="font-size:11px;color:var(--muted);">Появление элементов</div>
+        </div>
+        <div style="background:var(--light-blue);border-radius:10px;padding:14px;">
+          <div style="font-size:12px;font-weight:700;color:var(--primary);">ease-in-out</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;font-family:monospace;">cubic-bezier(.4,0,.2,1)</div>
+          <div style="font-size:11px;color:var(--muted);">Переходы страниц</div>
+        </div>
+        <div style="background:var(--light-blue);border-radius:10px;padding:14px;">
+          <div style="font-size:12px;font-weight:700;color:var(--primary);">spring</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;font-family:monospace;">stiffness:400 damping:30</div>
+          <div style="font-size:11px;color:var(--muted);">Hover, tap кнопок</div>
+        </div>
+        <div style="background:var(--light-blue);border-radius:10px;padding:14px;">
+          <div style="font-size:12px;font-weight:700;color:var(--primary);">linear</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;font-family:monospace;">duration: 0.7s</div>
+          <div style="font-size:11px;color:var(--muted);">Спиннеры загрузки</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── VOICE ───── -->
+  <section id="voice" style="background:#fff;">
+    <div class="section-header">
+      <div class="section-eyebrow">12 · Тон голоса</div>
+      <div class="divider"></div>
+      <h2 class="section-title">Голос и стиль общения</h2>
+      <p class="section-desc">ZhanCare говорит с пользователями как заботливый, компетентный медицинский советник.</p>
+    </div>
+
+    <div class="voice-grid">
+      <div class="voice-card">
+        <div class="voice-icon">💙</div>
+        <div class="voice-title">Заботливый</div>
+        <div class="voice-desc">Мы ставим здоровье пользователя на первое место. Каждое сообщение — поддержка, а не инструкция.</div>
+        <ul class="voice-examples">
+          <li>Ваш врач свободен сегодня в 14:00</li>
+          <li>Напомним о приёме за час</li>
+          <li>Ваши данные надёжно защищены</li>
+        </ul>
+      </div>
+      <div class="voice-card">
+        <div class="voice-icon">🎯</div>
+        <div class="voice-title">Чёткий</div>
+        <div class="voice-desc">Коротко и по делу. Никакого медицинского жаргона без необходимости. Пользователь понимает с первого раза.</div>
+        <ul class="voice-examples">
+          <li>Запись подтверждена</li>
+          <li>Неверный номер телефона</li>
+          <li>Выберите удобное время</li>
+        </ul>
+      </div>
+      <div class="voice-card">
+        <div class="voice-icon">🤝</div>
+        <div class="voice-title">Человечный</div>
+        <div class="voice-desc">Мы не банк и не бюрократия. Общаемся на «вы» (официально), но тепло и с уважением.</div>
+        <ul class="voice-examples">
+          <li>Что-то пошло не так. Попробуйте ещё раз</li>
+          <li>Рады видеть вас снова!</li>
+          <li>Заботьтесь о себе — мы рядом</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── RULES ───── -->
+  <section id="rules">
+    <div class="section-header">
+      <div class="section-eyebrow">13 · Правила использования</div>
+      <div class="divider"></div>
+      <h2 class="section-title">Что можно и нельзя</h2>
+    </div>
+
+    <div class="rules-grid">
+      <div class="rules-card do">
+        <div class="rules-header">✓ Можно</div>
+        <div class="rules-body">
+          <ul>
+            <li>Использовать логотип на белом, тёмно-синем или прозрачном фоне</li>
+            <li>Масштабировать логотип пропорционально</li>
+            <li>Использовать фирменные цвета из палитры</li>
+            <li>Применять Inter с указанными весами</li>
+            <li>Использовать одобренные градиенты</li>
+            <li>Добавлять иконки из Lucide Icons</li>
+            <li>Анимировать компоненты через Framer Motion</li>
+          </ul>
+        </div>
+      </div>
+      <div class="rules-card dont">
+        <div class="rules-header">✕ Нельзя</div>
+        <div class="rules-body">
+          <ul>
+            <li>Изменять цвета логотипа на неутверждённые</li>
+            <li>Растягивать или деформировать логотип</li>
+            <li>Помещать логотип на пёстрые фоны</li>
+            <li>Использовать другие шрифты вместо Inter</li>
+            <li>Создавать произвольные градиенты вне палитры</li>
+            <li>Использовать тени на тексте в интерфейсе</li>
+            <li>Анимировать логотип вращением или мерцанием</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Clear zone -->
+    <div style="margin-top:28px;background:var(--white);border-radius:20px;padding:32px;border:1px solid var(--border-blue);">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:16px;">Охранная зона логотипа</div>
+      <div style="display:flex;align-items:center;justify-content:center;padding:32px;background:repeating-linear-gradient(45deg,#f0f4ff,#f0f4ff 8px,#fff 8px,#fff 16px);border-radius:12px;border:1px dashed var(--border-blue);">
+        <div style="background:#fff;padding:24px 40px;border-radius:12px;border:2px solid var(--secondary);">
+          <div style="font-size:20px;font-weight:800;color:var(--primary);">ZhanCare<span style="color:var(--secondary);">.AI</span></div>
+        </div>
+      </div>
+      <div style="font-size:13px;color:var(--muted);text-align:center;margin-top:12px;">
+        Охранная зона = высота буквы «Z» со всех сторон. Никаких других элементов в этой зоне.
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── FOOTER ───── -->
+  <div class="brand-footer">
+    <div class="brand-footer-left">
+      <div class="title">ZhanCare.AI · Брендбук</div>
+      <div class="sub">Здоровье в один клик — визуальные стандарты платформы</div>
+    </div>
+    <div class="brand-footer-right">
+      Версия 1.0.0 · 2025<br>
+      ZhanCare Group · KZ
+    </div>
+  </div>
+
+</main>
+
+<script>
+  // Active nav highlight on scroll
+  const sections = document.querySelectorAll('section[id], div[id="intro"]');
+  const links = document.querySelectorAll('.nav-link');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`.nav-link[href="#${entry.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { threshold: 0.3 });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

@@ -335,8 +335,7 @@ export default function NurseProfileDashboard() {
             <PhoneInput
               value={form.phone}
               onChange={(e164) => setForm((p) => ({ ...p, phone: e164 }))}
-              placeholder="+7 (___) ___-__-__"
-              inputClassName="pl-10 pr-4 py-3 text-sm border-gray-200 bg-white text-gray-800 placeholder-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm hover:border-gray-300 rounded-xl"
+              defaultCountry="KZ"
             />
           </div>
         </div>
