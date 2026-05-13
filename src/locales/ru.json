@@ -288,7 +288,7 @@
     
     "statistics": [
       { "value": 1500, "description": "Консультация дежурного врача", "icon": "faVideo", "currency": "₸" },
-      { "value": 30, "description": "Сертифицированных врачей", "icon": "faUserMd" },
+      { "value": 100, "description": "Сертифицированных врачей", "icon": "faUserMd" },
       { "value": 2, "description": "Стран, знающих о ZhanCare.AI", "icon": "faClinicMedical" },
       { "value": 95, "description": "Более быстрая диагностика с ИИ", "icon": "faChartLine", "percent": true }
     ],

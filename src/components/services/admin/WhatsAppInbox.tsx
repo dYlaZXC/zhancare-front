@@ -222,7 +222,9 @@ export default function WhatsAppInbox() {
 
       {/* ── LEFT SIDEBAR ─────────────────────────────────── */}
       <div
-        className="w-[300px] flex-shrink-0 flex flex-col overflow-hidden"
+        className={`flex-shrink-0 flex flex-col overflow-hidden transition-all duration-300
+          ${selected ? "hidden md:flex" : "flex w-full"}
+          md:w-[300px]`}
         style={{ background: "linear-gradient(180deg, #1e263e 0%, #12263a 100%)" }}
       >
         {/* Sidebar header */}
@@ -364,15 +366,24 @@ export default function WhatsAppInbox() {
 
       {/* ── RIGHT: THREAD ────────────────────────────────── */}
       {selected ? (
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden w-full md:w-auto">
 
           {/* Thread header */}
           <div
-            className="flex-shrink-0 px-5 py-3 flex items-center gap-3 shadow-sm"
+            className="flex-shrink-0 px-3 md:px-5 py-3 flex items-center gap-2 md:gap-3 shadow-sm"
             style={{ background: "linear-gradient(135deg, #1e263e 0%, #29358f 100%)" }}
           >
+            {/* Back button — mobile only */}
+            <button
+              onClick={() => setSelected(null)}
+              className="md:hidden p-2 -ml-1 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-all flex-shrink-0"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
             <div
-              className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-white text-sm font-bold shadow-lg"
+              className="w-9 h-9 md:w-10 md:h-10 rounded-full flex-shrink-0 flex items-center justify-center text-white text-sm font-bold shadow-lg"
               style={{ background: "linear-gradient(135deg, #25d366 0%, #128c7e 100%)" }}
             >
               {selected.slice(-2)}
@@ -383,7 +394,7 @@ export default function WhatsAppInbox() {
             </div>
             <button
               onClick={() => fetchThread(selected)}
-              className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/10 transition-all"
+              className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/10 transition-all flex-shrink-0"
               title="Обновить"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -466,8 +477,8 @@ export default function WhatsAppInbox() {
         </div>
 
       ) : (
-        /* Empty state */
-        <div className="flex-1 flex flex-col items-center justify-center gap-4" style={{ background: "#f0f2f5" }}>
+        /* Empty state — desktop only */
+        <div className="hidden md:flex flex-1 flex-col items-center justify-center gap-4" style={{ background: "#f0f2f5" }}>
           <div
             className="w-24 h-24 rounded-3xl flex items-center justify-center shadow-2xl"
             style={{ background: "linear-gradient(135deg, #25d366 0%, #128c7e 100%)" }}

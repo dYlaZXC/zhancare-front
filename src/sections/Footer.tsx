@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import logo from "@/assets/logosaas.png";
 import SocialX from "@/assets/social-x.svg";
 import SocialInsta from "@/assets/social-insta.svg";
@@ -44,6 +44,20 @@ export const Footer = () => {
   };
 
   const translations = getTranslations();
+
+  const [platformStats, setPlatformStats] = useState({ doctors: "25+", patients: "150+", consultations: "1,000+" });
+
+  useEffect(() => {
+    const API = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000/api/v1";
+    fetch(`${API}/public/stats/`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return;
+        const fmt = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}K+` : String(n);
+        setPlatformStats({ doctors: fmt(data.doctors), patients: fmt(data.patients), consultations: fmt(data.consultations) });
+      })
+      .catch(() => {});
+  }, []);
 
   // Section IDs mapping for navigation
   const sectionIds: { [key: string]: string } = {
@@ -195,9 +209,9 @@ export const Footer = () => {
   };
 
   const stats = [
-    { value: "150+", label: translations.stats.patients, icon: Users },
-    { value: "25+", label: translations.stats.doctors, icon: Stethoscope },
-    { value: "1,000+", label: translations.stats.consultations, icon: TrendingUp },
+    { value: platformStats.patients, label: translations.stats.patients, icon: Users },
+    { value: platformStats.doctors, label: translations.stats.doctors, icon: Stethoscope },
+    { value: platformStats.consultations, label: translations.stats.consultations, icon: TrendingUp },
   ];
 
   return (
