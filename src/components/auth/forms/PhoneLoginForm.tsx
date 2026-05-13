@@ -4,7 +4,7 @@ import { useState, FormEvent } from "react";
 import { motion } from "framer-motion";
 import { Lock, Loader2, Shield } from "lucide-react";
 import AuthInput from "./AuthInput";
-import PhoneAuthInput from "./PhoneAuthInput";
+import PhoneInput from "@/components/ui/PhoneInput";
 import { isPhoneComplete } from "@/utils/phoneFormat";
 import { api } from "@/utils/api";
 
@@ -39,7 +39,9 @@ export default function PhoneLoginForm({ onSuccess, loading, setLoading }: Phone
       const res = await api.post("/auth/login/", { phone, password });
       onSuccess(res.data.access_token, res.data.refresh_token, res.data.user ?? null);
     } catch (err: any) {
-      const msg = err?.response?.data?.error ?? "Неправильный номер телефона или пароль.";
+      const msg = err?.response?.status === 403
+        ? "Извините, ваш аккаунт был деактивирован. Обратитесь к администратору."
+        : err?.response?.data?.error ?? "Неправильный номер телефона или пароль.";
       setErrors({ phone: msg });
     } finally {
       setLoading(false);
@@ -48,17 +50,16 @@ export default function PhoneLoginForm({ onSuccess, loading, setLoading }: Phone
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <PhoneAuthInput
+      <PhoneInput
         name="phone"
-        placeholder="+7 (777) 123-45-67"
         value={phone}
-        autoComplete="tel"
-        onChange={e => {
-          setPhone(e.target.value); // already E.164 from PhoneAuthInput
+        onChange={(e164) => {
+          setPhone(e164);
           if (errors.phone) setErrors(prev => ({ ...prev, phone: undefined }));
         }}
-        validationError={errors.phone}
-        loading={loading}
+        error={errors.phone}
+        disabled={loading}
+        defaultCountry="KZ"
       />
 
       <AuthInput

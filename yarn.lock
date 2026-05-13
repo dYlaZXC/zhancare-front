@@ -7394,6 +7394,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"libphonenumber-js@npm:^1.13.1":
+  version: 1.13.1
+  resolution: "libphonenumber-js@npm:1.13.1"
+  checksum: 10c0/347282b4918c6ed0a6266fa0ada2b66e04a23b414eaaed1a7a3e7392823dd7cd1462ec0a2a1dd2744abe40b43d6ffc9fa215e0a5472515a56fb581af8d32a1b2
+  languageName: node
+  linkType: hard
+
 "light-saas-landing-page@workspace:.":
   version: 0.0.0-use.local
   resolution: "light-saas-landing-page@workspace:."
@@ -7434,6 +7441,7 @@ __metadata:
     leaflet: "npm:^1.9.4"
     leaflet.heat: "npm:^0.2.0"
     leaflet.markercluster: "npm:^1.5.3"
+    libphonenumber-js: "npm:^1.13.1"
     livekit-client: "npm:^2.13.3"
     lucide-react: "npm:^0.534.0"
     maplibre-gl: "npm:^5.5.0"

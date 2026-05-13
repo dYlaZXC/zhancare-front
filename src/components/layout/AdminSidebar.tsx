@@ -20,6 +20,8 @@ import {
   faChevronDown,
   faChevronRight,
   faFunnelDollar,
+  faUserShield,
+  faHospital,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useState, useEffect, useRef } from "react";
@@ -34,8 +36,8 @@ import { usePathname } from "next/navigation";
 import { toast } from "react-toastify";
 import Link from "next/link";
 
-type SubMenuItem = { id: string; icon: any; title: string; color: string; href: string };
-type MenuItem = { id: string; icon: any; title: string; color: string; href?: string; children?: SubMenuItem[] };
+type SubMenuItem = { id: string; icon: any; title: string; color: string; href: string; superOnly?: boolean };
+type MenuItem = { id: string; icon: any; title: string; color: string; href?: string; superOnly?: boolean; children?: SubMenuItem[] };
 
 const adminMenu: MenuItem[] = [
   { id: "profile", icon: faUser, title: "Профиль", color: "#3772ff", href: "/admin/profile" },
@@ -49,6 +51,8 @@ const adminMenu: MenuItem[] = [
       { id: "patients", icon: faUserMd, title: "Пациенты", color: "#10b981", href: "/admin/patients" },
       { id: "schedule", icon: faCalendarCheck, title: "Расписание", color: "#295bbf", href: "/admin/schedule" },
       { id: "services", icon: faClipboardList, title: "Услуги", color: "#0ea5e9", href: "/admin/services" },
+      { id: "admins", icon: faUserShield, title: "Администраторы", color: "#f59e0b", href: "/admin/admins", superOnly: true },
+      { id: "clinics", icon: faHospital, title: "Клиники", color: "#10b981", href: "/admin/clinics", superOnly: true },
     ],
   },
   {
@@ -62,7 +66,7 @@ const adminMenu: MenuItem[] = [
     ],
   },
   { id: "ai-agents", icon: faRobot, title: "AI Агенты", color: "#8b5cf6", href: "/admin/ai-agents" },
-  { id: "pipeline", icon: faFunnelDollar, title: "Pipeline клиник", color: "#10b981", href: "/admin/pipeline" },
+  { id: "pipeline", icon: faFunnelDollar, title: "Pipeline клиник", color: "#10b981", href: "/admin/pipeline", superOnly: true },
 ];
 
 export interface AdminSidebarProps {
@@ -116,7 +120,13 @@ export const AdminSidebar = ({
 
   if (!user) return null;
 
-  const visibleMenu = adminMenu.filter(item => item.id !== "pipeline" || isSuperAdmin);
+  const visibleMenu = adminMenu
+    .filter(item => !item.superOnly || isSuperAdmin)
+    .map(item =>
+      item.children
+        ? { ...item, children: item.children.filter(c => !c.superOnly || isSuperAdmin) }
+        : item
+    );
 
   const activeTab = (() => {
     for (const item of visibleMenu) {

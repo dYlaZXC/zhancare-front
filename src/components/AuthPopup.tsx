@@ -41,6 +41,7 @@ const AuthPopup = () => {
         registerSuccess: "Регистрация прошла успешно",
         generalError: "Произошла ошибка. Попробуйте снова",
         invalidCredentials: "Неправильный E-mail или пароль",
+        accountDeactivated: "Извините, ваш аккаунт был деактивирован. Обратитесь к администратору.",
         phoneExists: "Пользователь с таким телефоном уже существует",
         emailExists: "Пользователь с таким email уже существует",
       },
@@ -49,6 +50,7 @@ const AuthPopup = () => {
         registerSuccess: "Тіркелу сәтті өтті",
         generalError: "Қате орын алды. Қайталап көріңіз",
         invalidCredentials: "Қате E-mail немесе құпия сөз",
+        accountDeactivated: "Кешіріңіз, сіздің аккаунтыңыз деактивтендірілді. Әкімшіге хабарласыңыз.",
         phoneExists: "Осы телефонмен қолданушы бұрын тіркелген",
         emailExists: "Осы email-мен қолданушы бұрын тіркелген",
       },
@@ -57,6 +59,7 @@ const AuthPopup = () => {
         registerSuccess: "Registration completed successfully",
         generalError: "An error occurred. Please try again",
         invalidCredentials: "Invalid email or password",
+        accountDeactivated: "Sorry, your account has been deactivated. Please contact an administrator.",
         phoneExists: "User with this phone number already exists",
         emailExists: "User with this email already exists",
       }
@@ -188,7 +191,9 @@ const AuthPopup = () => {
       const errorData = err?.response?.data;
       let errorMessage = errorMessages.generalError;
 
-      if (err?.response?.status === 401) {
+      if (err?.response?.status === 403) {
+        errorMessage = errorMessages.accountDeactivated;
+      } else if (err?.response?.status === 401) {
         errorMessage = errorMessages.invalidCredentials;
       } else if (errorData?.detail) {
         errorMessage = errorData.detail;

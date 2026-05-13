@@ -4,7 +4,7 @@ import { useState, useCallback, FormEvent } from "react";
 import { motion } from "framer-motion";
 import { Mail, Phone, User, Lock, Loader2, Shield } from "lucide-react";
 import AuthInput from "./AuthInput";
-import PhoneAuthInput from "./PhoneAuthInput";
+import PhoneInput from "@/components/ui/PhoneInput";
 import PdfViewerModal from "../PdfViewerModal";
 
 interface RegisterFormProps {
@@ -192,14 +192,16 @@ const RegisterForm = ({ translations, onSubmit, loading, language = "en" }: Regi
       />
 
       {/* Phone */}
-      <PhoneAuthInput
+      <PhoneInput
         name="phone"
-        placeholder={translations.phone}
         value={formData.phone}
-        autoComplete="tel"
-        onChange={handleChange}
-        validationError={validationErrors.phone}
-        loading={loading}
+        onChange={(e164) => {
+          setFormData(prev => ({ ...prev, phone: e164 }));
+          if (validationErrors.phone) setValidationErrors(prev => ({ ...prev, phone: undefined }));
+        }}
+        error={validationErrors.phone as string | undefined}
+        disabled={loading}
+        defaultCountry="KZ"
       />
 
       {/* Password */}
