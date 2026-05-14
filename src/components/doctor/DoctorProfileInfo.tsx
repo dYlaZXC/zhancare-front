@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/utils/api";
@@ -123,7 +124,19 @@ export default function DoctorProfileInfo() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const [avatarViewOpen, setAvatarViewOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const avatarMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!avatarMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (avatarMenuRef.current && !avatarMenuRef.current.contains(e.target as Node)) setAvatarMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [avatarMenuOpen]);
 
   useEffect(() => { fetchProfile(); }, []);
 
@@ -223,6 +236,9 @@ export default function DoctorProfileInfo() {
           ? { backgroundImage: `url(${banner})`, backgroundSize: "cover", backgroundPosition: "center" }
           : { background: 'linear-gradient(135deg, #12263a 0%, #1e263e 30%, #29358f 70%, #3772ff 100%)' }}>
         {banner && <div className="absolute inset-0 bg-black/50 pointer-events-none" />}
+        <div className="absolute top-4 right-4 z-10">
+          <BannerPicker userId={authUser?.id ?? 0} onBannerChange={saveBanner} />
+        </div>
         {!banner && (
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
             <div className="absolute -top-16 -left-16 w-72 h-72 rounded-full blur-3xl opacity-30" style={{ background: 'radial-gradient(circle, #3772ff, transparent)' }} />
@@ -236,7 +252,7 @@ export default function DoctorProfileInfo() {
 
         <div className="relative flex flex-col sm:flex-row items-center sm:items-end gap-6 px-8 py-8 sm:py-10">
           {/* Avatar */}
-          <div className="relative flex-shrink-0 group">
+          <div className="relative flex-shrink-0" ref={avatarMenuRef}>
             <div className="w-28 h-28 rounded-3xl overflow-hidden border-4 border-white shadow-2xl"
                  style={{ background: avatarPreview ? 'transparent' : 'linear-gradient(135deg, #3772ff 0%, #6048f5 100%)' }}>
               {avatarPreview
@@ -244,10 +260,32 @@ export default function DoctorProfileInfo() {
                 : <div className="w-full h-full flex items-center justify-center"><span className="text-white font-black text-4xl">{initials}</span></div>}
               {(uploading || deleting) && <div className="absolute inset-0 bg-black/50 flex items-center justify-center"><Loader2 className="w-7 h-7 text-white animate-spin" /></div>}
             </div>
-            <button onClick={() => fileRef.current?.click()} disabled={uploading || deleting}
-              className="absolute inset-0 rounded-3xl bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-1 cursor-pointer">
+            <button onClick={() => !uploading && !deleting && setAvatarMenuOpen(v => !v)} disabled={uploading || deleting}
+              className="absolute inset-0 rounded-3xl bg-black/50 opacity-0 hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-1 cursor-pointer">
               <Camera className="w-6 h-6 text-white" /><span className="text-white text-[10px] font-bold">Изменить</span>
             </button>
+            {avatarMenuOpen && (
+              <div className="absolute top-0 left-full ml-3 z-50 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden min-w-[170px]">
+                {avatarPreview && (
+                  <button onClick={() => { setAvatarViewOpen(true); setAvatarMenuOpen(false); }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                    <svg className="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    Просмотреть фото
+                  </button>
+                )}
+                <button onClick={() => { fileRef.current?.click(); setAvatarMenuOpen(false); }}
+                  className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors ${avatarPreview ? "border-t border-gray-100" : ""}`}>
+                  <Camera className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                  {avatarPreview ? "Заменить фото" : "Загрузить фото"}
+                </button>
+                {avatarPreview && (
+                  <button onClick={() => { handleDeleteAvatar(); setAvatarMenuOpen(false); }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors border-t border-gray-100">
+                    <Trash2 className="w-4 h-4 flex-shrink-0" /> Удалить фото
+                  </button>
+                )}
+              </div>
+            )}
             <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-400 rounded-full border-2 border-[#1e263e] shadow-lg animate-pulse" />
           </div>
 
@@ -275,21 +313,6 @@ export default function DoctorProfileInfo() {
             </div>
           </div>
 
-          {/* Avatar buttons */}
-          <div className="flex flex-wrap gap-2 flex-shrink-0">
-            <button onClick={() => fileRef.current?.click()} disabled={uploading || deleting}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white border border-white/20 hover:bg-white/10 transition-all disabled:opacity-40"
-              style={{ background: 'rgba(55,114,255,0.3)' }}>
-              <Camera className="w-3.5 h-3.5" /> {avatarPreview ? "Заменить" : "Загрузить"}
-            </button>
-            {avatarPreview && (
-              <button onClick={handleDeleteAvatar} disabled={uploading || deleting}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-red-300 border border-red-400/30 hover:bg-red-500/10 transition-all disabled:opacity-40">
-                <Trash2 className="w-3.5 h-3.5" /> Удалить
-              </button>
-            )}
-            <BannerPicker userId={authUser?.id ?? 0} onBannerChange={saveBanner} />
-          </div>
         </div>
         <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
       </div>
@@ -439,6 +462,22 @@ export default function DoctorProfileInfo() {
       )}
 
       <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFileChange} />
+
+      {/* Photo viewer modal */}
+      {avatarViewOpen && avatarPreview && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}
+          onClick={() => setAvatarViewOpen(false)}>
+          <div className="relative max-w-sm w-full" onClick={e => e.stopPropagation()}>
+            <img src={avatarPreview} alt="avatar" className="w-full rounded-3xl shadow-2xl object-cover" />
+            <button onClick={() => setAvatarViewOpen(false)}
+              className="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-gray-100 transition-colors">
+              <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
