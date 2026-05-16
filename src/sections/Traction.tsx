@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { useMemo } from "react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useBrand } from "@/context/BrandContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faLightbulb,
@@ -290,6 +291,7 @@ const STARS = generateStars(160);
 
 export function Traction() {
   const { language } = useLanguage();
+  const { brand } = useBrand();
   const t = useMemo(() => data[language] ?? data.ru, [language]);
 
   return (
@@ -316,9 +318,9 @@ export function Traction() {
       </div>
 
       {/* Nebula glows */}
-      <div className="absolute top-10 left-1/4 w-[500px] h-[500px] rounded-full bg-[#1a2fff]/8 blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-20 right-1/4 w-[400px] h-[400px] rounded-full bg-[#7c3aed]/6 blur-[120px] pointer-events-none" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[200px] rounded-full bg-[#0038ff]/5 blur-[80px] pointer-events-none" />
+      <div className="absolute top-10 left-1/4 w-[500px] h-[500px] rounded-full blur-[100px] pointer-events-none" style={{ backgroundColor: `${brand.accentRgba}0.08)` }} />
+      <div className="absolute bottom-20 right-1/4 w-[400px] h-[400px] rounded-full blur-[120px] pointer-events-none" style={{ backgroundColor: `${brand.accentRgba}0.06)` }} />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[200px] rounded-full blur-[80px] pointer-events-none" style={{ backgroundColor: `${brand.accentRgba}0.05)` }} />
 
       <style>{`
         @keyframes twinkle {
@@ -354,7 +356,7 @@ export function Traction() {
             <span className="text-xl md:text-2xl font-bold tracking-widest text-white/90 italic">
               {t.quote}
             </span>
-            <span className="text-sm text-[#3772ff] font-medium tracking-wide">
+            <span className="text-sm font-medium tracking-wide" style={{ color: brand.primary }}>
               — {t.quoteTranslation}
             </span>
           </div>
@@ -363,7 +365,7 @@ export function Traction() {
         {/* Timeline */}
         <div className="relative">
           {/* Center line — desktop only */}
-          <div className="hidden md:block absolute left-1/2 -translate-x-px top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[#3772ff]/50 to-transparent" />
+          <div className="hidden md:block absolute left-1/2 -translate-x-px top-0 bottom-0 w-px" style={{ background: `linear-gradient(to bottom, transparent, ${brand.accentRgba}0.5), transparent)` }} />
 
           <div className="flex flex-col gap-12">
             {t.milestones.map((m, i) => {
@@ -387,7 +389,7 @@ export function Traction() {
                       </p>
                     ) : (
                       // Odd: show card on left
-                      <MilestoneCard m={m} />
+                      <MilestoneCard m={m} brand={brand} />
                     )}
                   </div>
 
@@ -395,15 +397,15 @@ export function Traction() {
                   <div className="relative z-10 flex-shrink-0 md:absolute md:left-1/2 md:-translate-x-1/2">
                     {m.isCurrent ? (
                       <span className="relative flex h-5 w-5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#3772ff] opacity-70" />
-                        <span className="relative flex h-5 w-5 rounded-full bg-[#3772ff] items-center justify-center shadow-[0_0_16px_rgba(55,114,255,0.9)]">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-70" style={{ backgroundColor: brand.primary }} />
+                        <span className="relative flex h-5 w-5 rounded-full items-center justify-center" style={{ backgroundColor: brand.primary, boxShadow: `0 0 16px ${brand.accentRgba}0.9)` }}>
                           <span className="h-2 w-2 rounded-full bg-white" />
                         </span>
                       </span>
                     ) : m.isFuture ? (
                       <span className="flex h-4 w-4 rounded-full border-2 border-dashed border-white/30 bg-[#050810]" />
                     ) : (
-                      <span className="flex h-4 w-4 rounded-full border-2 border-[#3772ff] bg-[#050810] shadow-[0_0_8px_rgba(55,114,255,0.5)]" />
+                      <span className="flex h-4 w-4 rounded-full border-2 bg-[#050810]" style={{ borderColor: brand.primary, boxShadow: `0 0 8px ${brand.accentRgba}0.5)` }} />
                     )}
                   </div>
 
@@ -411,7 +413,7 @@ export function Traction() {
                   <div className={`hidden md:flex w-1/2 justify-start pl-10`}>
                     {isRight ? (
                       // Even: show card on right
-                      <MilestoneCard m={m} />
+                      <MilestoneCard m={m} brand={brand} />
                     ) : (
                       // Odd: show date label on right
                       <p className="text-white font-semibold text-sm tracking-widest uppercase">
@@ -422,7 +424,7 @@ export function Traction() {
 
                   {/* Mobile: full-width card */}
                   <div className="md:hidden w-full">
-                    <MilestoneCard m={m} />
+                    <MilestoneCard m={m} brand={brand} />
                   </div>
                 </motion.div>
               );
@@ -434,21 +436,29 @@ export function Traction() {
   );
 }
 
-function MilestoneCard({ m }: { m: Milestone }) {
+function MilestoneCard({ m, brand }: { m: Milestone; brand: { primary: string; secondary: string; accentRgba: string } }) {
   return (
     <div
       className={`relative rounded-2xl p-5 max-w-sm w-full backdrop-blur-md transition-all duration-300
         ${m.isCurrent
-          ? "bg-gradient-to-br from-[#1a2fff]/25 to-[#0010a0]/20 border border-[#3772ff]/60 shadow-[0_0_30px_rgba(55,114,255,0.3)]"
+          ? "bg-white/[0.04] border"
           : m.isFuture
           ? "bg-white/[0.02] border border-dashed border-white/20 opacity-70 hover:opacity-90 hover:border-white/35 transition-all duration-300"
-          : "bg-white/[0.04] border border-white/10 hover:border-[#3772ff]/40 hover:bg-white/[0.07] hover:shadow-[0_0_20px_rgba(55,114,255,0.15)]"
+          : "bg-white/[0.04] border border-white/10 hover:bg-white/[0.07]"
         }
       `}
+      style={m.isCurrent ? {
+        background: `linear-gradient(135deg, ${brand.accentRgba}0.25), ${brand.accentRgba}0.2))`,
+        borderColor: `${brand.accentRgba}0.6)`,
+        boxShadow: `0 0 30px ${brand.accentRgba}0.3)`,
+      } : {}}
     >
       {/* Badges */}
       {m.isCurrent && (
-        <span className="absolute -top-3 left-4 px-3 py-0.5 rounded-full text-[10px] font-bold tracking-widest uppercase bg-[#3772ff] text-white shadow-[0_2px_12px_rgba(55,114,255,0.6)]">
+        <span
+          className="absolute -top-3 left-4 px-3 py-0.5 rounded-full text-[10px] font-bold tracking-widest uppercase text-white"
+          style={{ backgroundColor: brand.primary, boxShadow: `0 2px 12px ${brand.accentRgba}0.6)` }}
+        >
           Live
         </span>
       )}
@@ -467,8 +477,11 @@ function MilestoneCard({ m }: { m: Milestone }) {
 
       {/* Icon + Title */}
       <div className="flex items-start gap-3">
-        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-[#3772ff]/20 border border-[#3772ff]/30 flex items-center justify-center mt-0.5">
-          <FontAwesomeIcon icon={m.icon} className="text-[#3772ff] text-sm" />
+        <div
+          className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center mt-0.5"
+          style={{ backgroundColor: `${brand.accentRgba}0.2)`, border: `1px solid ${brand.accentRgba}0.3)` }}
+        >
+          <FontAwesomeIcon icon={m.icon} className="text-sm" style={{ color: brand.primary }} />
         </div>
         <p className="text-white font-semibold text-sm leading-snug">{m.title}</p>
       </div>
@@ -478,7 +491,7 @@ function MilestoneCard({ m }: { m: Milestone }) {
         <ul className="mt-3 space-y-1.5 pl-9">
           {m.items.map((item, j) => (
             <li key={j} className="flex items-start gap-2 text-gray-400 text-xs leading-relaxed">
-              <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#3772ff]/70 flex-shrink-0" />
+              <span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: `${brand.accentRgba}0.7)` }} />
               {item}
             </li>
           ))}

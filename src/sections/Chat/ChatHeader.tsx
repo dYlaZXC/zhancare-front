@@ -1,6 +1,7 @@
 "use client";
 
 import { FaStethoscope, FaExpand, FaCompress } from "react-icons/fa";
+import { useBrand } from "@/context/BrandContext";
 
 interface ChatHeaderProps {
   language: string;
@@ -9,6 +10,8 @@ interface ChatHeaderProps {
 }
 
 export default function ChatHeader({ language, onExpand, isExpanded }: ChatHeaderProps) {
+  const { brand } = useBrand();
+
   const content = {
     ru: { subtitle: "ИИ медицинский ассистент", online: "Онлайн" },
     en: { subtitle: "AI Medical Assistant", online: "Online" },
@@ -16,18 +19,19 @@ export default function ChatHeader({ language, onExpand, isExpanded }: ChatHeade
   };
 
   const c = content[language as keyof typeof content] || content.en;
+  const botName = brand.id === "uz" ? "JanBot.Ai" : "ZhanBot.AI";
 
   return (
     <div className="flex items-center justify-between mb-6 pb-5 border-b border-white/[0.07]">
       <div className="flex items-center space-x-3">
         <div
           className="relative w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
-          style={{ background: "linear-gradient(135deg, #4F7FFF 0%, #00C6FF 100%)" }}
+          style={{ background: `linear-gradient(135deg, ${brand.primary} 0%, ${brand.secondary} 100%)` }}
         >
           <FaStethoscope className="text-white text-base" />
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-white leading-tight">ZhanBot.AI</h3>
+          <h3 className="text-sm font-semibold text-white leading-tight">{botName}</h3>
           <p className="text-xs text-white/45 mt-0.5">{c.subtitle}</p>
         </div>
       </div>

@@ -32,7 +32,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 import Image from "next/image";
-import Logo from "@/assets/logosaas.png";
+import { useBrand } from "@/context/BrandContext";
 import BookingModal from "@/sections/Chat/BookingModal";
 import LanguageSwitcher from "@/sections/Hero/LanguageSwitcher";
 import type { Doctor } from "@/components/services/consultations/types/doctor";
@@ -254,6 +254,7 @@ const UI = {
 export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }) {
   const router = useRouter();
   const { language, setLanguage } = useLanguage();
+  const { appLogo, brand } = useBrand();
   const accentColor = clinic?.primaryColor ?? "#3772ff";
   const accentDark = darkenHex(accentColor);
   const accentGrad = `linear-gradient(135deg, ${accentColor} 0%, ${accentDark} 100%)`;
@@ -802,7 +803,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={clinic.logoUrl} alt={clinic.clinicName} className="h-6 sm:h-8 w-auto rounded-lg object-contain" />
               ) : (
-                <Image src={Logo} alt="ZhanCare logo" height={32} className="h-6 sm:h-8 w-auto" />
+                <Image src={appLogo} alt={brand.name + " logo"} height={32} className="h-6 sm:h-8 w-auto" />
               )}
 
               <div className="w-px h-6 bg-white/15 hidden md:block" />

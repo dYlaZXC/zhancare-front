@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import logo from "@/assets/logosaas.png";
+import { useBrand } from "@/context/BrandContext";
 import SocialX from "@/assets/social-x.svg";
 import SocialInsta from "@/assets/social-insta.svg";
 import SocialLinkedin from "@/assets/social-linkedin.svg";
@@ -18,6 +18,7 @@ import en from "@/locales/en.json";
 
 export const Footer = () => {
   const { language } = useLanguage();
+  const { appLogo, brand } = useBrand();
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const controls = useAnimationControls();
@@ -330,8 +331,8 @@ export const Footer = () => {
                   className="w-48 sm:w-56 md:w-64"
                 >
                   <Image
-                    src={logo}
-                    alt="ZhanCare.AI Logo"
+                    src={appLogo}
+                    alt={brand.name + " Logo"}
                     className="w-full h-auto object-contain"
                   />
                 </motion.div>

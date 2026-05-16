@@ -10,11 +10,13 @@ import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import en from "@/locales/en.json";
 import { ShieldCheck, Stethoscope, HeartPulse, Hospital, ArrowRight, Sparkles } from "lucide-react";
+import { useBrand } from "@/context/BrandContext";
 
 const iconMap = [ShieldCheck, Stethoscope, HeartPulse, Hospital];
 
 const Features = () => {
   const { language } = useLanguage();
+  const { brand } = useBrand();
   const [hoveredFeature, setHoveredFeature] = React.useState<number | null>(null);
 
   // Get translations based on language
@@ -88,17 +90,18 @@ const Features = () => {
   return (
     <section
       id="features"
-      className="relative overflow-hidden bg-gradient-to-br from-[#2956bf] via-[#283353] to-[#1e263e] text-white py-20 px-6 sm:px-10"
+      className="relative overflow-hidden text-white py-20 px-6 sm:px-10"
+      style={{ background: `linear-gradient(135deg, ${brand.secondary} 0%, #283353 50%, #1e263e 100%)` }}
     >
       {/* Premium Background Effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -left-40 w-96 h-96 bg-[#3772ff]/30 rounded-full blur-3xl animate-pulse-slow" />
-        <div className="absolute top-1/2 -right-32 w-80 h-80 bg-[#2c5bcc]/20 rounded-full blur-3xl animate-pulse-slow-delayed" />
-        <div className="absolute bottom-0 left-1/3 w-96 h-96 bg-[#2956bf]/25 rounded-full blur-3xl animate-pulse-slow" />
+        <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full blur-3xl animate-pulse-slow" style={{ backgroundColor: `${brand.accentRgba}0.3)` }} />
+        <div className="absolute top-1/2 -right-32 w-80 h-80 rounded-full blur-3xl animate-pulse-slow-delayed" style={{ backgroundColor: `${brand.accentRgba}0.2)` }} />
+        <div className="absolute bottom-0 left-1/3 w-96 h-96 rounded-full blur-3xl animate-pulse-slow" style={{ backgroundColor: `${brand.accentRgba}0.25)` }} />
       </div>
 
       {/* Grid Pattern Overlay */}
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(55,114,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(55,114,255,0.03)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,black,transparent)]" />
+      <div className="absolute inset-0 bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,black,transparent)]" style={{ backgroundImage: `linear-gradient(${brand.accentRgba}0.03) 1px, transparent 1px), linear-gradient(90deg, ${brand.accentRgba}0.03) 1px, transparent 1px)` }} />
 
       <div className="relative z-10 max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row items-center gap-16">
@@ -118,7 +121,7 @@ const Features = () => {
               viewport={{ once: true }}
               className="inline-flex items-center gap-2 bg-[#ebf1ff]/10 backdrop-blur-sm border border-[#ebf1ff]/20 rounded-full px-4 py-2 text-sm font-medium"
             >
-              <Sparkles className="w-4 h-4 text-[#3772ff]" />
+              <Sparkles className="w-4 h-4" style={{ color: brand.primary }} />
               <span className="bg-gradient-to-r from-[#ebf1ff] to-[#e1eaff] bg-clip-text text-transparent">
                 AI-Powered Healthcare
               </span>
@@ -136,7 +139,8 @@ const Features = () => {
 
             <Link
               href="https://www.zhan.care/"
-              className="group inline-flex items-center gap-3 bg-gradient-to-r from-[#3772ff] to-[#3267e6] hover:from-[#3267e6] hover:to-[#2c5bcc] active:from-[#2c5bcc] active:to-[#2956bf] transition-all duration-300 px-8 py-4 rounded-xl font-semibold text-white shadow-lg shadow-[#3772ff]/30 hover:shadow-xl hover:shadow-[#3772ff]/40 hover:-translate-y-0.5"
+              className="group inline-flex items-center gap-3 transition-all duration-300 px-8 py-4 rounded-xl font-semibold text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+              style={{ background: `linear-gradient(to right, ${brand.primary}, ${brand.secondary})` }}
               aria-label="Go to main website"
             >
               {translations?.buttonText}
@@ -166,10 +170,11 @@ const Features = () => {
                         bg-gradient-to-br from-[#283353]/40 to-[#1e263e]/40
                         backdrop-blur-sm border transition-all duration-300
                         ${isHovered
-                          ? 'border-[#3772ff]/60 shadow-lg shadow-[#3772ff]/20'
+                          ? 'shadow-lg border-transparent'
                           : 'border-[#ebf1ff]/10 hover:border-[#ebf1ff]/20'
                         }
                       `}
+                      style={isHovered ? { borderColor: `${brand.accentRgba}0.6)`, boxShadow: `0 10px 15px -3px ${brand.accentRgba}0.2)` } : {}}
                       whileHover={{ scale: 1.02 }}
                       transition={{ duration: 0.2 }}
                     >
@@ -179,10 +184,11 @@ const Features = () => {
                           flex items-center justify-center w-12 h-12 rounded-xl
                           bg-gradient-to-br transition-all duration-300
                           ${isHovered
-                            ? 'from-[#3772ff] to-[#2c5bcc] shadow-lg shadow-[#3772ff]/30'
+                            ? 'shadow-lg'
                             : 'from-[#283353] to-[#1e263e] border border-[#ebf1ff]/20'
                           }
                         `}
+                        style={isHovered ? { background: `linear-gradient(135deg, ${brand.primary}, ${brand.secondary})`, boxShadow: `0 10px 15px -3px ${brand.accentRgba}0.3)` } : {}}
                         whileHover={{ rotate: [0, -10, 10, 0] }}
                         transition={{ duration: 0.5 }}
                       >
@@ -203,7 +209,8 @@ const Features = () => {
                       {isHovered && (
                         <motion.div
                           layoutId="feature-glow"
-                          className="absolute inset-0 bg-gradient-to-r from-[#3772ff]/10 to-[#2c5bcc]/10 rounded-2xl -z-10"
+                          className="absolute inset-0 rounded-2xl -z-10"
+                          style={{ background: `linear-gradient(to right, ${brand.accentRgba}0.1), ${brand.accentRgba}0.1))` }}
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
@@ -245,8 +252,8 @@ const Features = () => {
 
             {/* Premium Platform Glow - Larger */}
             <div className="absolute bottom-12 md:bottom-16 w-80 md:w-96 h-16 rounded-full z-0">
-              <div className="absolute inset-0 bg-gradient-to-t from-[#3772ff]/70 via-[#3772ff]/40 to-transparent blur-2xl animate-pulse-platform-premium" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#2c5bcc]/50 to-transparent blur-xl animate-pulse-platform-premium-delayed" />
+              <div className="absolute inset-0 blur-2xl animate-pulse-platform-premium" style={{ background: `linear-gradient(to top, ${brand.accentRgba}0.7), ${brand.accentRgba}0.4), transparent)` }} />
+              <div className="absolute inset-0 blur-xl animate-pulse-platform-premium-delayed" style={{ background: `linear-gradient(to top, ${brand.accentRgba}0.5), transparent)` }} />
             </div>
 
             {/* Robot Container - Much Larger */}
@@ -260,12 +267,12 @@ const Features = () => {
               >
                 <div className="relative bg-gradient-to-br from-[#ebf1ff] to-[#e1eaff] text-[#1b1b1b] text-sm sm:text-base px-6 py-4 rounded-2xl shadow-2xl border border-white/40 backdrop-blur-sm bubble-speech-premium">
                   <div className="flex items-center gap-3">
-                    <Sparkles className="w-5 h-5 text-[#3772ff] animate-pulse flex-shrink-0" />
+                    <Sparkles className="w-5 h-5 animate-pulse flex-shrink-0" style={{ color: brand.primary }} />
                     <span className="font-medium flex-1">{messages[messageIndex]}</span>
                     <div className="flex space-x-1.5 flex-shrink-0">
-                      <div className="w-2.5 h-2.5 bg-[#3772ff] rounded-full animate-typing-premium" />
-                      <div className="w-2.5 h-2.5 bg-[#3772ff] rounded-full animate-typing-premium delay-200" />
-                      <div className="w-2.5 h-2.5 bg-[#3772ff] rounded-full animate-typing-premium delay-400" />
+                      <div className="w-2.5 h-2.5 rounded-full animate-typing-premium" style={{ backgroundColor: brand.primary }} />
+                      <div className="w-2.5 h-2.5 rounded-full animate-typing-premium delay-200" style={{ backgroundColor: brand.primary }} />
+                      <div className="w-2.5 h-2.5 rounded-full animate-typing-premium delay-400" style={{ backgroundColor: brand.primary }} />
                     </div>
                   </div>
                 </div>
@@ -273,7 +280,7 @@ const Features = () => {
 
               {/* Robot Image with Glow - Significantly Larger */}
               <div className="relative max-w-full">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#3772ff]/20 to-[#2c5bcc]/20 blur-3xl rounded-full scale-110" />
+                <div className="absolute inset-0 blur-3xl rounded-full scale-110" style={{ background: `linear-gradient(135deg, ${brand.accentRgba}0.2), ${brand.accentRgba}0.2))` }} />
                 <Image
                   src={robotImage}
                   alt="AI Assistant Robot"

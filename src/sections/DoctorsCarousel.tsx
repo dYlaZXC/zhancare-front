@@ -9,6 +9,7 @@ import "swiper/css/pagination";
 import { useState } from "react";
 import Image from "next/image";
 import { useLanguage } from "@/context/LanguageContext";
+import { useBrand } from "@/context/BrandContext";
 
 // Import all doctor images
 import doctorImg from "@/assets/doctor-img/doctor-img.jpeg";
@@ -46,6 +47,7 @@ import doctorImg32 from "@/assets/doctor-img/doctor-img32.jpeg";
 
 export const DoctorsCarousel = () => {
   const { language } = useLanguage();
+  const { brand } = useBrand();
   const [selectedDoctor, setSelectedDoctor] = useState<null | any>(null);
   const [activeCategory, setActiveCategory] = useState<string>("all");
 
@@ -209,7 +211,8 @@ export const DoctorsCarousel = () => {
   return (
     <section id="specialists" className="py-20 bg-gradient-to-b from-white to-[#d2dcff] text-center overflow-hidden">
       <motion.h2
-        className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl laptop-hd:text-4xl desktop-fhd:text-5xl desktop-qhd:text-6xl desktop-4k:text-7xl font-extrabold tracking-tight text-[#001E80] mb-4 sm:mb-6 lg:mb-8"
+        className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl laptop-hd:text-4xl desktop-fhd:text-5xl desktop-qhd:text-6xl desktop-4k:text-7xl font-extrabold tracking-tight mb-4 sm:mb-6 lg:mb-8"
+        style={{ color: brand.secondary }}
         initial={{ opacity: 0, y: -30 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}

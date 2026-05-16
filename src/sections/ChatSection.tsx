@@ -12,11 +12,15 @@ import ChatInput from "./Chat/ChatInput";
 import BookingModal from "./Chat/BookingModal";
 import { Message } from "./Chat/types";
 import { useChat } from "./Chat/hooks/useChat";
-import ZhanBotLogo from "@/assets/ZhanBotAi.png";
+import ZhanBotLogoKZ from "@/assets/ZhanBotAi.png";
+import JanBotLogoUZ from "@/assets/JanBotAi_uz.png";
+import { useBrand } from "@/context/BrandContext";
 
 export const ChatSection = () => {
   useAuth();
   const { language } = useLanguage();
+  const { brand } = useBrand();
+  const ZhanBotLogo = brand.id === "uz" ? JanBotLogoUZ : ZhanBotLogoKZ;
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -179,7 +183,7 @@ export const ChatSection = () => {
           >
             <Image
               src={ZhanBotLogo}
-              alt="ZhanBot.AI"
+              alt={brand.id === "uz" ? "JanBot.Ai" : "ZhanBot.AI"}
               width={400}
               height={120}
               className="h-20 w-auto"

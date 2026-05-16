@@ -15,6 +15,7 @@ import { useState, useMemo } from "react";
 import heroVideo from "@/assets/hero-video.mp4";
 import Header from "@/sections/Hero/Header";
 import { useLanguage } from "@/context/LanguageContext";
+import { useBrand } from "@/context/BrandContext";
 import ru from "@/locales/ru.json";
 import en from "@/locales/en.json";
 import kz from "@/locales/kz.json";
@@ -22,6 +23,7 @@ import kz from "@/locales/kz.json";
 export default function HeroMeetStyle() {
   const router = useRouter();
   const { language } = useLanguage();
+  const { brand } = useBrand();
   const [isStarting, setIsStarting] = useState(false);
 
   const t = useMemo(() => {
@@ -113,7 +115,7 @@ export default function HeroMeetStyle() {
           >
             {t.heading}
             <br />
-            <span className="bg-gradient-to-r from-[#c1d3ff] via-[#3772ff] to-[#2956bf] bg-clip-text text-transparent drop-shadow-[0_2px_20px_rgba(55,114,255,0.5)]">
+            <span className="bg-clip-text text-transparent drop-shadow-[0_2px_20px_rgba(55,114,255,0.5)]" style={{ backgroundImage: `linear-gradient(to right, #c1d3ff, ${brand.primary}, ${brand.secondary})` }}>
               {t.headingHighlight}
             </span>
           </motion.h1>
@@ -139,14 +141,15 @@ export default function HeroMeetStyle() {
             <motion.button
               onClick={handleStartConsultation}
               disabled={isStarting}
-              className="group relative w-full sm:w-auto bg-gradient-to-r from-[#001E80] via-[#1A2FC8] to-[#3772ff] text-white px-12 py-6 rounded-3xl font-bold text-lg shadow-[0_10px_40px_rgba(55,114,255,0.5)] hover:shadow-[0_15px_50px_rgba(55,114,255,0.7)] focus:outline-none focus:ring-4 focus:ring-[#3772ff]/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
+              className="group relative w-full sm:w-auto text-white px-12 py-6 rounded-3xl font-bold text-lg shadow-[0_10px_40px_rgba(55,114,255,0.5)] hover:shadow-[0_15px_50px_rgba(55,114,255,0.7)] focus:outline-none focus:ring-4 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
+              style={{ background: `linear-gradient(to right, ${brand.secondary}, ${brand.primary})` }}
               whileHover={{ scale: 1.05, y: -3 }}
               whileTap={{ scale: 0.98 }}
             >
               {/* Enhanced Multi-layer Outer Glow */}
-              <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-[#001E80] via-[#3772ff] to-[#3772ff] blur-xl opacity-70 -z-10"></div>
-              <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-[#3772ff] to-[#7A8FFF] blur-2xl opacity-50 -z-20 group-hover:opacity-70 transition-opacity duration-300"></div>
-              <div className="absolute inset-0 rounded-3xl bg-[#3772ff] blur-3xl opacity-30 -z-30 group-hover:opacity-50 transition-opacity duration-300"></div>
+              <div className="absolute inset-0 rounded-3xl blur-xl opacity-70 -z-10" style={{ background: `linear-gradient(to right, ${brand.secondary}, ${brand.primary})` }}></div>
+              <div className="absolute inset-0 rounded-3xl blur-2xl opacity-50 -z-20 group-hover:opacity-70 transition-opacity duration-300" style={{ background: `linear-gradient(to right, ${brand.primary}, #7A8FFF)` }}></div>
+              <div className="absolute inset-0 rounded-3xl blur-3xl opacity-30 -z-30 group-hover:opacity-50 transition-opacity duration-300" style={{ backgroundColor: brand.primary }}></div>
 
               {/* Animated Shine Effect */}
               <div className="absolute inset-0 -top-full group-hover:top-full transition-all duration-1000 ease-out bg-gradient-to-b from-transparent via-white/25 to-transparent" />
@@ -171,7 +174,7 @@ export default function HeroMeetStyle() {
               </span>
 
               {/* Hover Gradient Overlay - More Pronounced */}
-              <div className="absolute inset-0 bg-gradient-to-r from-[#0029A3] via-[#3772ff] to-[#5A6FFF] opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-3xl" />
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-3xl" style={{ background: `linear-gradient(to right, ${brand.secondary}, ${brand.primary}, #5A6FFF)` }} />
             </motion.button>
 
             {/* Schedule Meeting Button - Premium Version */}
@@ -213,7 +216,8 @@ export default function HeroMeetStyle() {
 
               {/* Icon with Brand Colors */}
               <motion.div
-                className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#3772ff] to-[#2956bf] flex items-center justify-center mb-5 mx-auto shadow-[0_4px_20px_rgba(55,114,255,0.4)]"
+                className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 mx-auto shadow-[0_4px_20px_rgba(55,114,255,0.4)]"
+                style={{ background: `linear-gradient(135deg, ${brand.primary}, ${brand.secondary})` }}
                 whileHover={{ rotate: 360 }}
                 transition={{ duration: 0.6 }}
               >
@@ -227,7 +231,7 @@ export default function HeroMeetStyle() {
               </p>
 
               {/* Premium Hover Gradient Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-br from-[#3772ff]/10 to-[#2956bf]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl pointer-events-none" />
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl pointer-events-none" style={{ background: `linear-gradient(135deg, ${brand.accentRgba}0.1), ${brand.accentRgba}0.06))` }} />
             </motion.div>
 
             {/* Feature 2 - Premium Glassmorphism with Depth */}
@@ -244,7 +248,8 @@ export default function HeroMeetStyle() {
 
               {/* Icon with Brand Colors */}
               <motion.div
-                className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#3772ff] to-[#2956bf] flex items-center justify-center mb-5 mx-auto shadow-[0_4px_20px_rgba(55,114,255,0.4)]"
+                className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 mx-auto shadow-[0_4px_20px_rgba(55,114,255,0.4)]"
+                style={{ background: `linear-gradient(135deg, ${brand.primary}, ${brand.secondary})` }}
                 whileHover={{ rotate: 360 }}
                 transition={{ duration: 0.6 }}
               >
@@ -258,7 +263,7 @@ export default function HeroMeetStyle() {
               </p>
 
               {/* Premium Hover Gradient Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-br from-[#3772ff]/10 to-[#2956bf]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl pointer-events-none" />
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl pointer-events-none" style={{ background: `linear-gradient(135deg, ${brand.accentRgba}0.1), ${brand.accentRgba}0.06))` }} />
             </motion.div>
 
             {/* Feature 3 - Premium Glassmorphism with Depth */}
@@ -275,7 +280,8 @@ export default function HeroMeetStyle() {
 
               {/* Icon with Brand Colors */}
               <motion.div
-                className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#3772ff] to-[#2956bf] flex items-center justify-center mb-5 mx-auto shadow-[0_4px_20px_rgba(55,114,255,0.4)]"
+                className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 mx-auto shadow-[0_4px_20px_rgba(55,114,255,0.4)]"
+                style={{ background: `linear-gradient(135deg, ${brand.primary}, ${brand.secondary})` }}
                 whileHover={{ rotate: 360 }}
                 transition={{ duration: 0.6 }}
               >
@@ -289,7 +295,7 @@ export default function HeroMeetStyle() {
               </p>
 
               {/* Premium Hover Gradient Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-br from-[#3772ff]/10 to-[#2956bf]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl pointer-events-none" />
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl pointer-events-none" style={{ background: `linear-gradient(135deg, ${brand.accentRgba}0.1), ${brand.accentRgba}0.06))` }} />
             </motion.div>
           </motion.div>
 
@@ -309,7 +315,7 @@ export default function HeroMeetStyle() {
                 animate={{ scale: [1, 1.15, 1] }}
                 transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
               >
-                <FontAwesomeIcon icon={faCheckCircle} className="text-[#3772ff] text-sm opacity-80" />
+                <FontAwesomeIcon icon={faCheckCircle} className="text-sm opacity-80" style={{ color: brand.primary }} />
               </motion.div>
               <span className="text-gray-300 font-medium group-hover:text-gray-200 transition-colors opacity-90">
                 {t.trust[0]}
@@ -324,7 +330,7 @@ export default function HeroMeetStyle() {
                 animate={{ scale: [1, 1.15, 1] }}
                 transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.3 }}
               >
-                <FontAwesomeIcon icon={faCheckCircle} className="text-[#3772ff] text-sm opacity-80" />
+                <FontAwesomeIcon icon={faCheckCircle} className="text-sm opacity-80" style={{ color: brand.primary }} />
               </motion.div>
               <span className="text-gray-300 font-medium group-hover:text-gray-200 transition-colors opacity-90">
                 {t.trust[1]}
@@ -339,7 +345,7 @@ export default function HeroMeetStyle() {
                 animate={{ scale: [1, 1.15, 1] }}
                 transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.6 }}
               >
-                <FontAwesomeIcon icon={faCheckCircle} className="text-[#3772ff] text-sm opacity-80" />
+                <FontAwesomeIcon icon={faCheckCircle} className="text-sm opacity-80" style={{ color: brand.primary }} />
               </motion.div>
               <span className="text-gray-300 font-medium group-hover:text-gray-200 transition-colors opacity-90">
                 {t.trust[2]}

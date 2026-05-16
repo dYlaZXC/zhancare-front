@@ -20,6 +20,7 @@ import {
   faArrowUpRightFromSquare,
 } from "@fortawesome/free-solid-svg-icons";
 import { useLanguage } from "@/context/LanguageContext";
+import { useBrand } from "@/context/BrandContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import en from "@/locales/en.json";
@@ -42,6 +43,7 @@ interface Service {
 
 export const Services = () => {
   const { language } = useLanguage();
+  const { brand } = useBrand();
   
   // Get translations based on language
   const getTranslations = () => {
@@ -183,7 +185,7 @@ export const Services = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.7 }}
           >
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl laptop-hd:text-4xl desktop-fhd:text-5xl desktop-qhd:text-6xl desktop-4k:text-7xl font-extrabold tracking-tight text-[#001E80] mb-4 sm:mb-6 lg:mb-8">{translations.servicesHeader}</h1>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl laptop-hd:text-4xl desktop-fhd:text-5xl desktop-qhd:text-6xl desktop-4k:text-7xl font-extrabold tracking-tight mb-4 sm:mb-6 lg:mb-8" style={{ color: brand.secondary }}>{translations.servicesHeader}</h1>
             <p className="text-lg text-gray-600 mt-4">{translations.servicesDescription}</p>
           </motion.div>
 
@@ -293,8 +295,9 @@ export const Services = () => {
 
                   {/* Back of Card */}
                   <div
-                    className="absolute inset-0 w-full h-full bg-gradient-to-br from-[#001E80] to-[#3A50FF] shadow-lg rounded-2xl p-6 text-white overflow-hidden"
-                    style={{ 
+                    className="absolute inset-0 w-full h-full shadow-lg rounded-2xl p-6 text-white overflow-hidden"
+                    style={{
+                      background: `linear-gradient(135deg, ${brand.secondary} 0%, ${brand.primary} 100%)`,
                       backfaceVisibility: "hidden",
                       transform: "rotateY(180deg)"
                     }}
