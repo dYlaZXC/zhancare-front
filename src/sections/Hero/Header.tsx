@@ -1,10 +1,10 @@
 "use client";
 import Image from "next/image";
-import Logo from "@/assets/logosaas.png";
 import MenuIcon from "@/assets/menu.svg";
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { useBrand } from "@/context/BrandContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import en from "@/locales/en.json";
@@ -19,6 +19,7 @@ const SCROLL_OPTIONS = { passive: true };
 
 export default function Header() {
   const { setIsAuthOpen, user, logoutUser } = useAuth();
+  const { appLogo, brand } = useBrand();
   const { language, setLanguage } = useLanguage();
     
   // Debug: Log language changes
@@ -214,8 +215,8 @@ export default function Header() {
             {/* Logo */}
             <div className="flex items-center gap-2 xs:gap-3 flex-shrink-0">
               <Image
-                src={Logo}
-                alt="ZhanCare.AI logo"
+                src={appLogo}
+                alt={brand.name + " logo"}
                 className="h-5 xs:h-6 sm:h-8 md:h-10 lg:h-12 laptop-hd:h-8 desktop-fhd:h-10 w-auto transition-transform hover:scale-105"
                 priority
                 width={140}
@@ -283,7 +284,7 @@ export default function Header() {
                         onClick={() => { handleScrollToSection('traction'); setTractionOpen(false); }}
                         className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-white/90 hover:bg-white/10 transition-colors"
                       >
-                        <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-[#3772ff] to-[#29358f] flex items-center justify-center text-base">🚀</span>
+                        <span className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-base" style={{ background: `linear-gradient(135deg, ${brand.primary} 0%, ${brand.secondary} 100%)` }}>🚀</span>
                         <div>
                           <div className="font-semibold leading-tight">{tractionDropdownLabels.journey}</div>
                           <div className="text-xs text-white/50 mt-0.5">
@@ -330,12 +331,13 @@ export default function Header() {
                 ) : (
                   <button
                     onClick={() => setIsAuthOpen(true)}
-                    className="group bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white rounded-lg px-2.5 py-1.5 lg:px-4 lg:py-2 laptop-hd:px-3 laptop-hd:py-1.5 desktop-fhd:px-4 desktop-fhd:py-2 font-medium hover:opacity-90 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300 relative overflow-hidden text-xs lg:text-sm laptop-hd:text-xs desktop-fhd:text-sm whitespace-nowrap"
+                    className="group text-white rounded-lg px-2.5 py-1.5 lg:px-4 lg:py-2 laptop-hd:px-3 laptop-hd:py-1.5 desktop-fhd:px-4 desktop-fhd:py-2 font-medium hover:opacity-90 transition-all duration-200 focus:outline-none focus:ring-2 relative overflow-hidden text-xs lg:text-sm laptop-hd:text-xs desktop-fhd:text-sm whitespace-nowrap"
+                    style={{ background: `linear-gradient(135deg, ${brand.secondary} 0%, ${brand.primary} 100%)` }}
                   >
                     <span className="relative z-10">
                       {getAuthButtonText()}
                     </span>
-                    <div className="absolute inset-0 bg-gradient-to-r from-[#0029A3] to-[#4A5DFF] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
+                    <div className="absolute inset-0 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" style={{ background: `linear-gradient(135deg, ${brand.primary} 0%, ${brand.secondary} 100%)` }} />
                   </button>
                 )}
               </div>

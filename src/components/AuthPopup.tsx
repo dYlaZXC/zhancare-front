@@ -21,7 +21,7 @@ import PhoneLoginForm from "@/components/auth/forms/PhoneLoginForm";
 
 const AuthPopup = () => {
   const { isAuthOpen, setIsAuthOpen, loginUser, authDefaultTab, authNoRedirect } = useAuth();
-  const { appLogo } = useClinicCurrency();
+  const { appLogo, brand } = useClinicCurrency();
   const { language } = useLanguage();
 
   // Get translations based on language
@@ -329,7 +329,7 @@ const AuthPopup = () => {
             transition={{ duration: 0.2 }}
           >
             {/* Premium Header - Compact */}
-            <div className="relative bg-gradient-to-br from-[#3772ff] via-[#2956bf] to-[#1e263e] px-6 py-6 sm:py-8 overflow-hidden">
+            <div className="relative px-6 py-6 sm:py-8 overflow-hidden" style={{ background: `linear-gradient(135deg, ${brand.primary}, ${brand.secondary}, #1e263e)` }}>
               {/* Decorative elements */}
               <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
               <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#2956bf]/20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2"></div>
