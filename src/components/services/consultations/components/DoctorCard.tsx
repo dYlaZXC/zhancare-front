@@ -18,12 +18,14 @@ import {
 import type { Doctor, TimeSlot, Language } from "../types/doctor";
 import { getSpecializationName } from "../utils/doctorUtils";
 import { formatTime } from "../utils/timeslotUtils";
+import { getCurrencySymbol } from "@/utils/currency";
 
 interface DoctorCardProps {
   doctor: Doctor;
   isRecommended?: boolean;
   isSelected?: boolean;
   language: Language;
+  clinicCurrency?: string;
   timeslots?: TimeSlot[];
   selectedDate?: string;
   onTimeslotSelect?: (timeslot: TimeSlot) => void;
@@ -44,6 +46,7 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
   isRecommended = false,
   isSelected = false,
   language = 'ru',
+  clinicCurrency = 'KZT',
   timeslots = [],
   selectedDate,
   onTimeslotSelect,
@@ -226,9 +229,9 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
               </div>
               <div className="flex flex-col items-end flex-shrink-0">
                 <span className="text-sm font-black text-emerald-600 leading-none">
-                  {price.toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ₸
+                  {price.toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} {getCurrencySymbol(clinicCurrency)}
                 </span>
-                <span className="text-[10px] text-emerald-700 font-medium leading-none mt-0.5">за {duration} мин · ≈{perMin} ₸/мин</span>
+                <span className="text-[10px] text-emerald-700 font-medium leading-none mt-0.5">за {duration} мин · ≈{perMin} {getCurrencySymbol(clinicCurrency)}/мин</span>
               </div>
             </div>
           );

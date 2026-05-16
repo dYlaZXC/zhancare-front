@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/utils/api";
+import { getCurrencySymbol } from "@/utils/currency";
 import { toast } from "react-toastify";
 import {
   User, Mail, Phone, Stethoscope, GraduationCap,
@@ -112,6 +113,7 @@ const CardHeader = ({ icon: Icon, title, subtitle, iconBg, badge }: {
 
 export default function DoctorProfileInfo() {
   const { user: authUser } = useAuth();
+  const [clinicCurrency, setClinicCurrency] = useState<string>('KZT');
   const [profile, setProfile] = useState<DoctorProfile | null>(null);
   const [form, setForm] = useState({
     first_name: "", last_name: "", phone: "", language: "",
@@ -139,6 +141,12 @@ export default function DoctorProfileInfo() {
   }, [avatarMenuOpen]);
 
   useEffect(() => { fetchProfile(); }, []);
+  useEffect(() => {
+    api.get('/clinic-stats/').then((res: any) => {
+      const cur = res.data?.clinic_info?.currency;
+      if (cur) setClinicCurrency(cur);
+    }).catch(() => {});
+  }, []);
 
   const fetchProfile = async () => {
     try {
@@ -405,7 +413,7 @@ export default function DoctorProfileInfo() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <InputField
-            label="Онлайн консультация (₸)"
+            label={`Онлайн консультация (${getCurrencySymbol(clinicCurrency)})`}
             value={form.online_consultation_price}
             onChange={hasClinic ? undefined : v => setForm(p => ({ ...p, online_consultation_price: v }))}
             icon={CreditCard}
@@ -414,7 +422,7 @@ export default function DoctorProfileInfo() {
             readOnly={hasClinic}
           />
           <InputField
-            label="Оффлайн приём (₸)"
+            label={`Оффлайн приём (${getCurrencySymbol(clinicCurrency)})`}
             value={form.offline_consultation_price}
             onChange={hasClinic ? undefined : v => setForm(p => ({ ...p, offline_consultation_price: v }))}
             icon={CreditCard}

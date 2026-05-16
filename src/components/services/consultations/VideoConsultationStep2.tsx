@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { User, Sparkles, RefreshCw, ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Wand2, Clock, FileText } from "lucide-react";
 import { api } from "@/utils/api";
+import { getCurrencySymbol } from "@/utils/currency";
 
 import DoctorSearchAndFilters from "./components/DoctorSearchAndFilters";
 import DoctorCard from "./components/DoctorCard";
@@ -50,6 +51,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
   onClearSymptoms,
   consultationType = 'online',
 }) => {
+  const [clinicCurrency, setClinicCurrency] = useState<string>('KZT');
   const [searchTerm, setSearchTerm] = useState("");
   const [filterByType, setFilterByType] = useState<string>("all");
   const [filterByClinic, setFilterByClinic] = useState<string>("all");
@@ -118,6 +120,13 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
       if (!silent) console.error('Error fetching slots for date', date, error);
     }
   };
+
+  useEffect(() => {
+    api.get('/clinic-stats/').then((res: any) => {
+      const cur = res.data?.clinic_info?.currency;
+      if (cur) setClinicCurrency(cur);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (doctors.length === 0) return;
@@ -485,6 +494,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
                   isRecommended={recommendedDoctor?.id === doctor.id}
                   isSelected={selectedDoctorId === doctor.id}
                   language={language}
+                  clinicCurrency={clinicCurrency}
                   timeslots={doctorTimeslots[doctor.id] || []}
                   selectedDate={selectedDate}
                   onTimeslotSelect={handleTimeslotSelect}
@@ -551,7 +561,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
                     <div className="flex items-center justify-between px-4 py-3">
                       <span className="text-sm text-gray-500">Стоимость консультации</span>
                       <span className="text-sm font-black text-emerald-600">
-                        {Number(doc.online_consultation_price).toLocaleString('ru-RU', { minimumFractionDigits: 0 })} ₸
+                        {Number(doc.online_consultation_price).toLocaleString('ru-RU', { minimumFractionDigits: 0 })} {getCurrencySymbol(clinicCurrency)}
                       </span>
                     </div>
                   )}

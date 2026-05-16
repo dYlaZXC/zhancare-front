@@ -8,6 +8,7 @@ import {
   Loader2, MapPin, Phone, Sparkles, RefreshCw,
 } from "lucide-react";
 import { api as axiosInstance } from "@/utils/axiosInstance";
+import { getCurrencySymbol } from "@/utils/currency";
 
 interface DiagnosticsFlowProps {
   onBack: () => void;
@@ -48,6 +49,7 @@ const CATEGORIES = [
 type Step = 1 | 2 | 3;
 
 const DiagnosticsFlow: React.FC<DiagnosticsFlowProps> = ({ onBack, onComplete, onStepChange }) => {
+  const [clinicCurrency, setClinicCurrency] = useState<string>('KZT');
   const [step, setStep] = useState<Step>(1);
 
   const goToStep = (s: Step) => { setStep(s); onStepChange?.(s); };
@@ -81,6 +83,13 @@ const DiagnosticsFlow: React.FC<DiagnosticsFlowProps> = ({ onBack, onComplete, o
   const times = ['08:00', '09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00'];
 
   const progressWidth = step === 1 ? '33%' : step === 2 ? '66%' : '100%';
+
+  useEffect(() => {
+    axiosInstance.get('/clinic-stats/').then((res: any) => {
+      const cur = res.data?.clinic_info?.currency;
+      if (cur) setClinicCurrency(cur);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!selectedCategory) return;
@@ -365,7 +374,7 @@ const DiagnosticsFlow: React.FC<DiagnosticsFlowProps> = ({ onBack, onComplete, o
                           <div className="flex items-center gap-1 flex-wrap">
                             <span className="text-[11px] text-gray-400">{svc.clinic_name}</span>
                             {svc.price && (
-                              <span className="text-[11px] text-gray-500">· {Number(svc.price).toLocaleString('ru-RU')} ₸</span>
+                              <span className="text-[11px] text-gray-500">· {Number(svc.price).toLocaleString('ru-RU')} {getCurrencySymbol(clinicCurrency)}</span>
                             )}
                           </div>
                         </div>
@@ -480,7 +489,7 @@ const DiagnosticsFlow: React.FC<DiagnosticsFlowProps> = ({ onBack, onComplete, o
                     <p className="text-xs text-gray-400 font-medium">Исследование</p>
                     <p className="text-sm font-semibold text-gray-900 truncate">{selectedService.name}</p>
                     {selectedService.price && (
-                      <p className="text-xs text-gray-400">{Number(selectedService.price).toLocaleString('ru-RU')} ₸</p>
+                      <p className="text-xs text-gray-400">{Number(selectedService.price).toLocaleString('ru-RU')} {getCurrencySymbol(clinicCurrency)}</p>
                     )}
                   </div>
                 </div>

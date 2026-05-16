@@ -2,7 +2,7 @@
 import { createPortal } from "react-dom";
 
 import Image from "next/image";
-import Logo from "@/assets/logosaas.png";
+import { useClinicCurrency } from "@/context/BrandContext";
 import LogoIcon from "../../../public/logo_icon.png";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -65,6 +65,7 @@ export const DoctorSidebar = ({
   isCollapsed = false,
 }: DoctorSidebarProps) => {
   const { user, logoutUser } = useAuth();
+  const { appLogo, brand } = useClinicCurrency();
   const userRole = computeRole(user?.roles);
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -76,7 +77,7 @@ export const DoctorSidebar = ({
   const mobileSidebarRef = useRef<HTMLElement>(null);
   const desktopSidebarRef = useRef<HTMLElement>(null);
   const onSidebarMouseMove = (ref: React.RefObject<HTMLElement>) => (e: React.MouseEvent<HTMLElement>) => {
-    if (ref.current) ref.current.style.background = `radial-gradient(circle at ${e.clientX}px ${e.clientY}px, rgba(55,114,255,0.2) 0%, transparent 50%), linear-gradient(135deg, #12263a 0%, #1e263e 25%, #29358f 75%, #3772ff 100%)`;
+    if (ref.current) ref.current.style.background = `radial-gradient(circle at ${e.clientX}px ${e.clientY}px, ${brand.sidebarGlow} 0%, transparent 50%), ${brand.sidebarGradient}`;
   };
   const enterFlyout = (id: string, e?: React.MouseEvent<HTMLElement>) => {
     if (flyoutTimeout.current) clearTimeout(flyoutTimeout.current);
@@ -139,13 +140,10 @@ export const DoctorSidebar = ({
     }
   };
 
-  const getRoleGradient = (role: string) => {
-    switch (role) {
-      case "doctor": return { bg: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)', border: 'rgba(55, 114, 255, 0.3)' };
-      case "admin": return { bg: 'linear-gradient(135deg, #3267e6 0%, #1e4099 100%)', border: 'rgba(50, 103, 230, 0.3)' };
-      default: return { bg: 'linear-gradient(135deg, #295bbf 0%, #173373 100%)', border: 'rgba(41, 91, 191, 0.3)' };
-    }
-  };
+  const getRoleGradient = (_role: string) => ({
+    bg: `linear-gradient(135deg, ${brand.primary} 0%, ${brand.secondary} 100%)`,
+    border: brand.sidebarGlow,
+  });
 
   const renderSubItem = (child: SubMenuItem, variant: 'mobile' | 'desktop') => (
     <div key={child.id} className="relative">
@@ -221,21 +219,17 @@ export const DoctorSidebar = ({
         className={`${
           sidebarOpen || isOpen ? "translate-x-0" : "-translate-x-full"
         } fixed top-0 left-0 h-screen w-72 xs:w-76 text-white flex flex-col transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] transform z-50 shadow-2xl border-r border-white/10 backdrop-blur-xl will-change-transform overflow-x-hidden xl:hidden`}
-        style={{
-          background: `
-            linear-gradient(135deg, #12263a 0%, #1e263e 25%, #29358f 75%, #3772ff 100%)
-          `
-        }}
+        style={{ background: brand.sidebarGradient }}
       >
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-10 left-10 w-24 h-24 xs:w-32 xs:h-32 rounded-full blur-xl animate-pulse" style={{ background: 'radial-gradient(circle, rgba(55,114,255,0.15) 0%, rgba(41,53,143,0.1) 100%)', animationDuration: '4s' }}></div>
-          <div className="absolute bottom-20 right-10 w-16 h-16 xs:w-24 xs:h-24 rounded-full blur-lg animate-bounce" style={{ background: 'radial-gradient(circle, rgba(50,103,230,0.2) 0%, rgba(30,38,62,0.1) 100%)', animationDuration: '3s' }}></div>
-          <div className="absolute top-1/2 left-1/2 w-12 h-12 xs:w-16 xs:h-16 rounded-full blur-md animate-ping" style={{ background: 'radial-gradient(circle, rgba(67,126,255,0.25) 0%, transparent 70%)', animationDuration: '2s' }}></div>
+          <div className="absolute top-10 left-10 w-24 h-24 xs:w-32 xs:h-32 rounded-full blur-xl animate-pulse" style={{ background: `radial-gradient(circle, ${brand.accentRgba}0.15) 0%, ${brand.accentRgba}0.1) 100%)`, animationDuration: '4s' }}></div>
+          <div className="absolute bottom-20 right-10 w-16 h-16 xs:w-24 xs:h-24 rounded-full blur-lg animate-bounce" style={{ background: `radial-gradient(circle, ${brand.accentRgba}0.2) 0%, rgba(30,38,62,0.1) 100%)`, animationDuration: '3s' }}></div>
+          <div className="absolute top-1/2 left-1/2 w-12 h-12 xs:w-16 xs:h-16 rounded-full blur-md animate-ping" style={{ background: `radial-gradient(circle, ${brand.accentRgba}0.25) 0%, transparent 70%)`, animationDuration: '2s' }}></div>
         </div>
 
         <div className="flex justify-between items-center px-3 py-4 xs:px-4 xs:py-5 sm:px-6 sm:py-6 xl:hidden relative z-10 border-b border-white/10">
           <Link href="/" onClick={() => setSidebarOpen(false)} className="block outline-none focus:outline-none">
-            <Image src={Logo} alt="Logo" width={220} height={55} priority className="w-full max-w-[160px] h-auto hover:opacity-90 transition-opacity duration-300 drop-shadow-lg" />
+            <Image src={appLogo} alt="Logo" width={220} height={55} priority className="w-full max-w-[160px] h-auto hover:opacity-90 transition-opacity duration-300 drop-shadow-lg" />
           </Link>
           <div className="relative group">
             <button
@@ -373,16 +367,12 @@ export const DoctorSidebar = ({
         ref={desktopSidebarRef as any}
         onMouseMove={onSidebarMouseMove(desktopSidebarRef)}
         className={`hidden xl:flex fixed top-0 left-0 h-screen ${isCollapsed ? "w-20" : "w-80"} text-white flex-col justify-between overflow-y-hidden transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] z-40 shadow-2xl border-r border-white/10 backdrop-blur-xl will-change-transform overflow-x-hidden`}
-        style={{
-          background: `
-            linear-gradient(135deg, #12263a 0%, #1e263e 25%, #29358f 75%, #3772ff 100%)
-          `
-        }}
+        style={{ background: brand.sidebarGradient }}
       >
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-10 left-10 w-24 h-24 rounded-full blur-xl animate-pulse" style={{ background: 'radial-gradient(circle, rgba(55,114,255,0.15) 0%, rgba(41,53,143,0.1) 100%)', animationDuration: '4s' }}></div>
-          <div className="absolute bottom-20 right-10 w-16 h-16 rounded-full blur-lg animate-bounce" style={{ background: 'radial-gradient(circle, rgba(50,103,230,0.2) 0%, rgba(30,38,62,0.1) 100%)', animationDuration: '3s' }}></div>
-          <div className="absolute top-1/2 left-1/2 w-12 h-12 rounded-full blur-md animate-ping" style={{ background: 'radial-gradient(circle, rgba(67,126,255,0.25) 0%, transparent 70%)', animationDuration: '2s' }}></div>
+          <div className="absolute top-10 left-10 w-24 h-24 rounded-full blur-xl animate-pulse" style={{ background: `radial-gradient(circle, ${brand.accentRgba}0.15) 0%, ${brand.accentRgba}0.1) 100%)`, animationDuration: '4s' }}></div>
+          <div className="absolute bottom-20 right-10 w-16 h-16 rounded-full blur-lg animate-bounce" style={{ background: `radial-gradient(circle, ${brand.accentRgba}0.2) 0%, rgba(30,38,62,0.1) 100%)`, animationDuration: '3s' }}></div>
+          <div className="absolute top-1/2 left-1/2 w-12 h-12 rounded-full blur-md animate-ping" style={{ background: `radial-gradient(circle, ${brand.accentRgba}0.25) 0%, transparent 70%)`, animationDuration: '2s' }}></div>
         </div>
 
         <div className="flex flex-col flex-shrink-0 relative z-10">
@@ -391,7 +381,7 @@ export const DoctorSidebar = ({
               {isCollapsed ? (
                 <Image src={LogoIcon} alt="ZhanCare" width={40} height={40} priority className="w-10 h-10 object-contain drop-shadow-md mx-auto" />
               ) : (
-                <Image src={Logo} alt="Logo" width={280} height={55} priority className="w-full h-auto hover:opacity-90 transition-opacity duration-300 drop-shadow-lg" />
+                <Image src={appLogo} alt="Logo" width={280} height={55} priority className="w-full h-auto hover:opacity-90 transition-opacity duration-300 drop-shadow-lg" />
               )}
             </Link>
           </div>

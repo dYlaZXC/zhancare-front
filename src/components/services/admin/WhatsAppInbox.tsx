@@ -2,9 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "react-toastify";
-import { getWebSocketURL } from "@/utils/api";
-
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000/api/v1";
+import { api, getWebSocketURL } from "@/utils/api";
 
 interface WaMessage {
   id: number;
@@ -20,11 +18,6 @@ interface Contact {
   number: string;
   lastMessage: string;
   lastAt: string;
-}
-
-function authHeaders() {
-  const token = localStorage.getItem("access_token");
-  return { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
 }
 
 function formatTime(iso: string) {
@@ -84,24 +77,18 @@ export default function WhatsAppInbox() {
 
   const fetchContacts = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/whatsapp/messages/`, { headers: authHeaders() });
-      if (!res.ok) return;
-      const data = await res.json();
+      const { data } = await api.get("/whatsapp/messages/");
       const msgs: WaMessage[] = data.messages ?? [];
       setIncomingMsgs(msgs);
       setContacts(buildContacts(msgs));
-    } finally {
+    } catch { /* ignore */ } finally {
       setLoading(false);
     }
   }, []);
 
   const fetchThread = useCallback(async (number: string) => {
     try {
-      const res = await fetch(`${API}/whatsapp/messages/?from_number=${encodeURIComponent(number)}`, {
-        headers: authHeaders(),
-      });
-      if (!res.ok) return;
-      const data = await res.json();
+      const { data } = await api.get("/whatsapp/messages/", { params: { from_number: number } });
       setThread(data.messages ?? []);
     } catch { /* ignore */ }
   }, []);
@@ -178,33 +165,22 @@ export default function WhatsAppInbox() {
     setSending(true);
     setReplyText("");
     try {
-      const res = await fetch(`${API}/whatsapp/reply/`, {
-        method: "POST",
-        headers: authHeaders(),
-        body: JSON.stringify({ to: selected, body }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.message) {
-          const msg: WaMessage = data.message;
-          setIncomingMsgs(prev => {
-            if (prev.some(m => m.id === msg.id)) return prev;
-            const updated = [...prev, msg];
-            setContacts(buildContacts(updated));
-            return updated;
-          });
-          if (wsStatus !== "connected") {
-            setThread(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
-          }
+      const { data } = await api.post("/whatsapp/reply/", { to: selected, body });
+      if (data.message) {
+        const msg: WaMessage = data.message;
+        setIncomingMsgs(prev => {
+          if (prev.some(m => m.id === msg.id)) return prev;
+          const updated = [...prev, msg];
+          setContacts(buildContacts(updated));
+          return updated;
+        });
+        if (wsStatus !== "connected") {
+          setThread(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
         }
-        toast.success("Отправлено");
-      } else {
-        const err = await res.json().catch(() => ({}));
-        toast.error(err.error ?? "Ошибка отправки");
-        setReplyText(body);
       }
-    } catch {
-      toast.error("Ошибка соединения");
+      toast.success("Отправлено");
+    } catch (err: any) {
+      toast.error(err.response?.data?.error ?? "Ошибка отправки");
       setReplyText(body);
     } finally {
       setSending(false);

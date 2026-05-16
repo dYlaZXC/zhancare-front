@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import Logo from "@/assets/logosaas.png";
+import { useClinicCurrency } from "@/context/BrandContext";
 import LogoIcon from "../../../public/logo_icon.png";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -38,15 +38,15 @@ export const NurseSidebar = ({
   isCollapsed = false,
 }: NurseSidebarProps) => {
   const { user, logoutUser } = useAuth();
+  const { appLogo, brand } = useClinicCurrency();
   const userRole = computeRole(user?.roles);
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const mobileSidebarRef = useRef<HTMLElement>(null);
   const desktopSidebarRef = useRef<HTMLElement>(null);
-  const GRADIENT_BASE = "linear-gradient(135deg, #12263a 0%, #1e263e 25%, #29358f 75%, #3772ff 100%)";
   const onSidebarMouseMove = (ref: React.RefObject<HTMLElement>) => (e: React.MouseEvent<HTMLElement>) => {
-    if (ref.current) ref.current.style.background = `radial-gradient(circle at ${e.clientX}px ${e.clientY}px, rgba(55,114,255,0.2) 0%, transparent 50%), ${GRADIENT_BASE}`;
+    if (ref.current) ref.current.style.background = `radial-gradient(circle at ${e.clientX}px ${e.clientY}px, ${brand.sidebarGlow} 0%, transparent 50%), ${brand.sidebarGradient}`;
   };
 
   if (!user) return null;
@@ -117,11 +117,7 @@ export const NurseSidebar = ({
         className={`${
           sidebarOpen || isOpen ? "translate-x-0" : "-translate-x-full"
         } fixed top-0 left-0 h-screen w-72 xs:w-76 text-white flex flex-col transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] transform z-50 shadow-2xl border-r border-white/10 backdrop-blur-xl will-change-transform overflow-x-hidden xl:hidden`}
-        style={{
-          background: `
-            linear-gradient(135deg, #12263a 0%, #1e263e 25%, #29358f 75%, #3772ff 100%)
-          `
-        }}
+        style={{ background: brand.sidebarGradient }}
       >
         {/* Optimized Animated Background Elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -135,7 +131,7 @@ export const NurseSidebar = ({
           {/* Mobile Logo */}
           <Link href="/" onClick={() => setSidebarOpen(false)} className="block outline-none focus:outline-none">
             <Image
-              src={Logo}
+              src={appLogo}
               alt="Logo"
               width={220}
               height={55}
@@ -213,7 +209,7 @@ export const NurseSidebar = ({
               <Image src={LogoIcon} alt="ZhanCare" width={40} height={40} priority className="w-10 h-10 object-contain drop-shadow-md mx-auto" />
             ) : (
               <Image
-                src={Logo}
+                src={appLogo}
                 alt="Logo"
                 width={280}
                 height={55}
@@ -470,11 +466,7 @@ export const NurseSidebar = ({
         ref={desktopSidebarRef as any}
         onMouseMove={onSidebarMouseMove(desktopSidebarRef)}
         className={`hidden xl:flex fixed top-0 left-0 h-screen ${isCollapsed ? "w-20" : "w-80"} text-white flex-col justify-between overflow-y-hidden transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] z-40 shadow-2xl border-r border-white/10 backdrop-blur-xl will-change-transform overflow-x-hidden`}
-        style={{
-          background: `
-            linear-gradient(135deg, #12263a 0%, #1e263e 25%, #29358f 75%, #3772ff 100%)
-          `
-        }}
+        style={{ background: brand.sidebarGradient }}
       >
         {/* Optimized Animated Background Elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -493,7 +485,7 @@ export const NurseSidebar = ({
               <Image src={LogoIcon} alt="ZhanCare" width={40} height={40} priority className="w-10 h-10 object-contain drop-shadow-md mx-auto" />
             ) : (
               <Image
-                src={Logo}
+                src={appLogo}
                 alt="Logo"
                 width={280}
                 height={55}

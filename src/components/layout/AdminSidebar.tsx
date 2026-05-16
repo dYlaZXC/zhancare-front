@@ -2,7 +2,7 @@
 import { createPortal } from "react-dom";
 
 import Image from "next/image";
-import Logo from "@/assets/logosaas.png";
+import { useClinicCurrency } from "@/context/BrandContext";
 import LogoIcon from "../../../public/logo_icon.png";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -23,6 +23,7 @@ import {
   faUserShield,
   faHospital,
   faComments,
+  faPaperPlane,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useState, useEffect, useRef } from "react";
@@ -67,7 +68,16 @@ const adminMenu: MenuItem[] = [
     ],
   },
   { id: "ai-agents", icon: faRobot, title: "AI Агенты", color: "#8b5cf6", href: "/admin/ai-agents" },
-  { id: "whatsapp", icon: faComments, title: "WhatsApp", color: "#25d366", href: "/admin/whatsapp", superOnly: true },
+  {
+    id: "messengers",
+    icon: faComments,
+    title: "Мессенджеры",
+    color: "#0088cc",
+    children: [
+      { id: "whatsapp", icon: faComments, title: "WhatsApp", color: "#25d366", href: "/admin/whatsapp" },
+      { id: "telegram", icon: faPaperPlane, title: "Telegram", color: "#0088cc", href: "/admin/telegram" },
+    ],
+  },
   { id: "pipeline", icon: faFunnelDollar, title: "Pipeline клиник", color: "#10b981", href: "/admin/pipeline", superOnly: true },
 ];
 
@@ -83,6 +93,7 @@ export const AdminSidebar = ({
   isCollapsed = false,
 }: AdminSidebarProps) => {
   const { user } = useAuth();
+  const { appLogo, brand } = useClinicCurrency();
   const userRole = computeRole(user?.roles);
   const isSuperAdmin = !!(user?.profiles?.admin as any)?.is_super_admin;
   const pathname = usePathname();
@@ -95,7 +106,7 @@ export const AdminSidebar = ({
   const mobileSidebarRef = useRef<HTMLElement>(null);
   const desktopSidebarRef = useRef<HTMLElement>(null);
   const onSidebarMouseMove = (ref: React.RefObject<HTMLElement>) => (e: React.MouseEvent<HTMLElement>) => {
-    if (ref.current) ref.current.style.background = `radial-gradient(circle at ${e.clientX}px ${e.clientY}px, rgba(55,114,255,0.2) 0%, transparent 50%), linear-gradient(135deg, #12263a 0%, #1e263e 25%, #29358f 75%, #3772ff 100%)`;
+    if (ref.current) ref.current.style.background = `radial-gradient(circle at ${e.clientX}px ${e.clientY}px, ${brand.sidebarGlow} 0%, transparent 50%), ${brand.sidebarGradient}`;
   };
 
   const enterFlyout = (id: string, e?: React.MouseEvent<HTMLElement>) => {
@@ -260,14 +271,10 @@ export const AdminSidebar = ({
         className={`${
           sidebarOpen || isOpen ? "translate-x-0" : "-translate-x-full"
         } fixed top-0 left-0 h-screen w-72 xs:w-76 text-white flex flex-col transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] transform z-50 shadow-2xl border-r border-white/10 backdrop-blur-xl will-change-transform overflow-x-hidden xl:hidden`}
-        style={{
-          background: `
-            linear-gradient(135deg, #12263a 0%, #1e263e 25%, #29358f 75%, #3772ff 100%)
-          `
-        }}
+        style={{ background: brand.sidebarGradient }}
       >
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-10 left-10 w-24 h-24 xs:w-32 xs:h-32 rounded-full blur-xl animate-pulse" style={{ background: 'radial-gradient(circle, rgba(55, 114, 255, 0.15) 0%, rgba(41, 53, 143, 0.1) 100%)', animationDuration: '4s' }}></div>
+          <div className="absolute top-10 left-10 w-24 h-24 xs:w-32 xs:h-32 rounded-full blur-xl animate-pulse" style={{ background: `radial-gradient(circle, ${brand.accentRgba}0.15) 0%, ${brand.accentRgba}0.1) 100%)`, animationDuration: '4s' }}></div>
           <div className="absolute bottom-20 right-10 w-16 h-16 xs:w-24 xs:h-24 rounded-full blur-lg animate-bounce" style={{ background: 'radial-gradient(circle, rgba(50, 103, 230, 0.2) 0%, rgba(30, 38, 62, 0.1) 100%)', animationDuration: '3s' }}></div>
           <div className="absolute top-1/2 left-1/2 w-12 h-12 xs:w-16 xs:h-16 rounded-full blur-md animate-ping" style={{ background: 'radial-gradient(circle, rgba(67, 126, 255, 0.25) 0%, transparent 70%)', animationDuration: '2s' }}></div>
         </div>
@@ -275,7 +282,7 @@ export const AdminSidebar = ({
         {/* Mobile Header */}
         <div className="flex justify-between items-center px-3 py-4 xs:px-4 xs:py-5 sm:px-6 sm:py-6 xl:hidden relative z-10 border-b border-white/10">
           <Link href="/" onClick={() => setSidebarOpen(false)} className="block outline-none focus:outline-none">
-            <Image src={Logo} alt="Logo" width={220} height={55} priority className="w-full max-w-[160px] h-auto hover:opacity-90 transition-opacity duration-300 drop-shadow-lg" />
+            <Image src={appLogo} alt="Logo" width={220} height={55} priority className="w-full max-w-[160px] h-auto hover:opacity-90 transition-opacity duration-300 drop-shadow-lg" />
           </Link>
           <div className="relative group">
             <button
@@ -318,7 +325,7 @@ export const AdminSidebar = ({
         </div>
 
         {/* Mobile Navigation */}
-        <nav className="mt-2 space-y-2 xs:space-y-2.5 px-3 xs:px-4 sm:px-6 flex-1 overflow-y-auto overflow-x-hidden relative z-10">
+        <nav className="mt-2 space-y-2 xs:space-y-2.5 px-3 xs:px-4 sm:px-6 flex-1 overflow-y-auto overflow-x-hidden relative z-10 sidebar-scroll">
           {visibleMenu.map((item) => {
             if (!item.children) {
               // Standalone item
@@ -443,16 +450,12 @@ export const AdminSidebar = ({
         ref={desktopSidebarRef as any}
         onMouseMove={onSidebarMouseMove(desktopSidebarRef)}
         className={`hidden xl:flex fixed top-0 left-0 h-screen ${isCollapsed ? "w-20" : "w-80"} text-white flex-col justify-between overflow-y-hidden transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] z-40 shadow-2xl border-r border-white/10 backdrop-blur-xl will-change-transform overflow-x-hidden`}
-        style={{
-          background: `
-            linear-gradient(135deg, #12263a 0%, #1e263e 25%, #29358f 75%, #3772ff 100%)
-          `
-        }}
+        style={{ background: brand.sidebarGradient }}
       >
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-10 left-10 w-24 h-24 xs:w-32 xs:h-32 rounded-full blur-xl animate-pulse" style={{ background: 'radial-gradient(circle, rgba(55,114,255,0.15) 0%, rgba(41,53,143,0.1) 100%)', animationDuration: '4s' }}></div>
-          <div className="absolute bottom-20 right-10 w-16 h-16 xs:w-24 xs:h-24 rounded-full blur-lg animate-bounce" style={{ background: 'radial-gradient(circle, rgba(50,103,230,0.2) 0%, rgba(30,38,62,0.1) 100%)', animationDuration: '3s' }}></div>
-          <div className="absolute top-1/2 left-1/2 w-12 h-12 xs:w-16 xs:h-16 rounded-full blur-md animate-ping" style={{ background: 'radial-gradient(circle, rgba(67,126,255,0.25) 0%, transparent 70%)', animationDuration: '2s' }}></div>
+          <div className="absolute top-10 left-10 w-24 h-24 xs:w-32 xs:h-32 rounded-full blur-xl animate-pulse" style={{ background: `radial-gradient(circle, ${brand.accentRgba}0.15) 0%, ${brand.accentRgba}0.1) 100%)`, animationDuration: '4s' }}></div>
+          <div className="absolute bottom-20 right-10 w-16 h-16 xs:w-24 xs:h-24 rounded-full blur-lg animate-bounce" style={{ background: `radial-gradient(circle, ${brand.accentRgba}0.2) 0%, rgba(30,38,62,0.1) 100%)`, animationDuration: '3s' }}></div>
+          <div className="absolute top-1/2 left-1/2 w-12 h-12 xs:w-16 xs:h-16 rounded-full blur-md animate-ping" style={{ background: `radial-gradient(circle, ${brand.accentRgba}0.25) 0%, transparent 70%)`, animationDuration: '2s' }}></div>
         </div>
 
         {/* Desktop Top: Logo + User Info */}
@@ -462,7 +465,7 @@ export const AdminSidebar = ({
               {isCollapsed ? (
                 <Image src={LogoIcon} alt="ZhanCare" width={40} height={40} priority className="w-10 h-10 object-contain drop-shadow-md mx-auto" />
               ) : (
-                <Image src={Logo} alt="Logo" width={280} height={55} priority className="w-full h-auto hover:opacity-90 transition-opacity duration-300 drop-shadow-lg" />
+                <Image src={appLogo} alt="Logo" width={280} height={55} priority className="w-full h-auto hover:opacity-90 transition-opacity duration-300 drop-shadow-lg" />
               )}
             </Link>
           </div>
@@ -511,7 +514,7 @@ export const AdminSidebar = ({
         </div>
 
         {/* Desktop Navigation */}
-        <nav className={`flex-1 flex flex-col justify-start gap-2 ${isCollapsed ? 'px-2 py-3' : 'px-6 py-3'} overflow-x-hidden overflow-y-auto relative z-10`}>
+        <nav className={`flex-1 flex flex-col justify-start gap-2 ${isCollapsed ? 'px-2 py-3' : 'px-6 py-3'} overflow-x-hidden overflow-y-auto relative z-10 sidebar-scroll`}>
           {visibleMenu.map((item) => {
             if (!item.children) {
               // Standalone item

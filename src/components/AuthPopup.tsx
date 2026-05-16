@@ -11,7 +11,7 @@ import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import en from "@/locales/en.json";
 import { api } from "@/utils/api";
-import Logo from "@/assets/logosaas.png";
+import { useClinicCurrency } from "@/context/BrandContext";
 
 import AuthTabs from "@/components/auth/AuthTabs";
 import LoginForm, { LoginFormData } from "@/components/auth/forms/LoginForm";
@@ -21,6 +21,7 @@ import PhoneLoginForm from "@/components/auth/forms/PhoneLoginForm";
 
 const AuthPopup = () => {
   const { isAuthOpen, setIsAuthOpen, loginUser, authDefaultTab, authNoRedirect } = useAuth();
+  const { appLogo } = useClinicCurrency();
   const { language } = useLanguage();
 
   // Get translations based on language
@@ -352,7 +353,7 @@ const AuthPopup = () => {
                   className="w-full max-w-[200px] sm:max-w-[220px]"
                 >
                   <Image
-                    src={Logo}
+                    src={appLogo}
                     alt="ZhanCare.AI"
                     width={220}
                     height={220}

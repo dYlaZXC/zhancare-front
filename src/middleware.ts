@@ -23,14 +23,22 @@ const AUTH_ONLY_ROUTES = ["/login"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const hostname = request.headers.get("host") || "";
+  const brand = hostname.startsWith("uz.") ? "uz" : "kz";
+
   const isAuthenticated = !!request.cookies.get("zha_auth")?.value;
+
+  const withBrand = (res: ReturnType<typeof NextResponse.next>) => {
+    res.headers.set("x-brand", brand);
+    return res;
+  };
 
   // Redirect authenticated users away from login page
   if (AUTH_ONLY_ROUTES.some((r) => pathname.startsWith(r))) {
     if (isAuthenticated) {
       return NextResponse.redirect(new URL("/profile", request.url));
     }
-    return NextResponse.next();
+    return withBrand(NextResponse.next());
   }
 
   // Protect authenticated routes
@@ -42,7 +50,7 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  return NextResponse.next();
+  return withBrand(NextResponse.next());
 }
 
 export const config = {

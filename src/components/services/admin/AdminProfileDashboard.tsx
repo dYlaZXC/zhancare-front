@@ -27,6 +27,8 @@ import { faBolt } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context/AuthContext";
 import BannerPicker, { useBanner } from "@/components/profile/BannerPicker";
 import PhoneInput from "@/components/ui/PhoneInput";
+import { CURRENCIES } from "@/utils/currency";
+import { useClinicCurrency } from "@/context/BrandContext";
 
 const BACKEND = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') ?? 'http://127.0.0.1:8000';
 function resolveAvatarUrl(url: string | null | undefined): string | null {
@@ -60,6 +62,7 @@ interface ClinicInfo {
   phones?: Array<{ number: string } | string> | null;
   rating: number;
   logo?: string | null;
+  currency?: string | null;
 }
 interface ClinicStats {
   is_super_admin: boolean;
@@ -89,6 +92,7 @@ const InputField = ({
 
 export default function AdminProfileDashboard({ user }: AdminProfileDashboardProps) {
   const { updateUser, user: authUser } = useAuth();
+  const { setClinicCurrency } = useClinicCurrency();
   const [stats, setStats] = useState<ClinicStats | null>(null);
   const [personalForm, setPersonalForm] = useState({
     first_name: user.first_name,
@@ -99,7 +103,7 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
   const [savingPersonal, setSavingPersonal] = useState(false);
   const [savedPersonal, setSavedPersonal] = useState(false);
 
-  const [clinicForm, setClinicForm] = useState({ name: "", description: "", address: "", working_hours: "", phone: "", city_name: "" });
+  const [clinicForm, setClinicForm] = useState({ name: "", description: "", address: "", working_hours: "", phone: "", city_name: "", currency: "KZT" });
   const [savingClinic, setSavingClinic] = useState(false);
   const [savedClinic, setSavedClinic] = useState(false);
   const [clinicLogo, setClinicLogo] = useState<string | null>(null);
@@ -143,6 +147,7 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
           working_hours: ci.working_hours || "",
           phone: firstPhone,
           city_name: ci.city || "",
+          currency: ci.currency || "KZT",
         });
         setClinicLogo(ci.logo || null);
       }
@@ -174,6 +179,7 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
     setSavingClinic(true);
     try {
       await api.patch(`/clinic-update/${stats.clinic_info.id}/`, clinicForm);
+      setClinicCurrency(clinicForm.currency);
       toast.success("Данные клиники обновлены");
       setSavedClinic(true);
       setTimeout(() => setSavedClinic(false), 2500);
@@ -538,6 +544,31 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
 
               {/* Row 4: working hours */}
               <InputField label="Часы работы" value={clinicForm.working_hours} onChange={v => setClinicForm(p => ({ ...p, working_hours: v }))} icon={Clock} placeholder="Пн-Пт: 9:00–18:00, Сб: 10:00–15:00" />
+
+              {/* Row 4b: currency */}
+              <div className="sm:col-span-2 flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Валюта клиники</label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {CURRENCIES.map(cur => {
+                    const active = clinicForm.currency === cur.value;
+                    return (
+                      <button
+                        key={cur.value}
+                        type="button"
+                        onClick={() => setClinicForm(p => ({ ...p, currency: cur.value }))}
+                        className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${
+                          active
+                            ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                            : 'border-gray-200 text-gray-500 hover:border-gray-300 bg-white'
+                        }`}
+                      >
+                        <span className={`text-base leading-none ${active ? 'text-emerald-600' : 'text-gray-400'}`}>{cur.symbol}</span>
+                        <span>{cur.value}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
               {/* Row 5: description */}
               <div className="sm:col-span-2 flex flex-col gap-1.5">

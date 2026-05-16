@@ -5,19 +5,36 @@
 export interface ScheduleEvent {
   id: string;
   type: 'consultation' | 'appointment';
+  consultation_type?: 'online' | 'offline';
+  // Patient
   patient_id: number;
   patient_name: string;
+  patient_phone?: string;
+  patient_email?: string;
+  patient_birth_date?: string;
+  patient_gender?: string;
+  // Doctor
   doctor_id?: number;
   doctor_name?: string;
+  doctor_phone?: string;
+  doctor_email?: string;
+  doctor_specialization?: string;
+  doctor_years_of_experience?: number;
+  // Nurse (appointments only)
   nurse_id?: number;
   nurse_name?: string;
+  nurse_phone?: string;
+  nurse_email?: string;
+  // Scheduling
   date: string;
   time: string;
-  duration: number; // in minutes
+  duration: number;
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
-  location?: string;
+  // Access (consultations)
+  meeting_id?: string;
+  access_code?: string;
+  // Location (appointments)
   address?: string;
-  specialization?: string;
   notes?: string;
 }
 

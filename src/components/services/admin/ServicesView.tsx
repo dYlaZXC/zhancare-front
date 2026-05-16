@@ -4,11 +4,12 @@ import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "@/utils/api";
 import { toast } from "react-toastify";
+import { CURRENCIES, getCurrencySymbol, formatPrice } from "@/utils/currency";
 import {
   Plus, Pencil, Trash2, Loader2, X, CheckCircle2, Save,
   FlaskConical, ScanLine, Heart, Brain, Bone, Eye, Baby, Microscope,
   ClipboardList, Clock, Banknote, ToggleLeft, ToggleRight,
-  CalendarCheck, User, ChevronDown,
+  CalendarCheck, User, ChevronDown, CalendarDays,
 } from "lucide-react";
 
 const CATEGORIES = [
@@ -40,6 +41,12 @@ interface Service {
   category: string;
   category_label: string;
   is_active: boolean;
+  has_custom_schedule?: boolean;
+  schedule_days?: string[];
+  schedule_start?: string;
+  schedule_end?: string;
+  capacity_per_slot?: number;
+  currency?: string;
 }
 
 interface Appointment {
@@ -52,7 +59,21 @@ interface Appointment {
   notes: string;
 }
 
-const EMPTY_FORM = { name: "", description: "", price: "", duration_minutes: 30, category: "lab" };
+const WEEKDAYS = [
+  { id: "1", label: "Пн" }, { id: "2", label: "Вт" }, { id: "3", label: "Ср" },
+  { id: "4", label: "Чт" }, { id: "5", label: "Пт" }, { id: "6", label: "Сб" },
+  { id: "0", label: "Вс" },
+];
+
+const EMPTY_FORM = {
+  name: "", description: "", price: "", duration_minutes: 30, category: "lab",
+  currency: "",
+  has_custom_schedule: false,
+  schedule_days: [] as string[],
+  schedule_start: "09:00",
+  schedule_end: "18:00",
+  capacity_per_slot: 1,
+};
 
 export function ServicesView({ user }: { user: any }) {
   const [activeTab, setActiveTab] = useState<"services" | "appointments">("services");
@@ -61,6 +82,7 @@ export function ServicesView({ user }: { user: any }) {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [apptLoading, setApptLoading] = useState(false);
+  const [clinicCurrency, setClinicCurrency] = useState<string>('KZT');
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Service | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -91,6 +113,12 @@ export function ServicesView({ user }: { user: any }) {
     }
   }, []);
 
+  useEffect(() => {
+    api.get('/clinic-stats/').then(res => {
+      if (res.data?.clinic_info?.currency) setClinicCurrency(res.data.clinic_info.currency);
+    }).catch(() => {});
+  }, []);
+
   useEffect(() => { fetchServices(); }, [fetchServices]);
   useEffect(() => {
     if (activeTab === "appointments") fetchAppointments();
@@ -99,7 +127,16 @@ export function ServicesView({ user }: { user: any }) {
   const openCreate = () => { setEditing(null); setForm(EMPTY_FORM); setShowModal(true); };
   const openEdit = (s: Service) => {
     setEditing(s);
-    setForm({ name: s.name, description: s.description || "", price: s.price || "", duration_minutes: s.duration_minutes, category: s.category });
+    setForm({
+      name: s.name, description: s.description || "", price: s.price || "",
+      duration_minutes: s.duration_minutes, category: s.category,
+      currency: s.currency || "",
+      has_custom_schedule: s.has_custom_schedule ?? false,
+      schedule_days: s.schedule_days ?? [],
+      schedule_start: s.schedule_start ?? "09:00",
+      schedule_end: s.schedule_end ?? "18:00",
+      capacity_per_slot: s.capacity_per_slot ?? 1,
+    });
     setShowModal(true);
   };
 
@@ -107,7 +144,16 @@ export function ServicesView({ user }: { user: any }) {
     if (!form.name.trim()) { toast.error("Введите название услуги"); return; }
     setSaving(true);
     try {
-      const payload = { ...form, price: form.price || null };
+      const payload = {
+        ...form,
+        price: form.price || null,
+        currency: form.currency || clinicCurrency,
+        // Only send schedule fields when custom schedule is enabled
+        schedule_days:      form.has_custom_schedule ? form.schedule_days : [],
+        schedule_start:     form.has_custom_schedule ? form.schedule_start : null,
+        schedule_end:       form.has_custom_schedule ? form.schedule_end : null,
+        capacity_per_slot:  form.has_custom_schedule ? form.capacity_per_slot : null,
+      };
       if (editing) {
         const res = await api.patch(`/diagnostics/services/${editing.id}/`, payload);
         setServices(prev => prev.map(s => s.id === editing.id ? res.data : s));
@@ -268,9 +314,14 @@ export function ServicesView({ user }: { user: any }) {
                         </div>
                       </div>
                       {s.description && <p className="text-xs text-gray-500 mb-3 line-clamp-2">{s.description}</p>}
-                      <div className="flex items-center gap-3 text-[11px] text-gray-500 mb-3">
+                      <div className="flex items-center gap-3 text-[11px] text-gray-500 mb-3 flex-wrap">
                         <span className="flex items-center gap-1"><Clock size={10} /> {s.duration_minutes} мин</span>
-                        {s.price && <span className="flex items-center gap-1 font-semibold text-emerald-600"><Banknote size={10} /> {Number(s.price).toLocaleString()} ₸</span>}
+                        {s.price && <span className="flex items-center gap-1 font-semibold text-emerald-600"><Banknote size={10} /> {formatPrice(s.price, clinicCurrency)}</span>}
+                        {s.has_custom_schedule && (
+                          <span className="flex items-center gap-1 font-semibold text-sky-600 bg-sky-50 px-2 py-0.5 rounded-lg border border-sky-100">
+                            <CalendarDays size={9} /> Расписание
+                          </span>
+                        )}
                       </div>
                       <button onClick={() => handleToggle(s)}
                         className={`flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-lg transition-all ${s.is_active ? "text-emerald-700 bg-emerald-50 hover:bg-emerald-100" : "text-gray-500 bg-gray-100 hover:bg-gray-200"}`}>
@@ -406,10 +457,15 @@ export function ServicesView({ user }: { user: any }) {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Цена (₸)</label>
-                    <input type="number" min="0" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
-                      placeholder="0"
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-400/10 transition-all" />
+                    <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Цена</label>
+                    <div className="relative">
+                      <input type="number" min="0" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
+                        placeholder="0"
+                        className="w-full pl-4 pr-12 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-400/10 transition-all" />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-600 pointer-events-none">
+                        {getCurrencySymbol(form.currency || clinicCurrency)}
+                      </span>
+                    </div>
                   </div>
                   <div>
                     <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Длит. (мин)</label>
@@ -417,6 +473,106 @@ export function ServicesView({ user }: { user: any }) {
                       className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-400/10 transition-all" />
                   </div>
                 </div>
+
+                {/* Currency selector */}
+                <div>
+                  <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">
+                    Валюта цены
+                    {!form.currency && <span className="ml-1.5 normal-case font-normal text-gray-400">(по умолчанию клиники: {clinicCurrency})</span>}
+                  </label>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {CURRENCIES.map(cur => {
+                      const active = (form.currency || clinicCurrency) === cur.value;
+                      return (
+                        <button key={cur.value} type="button"
+                          onClick={() => setForm(f => ({ ...f, currency: cur.value }))}
+                          className={`flex items-center justify-center gap-1.5 py-2 rounded-xl border-2 text-xs font-bold transition-all ${
+                            active
+                              ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                              : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                          }`}>
+                          <span className={`text-sm leading-none ${active ? 'text-emerald-600' : 'text-gray-400'}`}>{cur.symbol}</span>
+                          {cur.value}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Schedule toggle */}
+                <button type="button"
+                  onClick={() => setForm(f => ({ ...f, has_custom_schedule: !f.has_custom_schedule }))}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 transition-all ${
+                    form.has_custom_schedule ? 'border-sky-300 bg-sky-50' : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                  }`}>
+                  <div className="flex items-center gap-2.5 text-left">
+                    <CalendarDays size={16} className={form.has_custom_schedule ? 'text-sky-500' : 'text-gray-400'} />
+                    <div>
+                      <p className={`text-sm font-bold leading-tight ${form.has_custom_schedule ? 'text-sky-700' : 'text-gray-600'}`}>
+                        Ограниченное расписание
+                      </p>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        {form.has_custom_schedule ? 'Услуга доступна только в заданные дни и часы' : 'По умолчанию — рабочие часы клиники'}
+                      </p>
+                    </div>
+                  </div>
+                  {form.has_custom_schedule
+                    ? <ToggleRight size={22} className="text-sky-500 flex-shrink-0" />
+                    : <ToggleLeft  size={22} className="text-gray-300 flex-shrink-0" />}
+                </button>
+
+                {/* Schedule details — shown when toggle is ON */}
+                {form.has_custom_schedule && (
+                  <div className="space-y-3 px-4 py-4 rounded-xl border-2 border-sky-200 bg-sky-50/50">
+
+                    {/* Days of week */}
+                    <div>
+                      <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2 block">Дни работы</label>
+                      <div className="flex gap-1.5">
+                        {WEEKDAYS.map(day => {
+                          const active = form.schedule_days.includes(day.id);
+                          return (
+                            <button key={day.id} type="button"
+                              onClick={() => setForm(f => ({
+                                ...f,
+                                schedule_days: active
+                                  ? f.schedule_days.filter(d => d !== day.id)
+                                  : [...f.schedule_days, day.id],
+                              }))}
+                              className={`flex-1 py-2 rounded-xl text-[11px] font-bold border-2 transition-all ${
+                                active ? 'text-white border-transparent shadow-sm' : 'bg-white text-gray-400 border-gray-200 hover:border-sky-300 hover:text-sky-500'
+                              }`}
+                              style={active ? { background: 'linear-gradient(135deg, #0ea5e9, #6366f1)' } : {}}>
+                              {day.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Time range + capacity */}
+                    <div className="grid grid-cols-3 gap-2.5">
+                      <div>
+                        <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Начало</label>
+                        <input type="time" value={form.schedule_start}
+                          onChange={e => setForm(f => ({ ...f, schedule_start: e.target.value }))}
+                          className="w-full px-3 py-2.5 rounded-xl border-2 border-gray-200 text-sm text-gray-800 outline-none focus:border-sky-400 transition-all bg-white" />
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Конец</label>
+                        <input type="time" value={form.schedule_end}
+                          onChange={e => setForm(f => ({ ...f, schedule_end: e.target.value }))}
+                          className="w-full px-3 py-2.5 rounded-xl border-2 border-gray-200 text-sm text-gray-800 outline-none focus:border-sky-400 transition-all bg-white" />
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Лимит/слот</label>
+                        <input type="number" min="1" max="99" value={form.capacity_per_slot}
+                          onChange={e => setForm(f => ({ ...f, capacity_per_slot: Number(e.target.value) }))}
+                          className="w-full px-3 py-2.5 rounded-xl border-2 border-gray-200 text-sm text-gray-800 outline-none focus:border-sky-400 transition-all bg-white" />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="px-6 pb-5 flex gap-3">
                 <button onClick={() => setShowModal(false)} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 transition-all">

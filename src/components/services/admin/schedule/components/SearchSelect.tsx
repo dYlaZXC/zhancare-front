@@ -4,23 +4,21 @@ import { useState, useEffect, useRef } from 'react';
 import { Search, X, ChevronDown } from 'lucide-react';
 
 interface SearchSelectProps {
-  options: Array<{ id: number; label: string; subtitle?: string }>;
+  options: Array<{ id: number | string; label: string; subtitle?: string }>;
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
   required?: boolean;
+  renderOption?: (option: { id: number | string; label: string; subtitle?: string }, isSelected: boolean, onSelect: () => void) => React.ReactNode;
 }
 
-/**
- * Searchable Select Component
- * A custom dropdown with search functionality
- */
 export default function SearchSelect({
   options,
   value,
   onChange,
   placeholder,
-  required
+  required,
+  renderOption,
 }: SearchSelectProps) {
   const [search, setSearch] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -88,27 +86,34 @@ export default function SearchSelect({
             {filtered.length === 0 ? (
               <div className="px-4 py-3 text-sm text-gray-400 text-center">Ничего не найдено</div>
             ) : (
-              filtered.map(option => (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => { onChange(String(option.id)); setIsOpen(false); }}
-                  className={`w-full text-left px-4 py-2.5 transition-colors ${
-                    String(option.id) === value
-                      ? 'bg-blue-50'
-                      : 'hover:bg-gray-50'
-                  }`}
-                >
-                  <div className={`text-sm font-medium ${String(option.id) === value ? 'text-blue-700' : 'text-gray-700'}`}>
-                    {option.label}
-                  </div>
-                  {option.subtitle && (
-                    <div className={`text-xs ${String(option.id) === value ? 'text-blue-500' : 'text-gray-400'}`}>
-                      {option.subtitle}
+              filtered.map(option => {
+                const isSelected = String(option.id) === value;
+                const onSelect = () => { onChange(String(option.id)); setIsOpen(false); };
+                if (renderOption) {
+                  return (
+                    <div key={option.id}>
+                      {renderOption(option, isSelected, onSelect)}
                     </div>
-                  )}
-                </button>
-              ))
+                  );
+                }
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={onSelect}
+                    className={`w-full text-left px-4 py-2.5 transition-colors ${isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                  >
+                    <div className={`text-sm font-medium ${isSelected ? 'text-blue-700' : 'text-gray-700'}`}>
+                      {option.label}
+                    </div>
+                    {option.subtitle && (
+                      <div className={`text-xs ${isSelected ? 'text-blue-500' : 'text-gray-400'}`}>
+                        {option.subtitle}
+                      </div>
+                    )}
+                  </button>
+                );
+              })
             )}
           </div>
         </div>
