@@ -11,6 +11,7 @@ import product3 from "@/assets/hero1214.png";
 import product4 from "@/assets/hero1215.png";
 
 import { useLanguage } from "@/context/LanguageContext";
+import { useBrand } from "@/context/BrandContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import en from "@/locales/en.json";
@@ -58,6 +59,7 @@ const mapTranslations = (contentData: any[]): ContentData[] => {
 
 export const ProductShowcase = () => {
   const { language } = useLanguage();
+  const { brand } = useBrand();
   
   // Get translations based on language
   const getTranslations = () => {
@@ -119,14 +121,15 @@ export const ProductShowcase = () => {
       ref={sectionRef}
       className="bg-gradient-to-b from-white to-[#D2DCFF] py-28 overflow-x-clip relative"
     >
-      <div className="absolute top-0 left-10 w-96 h-96 bg-blue-300 opacity-20 rounded-full blur-3xl animate-pulse"></div>
+      <div className="absolute top-0 left-10 w-96 h-96 rounded-full blur-3xl animate-pulse" style={{ backgroundColor: brand.primary, opacity: 0.2 }}></div>
       <div className="absolute top-[60%] right-10 w-96 h-96 bg-pink-300 opacity-20 rounded-full blur-3xl animate-pulse"></div>
 
       <div className="relative z-10 container mx-auto max-w-7xl px-6 lg:px-10">
         {/* Heading */}
         <div className="text-center mb-12">
           <motion.h2
-            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl laptop-hd:text-4xl desktop-fhd:text-5xl desktop-qhd:text-6xl desktop-4k:text-7xl font-extrabold tracking-tight text-[#001E80] mb-4 sm:mb-6 lg:mb-8"
+            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl laptop-hd:text-4xl desktop-fhd:text-5xl desktop-qhd:text-6xl desktop-4k:text-7xl font-extrabold tracking-tight mb-4 sm:mb-6 lg:mb-8"
+            style={{ color: brand.secondary }}
             initial={{ opacity: 0, y: -30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -145,11 +148,24 @@ export const ProductShowcase = () => {
             <button
               key={content.id}
               onClick={() => handleContentChange(content.id)}
-              className={`px-6 py-2 rounded-full border-2 text-sm font-semibold transition-all ${
+              className="px-6 py-2 rounded-full border-2 text-sm font-semibold transition-all"
+              style={
                 activeContent.id === content.id
-                  ? "bg-blue-700 text-white border-blue-700"
-                  : "border-gray-300 text-gray-700 hover:border-blue-500 hover:text-[#001E80]"
-              }`}
+                  ? { backgroundColor: brand.secondary, color: "white", borderColor: brand.secondary }
+                  : { backgroundColor: "transparent", color: "#374151", borderColor: "#d1d5db" }
+              }
+              onMouseEnter={(e) => {
+                if (activeContent.id !== content.id) {
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = brand.primary;
+                  (e.currentTarget as HTMLButtonElement).style.color = brand.secondary;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeContent.id !== content.id) {
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = "#d1d5db";
+                  (e.currentTarget as HTMLButtonElement).style.color = "#374151";
+                }
+              }}
             >
               {content.title}
             </button>
@@ -175,7 +191,7 @@ export const ProductShowcase = () => {
                 className="rounded-3xl shadow-2xl mx-auto"
               />
               <div className="text-center mt-6">
-                <h3 className="text-2xl font-bold text-[#001E80]">{activeContent.title}</h3>
+                <h3 className="text-2xl font-bold" style={{ color: brand.secondary }}>{activeContent.title}</h3>
                 <p className="text-gray-600 mt-2">{activeContent.description}</p>
               </div>
             </motion.div>

@@ -5,6 +5,7 @@ import springImage from "@/assets/spring.png";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef, useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useBrand } from "@/context/BrandContext";
 import { Mail, User, MessageSquare, Send, ArrowRight as ArrowRightIcon } from "lucide-react";
 import { toast } from "react-toastify";
 import ru from "@/locales/ru.json";
@@ -13,6 +14,7 @@ import en from "@/locales/en.json";
 
 export const CallToAction = () => {
   const { language } = useLanguage();
+  const { brand } = useBrand();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -150,7 +152,7 @@ ${formData.message}
         <div className="max-w-4xl mx-auto relative z-10">
           <div className="relative">
             {/* Glassmorphic background glow */}
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-indigo-500/10 to-purple-500/20 rounded-3xl blur-2xl" />
+            <div className="absolute inset-0 rounded-3xl blur-2xl" style={{ background: `linear-gradient(135deg, ${brand.accentRgba}0.2) 0%, ${brand.accentRgba}0.1) 100%)` }} />
 
             <div className="relative bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
               <div className="p-8 sm:p-12">
@@ -162,7 +164,7 @@ ${formData.message}
                         htmlFor="name"
                         className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2"
                       >
-                        <User className="w-4 h-4 text-blue-600" />
+                        <User className="w-4 h-4" style={{ color: brand.primary }} />
                         {translations.form.nameLabel}
                       </label>
                       <div className="relative">
@@ -173,7 +175,7 @@ ${formData.message}
                           value={formData.name}
                           onChange={handleChange}
                           required
-                          className="w-full px-4 py-3.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 focus:bg-white transition-all duration-300 group-hover:border-gray-300"
+                          className="w-full px-4 py-3.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/50 focus:border-[var(--brand-primary)] focus:bg-white transition-all duration-300 group-hover:border-gray-300"
                           disabled={isSubmitting}
                         />
                       </div>
@@ -185,7 +187,7 @@ ${formData.message}
                         htmlFor="email"
                         className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2"
                       >
-                        <Mail className="w-4 h-4 text-blue-600" />
+                        <Mail className="w-4 h-4" style={{ color: brand.primary }} />
                         Email
                       </label>
                       <div className="relative">
@@ -196,7 +198,7 @@ ${formData.message}
                           value={formData.email}
                           onChange={handleChange}
                           required
-                          className="w-full px-4 py-3.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 focus:bg-white transition-all duration-300 group-hover:border-gray-300"
+                          className="w-full px-4 py-3.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/50 focus:border-[var(--brand-primary)] focus:bg-white transition-all duration-300 group-hover:border-gray-300"
                           disabled={isSubmitting}
                         />
                       </div>
@@ -209,7 +211,7 @@ ${formData.message}
                       htmlFor="message"
                       className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2"
                     >
-                      <MessageSquare className="w-4 h-4 text-blue-600" />
+                      <MessageSquare className="w-4 h-4" style={{ color: brand.primary }} />
                       {translations.form.messageLabel}
                     </label>
                     <div className="relative">
@@ -220,7 +222,7 @@ ${formData.message}
                         value={formData.message}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-3.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 focus:bg-white transition-all duration-300 resize-none group-hover:border-gray-300"
+                        className="w-full px-4 py-3.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/50 focus:border-[var(--brand-primary)] focus:bg-white transition-all duration-300 resize-none group-hover:border-gray-300"
                         disabled={isSubmitting}
                       />
                     </div>
@@ -231,7 +233,8 @@ ${formData.message}
                     <motion.button
                       type="submit"
                       disabled={isSubmitting}
-                      className="flex-1 relative px-8 py-4 bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 hover:from-blue-700 hover:via-blue-600 hover:to-indigo-700 text-white font-bold rounded-xl transition-all duration-300 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 overflow-hidden group"
+                      className="flex-1 relative px-8 py-4 text-white font-bold rounded-xl transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 overflow-hidden group"
+                      style={{ background: `linear-gradient(135deg, ${brand.primary} 0%, ${brand.secondary} 100%)` }}
                       whileHover={{ scale: isSubmitting ? 1 : 1.02 }}
                       whileTap={{ scale: isSubmitting ? 1 : 0.98 }}
                     >
@@ -259,7 +262,7 @@ ${formData.message}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
-                      <Mail className="w-5 h-5 text-blue-600" />
+                      <Mail className="w-5 h-5" style={{ color: brand.primary }} />
                       <span>{translations.form.contactButton}</span>
                       <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </motion.button>

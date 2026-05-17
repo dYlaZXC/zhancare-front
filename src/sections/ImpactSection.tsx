@@ -18,6 +18,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import CountUp from "react-countup";
 import { useLanguage } from "@/context/LanguageContext";
+import { useBrand } from "@/context/BrandContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import en from "@/locales/en.json";
@@ -48,6 +49,7 @@ const iconMapping: Record<IconName, any> = {
 
 export const ImpactSection = () => {
   const { language } = useLanguage();
+  const { brand } = useBrand();
   
   // Get translations based on language
   const getTranslations = () => {
@@ -71,13 +73,14 @@ export const ImpactSection = () => {
       className="relative py-16 sm:py-20 md:py-24 lg:py-28 xl:py-32 laptop-hd:py-24 desktop-fhd:py-32 desktop-qhd:py-40 desktop-4k:py-48 px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 laptop-hd:px-8 desktop-fhd:px-12 desktop-qhd:px-16 desktop-4k:px-24 bg-gradient-to-b from-[#d2dcff] via-[#d2dcff] to-white text-center overflow-hidden"
     >
       {/* Responsive Floating Background */}
-      <div className="absolute top-[-50px] sm:top-[-100px] lg:top-[-150px] left-[-75px] sm:left-[-100px] lg:left-[-150px] w-[150px] sm:w-[200px] lg:w-[300px] desktop-qhd:w-[400px] desktop-4k:w-[500px] h-[150px] sm:h-[200px] lg:h-[300px] desktop-qhd:h-[400px] desktop-4k:h-[500px] bg-blue-300 opacity-20 rounded-full blur-2xl sm:blur-3xl"></div>
+      <div className="absolute top-[-50px] sm:top-[-100px] lg:top-[-150px] left-[-75px] sm:left-[-100px] lg:left-[-150px] w-[150px] sm:w-[200px] lg:w-[300px] desktop-qhd:w-[400px] desktop-4k:w-[500px] h-[150px] sm:h-[200px] lg:h-[300px] desktop-qhd:h-[400px] desktop-4k:h-[500px] rounded-full blur-2xl sm:blur-3xl" style={{ backgroundColor: brand.primary, opacity: 0.2 }}></div>
       <div className="absolute bottom-[-20%] sm:bottom-[-30%] lg:bottom-[-40%] right-[-75px] sm:right-[-100px] lg:right-[-150px] w-[150px] sm:w-[200px] lg:w-[300px] desktop-qhd:w-[400px] desktop-4k:w-[500px] h-[150px] sm:h-[200px] lg:h-[300px] desktop-qhd:h-[400px] desktop-4k:h-[500px] bg-pink-300 opacity-20 rounded-full blur-2xl sm:blur-3xl"></div>
 
       <div className="container mx-auto relative z-10 max-w-7xl laptop-hd:max-w-6xl desktop-fhd:max-w-7xl desktop-qhd:max-w-8xl desktop-4k:max-w-9xl">
         {/* Responsive Title */}
         <motion.h2
-          className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl laptop-hd:text-4xl desktop-fhd:text-5xl desktop-qhd:text-6xl desktop-4k:text-7xl font-extrabold tracking-tight text-[#001E80] mb-4 sm:mb-6 lg:mb-8"
+          className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl laptop-hd:text-4xl desktop-fhd:text-5xl desktop-qhd:text-6xl desktop-4k:text-7xl font-extrabold tracking-tight mb-4 sm:mb-6 lg:mb-8"
+          style={{ color: brand.secondary }}
           initial={{ opacity: 0, y: -30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -109,10 +112,10 @@ export const ImpactSection = () => {
                 variants={{ hidden: { opacity: 0, y: 40 }, visible: { opacity: 1, y: 0 } }}
                 transition={{ type: "spring", stiffness: 150, damping: 20 }}
               >
-                <div className="flex justify-center items-center w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 desktop-qhd:w-20 desktop-qhd:h-20 desktop-4k:w-24 desktop-4k:h-24 mb-4 sm:mb-6 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 group-hover:scale-110 transition-all duration-300">
+                <div className="flex justify-center items-center w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 desktop-qhd:w-20 desktop-qhd:h-20 desktop-4k:w-24 desktop-4k:h-24 mb-4 sm:mb-6 rounded-full group-hover:scale-110 transition-all duration-300" style={{ background: `linear-gradient(135deg, ${brand.primary} 0%, ${brand.secondary} 100%)` }}>
                   <FontAwesomeIcon icon={icon} className="text-xl sm:text-2xl lg:text-3xl desktop-qhd:text-4xl desktop-4k:text-5xl text-white" />
                 </div>
-                <h3 className="text-2xl sm:text-3xl lg:text-4xl desktop-qhd:text-5xl desktop-4k:text-6xl font-bold text-[#001E80] mb-2">
+                <h3 className="text-2xl sm:text-3xl lg:text-4xl desktop-qhd:text-5xl desktop-4k:text-6xl font-bold mb-2" style={{ color: brand.secondary }}>
                   <CountUp end={stat.value} duration={2} />{stat.currency ? stat.currency : stat.percent ? "%" : "+"}
                 </h3>
                 <p className="text-gray-600 text-xs sm:text-sm lg:text-base desktop-qhd:text-lg desktop-4k:text-xl mt-2 text-center leading-relaxed">{stat.description}</p>
@@ -129,7 +132,7 @@ export const ImpactSection = () => {
           transition={{ duration: 0.8 }}
           className="text-center mb-12 sm:mb-16 lg:mb-20 desktop-qhd:mb-24 desktop-4k:mb-28"
         >
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl laptop-hd:text-4xl desktop-fhd:text-5xl desktop-qhd:text-6xl desktop-4k:text-7xl font-extrabold tracking-tight text-[#001E80] mb-4 sm:mb-6 lg:mb-8">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl laptop-hd:text-4xl desktop-fhd:text-5xl desktop-qhd:text-6xl desktop-4k:text-7xl font-extrabold tracking-tight mb-4 sm:mb-6 lg:mb-8" style={{ color: brand.secondary }}>
             {translations.features.title}
           </h2>
           <p className="text-gray-600 max-w-xl sm:max-w-2xl lg:max-w-3xl desktop-qhd:max-w-4xl desktop-4k:max-w-5xl mx-auto text-sm sm:text-base lg:text-lg desktop-qhd:text-xl desktop-4k:text-2xl">
@@ -156,7 +159,7 @@ export const ImpactSection = () => {
                 variants={{ hidden: { opacity: 0, y: 40 }, visible: { opacity: 1, y: 0 } }}
                 transition={{ type: "spring", stiffness: 150, damping: 20 }}
               >
-                <div className="flex justify-center items-center w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 desktop-qhd:w-20 desktop-qhd:h-20 desktop-4k:w-24 desktop-4k:h-24 mb-4 sm:mb-6 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600">
+                <div className="flex justify-center items-center w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 desktop-qhd:w-20 desktop-qhd:h-20 desktop-4k:w-24 desktop-4k:h-24 mb-4 sm:mb-6 rounded-full" style={{ background: `linear-gradient(135deg, ${brand.primary} 0%, ${brand.secondary} 100%)` }}>
                   <FontAwesomeIcon icon={icon} className="text-xl sm:text-2xl lg:text-3xl desktop-qhd:text-4xl desktop-4k:text-5xl text-white" />
                 </div>
                 <h3 className="text-lg sm:text-xl lg:text-2xl desktop-qhd:text-3xl desktop-4k:text-4xl font-bold mb-2 sm:mb-3 lg:mb-4">
@@ -178,7 +181,7 @@ export const ImpactSection = () => {
           transition={{ duration: 0.8 }}
           className="text-center mb-12 sm:mb-16 lg:mb-20 desktop-qhd:mb-24 desktop-4k:mb-28"
         >
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl laptop-hd:text-4xl desktop-fhd:text-5xl desktop-qhd:text-6xl desktop-4k:text-7xl font-extrabold tracking-tight text-[#001E80] mb-4 sm:mb-6 lg:mb-8">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl laptop-hd:text-4xl desktop-fhd:text-5xl desktop-qhd:text-6xl desktop-4k:text-7xl font-extrabold tracking-tight mb-4 sm:mb-6 lg:mb-8" style={{ color: brand.secondary }}>
             {translations.successStories.title}
           </h2>
           <p className="text-gray-600 max-w-xl sm:max-w-2xl lg:max-w-3xl desktop-qhd:max-w-4xl desktop-4k:max-w-5xl mx-auto text-sm sm:text-base lg:text-lg desktop-qhd:text-xl desktop-4k:text-2xl">
@@ -275,7 +278,7 @@ export const ImpactSection = () => {
                   )}
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg sm:text-xl lg:text-2xl desktop-qhd:text-3xl desktop-4k:text-4xl font-bold mb-3 sm:mb-4 text-[#001E80] group-hover:text-blue-700 transition-colors duration-300">
+                  <h3 className="text-lg sm:text-xl lg:text-2xl desktop-qhd:text-3xl desktop-4k:text-4xl font-bold mb-3 sm:mb-4 transition-colors duration-300" style={{ color: brand.secondary }}>
                     {story.title}
                   </h3>
                   <p className="text-gray-600 text-sm sm:text-base lg:text-lg desktop-qhd:text-xl desktop-4k:text-2xl leading-relaxed max-w-md mx-auto">

@@ -221,7 +221,7 @@ export const Footer = () => {
       <div className="absolute inset-0 overflow-hidden">
         {/* Gradient Orbs */}
         <motion.div
-          className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl"
+          className="absolute top-0 left-1/4 w-96 h-96 rounded-full blur-3xl" style={{ backgroundColor: `${brand.accentRgba}0.1)` }}
           animate={{
             scale: [1, 1.2, 1],
             opacity: [0.3, 0.5, 0.3],
@@ -233,7 +233,7 @@ export const Footer = () => {
           }}
         />
         <motion.div
-          className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl"
+          className="absolute bottom-0 right-1/4 w-96 h-96 rounded-full blur-3xl" style={{ backgroundColor: `${brand.accentRgba}0.1)` }}
           animate={{
             scale: [1.2, 1, 1.2],
             opacity: [0.5, 0.3, 0.5],
@@ -288,7 +288,7 @@ export const Footer = () => {
                 variants={itemVariants}
                 className="relative group"
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-indigo-600/20 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-500" />
+                <div className="absolute inset-0 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-500" style={{ background: `linear-gradient(135deg, ${brand.accentRgba}0.2) 0%, ${brand.accentRgba}0.1) 100%)` }} />
                 <div className="relative bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300">
                   <div className="flex items-center justify-between">
                     <div>
@@ -303,7 +303,7 @@ export const Footer = () => {
                       </motion.div>
                       <div className="text-sm text-gray-400">{stat.label}</div>
                     </div>
-                    <stat.icon className="w-12 h-12 text-blue-400/50" />
+                    <stat.icon className="w-12 h-12" style={{ color: brand.primary, opacity: 0.5 }} />
                   </div>
                 </div>
               </motion.div>
@@ -345,7 +345,8 @@ export const Footer = () => {
 
                   <motion.a
                     href="#hero"
-                    className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 font-semibold text-sm sm:text-base group transition-all duration-300"
+                    className="inline-flex items-center gap-2 font-semibold text-sm sm:text-base group transition-all duration-300"
+                    style={{ color: brand.primary }}
                     whileHover={{ x: 5 }}
                   >
                     {translations.learnMore}
@@ -357,11 +358,11 @@ export const Footer = () => {
                 <div className="space-y-3">
                   <motion.a
                     href={`mailto:${translations.contact.email}`}
-                    className="flex items-center gap-3 text-gray-400 hover:text-blue-400 text-sm transition-colors duration-300 group"
+                    className="flex items-center gap-3 text-gray-400 text-sm transition-colors duration-300 group hover:text-[var(--brand-primary)]"
                     whileHover={{ x: 5 }}
                   >
-                    <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors duration-300">
-                      <Mail className="w-4 h-4 text-blue-400" />
+                    <div className="p-2 rounded-lg transition-colors duration-300" style={{ backgroundColor: `${brand.accentRgba}0.1)` }}>
+                      <Mail className="w-4 h-4" style={{ color: brand.primary }} />
                     </div>
                     {translations.contact.email}
                   </motion.a>
@@ -381,11 +382,11 @@ export const Footer = () => {
                     <motion.button
                       key={index}
                       onClick={() => handleScrollToSection(link)}
-                      className="w-full text-left block text-gray-400 hover:text-blue-400 text-sm transition-all duration-300 group flex items-center gap-2 cursor-pointer bg-transparent border-0"
+                      className="w-full text-left block text-gray-400 text-sm transition-all duration-300 group flex items-center gap-2 cursor-pointer bg-transparent border-0 hover:text-[var(--brand-primary)]"
                       whileHover={{ x: 5 }}
                     >
-                      <CheckCircle className="w-3 h-3 text-blue-500/50 group-hover:text-blue-400 transition-colors" />
-                      <span className="border-b border-transparent group-hover:border-blue-400/50 transition-colors duration-300">
+                      <CheckCircle className="w-3 h-3 transition-colors group-hover:text-[var(--brand-primary)]" style={{ color: `${brand.accentRgba}0.5)` }} />
+                      <span className="border-b border-transparent transition-colors duration-300 group-hover:border-[var(--brand-primary)]">
                         {link}
                       </span>
                     </motion.button>
@@ -404,33 +405,33 @@ export const Footer = () => {
                 <nav className="space-y-2">
                   <motion.button
                     onClick={() => openPdfModal("data_processing_policy", translations.legal.dataProcessing)}
-                    className="w-full text-left block text-gray-400 hover:text-blue-400 text-sm transition-all duration-300 group flex items-center gap-2 cursor-pointer bg-transparent border-0"
+                    className="w-full text-left block text-gray-400 text-sm transition-all duration-300 group flex items-center gap-2 cursor-pointer bg-transparent border-0 hover:text-[var(--brand-primary)]"
                     whileHover={{ x: 5 }}
                   >
-                    <FileText className="w-3 h-3 text-blue-500/50 group-hover:text-blue-400 transition-colors" />
-                    <span className="border-b border-transparent group-hover:border-blue-400/50 transition-colors duration-300">
+                    <FileText className="w-3 h-3 transition-colors group-hover:text-[var(--brand-primary)]" style={{ color: `${brand.accentRgba}0.5)` }} />
+                    <span className="border-b border-transparent transition-colors duration-300 group-hover:border-[var(--brand-primary)]">
                       {translations.legal.dataProcessing}
                     </span>
                   </motion.button>
 
                   <motion.button
                     onClick={() => openPdfModal("offer_dmu", translations.legal.offer)}
-                    className="w-full text-left block text-gray-400 hover:text-blue-400 text-sm transition-all duration-300 group flex items-center gap-2 cursor-pointer bg-transparent border-0"
+                    className="w-full text-left block text-gray-400 text-sm transition-all duration-300 group flex items-center gap-2 cursor-pointer bg-transparent border-0 hover:text-[var(--brand-primary)]"
                     whileHover={{ x: 5 }}
                   >
-                    <FileText className="w-3 h-3 text-blue-500/50 group-hover:text-blue-400 transition-colors" />
-                    <span className="border-b border-transparent group-hover:border-blue-400/50 transition-colors duration-300">
+                    <FileText className="w-3 h-3 transition-colors group-hover:text-[var(--brand-primary)]" style={{ color: `${brand.accentRgba}0.5)` }} />
+                    <span className="border-b border-transparent transition-colors duration-300 group-hover:border-[var(--brand-primary)]">
                       {translations.legal.offer}
                     </span>
                   </motion.button>
 
                   <motion.button
                     onClick={() => openPdfModal("terms_of_use", translations.legal.terms)}
-                    className="w-full text-left block text-gray-400 hover:text-blue-400 text-sm transition-all duration-300 group flex items-center gap-2 cursor-pointer bg-transparent border-0"
+                    className="w-full text-left block text-gray-400 text-sm transition-all duration-300 group flex items-center gap-2 cursor-pointer bg-transparent border-0 hover:text-[var(--brand-primary)]"
                     whileHover={{ x: 5 }}
                   >
-                    <FileText className="w-3 h-3 text-blue-500/50 group-hover:text-blue-400 transition-colors" />
-                    <span className="border-b border-transparent group-hover:border-blue-400/50 transition-colors duration-300">
+                    <FileText className="w-3 h-3 transition-colors group-hover:text-[var(--brand-primary)]" style={{ color: `${brand.accentRgba}0.5)` }} />
+                    <span className="border-b border-transparent transition-colors duration-300 group-hover:border-[var(--brand-primary)]">
                       {translations.legal.terms}
                     </span>
                   </motion.button>
@@ -442,14 +443,14 @@ export const Footer = () => {
             <motion.div variants={itemVariants} className="lg:col-span-5">
               <div className="relative">
                 {/* Glassmorphic Card Background */}
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-indigo-600/5 to-purple-600/10 rounded-2xl blur-xl" />
+                <div className="absolute inset-0 rounded-2xl blur-xl" style={{ background: `linear-gradient(135deg, ${brand.accentRgba}0.1) 0%, ${brand.accentRgba}0.05) 100%)` }} />
 
                 <div className="relative bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:bg-white/[0.07] transition-all duration-300">
                   <div className="space-y-4">
                     {/* Title with Icon */}
                     <div className="flex items-center gap-3">
-                      <div className="p-2.5 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-xl">
-                        <Mail className="w-5 h-5 text-blue-400" />
+                      <div className="p-2.5 rounded-xl" style={{ background: `linear-gradient(135deg, ${brand.accentRgba}0.2) 0%, ${brand.accentRgba}0.1) 100%)` }}>
+                        <Mail className="w-5 h-5" style={{ color: brand.primary }} />
                       </div>
                       <div>
                         <h3 className="text-white text-lg font-bold">
@@ -469,7 +470,7 @@ export const Footer = () => {
                     >
                       <div className="relative">
                         {/* Glow Effect on Focus */}
-                        <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl opacity-0 group-focus-within:opacity-20 blur transition duration-500" />
+                        <div className="absolute -inset-0.5 rounded-xl opacity-0 group-focus-within:opacity-20 blur transition duration-500" style={{ background: `linear-gradient(135deg, ${brand.primary} 0%, ${brand.secondary} 100%)` }} />
 
                         <div className="relative flex gap-2 group">
                           <div className="relative flex-1">
@@ -478,14 +479,15 @@ export const Footer = () => {
                               value={email}
                               onChange={(e) => setEmail(e.target.value)}
                               placeholder={translations.newsletter.placeholder}
-                              className="w-full px-4 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 focus:bg-white/[0.15] transition-all duration-300"
+                              className="w-full px-4 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/50 focus:border-[var(--brand-primary)]/50 focus:bg-white/[0.15] transition-all duration-300"
                               disabled={isSubmitting}
                             />
                           </div>
                           <motion.button
                             type="submit"
                             disabled={isSubmitting}
-                            className="relative px-6 py-3.5 bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 hover:from-blue-700 hover:via-blue-600 hover:to-indigo-700 text-white font-bold rounded-xl transition-all duration-300 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 overflow-hidden group"
+                            className="relative px-6 py-3.5 text-white font-bold rounded-xl transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 overflow-hidden group"
+                            style={{ background: `linear-gradient(135deg, ${brand.primary} 0%, ${brand.secondary} 100%)` }}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                           >
@@ -528,15 +530,15 @@ export const Footer = () => {
                             key={index}
                             href={social.href}
                             aria-label={social.label}
-                            className="group relative w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 hover:bg-gradient-to-br hover:from-blue-500/20 hover:to-indigo-500/20 border border-white/10 hover:border-blue-500/50 transition-all duration-300"
+                            className="group relative w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 transition-all duration-300 hover:border-[var(--brand-primary)]"
                             whileHover={{ scale: 1.1, y: -2 }}
                             whileTap={{ scale: 0.95 }}
                           >
                             <div className="flex items-center justify-center w-5 h-5">
-                              <social.Icon className="w-full h-full text-gray-400 group-hover:text-blue-400 transition-colors duration-300" />
+                              <social.Icon className="w-full h-full text-gray-400 transition-colors duration-300 group-hover:text-[var(--brand-primary)]" />
                             </div>
                             {/* Glow on hover */}
-                            <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 opacity-0 group-hover:opacity-20 blur transition-opacity duration-300" />
+                            <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-20 blur transition-opacity duration-300" style={{ background: `linear-gradient(135deg, ${brand.primary} 0%, ${brand.secondary} 100%)` }} />
                           </motion.a>
                         ))}
                       </div>
@@ -556,7 +558,7 @@ export const Footer = () => {
               <div className="w-full border-t border-white/10" />
             </div>
             <div className="relative flex justify-center">
-              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 w-16 h-1 rounded-full" />
+              <div className="w-16 h-1 rounded-full" style={{ background: `linear-gradient(135deg, ${brand.primary} 0%, ${brand.secondary} 100%)` }} />
             </div>
           </motion.div>
 
@@ -567,7 +569,7 @@ export const Footer = () => {
           >
             {/* Copyright */}
             <div className="flex items-center gap-2 text-gray-500 text-sm">
-              <span>&copy; {new Date().getFullYear()} {translations.rights}</span>
+              <span>&copy; {new Date().getFullYear()} {brand.name}. {translations.rights.replace(/^ZhanCare\.AI\.\s*/, "").replace(/^JanCare\.Ai\.\s*/, "")}</span>
             </div>
 
             {/* Made with love */}

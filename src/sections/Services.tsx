@@ -173,7 +173,7 @@ export const Services = () => {
     <>
       <section id="services" className="relative py-24 bg-gradient-to-b from-[#f0f4f8] to-[#e6ebf3] overflow-hidden">
         {/* Floating Background */}
-        <div className="absolute top-10 left-10 w-72 h-72 bg-blue-400 opacity-20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute top-10 left-10 w-72 h-72 rounded-full blur-3xl animate-pulse" style={{ backgroundColor: brand.primary, opacity: 0.2 }}></div>
         <div className="absolute bottom-10 right-10 w-80 h-80 bg-purple-300 opacity-20 rounded-full blur-3xl animate-pulse"></div>
 
         <div className="container mx-auto px-6 relative z-10">
@@ -230,7 +230,7 @@ export const Services = () => {
                     }}
                   >
                     <div className="flex flex-col items-center space-y-4 h-full justify-center">
-                      <div className="p-6 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-full shadow-md group-hover:scale-110 transition-all duration-300">
+                      <div className="p-6 text-white rounded-full shadow-md group-hover:scale-110 transition-all duration-300" style={{ background: `linear-gradient(135deg, ${brand.primary} 0%, ${brand.secondary} 100%)` }}>
                         <FontAwesomeIcon icon={iconMapping[service.icon]} className="text-3xl" />
                       </div>
                       <h5 className="text-2xl font-bold text-gray-800">{service.title}</h5>
@@ -245,19 +245,26 @@ export const Services = () => {
                       >
                         <motion.button
                           className="
-                            relative px-6 py-3 bg-transparent border-2 border-blue-600 text-blue-600 
-                            rounded-full font-semibold text-sm transition-all duration-300 
-                            hover:bg-blue-600 hover:text-white hover:shadow-lg
-                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                            relative px-6 py-3 bg-transparent border-2
+                            rounded-full font-semibold text-sm transition-all duration-300
+                            hover:text-white hover:shadow-lg
+                            focus:outline-none focus:ring-2 focus:ring-offset-2
                             group/btn overflow-hidden
                           "
+                          style={{ borderColor: brand.primary, color: brand.primary }}
+                          onMouseEnter={(e) => {
+                            (e.currentTarget as HTMLButtonElement).style.color = "white";
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.currentTarget as HTMLButtonElement).style.color = brand.primary;
+                          }}
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                         >
                           {/* Background animation on hover */}
                           <motion.div
-                            className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"
-                            style={{ borderRadius: "inherit" }}
+                            className="absolute inset-0 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"
+                            style={{ background: `linear-gradient(135deg, ${brand.primary} 0%, ${brand.secondary} 100%)`, borderRadius: "inherit" }}
                           />
                           
                           {/* Button content */}
