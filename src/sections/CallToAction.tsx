@@ -152,7 +152,7 @@ ${formData.message}
         <div className="max-w-4xl mx-auto relative z-10">
           <div className="relative">
             {/* Glassmorphic background glow */}
-            <div className="absolute inset-0 rounded-3xl blur-2xl" style={{ background: `linear-gradient(135deg, ${brand.accentRgba}0.2) 0%, ${brand.accentRgba}0.1) 100%)` }} />
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-indigo-500/10 to-purple-500/20 rounded-3xl blur-2xl" />
 
             <div className="relative bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
               <div className="p-8 sm:p-12">
@@ -175,7 +175,7 @@ ${formData.message}
                           value={formData.name}
                           onChange={handleChange}
                           required
-                          className="w-full px-4 py-3.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/50 focus:border-[var(--brand-primary)] focus:bg-white transition-all duration-300 group-hover:border-gray-300"
+                          className="w-full px-4 py-3.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 focus:bg-white transition-all duration-300 group-hover:border-gray-300"
                           disabled={isSubmitting}
                         />
                       </div>
@@ -198,7 +198,7 @@ ${formData.message}
                           value={formData.email}
                           onChange={handleChange}
                           required
-                          className="w-full px-4 py-3.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/50 focus:border-[var(--brand-primary)] focus:bg-white transition-all duration-300 group-hover:border-gray-300"
+                          className="w-full px-4 py-3.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 focus:bg-white transition-all duration-300 group-hover:border-gray-300"
                           disabled={isSubmitting}
                         />
                       </div>
@@ -222,7 +222,7 @@ ${formData.message}
                         value={formData.message}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-3.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/50 focus:border-[var(--brand-primary)] focus:bg-white transition-all duration-300 resize-none group-hover:border-gray-300"
+                        className="w-full px-4 py-3.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 focus:bg-white transition-all duration-300 resize-none group-hover:border-gray-300"
                         disabled={isSubmitting}
                       />
                     </div>
