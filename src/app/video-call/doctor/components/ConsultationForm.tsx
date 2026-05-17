@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCommentMedical,
@@ -10,6 +10,8 @@ import {
   faDiagnoses,
   faXmark
 } from "@fortawesome/free-solid-svg-icons";
+import { Sparkles } from "lucide-react";
+import AIConsultationReview from "./AIConsultationReview";
 
 interface ConsultationFormData {
   complaints: string;
@@ -23,13 +25,27 @@ interface ConsultationFormProps {
   formData: ConsultationFormData;
   onUpdate: (field: keyof ConsultationFormData, value: string) => void;
   onClose?: () => void;
+  patientName?: string;
+  transcription?: string;
 }
 
 const ConsultationForm: React.FC<ConsultationFormProps> = ({
   formData,
   onUpdate,
-  onClose
+  onClose,
+  patientName,
+  transcription,
 }) => {
+  const [showAI, setShowAI] = useState(false);
+
+  const handleAIApply = (aiFields: Record<string, string>) => {
+    Object.entries(aiFields).forEach(([key, value]) => {
+      if (value && key in formData) {
+        onUpdate(key as keyof ConsultationFormData, value);
+      }
+    });
+  };
+
   const formFields = [
     {
       key: 'complaints' as keyof ConsultationFormData,
@@ -87,24 +103,37 @@ const ConsultationForm: React.FC<ConsultationFormProps> = ({
               <p className="text-xs" style={{ color: '#bcc0ca' }}>Заполните данные о консультации</p>
             </div>
           </div>
-          {onClose && (
+          <div className="flex items-center gap-2">
+            {/* AI autofill button */}
             <button
-              onClick={onClose}
-              className="w-8 h-8 rounded-lg transition-all flex items-center justify-center"
-              style={{ backgroundColor: '#202942', color: '#bcc0ca' }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#242e4b';
-                e.currentTarget.style.color = '#ebf1ff';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#202942';
-                e.currentTarget.style.color = '#bcc0ca';
-              }}
-              title="Свернуть"
+              onClick={() => setShowAI(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+              style={{ background: "linear-gradient(135deg, #2956bf, #3772ff)", color: "#ebf1ff" }}
+              title="ИИ заполнит все поля автоматически"
             >
-              <FontAwesomeIcon icon={faXmark} className="text-sm" />
+              <Sparkles className="w-3.5 h-3.5" />
+              ИИ Анализ
             </button>
-          )}
+
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="w-8 h-8 rounded-lg transition-all flex items-center justify-center"
+                style={{ backgroundColor: '#202942', color: '#bcc0ca' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#242e4b';
+                  e.currentTarget.style.color = '#ebf1ff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#202942';
+                  e.currentTarget.style.color = '#bcc0ca';
+                }}
+                title="Свернуть"
+              >
+                <FontAwesomeIcon icon={faXmark} className="text-sm" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -158,6 +187,16 @@ const ConsultationForm: React.FC<ConsultationFormProps> = ({
           <span>Данные автоматически сохраняются при нажатии кнопки &ldquo;Сохранить&rdquo;</span>
         </div>
       </div>
+
+      {/* AI Review Modal */}
+      {showAI && (
+        <AIConsultationReview
+          patientName={patientName}
+          initialDescription={transcription ?? ""}
+          onApply={handleAIApply}
+          onClose={() => setShowAI(false)}
+        />
+      )}
     </div>
   );
 };

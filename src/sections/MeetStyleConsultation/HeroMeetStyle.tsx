@@ -18,6 +18,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useBrand } from "@/context/BrandContext";
 import ru from "@/locales/ru.json";
 import en from "@/locales/en.json";
+import uz from "@/locales/uz.json";
 import kz from "@/locales/kz.json";
 
 export default function HeroMeetStyle() {
@@ -30,6 +31,7 @@ export default function HeroMeetStyle() {
     switch (language) {
       case "en": return en.heroMeetStyle;
       case "kz": return kz.heroMeetStyle;
+      case "uz": return uz.heroMeetStyle;
       default: return ru.heroMeetStyle;
     }
   }, [language]);

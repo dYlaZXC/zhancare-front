@@ -59,10 +59,10 @@ const WaIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-export default function WhatsAppInbox() {
+export default function WhatsAppInbox({ initialPhone }: { initialPhone?: string } = {}) {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [incomingMsgs, setIncomingMsgs] = useState<WaMessage[]>([]);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(initialPhone ?? null);
   const [thread, setThread] = useState<WaMessage[]>([]);
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
@@ -81,10 +81,12 @@ export default function WhatsAppInbox() {
       const msgs: WaMessage[] = data.messages ?? [];
       setIncomingMsgs(msgs);
       setContacts(buildContacts(msgs));
+      // Auto-open thread if initialPhone provided
+      if (initialPhone) fetchThread(initialPhone);
     } catch { /* ignore */ } finally {
       setLoading(false);
     }
-  }, []);
+  }, [initialPhone]);
 
   const fetchThread = useCallback(async (number: string) => {
     try {
@@ -320,7 +322,7 @@ export default function WhatsAppInbox() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-1">
-                    <span className="text-sm font-semibold text-white truncate">+{c.number}</span>
+                    <span className="text-sm font-semibold text-white truncate">{c.number.startsWith("+") ? c.number : `+${c.number}`}</span>
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                       {(unread.get(c.number) ?? 0) > 0 && (
                         <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center shadow-md">
@@ -365,7 +367,7 @@ export default function WhatsAppInbox() {
               {selected.slice(-2)}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white font-bold text-sm leading-none">+{selected}</p>
+              <p className="text-white font-bold text-sm leading-none">{selected?.startsWith("+") ? selected : `+${selected}`}</p>
               <p className="text-white/40 text-xs mt-0.5">{thread.length} сообщений</p>
             </div>
             <button

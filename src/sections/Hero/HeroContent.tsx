@@ -8,6 +8,7 @@ import { useRef, useMemo } from "react";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import en from "@/locales/en.json";
+import uz from "@/locales/uz.json";
 import HeroText from "./HeroText";
 import HeroVisualization from "./HeroVisualization";
 
@@ -34,6 +35,7 @@ export default function HeroContent() {
       case "ru": return ru.hero;
       case "en": return en.hero;
       case "kz": return kz.hero;
+      case "uz": return uz.hero;
       default: return ru.hero;
     }
   }, [language]);

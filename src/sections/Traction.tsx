@@ -292,7 +292,7 @@ const STARS = generateStars(160);
 export function Traction() {
   const { language } = useLanguage();
   const { brand } = useBrand();
-  const t = useMemo(() => data[language] ?? data.ru, [language]);
+  const t = useMemo(() => data[language as keyof typeof data] ?? data.ru, [language]);
 
   return (
     <section className="relative py-24 overflow-hidden" id="traction"

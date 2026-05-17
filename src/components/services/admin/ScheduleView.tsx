@@ -13,11 +13,13 @@ import {
   Home,
   Loader2,
   AlertCircle,
-  Users
+  Users,
+  Archive,
 } from "lucide-react";
 import EventCard from "./schedule/components/EventCard";
 import AddEventModal from "./schedule/modals/AddEventModal";
 import DateDetailsDrawer from "./schedule/modals/DateDetailsDrawer";
+import ArchivedRecordsDrawer from "./schedule/modals/ArchivedRecordsDrawer";
 import { DoctorsScheduleContent } from "./schedule/views/DoctorsScheduleContent";
 
 interface ScheduleEvent {
@@ -51,6 +53,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDateDetailsDrawer, setShowDateDetailsDrawer] = useState(false);
+  const [showArchiveDrawer, setShowArchiveDrawer] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<'all' | 'consultation' | 'appointment'>('all');
@@ -63,6 +66,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
   });
 
   useEffect(() => {
+    if (viewMode === 'doctors') return;
     fetchSchedule();
   }, [currentDate, viewMode]);
 
@@ -381,20 +385,32 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
             </p>
           </div>
 
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              setSelectedDate(null);
-              setShowAddModal(true);
-            }}
-            className="flex items-center gap-1 md:gap-2 px-3 md:px-6 py-2 md:py-3 mr-2 rounded-xl md:rounded-2xl text-white text-sm md:text-base font-semibold shadow-lg hover:shadow-xl transition-all whitespace-nowrap"
-            style={{ background: 'linear-gradient(135deg, #3772ff 0%, #2c5bcc 100%)' }}
-          >
-            <Plus className="w-4 h-4 md:w-5 md:h-5" />
-            <span className="hidden sm:inline">Добавить Запись</span>
-            <span className="sm:hidden">Добавить</span>
-          </motion.button>
+          <div className="flex items-center gap-2">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowArchiveDrawer(true)}
+              className="flex items-center gap-1.5 px-3 md:px-4 py-2 md:py-3 rounded-xl md:rounded-2xl text-sm font-semibold border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-all whitespace-nowrap shadow-sm"
+            >
+              <Archive className="w-4 h-4" />
+              <span className="hidden sm:inline">Архив</span>
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                setSelectedDate(null);
+                setShowAddModal(true);
+              }}
+              className="flex items-center gap-1 md:gap-2 px-3 md:px-6 py-2 md:py-3 mr-2 rounded-xl md:rounded-2xl text-white text-sm md:text-base font-semibold shadow-lg hover:shadow-xl transition-all whitespace-nowrap"
+              style={{ background: 'linear-gradient(135deg, #3772ff 0%, #2c5bcc 100%)' }}
+            >
+              <Plus className="w-4 h-4 md:w-5 md:h-5" />
+              <span className="hidden sm:inline">Добавить Запись</span>
+              <span className="sm:hidden">Добавить</span>
+            </motion.button>
+          </div>
         </div>
 
         {/* Controls */}
@@ -561,17 +577,16 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
       {/* Date Details Drawer */}
       <DateDetailsDrawer
         isOpen={showDateDetailsDrawer}
-        onClose={() => {
-          setShowDateDetailsDrawer(false);
-        }}
+        onClose={() => setShowDateDetailsDrawer(false)}
         selectedDate={selectedDate}
-        events={selectedDate ? events.filter(e => {
-          const eventDate = new Date(e.date + 'T' + e.time);
-          const targetDate = new Date(selectedDate);
-          return eventDate.getFullYear() === targetDate.getFullYear() &&
-                 eventDate.getMonth() === targetDate.getMonth() &&
-                 eventDate.getDate() === targetDate.getDate();
-        }) : []}
+        onEventChanged={fetchSchedule}
+        events={selectedDate ? events.filter(e => e.date === selectedDate) : []}
+      />
+
+      <ArchivedRecordsDrawer
+        isOpen={showArchiveDrawer}
+        onClose={() => setShowArchiveDrawer(false)}
+        onRestored={fetchSchedule}
       />
     </div>
   );

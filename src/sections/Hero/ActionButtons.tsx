@@ -66,8 +66,10 @@ export default function ActionButtons({
         return "Көбірек білу";
       case "en":
         return "Learn More";
+      case "uz":
+        return "Ko'proq bilish";
       default:
-        return "Learn More"; // Default to English
+        return "Learn More";
     }
   };
 

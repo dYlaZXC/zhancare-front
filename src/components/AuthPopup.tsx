@@ -10,6 +10,7 @@ import { X } from "lucide-react";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import en from "@/locales/en.json";
+import uz from "@/locales/uz.json";
 import { api } from "@/utils/api";
 import { useClinicCurrency } from "@/context/BrandContext";
 
@@ -30,6 +31,7 @@ const AuthPopup = () => {
       case "ru": return ru.auth;
       case "kz": return kz.auth;
       case "en": return en.auth;
+      case "uz": return uz.auth;
       default: return en.auth;
     }
   }, [language]);
@@ -322,12 +324,13 @@ const AuthPopup = () => {
           onClick={handleOverlayClick}
         >
           <motion.div
-            className="relative bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-[95%] xs:max-w-[90%] sm:max-w-[480px] md:max-w-[520px] max-h-[95vh] overflow-y-auto"
+            className="relative bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-[95%] xs:max-w-[90%] sm:max-w-[480px] md:max-w-[520px] overflow-hidden [contain:paint]"
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{ duration: 0.2 }}
           >
+          <div className="overflow-y-auto max-h-[95vh]">
             {/* Premium Header - Compact */}
             <div className="relative px-6 py-6 sm:py-8 overflow-hidden" style={{ background: brand.sidebarGradient }}>
               {/* Decorative elements */}
@@ -465,6 +468,7 @@ const AuthPopup = () => {
                 </AnimatePresence>
               </div>
             </div>
+          </div>
           </motion.div>
         </motion.div>
       </AnimatePresence>

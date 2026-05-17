@@ -8,6 +8,7 @@ import { useBrand } from "@/context/BrandContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import en from "@/locales/en.json";
+import uz from "@/locales/uz.json";
 import LanguageSwitcher from "./LanguageSwitcher";
 import UserDropdown from "./UserDropdown";
 import MobileMenu from "./MobileMenu";
@@ -33,6 +34,7 @@ export default function Header() {
       case "ru": return ru.hero;
       case "en": return en.hero;
       case "kz": return kz.hero;
+      case "uz": return uz.hero;
       default: return ru.hero;
     }
   }, [language]);
@@ -157,6 +159,7 @@ export default function Header() {
       case "ru": return "Войти";
       case "en": return "Sign In";
       case "kz": return "Кіру";
+      case "uz": return "Kirish";
       default: return "Sign In";
     }
   }, [language]);
@@ -167,6 +170,7 @@ export default function Header() {
       case "ru": return isMenuOpen ? "Закрыть меню" : "Открыть меню";
       case "en": return isMenuOpen ? "Close menu" : "Open menu";
       case "kz": return isMenuOpen ? "Мәзірді жабу" : "Мәзірді ашу";
+      case "uz": return isMenuOpen ? "Menyuni yopish" : "Menyuni ochish";
       default: return isMenuOpen ? "Close menu" : "Open menu";
     }
   }, [language, isMenuOpen]);
@@ -177,6 +181,7 @@ export default function Header() {
       case "ru": return "Основная навигация";
       case "en": return "Main navigation";
       case "kz": return "Негізгі навигация";
+      case "uz": return "Asosiy navigatsiya";
       default: return "Main navigation";
     }
   }, [language]);
@@ -193,6 +198,7 @@ export default function Header() {
       ru: { journey: 'Наш путь',        pipeline: 'Pipeline клиник' },
       en: { journey: 'Our Journey',     pipeline: 'Clinic Pipeline' },
       kz: { journey: 'Біздің жол',      pipeline: 'Клиника Pipeline' },
+      uz: { journey: "Bizning yo'l",    pipeline: 'Klinika Pipeline' },
     };
     return map[language] ?? map.ru;
   }, [language]);
@@ -288,7 +294,7 @@ export default function Header() {
                         <div>
                           <div className="font-semibold leading-tight">{tractionDropdownLabels.journey}</div>
                           <div className="text-xs text-white/50 mt-0.5">
-                            {language === 'ru' ? 'Наша история' : language === 'kz' ? 'Біздің тарих' : 'Our story'}
+                            {language === 'ru' ? 'Наша история' : language === 'kz' ? 'Біздің тарих' : language === 'uz' ? "Bizning tarix" : 'Our story'}
                           </div>
                         </div>
                       </button>
@@ -305,7 +311,7 @@ export default function Header() {
                         <div>
                           <div className="font-semibold leading-tight">{tractionDropdownLabels.pipeline}</div>
                           <div className="text-xs text-white/50 mt-0.5">
-                            {language === 'ru' ? 'CRM клиник' : language === 'kz' ? 'Клиника CRM' : 'Clinics CRM'}
+                            {language === 'ru' ? 'CRM клиник' : language === 'kz' ? 'Клиника CRM' : language === 'uz' ? "Klinikalar CRM" : 'Clinics CRM'}
                           </div>
                         </div>
                       </Link>

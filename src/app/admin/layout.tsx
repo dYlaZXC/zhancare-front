@@ -80,7 +80,7 @@ export default function AdminLayout({
           <AdminBreadcrumb />
 
           {/* Page Content — scrollable for normal pages */}
-          <div className="flex-1 overflow-y-auto min-h-0 flex flex-col pl-4 sm:pl-6 pr-0 pt-4 sm:pt-6 pb-4 sm:pb-1">
+          <div className="flex-1 overflow-y-auto min-h-0 flex flex-col pl-4 sm:pl-6 pr-4 sm:pr-6 pt-4 sm:pt-6 pb-4 sm:pb-1">
             {children}
           </div>
         </main>

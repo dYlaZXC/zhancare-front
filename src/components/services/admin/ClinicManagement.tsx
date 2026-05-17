@@ -437,12 +437,84 @@ const ClinicFormModal = ({
 
 // ─── Clinic Row ───────────────────────────────────────────────────────────────
 
+// ─── Delete Confirm Modal ─────────────────────────────────────────────────────
+
+const DeleteConfirmModal = ({
+  clinic,
+  onConfirm,
+  onCancel,
+  loading,
+}: {
+  clinic: ClinicData;
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading: boolean;
+}) => (
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className="fixed inset-0 z-50 flex items-center justify-center p-4"
+    style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
+    onClick={onCancel}
+  >
+    <motion.div
+      initial={{ scale: 0.92, opacity: 0, y: 16 }}
+      animate={{ scale: 1, opacity: 1, y: 0 }}
+      exit={{ scale: 0.92, opacity: 0, y: 16 }}
+      transition={{ type: "spring", damping: 22, stiffness: 300 }}
+      className="bg-white rounded-3xl shadow-2xl p-6 max-w-sm w-full border border-gray-100"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-2xl bg-red-100 flex items-center justify-center flex-shrink-0">
+          <Trash2 className="w-5 h-5 text-red-600" />
+        </div>
+        <div>
+          <h3 className="text-base font-bold text-gray-900">Удалить клинику?</h3>
+          <p className="text-xs text-gray-400 mt-0.5">Это действие необратимо</p>
+        </div>
+      </div>
+      <p className="text-sm text-gray-600 mb-5">
+        Вы уверены, что хотите удалить клинику{" "}
+        <span className="font-semibold text-gray-900">«{clinic.name}»</span>?{" "}
+        Данные будут скрыты из системы.
+      </p>
+      <div className="flex gap-2">
+        <button
+          onClick={onCancel}
+          disabled={loading}
+          className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+        >
+          Отмена
+        </button>
+        <button
+          onClick={onConfirm}
+          disabled={loading}
+          className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+        >
+          {loading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Trash2 className="w-4 h-4" />
+          )}
+          Удалить
+        </button>
+      </div>
+    </motion.div>
+  </motion.div>
+);
+
+// ─── Clinic Row ───────────────────────────────────────────────────────────────
+
 const ClinicRow = ({
   clinic,
   onEdit,
+  onDelete,
 }: {
   clinic: ClinicData;
   onEdit: (c: ClinicData) => void;
+  onDelete: (c: ClinicData) => void;
 }) => (
   <tr className="hover:bg-gray-50 transition-colors">
     {/* Клиника */}
@@ -529,13 +601,22 @@ const ClinicRow = ({
 
     {/* Действия */}
     <td className="px-4 py-3">
-      <button
-        onClick={() => onEdit(clinic)}
-        className="p-1.5 rounded-lg hover:bg-emerald-50 text-gray-400 hover:text-emerald-600 transition-colors"
-        title="Редактировать"
-      >
-        <Edit className="w-4 h-4" />
-      </button>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => onEdit(clinic)}
+          className="p-1.5 rounded-lg hover:bg-emerald-50 text-gray-400 hover:text-emerald-600 transition-colors"
+          title="Редактировать"
+        >
+          <Edit className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => onDelete(clinic)}
+          className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+          title="Удалить"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
     </td>
   </tr>
 );
@@ -552,6 +633,8 @@ export default function ClinicManagement() {
 
   const [showCreate, setShowCreate] = useState(false);
   const [editTarget, setEditTarget] = useState<ClinicData | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ClinicData | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // keep ref to avoid stale deps warning
   const _ref = useRef<null>(null);
@@ -592,6 +675,22 @@ export default function ClinicManagement() {
     });
     setShowCreate(false);
     setEditTarget(null);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/clinic-delete/${deleteTarget.id}/`);
+      setClinics((prev) => prev.filter((c) => c.id !== deleteTarget.id));
+      toast.success(`Клиника «${deleteTarget.name}» удалена`);
+      setDeleteTarget(null);
+    } catch (err: unknown) {
+      const anyErr = err as { response?: { data?: { error?: string } } };
+      toast.error(anyErr?.response?.data?.error || "Не удалось удалить клинику");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   // Reset to page 1 whenever search changes
@@ -874,6 +973,7 @@ export default function ClinicManagement() {
                       key={clinic.id}
                       clinic={clinic}
                       onEdit={setEditTarget}
+                      onDelete={setDeleteTarget}
                     />
                   ))}
                 </tbody>
@@ -949,6 +1049,15 @@ export default function ClinicManagement() {
               setEditTarget(null);
             }}
             onSaved={handleSaved}
+          />
+        )}
+        {deleteTarget && (
+          <DeleteConfirmModal
+            key="delete"
+            clinic={deleteTarget}
+            onConfirm={handleDelete}
+            onCancel={() => setDeleteTarget(null)}
+            loading={deleting}
           />
         )}
       </AnimatePresence>

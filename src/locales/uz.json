@@ -1,0 +1,360 @@
+{
+    "auth": {
+      "welcome": "JanCare.Ai'ga xush kelibsiz!",
+      "description": "Ro'yxatdan o'tgan bo'lsangiz tizimga kiring yoki bir necha bosish bilan hisob oching!",
+      "login": "Kirish",
+      "register": "Ro'yxatdan o'tish",
+      "email": "Elektron pochta",
+      "password": "Parol",
+      "forgotPassword": "Parolni unutdingizmi?",
+      "loginButton": "Kirish",
+      "lastName": "Familiya",
+      "firstName": "Ism",
+      "phone": "Telefon",
+      "confirmPassword": "Parolni tasdiqlang",
+      "registerButton": "Ro'yxatdan o'tish",
+      "rememberMe": "Meni eslab qol",
+      "backToLogin": "Kirishga qaytish",
+      "forgotPasswordTitle": "Parolni tiklash",
+      "enterEmail": "Emailingizni kiriting",
+      "sendCode": "Emailga kod yuborish",
+      "sending": "Yuborilmoqda...",
+      "codeSent": "Kod emailingizga yuborildi",
+      "failedToSend": "Kodni yuborib bo'lmadi",
+      "incorrectCode": "Noto'g'ri kod. Qayta urinib ko'ring.",
+      "codeExpiresIn": "Kod muddati tugaydi:",
+      "codeExpired": "Kod muddati tugagan",
+      "sendAgain": "Qayta yuborish",
+      "newPassword": "Yangi parol",
+      "resetPassword": "Parolni tiklash",
+      "updating": "Yangilanmoqda...",
+      "passwordUpdated": "Parol muvaffaqiyatli yangilandi",
+      "resetError": "Parolni tiklashda xatolik",
+      "fillAllFields": "Barcha maydonlarni to'ldiring",
+      "passwordsMismatch": "Parollar mos kelmaydi",
+      "codeDescription": "Emailingizga yuborilgan 6 xonali kodni kiriting",
+      "resendAvailableIn": "Qayta yuborish mavjud:",
+      "resendCooldownMessage": "Yangi kod so'rashdan oldin {minutes} daqiqa kuting",
+      "consentPersonalData": "Men roziman",
+      "consentPersonalDataLink": "shaxsiy ma'lumotlarni to'plashga rozilik",
+      "consentInformAgreement": "Men roziman",
+      "consentInformAgreementLink": "ma'lumotlangan rozilik",
+      "consentOffer": "Men roziman",
+      "consentOfferLink": "oferta shartnomasi"
+    },
+    "telegramAuth": {
+      "initializing": "Ishga tushirilmoqda...",
+      "welcome": "Xush kelibsiz",
+      "loginSuccess": "Muvaffaqiyatli kirildi!",
+      "loginError": "Autentifikatsiya xatosi",
+      "invalidPhone": "Iltimos, to'g'ri telefon raqamini kiriting",
+      "registrationSuccess": "Ro'yxatdan o'tish muvaffaqiyatli yakunlandi!",
+      "registrationError": "Ro'yxatdan o'tish xatosi",
+      "phoneLabel": "Telefon raqami",
+      "phoneDescription": "Ro'yxatdan o'tishni yakunlash uchun telefon raqamingiz kerak",
+      "completeRegistration": "Ro'yxatdan o'tishni yakunlash",
+      "authenticating": "Autentifikatsiya...",
+      "checkingAccount": "Hisobingiz tekshirilmoqda...",
+      "secureAuth": "Telegram orqali xavfsiz autentifikatsiya"
+    },
+    "hero": {
+      "navigation": {
+        "hero": "Asosiy",
+        "ai-chat": "AI Chat",
+        "services": "Xizmatlar",
+        "specialists": "Mutaxassislar",
+        "modules": "Modullar",
+        "traction": "Bizning yo'l",
+        "contacts": "Aloqa"
+      },
+      "content": {
+        "heroHeading": "Yangi avlod telemeditsina – bir bosish bilan sog'liq!",
+        "heroDescription": "Masofaviy tibbiy konsultatsiyalar, shifokorlar uchun AI vositalari va bemorlar bilan shifokorlar o'rtasida qulay aloqani ta'minlaymiz.",
+        "videoNotSupported": "Brauzeringiz videoni qo'llab-quvvatlamaydi.",
+        "openDataButton": "Qabulga yozilish"
+      },
+      "statistics": [
+        { "value": "700+", "description": "Oylik konsultatsiyalar" },
+        { "value": "100+", "description": "Uyga shifokor chaqirish" },
+        { "value": "24/7", "description": "Tibbiy konsultatsiyalarga kirish" },
+        { "value": "AI", "description": "Shifokorlar uchun AI tahlil" }
+      ]
+    },
+
+    "services": {
+    "servicesHeader": "JanCare.Ai asosiy yo'nalishlari:",
+    "servicesDescription": "Bizning xizmatlarimiz tibbiy yordamga qulay kirishni ta'minlaydi, bemorlar va shifokorlar o'rtasidagi munosabatlarni yaxshilaydi.",
+    "list": [
+      {
+        "icon": "faPlane",
+        "title": "Tibbiy turizm",
+        "description": "Tashxis, davolash va sog'lomlashtirish uchun xorijga sayohat tashkil etish.",
+        "details": [
+          "Klinika va shifokor tanlash",
+          "Sayohatni tashkil etish",
+          "Bemorni kuzatib borish"
+        ]
+      },
+      {
+        "icon": "faVideo",
+        "title": "Telemeditsina",
+        "description": "Istalgan vaqtda masofaviy tibbiy konsultatsiyalar.",
+        "details": ["Xavfsiz aloqa", "Yuqori sifatli video", "Sertifikatlangan shifokorlar bilan konsultatsiyalar"]
+      },
+      {
+        "icon": "faHouse",
+        "title": "Uyga shifokor chaqirish",
+        "description": "Malakali shifokorning uyga tezkor kelishi.",
+        "details": [
+          "Ko'rik va tashxis",
+          "Davolash tayinlash",
+          "Uyda tahlil olish"
+        ]
+      },
+      {
+        "icon": "faBell",
+        "title": "Eslatmalar va bildirishnomalar",
+        "description": "Qabullar va dorilar haqida avtomatlashtirilgan eslatmalar.",
+        "details": ["Tizimli bildirishnomalar", "Taqvim bilan integratsiya", "Shaxsiylashtirilgan eslatmalar"]
+      },
+      {
+        "icon": "faUserMd",
+        "title": "Shifokorlarga yordam",
+        "description": "Shifokorlar samaradorligini oshirish uchun vositalar.",
+        "details": ["Davolash bo'yicha tavsiyalar", "Bemor tahlili", "Avtomatlashtirilgan hisobotlar"]
+      },
+      {
+        "icon": "faHeartbeat",
+        "title": "Sog'liqni monitoring qilish",
+        "description": "Bemorlar holatini real vaqtda tahlil qilish.",
+        "details": ["Kiyiladigan qurilmalar bilan integratsiya", "Ko'rsatkichlarni avtomatik tahlil", "Sog'liq bo'yicha tavsiyalar"]
+      },
+      {
+        "icon": "faPills",
+        "title": "Dori tavsiyalari",
+        "description": "Dori qabul qilish bo'yicha individual tavsiyalar.",
+        "details": ["Dorilar muvofiqligini tahlil", "Dozalash bo'yicha tavsiyalar", "Davolash rejimiga rioya qilishni nazorat"]
+      },
+      {
+        "icon": "faClinicMedical",
+        "title": "Masofaviy hududlar uchun telemeditsina",
+        "description": "Qiyin yetib boriladigan joylarda tibbiy xizmatlarga kirish.",
+        "details": ["Mobil tarmoqlar orqali ulanish", "Masofaviy tekshirish", "Tor mutaxassislar bilan konsultatsiyalar"]
+      },
+      {
+        "icon": "faChartLine",
+        "title": "Tibbiy ma'lumotlar tahlili",
+        "description": "Tibbiy qarorlarni yaxshilash uchun katta ma'lumotlardan foydalanish.",
+        "details": ["Kasallik tarqalishini prognozlash", "Shifokorlar yuklamasini optimallashtirish", "Trendlarni avtomatlashtirilgan tahlil"]
+      }
+    ]
+  },
+
+    "features": {
+      "title": "JanCare.Ai imkoniyatlari",
+      "description": "Bizning platformamiz tashxisni yaxshilash, shifokorlar va bemorlar o'rtasidagi aloqani mustahkamlash va tibbiy xizmatlar sifatini oshirish uchun ilg'or texnologiyalardan foydalanadi.",
+      "buttonText": "Ko'proq bilish",
+      "featuresList": [
+        {
+          "title": "AI tashxis va tavsiyalar",
+          "description": "Tibbiy ma'lumotlarni tahlil qilish va shifokorlarga aniq tavsiyalar berish uchun sun'iy intellektdan foydalanish."
+        },
+        {
+          "title": "Video konsultatsiyalar",
+          "description": "Shifokorlar bilan xavfsiz video qo'ng'iroqlar, dunyoning istalgan nuqtasidan tibbiy yordamga kirish imkonini beradi."
+        },
+        {
+          "title": "Elektron tibbiy kartalar",
+          "description": "Kasallik tarixi, tahlillar va retseptlarni qulay kirishli himoyalangan raqamli formatda saqlash."
+        }
+      ]
+    },
+
+    "productShowcase": {
+      "title": "Telemeditsina va tashxis uchun innovatsion interfeys",
+      "description": "JanCare.Ai shifokorlar va bemorlar uchun qulay interfeys taqdim etadi, tibbiy ma'lumotlarga, video konsultatsiyalarga va AI tahlil vositalariga tezkor kirishni ta'minlaydi.",
+      "contentData": [
+        {
+          "id": 1,
+          "title": "AI tashxis va ma'lumotlar tahlili",
+          "description": "Shifokorlar uchun tavsiyalar va kasalliklarni prognozlash bilan tibbiy ma'lumotlarni avtomatlashtirilgan tahlil.",
+          "imageSrc": "hero1212"
+        },
+        {
+          "id": 2,
+          "title": "Bemorlar holatini monitoring qilish",
+          "description": "Operativ munosabat va shaxsiylashtirilgan davolash uchun bemorlar ma'lumotlarini uzluksiz yig'ish va tahlil.",
+          "imageSrc": "hero1213"
+        },
+        {
+          "id": 3,
+          "title": "Shifokorlar bilan video konsultatsiyalar",
+          "description": "Masofaviy tibbiy konsultatsiyalar uchun sertifikatlangan mutaxassislar bilan xavfsiz video qo'ng'iroqlar.",
+          "imageSrc": "hero1214"
+        },
+        {
+          "id": 4,
+          "title": "Elektron tibbiy kartalar",
+          "description": "Shifokorlar va bemorlar uchun qulay kirishli tibbiy ma'lumotlarni markazlashtirilgan saqlash.",
+          "imageSrc": "hero1215"
+        }
+      ]
+    },
+
+    "callToAction": {
+      "title": "Biz bilan bog'laning",
+      "description": "Savollaringizga javob berishga va qo'shimcha ma'lumot berishga tayyormiz.",
+      "form": {
+        "nameLabel": "Ism",
+        "emailLabel": "Email",
+        "messageLabel": "Xabar",
+        "submitButton": "Xabar yuborish",
+        "contactButton": "Bizga yozing"
+      },
+      "alertMessage": "Xabaringiz yuborildi!"
+    },
+
+    "footer": {
+      "companyTagline": "Texnologiyalar va g'amxo'rlikni yaxshiroq sog'liq uchun birlashtirамиз.",
+      "learnMore": "Ko'proq bilish",
+      "navigation": {
+        "title": "Navigatsiya",
+        "links": ["Asosiy", "Biz haqimizda", "AI Chat", "Xizmatlar", "Imkoniyatlar", "Aloqa"]
+      },
+      "contact": {
+        "title": "Aloqa",
+        "address": "",
+        "email": "zhancare.group@yandex.kz",
+        "contactUs": "Biz bilan bog'laning"
+      },
+      "map": {
+        "title": "Xarita"
+      },
+      "social": {
+        "title": "Ijtimoiy tarmoqlarda"
+      },
+      "newsletter": {
+        "title": "Xabardor bo'ling",
+        "description": "Sog'liq bo'yicha maslahatlar olish uchun obuna bo'ling",
+        "placeholder": "Emailingizni kiriting",
+        "button": "Obuna bo'lish",
+        "successMessage": "Obuna uchun rahmat!",
+        "errorMessage": "Iltimos, to'g'ri email kiriting"
+      },
+      "stats": {
+        "patients": "Faol bemorlar",
+        "doctors": "Sertifikatlangan shifokorlar",
+        "consultations": "Konsultatsiyalar"
+      },
+      "legal": {
+        "title": "Huquqiy ma'lumot",
+        "dataProcessing": "Ma'lumotlarni qayta ishlash siyosati",
+        "offer": "Oferta shartnomasi",
+        "terms": "Foydalanish shartlari"
+      },
+      "rights": "JanCare.Ai. Barcha huquqlar himoyalangan."
+    },
+
+    "chat": {
+      "title": "JanBot.Ai bilan muloqot qiling",
+      "assistantInstruction": "Siz virtual tibbiy yordamchisiz. Foydalanuvchilarga sog'liq haqida ma'lumot olish, qabul eslatmalari va o'ziga g'amxo'rlik maslahatlari bilan yordam bering.",
+      "placeholder": "Savol bering...",
+      "sendButton": "Yuborish",
+      "sending": "Yuborilmoqda...",
+      "typing": " O'ylamoqda...",
+      "fetchError": "Serverdan javob olishda xatolik.",
+      "genericError": "Xatolik yuz berdi. Qayta urinib ko'ring.",
+      "gameResponse": "Ajoyib g'oya! Keling, tibbiy viktorina o'ynaymiz! 🎮"
+    },
+
+    "heroMeetStyle": {
+      "heading": "Shifokor konsultatsiyasi",
+      "headingHighlight": "5 daqiqada",
+      "subtitle": "Simptomlarni tasvirlab bering → AI shifokorni tanlaydi → To'lov → Video konsultatsiya",
+      "startButton": "Konsultatsiyani boshlash",
+      "startingButton": "Ishga tushirilmoqda...",
+      "scheduleButton": "Uchrashuvni rejalashtirish",
+      "features": [
+        { "title": "Tez", "description": "Konsultatsiya to'lovdan 5 daqiqa o'tgach boshlanadi" },
+        { "title": "Aqlli tanlov", "description": "AI avtomatik ravishda mos shifokorni tanlaydi" },
+        { "title": "Xavfsiz", "description": "Barcha ma'lumotlar himoyalangan va maxfiy" }
+      ],
+      "trust": ["Litsenziyalangan shifokorlar", "500+ dan ortiq konsultatsiyalar", "Reyting 4.9/5"]
+    },
+
+    "impactSection": {
+    "title": "Nima uchun JanCare.Ai tanlashadi?",
+    "description": "Biz AI yordamida aqlli sog'liqni saqlashni kengaytiramiz.",
+
+    "statistics": [
+      { "value": 1500, "description": "Navbatchi shifokor konsultatsiyasi", "icon": "faVideo", "currency": "so'm" },
+      { "value": 100, "description": "Sertifikatlangan shifokorlar", "icon": "faUserMd" },
+      { "value": 2, "description": "JanCare.Ai haqida biladigan mamlakatlar", "icon": "faClinicMedical" },
+      { "value": 95, "description": "AI bilan tezroq tashxis", "icon": "faChartLine", "percent": true }
+    ],
+
+    "features": {
+      "title": "Tibbiyotni o'zgartiruvchi AI",
+      "description": "Intellektual, avtomatlashtirilgan va qulay tibbiy yordam.",
+      "list": [
+        {
+          "title": "AI tashxis",
+          "description": "Tezkor qaror qabul qilish uchun simptomlarni bir zumda tahlil.",
+          "icon": "faStethoscope"
+        },
+        {
+          "title": "Real vaqtda sog'liqni monitoring",
+          "description": "Bemorning hayotiy muhim ko'rsatkichlarini 24/7 kuzatish.",
+          "icon": "faHeartbeat"
+        },
+        {
+          "title": "Xavfsiz raqamli tibbiy kartalar",
+          "description": "Tibbiy tarixga shifrlangan bulut orqali kirish.",
+          "icon": "faNotesMedical"
+        },
+        {
+          "title": "Aqlli eslatmalar",
+          "description": "Qabullar va dorilar haqida avtomatik bildirishnomalar.",
+          "icon": "faBell"
+        },
+        {
+          "title": "Dorilar bo'yicha shaxsiylashtirilgan tavsiyalar",
+          "description": "Dozalash va dorilar muvofiqligini AI tahlili.",
+          "icon": "faPills"
+        },
+        {
+          "title": "Shifokorlar uchun avtomatlashtirilgan hisobotlar",
+          "description": "Bemor ma'lumotlari asosida batafsil tibbiy hisobotlar yaratish.",
+          "icon": "faChartLine"
+        }
+      ]
+    },
+
+    "successStories": {
+      "title": "Haqiqiy natijalar",
+      "description": "JanCare.Ai sog'liqni saqlashni qanday o'zgartirmoqda.",
+      "stories": [
+        {
+          "icon": "faClock",
+          "title": "Enactus",
+          "description": "Biz Enactus Kazakhstan 2025 milliy kubogi sohiblarimiz! Faxr bilan e'lon qilamiz: ZhanCare tibbiyot talabalari jamoasi 30-yubileyli Enactus Kazakhstan National Expo 2025da 1-o'rinni egalladi va Qozog'iston ikki marta chempioni bo'ldi!"
+        },
+        {
+          "icon": "faGlobe",
+          "title": "Astana Tibbiyot Universiteti",
+          "description": "Astana Tibbiyot Universiteti qo'llab-quvvatlashi. Jamoa alma mater — Astana Tibbiyot Universitetidan kuchli qo'llab-quvvatlashga erishdi, u yerda tantanali kuzatuv marosimi bo'lib o'tdi."
+        },
+        {
+          "icon": "faGlobe",
+          "title": "Qozog'iston Respublikasi Vazirligi",
+          "description": "Hamkorlik aloqalarini mustahkamlash va birgalikdagi tashabbusllarni amalga oshirish maqsadida JanCare.Ai Qozog'iston Respublikasining asosiy Vazirliklari bilan hamkorlik qiladi."
+        },
+        {
+          "icon": "faGlobe",
+          "title": "OMRON",
+          "description": "Xalqaro Omron Healthcare kompaniyasi bilan birgalikda JanCare shifokorlari jamoasi savdo markazida bepul ko'rik bo'yicha keng ko'lamli ijtimoiy aktsiya o'tkazdi. Ikki kun davomida stendimizga 2341 kishi murojaat qildi."
+        }
+      ]
+    }
+  }
+}

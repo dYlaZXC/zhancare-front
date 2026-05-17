@@ -20,15 +20,23 @@ import {
   BadgeInfo,
   Activity,
   ClipboardList,
+  Search,
+  CalendarDays,
+  Trash2,
 } from "lucide-react";
 import { ScheduleEvent } from "../types/scheduleTypes";
 import { getStatusColor } from "../utils/scheduleUtils";
+import { api } from "@/utils/api";
+import { toast } from "react-toastify";
+import RescheduleModal from "./RescheduleModal";
+import ConfirmDeleteModal from "./ConfirmDeleteModal";
 
 interface DateDetailsDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   selectedDate: string | null;
   events: ScheduleEvent[];
+  onEventChanged?: () => void;
 }
 
 const GENDER_LABEL: Record<string, string> = { M: 'Мужчина', F: 'Женщина' };
@@ -155,8 +163,25 @@ function CopyAllButton({ event }: { event: ScheduleEvent }) {
   );
 }
 
-function ConsultationCard({ event }: { event: ScheduleEvent }) {
+function ConsultationCard({ event, onChanged }: { event: ScheduleEvent; onChanged?: () => void }) {
   const isOnline = event.consultation_type !== 'offline';
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await api.delete(`/schedule/${event.id}/`);
+      toast.success("Запись удалена");
+      setConfirmDelete(false);
+      onChanged?.();
+    } catch {
+      toast.error("Не удалось удалить запись");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <motion.div
@@ -193,8 +218,41 @@ function ConsultationCard({ event }: { event: ScheduleEvent }) {
             </div>
           </div>
         </div>
-        <StatusBadge status={event.status} />
+        <div className="flex items-center gap-2">
+          <StatusBadge status={event.status} />
+          <button
+            onClick={() => setRescheduleOpen(true)}
+            title="Перенести запись"
+            className="p-1.5 rounded-lg hover:bg-blue-100 transition-colors text-blue-400 hover:text-blue-600"
+          >
+            <CalendarDays className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setConfirmDelete(true)}
+            title="Удалить запись"
+            className="p-1.5 rounded-lg hover:bg-red-100 transition-colors text-gray-400 hover:text-red-500"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       </div>
+
+      {rescheduleOpen && (
+        <RescheduleModal
+          event={event}
+          onClose={() => setRescheduleOpen(false)}
+          onRescheduled={() => { onChanged?.(); }}
+        />
+      )}
+
+      {confirmDelete && (
+        <ConfirmDeleteModal
+          patientName={event.patient_name}
+          loading={deleting}
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmDelete(false)}
+        />
+      )}
 
       <div className="p-5 space-y-4">
         {/* Patient + Doctor grid */}
@@ -324,7 +382,10 @@ export default function DateDetailsDrawer({
   onClose,
   selectedDate,
   events,
+  onEventChanged,
 }: DateDetailsDrawerProps) {
+  const [search, setSearch] = useState("");
+
   if (!isOpen || !selectedDate) return null;
 
   const formattedDate = new Date(selectedDate + 'T00:00:00').toLocaleDateString('ru-RU', {
@@ -335,6 +396,19 @@ export default function DateDetailsDrawer({
   });
 
   const sorted = [...events].sort((a, b) => a.time.localeCompare(b.time));
+
+  const q = search.trim().toLowerCase();
+  const filtered = q
+    ? sorted.filter(e =>
+        e.patient_name?.toLowerCase().includes(q) ||
+        e.doctor_name?.toLowerCase().includes(q) ||
+        e.nurse_name?.toLowerCase().includes(q) ||
+        e.patient_phone?.includes(q) ||
+        e.doctor_phone?.includes(q) ||
+        e.patient_email?.toLowerCase().includes(q) ||
+        e.time?.includes(q)
+      )
+    : sorted;
 
   return (
     <AnimatePresence>
@@ -367,6 +441,30 @@ export default function DateDetailsDrawer({
             </button>
           </div>
 
+          {/* Search */}
+          {sorted.length > 0 && (
+            <div className="px-5 py-3 border-b border-gray-100 bg-white">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Поиск по пациенту, врачу, телефону..."
+                  className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-blue-400 focus:bg-white transition-colors"
+                />
+                {search && (
+                  <button
+                    onClick={() => setSearch("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Content */}
           <div className="flex-1 overflow-y-auto">
             {sorted.length === 0 ? (
@@ -377,13 +475,22 @@ export default function DateDetailsDrawer({
                 <p className="text-gray-600 font-semibold">Нет запланированных консультаций</p>
                 <p className="text-gray-400 text-sm mt-1">На эту дату пока нет записей</p>
               </div>
+            ) : filtered.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center px-6">
+                <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
+                  <Search className="w-8 h-8 text-gray-300" />
+                </div>
+                <p className="text-gray-600 font-semibold">Ничего не найдено</p>
+                <p className="text-gray-400 text-sm mt-1">Попробуйте изменить запрос</p>
+              </div>
             ) : (
               <div className="p-5 space-y-4">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">
-                  {sorted.length} {sorted.length === 1 ? 'запись' : 'записей'}
+                  {filtered.length} {filtered.length === 1 ? 'запись' : 'записей'}
+                  {q && <span className="normal-case font-normal ml-1 text-blue-400">· по запросу «{search.trim()}»</span>}
                 </p>
-                {sorted.map(event => (
-                  <ConsultationCard key={event.id} event={event} />
+                {filtered.map(event => (
+                  <ConsultationCard key={event.id} event={event} onChanged={onEventChanged} />
                 ))}
               </div>
             )}

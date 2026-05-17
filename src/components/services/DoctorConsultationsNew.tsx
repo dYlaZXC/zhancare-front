@@ -199,12 +199,18 @@ const DoctorConsultationsNew: React.FC = () => {
   };
 
   const changeConsultationStatus = async (meeting_id: string, newStatus: string) => {
+    if (!meeting_id) {
+      toast.error("Не удалось определить ID консультации");
+      return;
+    }
     try {
-      await api.post(`/consultations/${meeting_id}/status/`, { status: newStatus });
-      toast.success("Статус консультации обновлен");
+      await api.post(`/consultations/${encodeURIComponent(meeting_id)}/status/`, { status: newStatus });
+      toast.success("Статус обновлён");
       fetchConsultations();
-    } catch {
-      toast.error("Ошибка при изменении статуса консультации");
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err?.response?.data?.detail || "Ошибка при изменении статуса";
+      toast.error(msg);
+      console.error("Status change error:", err?.response?.status, err?.response?.data);
     }
   };
 

@@ -30,6 +30,8 @@ import AnamnesisForm from "./forms/AnamnesisForm";
 import DiagnosticsForm from "./forms/DiagnosticsForm";
 import TreatmentRecommendationsForm from "./forms/TreatmentRecommendationsForm";
 import DiagnosisForm from "./forms/DiagnosisForm";
+import { Sparkles } from "lucide-react";
+import AIConsultationReview from "./AIConsultationReview";
 import { Consultation } from "@/types/consultation";
 import { api } from "@/utils/api";
 import { isInjectionAttempt, CHAT_ENDPOINT } from "@/lib/ai";
@@ -88,6 +90,26 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
   const [sessionNotes, setSessionNotes] = useState("");
   const [prescription, setPrescription] = useState("");
   const [recommendations, setRecommendations] = useState("");
+
+  const [showAIReview, setShowAIReview] = useState(false);
+
+  const handleAIApply = (aiFields: Record<string, string>) => {
+    const formKeys = ['complaints', 'anamnesis', 'diagnostics', 'diagnosis', 'treatment'] as const;
+    const formUpdates: Partial<ConsultationFormData> = {};
+    formKeys.forEach(key => {
+      if (aiFields[key]) formUpdates[key] = aiFields[key];
+    });
+    if (Object.keys(formUpdates).length > 0) {
+      setConsultationFormData(prev => ({ ...prev, ...formUpdates }));
+    }
+    if (aiFields.prescription) {
+      setPrescription(aiFields.prescription);
+    } else if (aiFields.treatment) {
+      setPrescription(aiFields.treatment);
+    }
+    if (aiFields.recommendations) setRecommendations(aiFields.recommendations);
+    if (aiFields.session_notes) setSessionNotes(aiFields.session_notes);
+  };
 
   // Loading state for data fetch
   const [isLoadingData, setIsLoadingData] = useState(false);
@@ -992,16 +1014,27 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
                     <p className="text-xs" style={{ color: '#bcc0ca' }}>{consultation.patient_name}</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => setActiveTab(null)}
-                  className="w-9 h-9 rounded-lg transition-all flex items-center justify-center"
-                  style={{ backgroundColor: '#202942', color: '#ebf1ff' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#242e4b'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#202942'}
-                  title="Закрыть форму"
-                >
-                  <FontAwesomeIcon icon={faChevronRight} className="text-sm" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowAIReview(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                    style={{ background: "linear-gradient(135deg, #2956bf, #3772ff)", color: "#ebf1ff" }}
+                    title="ИИ заполнит все поля автоматически"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    ИИ Анализ
+                  </button>
+                  <button
+                    onClick={() => setActiveTab(null)}
+                    className="w-9 h-9 rounded-lg transition-all flex items-center justify-center"
+                    style={{ backgroundColor: '#202942', color: '#ebf1ff' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#242e4b'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#202942'}
+                    title="Закрыть форму"
+                  >
+                    <FontAwesomeIcon icon={faChevronRight} className="text-sm" />
+                  </button>
+                </div>
               </div>
 
               {/* Form Panel Content */}
@@ -1423,6 +1456,16 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
             </div>
           )}
         </>
+      )}
+
+      {/* AI Consultation Review Modal */}
+      {showAIReview && (
+        <AIConsultationReview
+          patientName={consultation.patient_name}
+          initialDescription={transcript ?? ""}
+          onApply={handleAIApply}
+          onClose={() => setShowAIReview(false)}
+        />
       )}
 
       {/* Signature Modal */}

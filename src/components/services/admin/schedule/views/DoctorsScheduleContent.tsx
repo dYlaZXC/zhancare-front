@@ -15,10 +15,14 @@ import {
   Calendar as CalendarIcon,
   ChevronDown,
   ChevronUp,
+  CalendarDays,
+  Trash2,
 } from "lucide-react";
 import { ScheduleEvent } from "../types/scheduleTypes";
 import StaffScheduleModal from "../../StaffScheduleModal";
 import AssignConsultationModal from "../modals/AssignConsultationModal";
+import RescheduleModal from "../modals/RescheduleModal";
+import ConfirmDeleteModal from "../modals/ConfirmDeleteModal";
 
 interface DoctorsScheduleContentProps {
   selectedDate: string;
@@ -55,6 +59,24 @@ export function DoctorsScheduleContent({
   const [consultationType, setConsultationType] = useState<'online' | 'offline'>('online');
   const [showNoSchedule, setShowNoSchedule] = useState(false);
   const [scheduleEditMember, setScheduleEditMember] = useState<{ id: number; first_name: string; last_name: string } | null>(null);
+  const [rescheduleEvent, setRescheduleEvent] = useState<ScheduleEvent | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ScheduleEvent | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/schedule/${deleteTarget.id}/`);
+      toast.success("Запись удалена");
+      setDeleteTarget(null);
+      onEventAdded();
+    } catch {
+      toast.error("Не удалось удалить запись");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   useEffect(() => {
     if (!selectedDate) return;
@@ -479,6 +501,22 @@ export function DoctorsScheduleContent({
                                           </span>
                                         </div>
                                       </div>
+                                      <div className="flex flex-col gap-1 flex-shrink-0">
+                                        <button
+                                          onClick={() => setRescheduleEvent(event)}
+                                          title="Перенести"
+                                          className="p-1.5 rounded-lg hover:bg-blue-200 transition-colors text-blue-400 hover:text-blue-600"
+                                        >
+                                          <CalendarDays className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                          onClick={() => setDeleteTarget(event)}
+                                          title="Удалить"
+                                          className="p-1.5 rounded-lg hover:bg-red-100 transition-colors text-gray-400 hover:text-red-500"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
                                     </div>
                                   ))}
                                 </div>
@@ -538,6 +576,25 @@ export function DoctorsScheduleContent({
           onEventAdded();
         }}
       />
+
+      {/* Reschedule Modal */}
+      {rescheduleEvent && (
+        <RescheduleModal
+          event={rescheduleEvent}
+          onClose={() => setRescheduleEvent(null)}
+          onRescheduled={() => { setRescheduleEvent(null); onEventAdded(); }}
+        />
+      )}
+
+      {/* Confirm Delete Modal */}
+      {deleteTarget && (
+        <ConfirmDeleteModal
+          patientName={deleteTarget.patient_name}
+          loading={deleting}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
 
       {/* Assignment Modal */}
       {showAssignModal && selectedDoctor && (

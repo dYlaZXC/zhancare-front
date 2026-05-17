@@ -203,6 +203,7 @@ function StatusDropdown({
           <div
             className="fixed z-50 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden min-w-[200px]"
             style={{ top: pos.top, left: pos.left }}
+            onMouseDown={(e) => e.stopPropagation()}
           >
             <div className="px-3.5 py-2.5 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
               <Edit className="w-3.5 h-3.5 text-gray-400" />

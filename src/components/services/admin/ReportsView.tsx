@@ -1,58 +1,75 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import Image from "next/image";
-import {
-  FileText,
-  Download,
-  Calendar,
-  TrendingUp,
-  Users,
-  DollarSign,
-  Activity,
-  BarChart3,
-  PieChart as PieChartIcon,
-  Loader2,
-  AlertCircle,
-  Filter,
-  RefreshCw,
-  Stethoscope,
-  UserPlus,
-  Video,
-  CheckCircle,
-  Clock,
-  Star,
-} from "lucide-react";
-import bnClinicLogo from "@/assets/clinics_logos/bn-clinica.png";
-import ayalaClinicLogo from "@/assets/clinics_logos/ayala_clinic.png";
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  AreaChart,
-  Area
-} from "recharts";
+import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/api";
+import {
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  LineChart, Line,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from "recharts";
+import {
+  TrendingUp, Users, Stethoscope, CalendarCheck,
+  RefreshCw, Activity, ArrowUpRight, ArrowDownRight,
+  Star, Award, Target, Repeat,
+} from "lucide-react";
 
-interface ReportsViewProps {
-  user: any;
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface ReportData {
+  revenue_report: {
+    total_revenue: number;
+    monthly_revenue: { month: string; revenue: number }[];
+    revenue_by_service: { service: string; revenue: number; count: number }[];
+  };
+  consultation_report: {
+    total_consultations: number;
+    by_status: { status: string; count: number }[];
+    by_doctor: { doctor_name: string; consultations: number }[];
+    by_specialization: { specialization: string; count: number }[];
+    completion_rate: number;
+    cancellation_rate: number;
+    avg_duration_min: number | null;
+  };
+  appointment_report: {
+    total_appointments: number;
+    by_status: { status: string; count: number }[];
+    by_nurse: { nurse_name: string; appointments: number }[];
+  };
+  patient_report: {
+    total_patients: number;
+    new_patients_monthly: { month: string; count: number }[];
+    by_age_group: { age_group: string; count: number }[];
+  };
+  growth_metrics: {
+    consultations_change: number | null;
+    appointments_change: number | null;
+    revenue_change: number | null;
+    new_patients_change: number | null;
+    new_patients_current: number;
+  };
+  funnel: { stage: string; count: number; rate: number }[];
+  peak_hours: { hour: number; count: number }[];
+  weekday_distribution: { day: string; count: number }[];
+  daily_trend: { date: string; count: number }[];
+  doctor_performance: {
+    doctor_id: number;
+    doctor_name: string;
+    specialization: string;
+    total: number;
+    completed: number;
+    cancelled: number;
+    completion_rate: number;
+    cancellation_rate: number;
+  }[];
+  patient_retention: {
+    total_unique: number;
+    repeat: number;
+    one_time: number;
+    retention_rate: number;
+  };
 }
 
-interface ClinicInfo { id: number; name: string; address: string; city?: string; phone?: string; rating: number; }
 interface ClinicStats {
-  is_super_admin: boolean;
-  clinic_info?: ClinicInfo | null;
   total_doctors: number;
   total_nurses: number;
   total_patients: number;
@@ -63,666 +80,514 @@ interface ClinicStats {
   average_rating: number;
 }
 
-interface ReportData {
-  revenue_report: {
-    total_revenue: number;
-    monthly_revenue: MonthlyRevenue[];
-    revenue_by_service: ServiceRevenue[];
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const BRAND = "linear-gradient(135deg, #12263a 0%, #1e263e 40%, #3772ff 100%)";
+const BLUE = "#3772ff";
+const COLORS = ["#3772ff", "#8b5cf6", "#10b981", "#f59e0b", "#f43f5e", "#06b6d4", "#ec4899"];
+
+function fmtKZT(n: number) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)} млн ₸`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)} тыс ₸`;
+  return `${n} ₸`;
+}
+
+function Delta({ val }: { val: number | null | undefined }) {
+  if (val == null) return <span className="text-gray-400 text-xs font-medium">—</span>;
+  const pos = val >= 0;
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-xs font-bold ${pos ? "text-emerald-500" : "text-red-500"}`}>
+      {pos ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+      {Math.abs(val)}%
+    </span>
+  );
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2 mb-4">
+      <span className="w-1 h-4 rounded-full bg-blue-500 inline-block flex-shrink-0" />
+      {children}
+    </h2>
+  );
+}
+
+const ChartTip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-white border border-gray-100 shadow-xl rounded-xl px-3 py-2 text-xs">
+      <p className="font-semibold text-gray-700 mb-1">{label}</p>
+      {payload.map((p: any, i: number) => (
+        <p key={i} style={{ color: p.color }}>{p.name}: <span className="font-bold">{p.value}</span></p>
+      ))}
+    </div>
+  );
+};
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function KPICard({ label, value, sub, icon: Icon, change, color = BLUE }: {
+  label: string; value: string; sub?: string;
+  icon: any; change?: number | null; color?: string;
+}) {
+  return (
+    <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-3">
+      <div className="flex items-start justify-between">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${color}22` }}>
+          <Icon className="w-5 h-5" style={{ color }} />
+        </div>
+        {change !== undefined && <Delta val={change} />}
+      </div>
+      <div>
+        <p className="text-2xl font-black text-gray-900 leading-tight">{value}</p>
+        {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+        <p className="text-xs font-semibold text-gray-500 mt-1.5">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+function PeakHeatmap({ data }: { data: { hour: number; count: number }[] }) {
+  const map: Record<number, number> = {};
+  data.forEach(d => { map[d.hour] = d.count; });
+  const maxVal = Math.max(...data.map(d => d.count), 1);
+
+  const cell = (count: number) => {
+    const r = count / maxVal;
+    if (r === 0) return { bg: "bg-gray-100", text: "text-gray-300" };
+    if (r < 0.2) return { bg: "bg-blue-100", text: "text-blue-600" };
+    if (r < 0.4) return { bg: "bg-blue-200", text: "text-blue-700" };
+    if (r < 0.6) return { bg: "bg-blue-400", text: "text-white" };
+    if (r < 0.8) return { bg: "bg-blue-500", text: "text-white" };
+    return { bg: "bg-blue-700", text: "text-white" };
   };
-  consultation_report: {
-    total_consultations: number;
-    by_status: StatusCount[];
-    by_doctor: DoctorStats[];
-    by_specialization: SpecializationStats[];
-  };
-  appointment_report: {
-    total_appointments: number;
-    by_status: StatusCount[];
-    by_nurse: NurseStats[];
-  };
-  patient_report: {
-    total_patients: number;
-    new_patients_monthly: MonthlyCount[];
-    by_age_group: AgeGroupCount[];
-  };
-}
-
-interface MonthlyRevenue {
-  month: string;
-  revenue: number;
-}
-
-interface ServiceRevenue {
-  service: string;
-  revenue: number;
-  count: number;
-}
-
-interface StatusCount {
-  status: string;
-  count: number;
-}
-
-interface DoctorStats {
-  doctor_name: string;
-  consultations: number;
-  revenue: number;
-}
-
-interface SpecializationStats {
-  specialization: string;
-  count: number;
-}
-
-interface NurseStats {
-  nurse_name: string;
-  appointments: number;
-}
-
-interface MonthlyCount {
-  month: string;
-  count: number;
-}
-
-interface AgeGroupCount {
-  age_group: string;
-  count: number;
-}
-
-export default function ReportsView({ user }: ReportsViewProps) {
-  const [clinicStats, setClinicStats] = useState<ClinicStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [reportData, setReportData] = useState<ReportData | null>(null);
-  const [dateRange, setDateRange] = useState({
-    start: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0],
-    end: new Date().toISOString().split('T')[0]
-  });
-
-  useEffect(() => {
-    fetchClinicStats();
-  }, []);
-
-  useEffect(() => {
-    fetchReports();
-  }, [dateRange]);
-
-  const fetchClinicStats = async () => {
-    try {
-      const res = await api.get("/clinic-stats/");
-      setClinicStats(res.data);
-    } catch {
-      setClinicStats({
-        is_super_admin: false,
-        clinic_info: { id: 1, name: "Демо Клиника", address: "Алматы, ул. Демонстрационная 123", rating: 4.8 },
-        total_doctors: 12, total_nurses: 8, total_patients: 156,
-        active_consultations: 3, completed_consultations_today: 15,
-        pending_appointments: 7, total_revenue_month: 2500000, average_rating: 4.8,
-      });
-    }
-  };
-
-  const fetchReports = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await api.get(`/reports/`, {
-        params: {
-          start: dateRange.start,
-          end: dateRange.end
-        }
-      });
-
-      const data: ReportData = response.data;
-      // Apply mock fallbacks for empty chart data
-      const mockMonthly = [
-        { month: "Янв", revenue: 480000 },
-        { month: "Фев", revenue: 560000 },
-        { month: "Мар", revenue: 620000 },
-        { month: "Апр", revenue: 840000 },
-      ];
-      const mockByService = [
-        { service: "Консультации", revenue: 1700000, count: 85 },
-        { service: "Записи на дому", revenue: 550000, count: 22 },
-        { service: "Анализы", revenue: 250000, count: 14 },
-      ];
-      if (!data.revenue_report.monthly_revenue?.length) {
-        data.revenue_report.monthly_revenue = mockMonthly;
-      }
-      if (!data.revenue_report.revenue_by_service?.length) {
-        data.revenue_report.revenue_by_service = mockByService;
-      }
-      setReportData(data);
-    } catch (err: any) {
-      console.error("Error fetching reports:", err);
-      setError(err.response?.data?.error || err.message || "Не удалось загрузить отчеты");
-
-      // Mock data for development fallback
-      const mockData: ReportData = {
-        revenue_report: {
-          total_revenue: 15750000,
-          monthly_revenue: [
-            { month: "Янв", revenue: 2100000 },
-            { month: "Фев", revenue: 2300000 },
-            { month: "Мар", revenue: 2500000 },
-            { month: "Апр", revenue: 2200000 },
-            { month: "Май", revenue: 2450000 },
-            { month: "Июн", revenue: 2600000 },
-            { month: "Июл", revenue: 1600000 },
-          ],
-          revenue_by_service: [
-            { service: "Консультации", revenue: 9500000, count: 1900 },
-            { service: "Записи на дому", revenue: 4250000, count: 850 },
-            { service: "Анализы", revenue: 2000000, count: 400 },
-          ]
-        },
-        consultation_report: {
-          total_consultations: 1900,
-          by_status: [
-            { status: "Завершено", count: 1650 },
-            { status: "Запланировано", count: 150 },
-            { status: "В процессе", count: 50 },
-            { status: "Отменено", count: 50 },
-          ],
-          by_doctor: [
-            { doctor_name: "Доктор Абаев", consultations: 580, revenue: 2900000 },
-            { doctor_name: "Доктор Сагындыкова", consultations: 520, revenue: 2600000 },
-            { doctor_name: "Доктор Нурсултанова", consultations: 450, revenue: 2250000 },
-            { doctor_name: "Доктор Касымов", consultations: 350, revenue: 1750000 },
-          ],
-          by_specialization: [
-            { specialization: "Кардиология", count: 680 },
-            { specialization: "Терапия", count: 520 },
-            { specialization: "Педиатрия", count: 380 },
-            { specialization: "Неврология", count: 320 },
-          ]
-        },
-        appointment_report: {
-          total_appointments: 850,
-          by_status: [
-            { status: "Завершено", count: 720 },
-            { status: "Запланировано", count: 90 },
-            { status: "В процессе", count: 25 },
-            { status: "Отменено", count: 15 },
-          ],
-          by_nurse: [
-            { nurse_name: "Медсестра Малика", appointments: 280 },
-            { nurse_name: "Медсестра Асель", appointments: 250 },
-            { nurse_name: "Медсестра Динара", appointments: 180 },
-            { nurse_name: "Медсестра Гульнара", appointments: 140 },
-          ]
-        },
-        patient_report: {
-          total_patients: 3450,
-          new_patients_monthly: [
-            { month: "Янв", count: 380 },
-            { month: "Фев", count: 420 },
-            { month: "Мар", count: 510 },
-            { month: "Апр", count: 480 },
-            { month: "Май", count: 550 },
-            { month: "Июн", count: 620 },
-            { month: "Июл", count: 490 },
-          ],
-          by_age_group: [
-            { age_group: "0-17", count: 520 },
-            { age_group: "18-30", count: 980 },
-            { age_group: "31-50", count: 1150 },
-            { age_group: "51-70", count: 620 },
-            { age_group: "70+", count: 180 },
-          ]
-        }
-      };
-      setReportData(mockData);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleExportReport = (reportType: string) => {
-    // TODO: Implement PDF/Excel export
-    console.log(`Exporting ${reportType} report...`);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Завершено':
-        return '#10b981';
-      case 'Запланировано':
-        return '#3772ff';
-      case 'В процессе':
-        return '#f59e0b';
-      case 'Отменено':
-        return '#ef4444';
-      default:
-        return '#6b7280';
-    }
-  };
-
-  const statCards = clinicStats ? [
-    { title: "Всего Докторов", value: clinicStats.total_doctors, icon: Stethoscope, gradient: "from-[#3772ff] to-[#2956bf]", bgColor: "bg-[#ebf1ff]", iconColor: "text-[#3772ff]" },
-    { title: "Всего Медсестер", value: clinicStats.total_nurses, icon: UserPlus, gradient: "from-[#3267e6] to-[#214499]", bgColor: "bg-[#e1eaff]", iconColor: "text-[#3267e6]" },
-    { title: "Всего Пациентов", value: clinicStats.total_patients, icon: Users, gradient: "from-[#2c5bcc] to-[#193373]", bgColor: "bg-[#c1d3ff]", iconColor: "text-[#2c5bcc]" },
-    { title: "Активные Консультации", value: clinicStats.active_consultations, icon: Video, gradient: "from-[#283353] to-[#1e263e]", bgColor: "bg-[#eaebee]", iconColor: "text-[#283353]" },
-    { title: "Завершено Сегодня", value: clinicStats.completed_consultations_today, icon: CheckCircle, gradient: "from-[#3772ff] to-[#3267e6]", bgColor: "bg-[#ebf1ff]", iconColor: "text-[#3772ff]" },
-    { title: "Ожидающие Записи", value: clinicStats.pending_appointments, icon: Clock, gradient: "from-[#2c5bcc] to-[#2956bf]", bgColor: "bg-[#e1eaff]", iconColor: "text-[#2c5bcc]" },
-    { title: "Доход за Месяц", value: `${(clinicStats.total_revenue_month || 140000).toLocaleString()} ₸`, icon: DollarSign, gradient: "from-[#3267e6] to-[#193373]", bgColor: "bg-[#c1d3ff]", iconColor: "text-[#3267e6]" },
-    { title: "Средний Рейтинг", value: clinicStats.average_rating.toFixed(1), icon: Star, gradient: "from-[#3772ff] to-[#2c5bcc]", bgColor: "bg-[#ebf1ff]", iconColor: "text-[#3772ff]" },
-  ] : [];
 
   return (
-    <div className="w-full">
+    <div>
+      <div className="grid grid-cols-12 gap-1">
+        {Array.from({ length: 24 }, (_, h) => {
+          const count = map[h] ?? 0;
+          const { bg, text } = cell(count);
+          return (
+            <div key={h} title={`${String(h).padStart(2, "0")}:00 — ${count}`}
+              className={`${bg} rounded-lg flex flex-col items-center justify-center py-2.5 cursor-default transition-transform hover:scale-105`}
+            >
+              <span className={`text-[10px] font-bold ${text}`}>{count > 0 ? count : ""}</span>
+              <span className="text-[9px] text-gray-400 mt-0.5">{String(h).padStart(2, "0")}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex items-center gap-1.5 mt-3 justify-end">
+        <span className="text-[10px] text-gray-400 mr-1">Меньше</span>
+        {["bg-gray-100", "bg-blue-100", "bg-blue-200", "bg-blue-400", "bg-blue-500", "bg-blue-700"].map((c, i) => (
+          <div key={i} className={`w-4 h-4 rounded ${c}`} />
+        ))}
+        <span className="text-[10px] text-gray-400 ml-1">Больше</span>
+      </div>
+    </div>
+  );
+}
 
-      {/* Clinic Banner */}
-      {clinicStats && !clinicStats.is_super_admin && clinicStats.clinic_info && (
-        <div className="rounded-2xl p-5 flex items-center gap-4 border-2 mb-6" style={{ background: 'linear-gradient(135deg, #ebf1ff 0%, #d6e4ff 100%)', borderColor: '#3772ff' }}>
-          {clinicStats.clinic_info.name?.toLowerCase().includes("ayala") ? (
-            <div className="flex-shrink-0 bg-white p-2 rounded-xl border-2 border-[#3772ff]">
-              <Image src={ayalaClinicLogo} alt="Ayala" width={80} height={28} className="object-contain" />
+function Funnel({ funnel }: { funnel: { stage: string; count: number; rate: number }[] }) {
+  const max = Math.max(...funnel.map(f => f.count), 1);
+  const pal = ["#3772ff", "#8b5cf6", "#10b981", "#f59e0b", "#f43f5e"];
+  return (
+    <div className="space-y-2.5">
+      {funnel.map((f, i) => (
+        <div key={f.stage} className="flex items-center gap-3">
+          <span className="text-xs text-gray-500 w-24 text-right flex-shrink-0">{f.stage}</span>
+          <div className="flex-1 bg-gray-100 rounded-full h-7 relative overflow-hidden">
+            <div className="h-full rounded-full flex items-center justify-end pr-3 transition-all duration-700"
+              style={{ width: `${Math.max((f.count / max) * 100, f.count > 0 ? 6 : 0)}%`, background: pal[i % pal.length] }}>
+              {f.count > 0 && <span className="text-white text-[11px] font-bold">{f.count}</span>}
             </div>
-          ) : clinicStats.clinic_info.name?.toLowerCase().includes("bn") ? (
-            <div className="flex-shrink-0 bg-white p-2 rounded-xl border-2 border-[#3772ff]">
-              <Image src={bnClinicLogo} alt="BN" width={80} height={28} className="object-contain" />
-            </div>
-          ) : (
-            <Stethoscope className="w-6 h-6 flex-shrink-0 text-[#3772ff]" />
-          )}
-          <div className="flex-1">
-            <h3 className="font-bold text-sm text-[#1e263e]">{clinicStats.clinic_info.name}</h3>
-            <p className="text-xs text-[#283353] mt-0.5">{clinicStats.clinic_info.address}</p>
           </div>
-          <div className="flex items-center gap-1.5">
-            <Star className="w-4 h-4 text-amber-400" fill="#fbbf24" />
-            <span className="font-bold text-[#1e263e]">{clinicStats.clinic_info.rating != null ? clinicStats.clinic_info.rating.toFixed(1) : "—"}</span>
+          <span className="text-xs font-bold text-gray-700 w-11 flex-shrink-0 text-right">{f.rate}%</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DoctorBoard({ doctors }: { doctors: ReportData["doctor_performance"] }) {
+  const MEDALS = ["from-amber-400 to-orange-400", "from-gray-300 to-gray-400", "from-amber-600 to-amber-700"];
+  return (
+    <div className="space-y-1">
+      {doctors.slice(0, 10).map((d, i) => (
+        <div key={d.doctor_id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors">
+          {i < 3
+            ? <div className={`w-7 h-7 rounded-full bg-gradient-to-br ${MEDALS[i]} flex items-center justify-center flex-shrink-0`}>
+                <span className="text-white text-[10px] font-black">{i + 1}</span>
+              </div>
+            : <span className="w-7 h-7 flex items-center justify-center text-xs font-bold text-gray-400 flex-shrink-0">{i + 1}</span>
+          }
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-gray-900 truncate">{d.doctor_name}</p>
+            <p className="text-[10px] text-gray-400 truncate">{d.specialization}</p>
+          </div>
+          <div className="flex-shrink-0 text-right">
+            <p className="text-sm font-black text-gray-900">{d.total}</p>
+            <p className="text-[10px] text-emerald-600 font-semibold">{d.completion_rate}% ✓</p>
+          </div>
+          <div className="w-14 flex-shrink-0">
+            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-full rounded-full" style={{ width: `${d.completion_rate}%`, background: BLUE }} />
+            </div>
           </div>
         </div>
-      )}
+      ))}
+    </div>
+  );
+}
 
-      {/* Stat Cards */}
-      {statCards.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-[#1e263e]">
-            <TrendingUp className="w-5 h-5 text-[#3772ff]" /> Статистика Клиники
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {statCards.map((card, index) => (
-              <motion.div key={card.title} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 * index }}
-                className="relative overflow-hidden rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
-                style={{ background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)' }}>
-                <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${card.gradient}`} />
-                <div className="flex items-center justify-between mb-3">
-                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${card.bgColor}`}>
-                    <card.icon className={`w-5 h-5 ${card.iconColor}`} />
-                  </div>
-                </div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{card.title}</h3>
-                <p className="text-2xl font-bold text-[#1e263e]">{card.value}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      )}
+// ─── Main ─────────────────────────────────────────────────────────────────────
+
+export default function ReportsView({ user }: { user: any }) {
+  const today = new Date().toISOString().split("T")[0];
+  const yearStart = `${new Date().getFullYear()}-01-01`;
+
+  const [startDate, setStartDate] = useState(yearStart);
+  const [endDate, setEndDate] = useState(today);
+  const [data, setData] = useState<ReportData | null>(null);
+  const [stats, setStats] = useState<ClinicStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchAll = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true); else setLoading(true);
+    try {
+      const [reportRes, statsRes] = await Promise.all([
+        api.get(`/reports/?start=${startDate}&end=${endDate}`),
+        api.get("/clinic-stats/"),
+      ]);
+      setData(reportRes.data);
+      setStats(statsRes.data);
+    } catch (err) {
+      console.error("Analytics fetch error:", err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [startDate, endDate]);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <div className="w-16 h-16 rounded-2xl animate-pulse" style={{ background: BRAND }} />
+        <p className="text-gray-500 font-medium animate-pulse">Загрузка аналитики...</p>
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  return (
+    <div className="space-y-6 pb-12">
 
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-6">
+      <div className="rounded-2xl p-6 text-white" style={{ background: BRAND }}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold mb-2" style={{ color: '#1e263e' }}>
-              Аналитика
-            </h1>
-            <p className="text-gray-600">
-              Подробные отчеты по доходам, консультациям и пациентам
-            </p>
+            <h1 className="text-2xl font-black">Аналитика</h1>
+            <p className="text-blue-200 text-sm mt-0.5">Реальные данные · Математически точные метрики</p>
           </div>
-
-          <div className="flex items-center gap-3">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={fetchReports}
-              className="flex items-center gap-2 px-4 py-3 rounded-2xl border-2 border-gray-200 hover:border-blue-300 font-medium transition-colors"
-            >
-              <RefreshCw className="w-5 h-5" />
-              Обновить
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => handleExportReport('full')}
-              className="flex items-center gap-2 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all"
-              style={{ background: 'linear-gradient(135deg, #3772ff 0%, #2c5bcc 100%)' }}
-            >
-              <Download className="w-5 h-5" />
-              Экспорт PDF
-            </motion.button>
+          <div className="flex flex-wrap items-center gap-2">
+            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+              className="px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm focus:outline-none focus:border-white/50" />
+            <span className="text-blue-300 text-sm">—</span>
+            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+              className="px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm focus:outline-none focus:border-white/50" />
+            <button onClick={() => fetchAll(true)}
+              className="p-2.5 rounded-xl bg-white/10 border border-white/20 hover:bg-white/20 transition-colors" title="Обновить">
+              <RefreshCw className={`w-4 h-4 text-white ${refreshing ? "animate-spin" : ""}`} />
+            </button>
           </div>
-        </div>
-
-        {/* Date Range Filter */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-gray-600" />
-            <span className="font-semibold text-gray-700">Период:</span>
-          </div>
-          <input
-            type="date"
-            value={dateRange.start}
-            onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-            className="px-4 py-2 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
-          />
-          <span className="text-gray-500">—</span>
-          <input
-            type="date"
-            value={dateRange.end}
-            onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-            className="px-4 py-2 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
-          />
         </div>
       </div>
 
-      {/* Loading State */}
-      {loading && (
-        <div className="flex flex-col items-center justify-center py-20">
-          <Loader2 className="w-16 h-16 animate-spin mb-4" style={{ color: '#3772ff' }} />
-          <span className="text-lg font-medium text-gray-600">
-            Загрузка отчетов...
-          </span>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <KPICard label="Консультации" value={data.consultation_report.total_consultations.toLocaleString("ru-RU")}
+          sub={`${data.consultation_report.completion_rate}% завершено`}
+          icon={Stethoscope} change={data.growth_metrics.consultations_change} color="#3772ff" />
+        <KPICard label="Выезды на дом" value={data.appointment_report.total_appointments.toLocaleString("ru-RU")}
+          icon={CalendarCheck} change={data.growth_metrics.appointments_change} color="#8b5cf6" />
+        <KPICard label="Выручка" value={fmtKZT(data.revenue_report.total_revenue)}
+          icon={TrendingUp} change={data.growth_metrics.revenue_change} color="#10b981" />
+        <KPICard label="Пациентов" value={data.patient_report.total_patients.toLocaleString("ru-RU")}
+          sub={`+${data.growth_metrics.new_patients_current} новых`}
+          icon={Users} change={data.growth_metrics.new_patients_change} color="#f59e0b" />
+        <KPICard label="Конверсия" value={`${data.consultation_report.completion_rate}%`}
+          sub="завершённых" icon={Target} color="#06b6d4" />
+        <KPICard label="Удержание" value={`${data.patient_retention.retention_rate}%`}
+          sub={`${data.patient_retention.repeat} повторных`} icon={Repeat} color="#ec4899" />
+      </div>
+
+      {/* Live stats */}
+      {stats && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {([
+            { label: "Врачей", value: stats.total_doctors, icon: Stethoscope, color: "#3772ff" },
+            { label: "Медсестёр", value: stats.total_nurses, icon: Award, color: "#8b5cf6" },
+            { label: "Активных сейчас", value: stats.active_consultations, icon: Activity, color: "#10b981" },
+            { label: "Рейтинг клиники", value: stats.average_rating ? `${stats.average_rating.toFixed(1)} ★` : "—", icon: Star, color: "#f59e0b" },
+          ] as const).map(item => (
+            <div key={item.label} className="bg-white rounded-xl border border-gray-100 px-4 py-3 flex items-center gap-3 shadow-sm">
+              <item.icon className="w-5 h-5 flex-shrink-0" style={{ color: item.color }} />
+              <div>
+                <p className="text-lg font-black text-gray-900">{item.value}</p>
+                <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">{item.label}</p>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Error State */}
-      {error && !loading && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="rounded-3xl p-6 flex items-center gap-4 border-2 mb-8"
-          style={{
-            background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-            borderColor: '#fbbf24'
-          }}
-        >
-          <AlertCircle className="w-7 h-7 text-amber-700 flex-shrink-0" />
-          <div>
-            <h3 className="text-amber-900 font-bold text-base mb-1">Демонстрационный режим</h3>
-            <p className="text-amber-800 text-sm">{error}</p>
-            <p className="text-amber-700 text-sm mt-1">Отображаются демонстрационные данные.</p>
-          </div>
-        </motion.div>
-      )}
+      {/* Revenue + Daily Trend */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <SectionTitle>Выручка по месяцам</SectionTitle>
+          {data.revenue_report.monthly_revenue.length > 0 ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <AreaChart data={data.revenue_report.monthly_revenue}>
+                <defs>
+                  <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={BLUE} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={BLUE} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} tickFormatter={v => fmtKZT(v)} width={70} />
+                <Tooltip content={<ChartTip />} formatter={(v: any) => fmtKZT(Number(v))} />
+                <Area type="monotone" dataKey="revenue" name="Выручка" stroke={BLUE} strokeWidth={2.5}
+                  fill="url(#revGrad)" dot={{ r: 3, fill: BLUE }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[220px] flex items-center justify-center text-gray-400 text-sm">Нет данных по выручке</div>
+          )}
+        </div>
 
-      {/* Reports Content */}
-      {!loading && reportData && (
-        <div className="space-y-8">
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {[
-              {
-                title: "Общий Доход",
-                value: `${(reportData.revenue_report.total_revenue || 680000).toLocaleString()} ₸`,
-                icon: DollarSign,
-                color: "#10b981",
-                bg: "#d1fae5"
-              },
-              {
-                title: "Консультации",
-                value: reportData.consultation_report.total_consultations.toLocaleString(),
-                icon: Activity,
-                color: "#3772ff",
-                bg: "#ebf1ff"
-              },
-              {
-                title: "Записи на дому",
-                value: reportData.appointment_report.total_appointments.toLocaleString(),
-                icon: Users,
-                color: "#8b5cf6",
-                bg: "#f3e8ff"
-              },
-              {
-                title: "Всего Пациентов",
-                value: Math.max(reportData.patient_report.total_patients, 74).toLocaleString(),
-                icon: Users,
-                color: "#f59e0b",
-                bg: "#fef3c7"
-              }
-            ].map((card, index) => (
-              <motion.div
-                key={card.title}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="rounded-3xl p-6 border border-gray-100 shadow-sm"
-                style={{ backgroundColor: card.bg }}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <card.icon className="w-8 h-8" style={{ color: card.color }} />
-                </div>
-                <p className="text-sm text-gray-600 mb-1">{card.title}</p>
-                <p className="text-2xl font-bold" style={{ color: card.color }}>
-                  {card.value}
-                </p>
-              </motion.div>
-            ))}
-          </div>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <SectionTitle>Консультации по дням</SectionTitle>
+          {data.daily_trend.length > 0 ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <AreaChart data={data.daily_trend}>
+                <defs>
+                  <linearGradient id="dayGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                <XAxis dataKey="date" tick={{ fontSize: 9 }} tickFormatter={v => v.slice(5)} interval="preserveStartEnd" />
+                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                <Tooltip content={<ChartTip />} />
+                <Area type="monotone" dataKey="count" name="Консультаций" stroke="#8b5cf6" strokeWidth={2}
+                  fill="url(#dayGrad)" dot={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[220px] flex items-center justify-center text-gray-400 text-sm">Нет данных</div>
+          )}
+        </div>
+      </div>
 
-          {/* Revenue Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Monthly Revenue */}
-            <div className="rounded-3xl p-8 shadow-lg border border-gray-100 bg-white">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold flex items-center gap-3" style={{ color: '#1e263e' }}>
-                  <TrendingUp className="w-7 h-7" style={{ color: '#10b981' }} />
-                  Доход по месяцам
-                </h2>
-                <button
-                  onClick={() => handleExportReport('revenue')}
-                  className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
-                  title="Экспорт"
-                >
-                  <Download className="w-5 h-5 text-gray-600" />
-                </button>
-              </div>
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={reportData.revenue_report.monthly_revenue}>
-                  <defs>
-                    <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="month" stroke="#6b7280" style={{ fontSize: '14px' }} />
-                  <YAxis stroke="#6b7280" style={{ fontSize: '14px' }} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '12px',
-                      padding: '12px'
-                    }}
-                    formatter={(value: number) => [`${value.toLocaleString()} ₸`, 'Доход']}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="revenue"
-                    stroke="#10b981"
-                    strokeWidth={3}
-                    fill="url(#revenueGradient)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+      {/* Funnel + Weekday */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <div className="flex items-start justify-between mb-4">
+            <SectionTitle>Воронка консультаций</SectionTitle>
+            <div className="text-right">
+              <p className="text-[10px] text-gray-400">Отмена / пропуск</p>
+              <p className="text-xl font-black text-red-500">{data.consultation_report.cancellation_rate}%</p>
             </div>
+          </div>
+          <Funnel funnel={data.funnel} />
+        </div>
 
-            {/* Revenue by Service */}
-            <div className="rounded-3xl p-8 shadow-lg border border-gray-100 bg-white">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold flex items-center gap-3" style={{ color: '#1e263e' }}>
-                  <PieChartIcon className="w-7 h-7" style={{ color: '#3772ff' }} />
-                  Доход по услугам
-                </h2>
-              </div>
-              <ResponsiveContainer width="100%" height={300}>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <SectionTitle>Нагрузка по дням недели</SectionTitle>
+          {data.weekday_distribution.length > 0 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={data.weekday_distribution} barSize={28}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                <XAxis dataKey="day" tick={{ fontSize: 12, fontWeight: 600 }} />
+                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                <Tooltip content={<ChartTip />} />
+                <Bar dataKey="count" name="Консультаций" radius={[6, 6, 0, 0]}>
+                  {data.weekday_distribution.map((_, i) => (
+                    <Cell key={i} fill={i >= 5 ? "#f59e0b" : BLUE} fillOpacity={0.85} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[200px] flex items-center justify-center text-gray-400 text-sm">Нет данных</div>
+          )}
+        </div>
+      </div>
+
+      {/* Peak Hours */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <SectionTitle>Тепловая карта активности (часы)</SectionTitle>
+          {data.peak_hours.length > 0 && (
+            <span className="text-xs text-gray-400 bg-gray-50 px-3 py-1 rounded-full">
+              Пик: {data.peak_hours.reduce((a, b) => b.count > a.count ? b : a, data.peak_hours[0])?.hour}:00
+            </span>
+          )}
+        </div>
+        {data.peak_hours.length > 0
+          ? <PeakHeatmap data={data.peak_hours} />
+          : <div className="h-20 flex items-center justify-center text-gray-400 text-sm">Нет данных о часах</div>
+        }
+      </div>
+
+      {/* Doctor Leaderboard + Specializations */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <SectionTitle>Рейтинг врачей</SectionTitle>
+          {data.doctor_performance.length > 0
+            ? <DoctorBoard doctors={data.doctor_performance} />
+            : <p className="text-gray-400 text-sm text-center py-8">Нет данных</p>
+          }
+        </div>
+
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <SectionTitle>По специализациям</SectionTitle>
+          {data.consultation_report.by_specialization.length > 0 ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={data.consultation_report.by_specialization.slice(0, 8)}
+                layout="vertical" barSize={14} margin={{ left: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
+                <YAxis type="category" dataKey="specialization" tick={{ fontSize: 10 }} width={110} />
+                <Tooltip content={<ChartTip />} />
+                <Bar dataKey="count" name="Консультаций" fill={BLUE} fillOpacity={0.85} radius={[0, 6, 6, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[280px] flex items-center justify-center text-gray-400 text-sm">Нет данных</div>
+          )}
+        </div>
+      </div>
+
+      {/* Patient Retention + Age */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <SectionTitle>Удержание пациентов</SectionTitle>
+          <div className="flex items-center gap-6">
+            <div className="relative w-36 h-36 flex-shrink-0">
+              <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie
-                    data={reportData.revenue_report.revenue_by_service?.length
-                      ? reportData.revenue_report.revenue_by_service
-                      : [
-                          { service: "Консультации", revenue: 480000, count: 64 },
-                          { service: "Записи на дому", revenue: 150000, count: 18 },
-                          { service: "Анализы", revenue: 50000, count: 10 },
-                        ]}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={false}
-                    outerRadius={90}
-                    dataKey="revenue"
-                    nameKey="service"
-                  >
-                    {(reportData.revenue_report.revenue_by_service?.length
-                      ? reportData.revenue_report.revenue_by_service
-                      : [
-                          { service: "Консультации", revenue: 480000, count: 64 },
-                          { service: "Записи на дому", revenue: 150000, count: 18 },
-                          { service: "Анализы", revenue: 50000, count: 10 },
-                        ]
-                    ).map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={['#3772ff', '#8b5cf6', '#10b981'][index % 3]} />
-                    ))}
+                  <Pie data={[
+                    { name: "Повторные", value: data.patient_retention.repeat },
+                    { name: "Разовые", value: data.patient_retention.one_time },
+                  ]} cx="50%" cy="50%" innerRadius={44} outerRadius={62}
+                    dataKey="value" startAngle={90} endAngle={-270}>
+                    <Cell fill={BLUE} />
+                    <Cell fill="#e5e7eb" />
                   </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '12px',
-                      padding: '12px'
-                    }}
-                    formatter={(value: number) => `${value.toLocaleString()} ₸`}
-                  />
-                  <Legend formatter={(value) => value} />
                 </PieChart>
               </ResponsiveContainer>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-xl font-black text-gray-900">{data.patient_retention.retention_rate}%</span>
+                <span className="text-[10px] text-gray-400">возврат</span>
+              </div>
+            </div>
+            <div className="space-y-3 flex-1">
+              {[
+                { label: "Уникальных", value: data.patient_retention.total_unique, dot: "bg-gray-300" },
+                { label: "Повторных", value: data.patient_retention.repeat, dot: "bg-blue-500" },
+                { label: "Разовых", value: data.patient_retention.one_time, dot: "bg-gray-200" },
+              ].map(item => (
+                <div key={item.label} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2.5 h-2.5 rounded-full ${item.dot}`} />
+                    <span className="text-sm text-gray-600">{item.label}</span>
+                  </div>
+                  <span className="text-sm font-bold text-gray-900">{item.value}</span>
+                </div>
+              ))}
             </div>
           </div>
+        </div>
 
-          {/* Consultation Reports */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Consultations by Status */}
-            <div className="rounded-3xl p-8 shadow-lg border border-gray-100 bg-white">
-              <h2 className="text-2xl font-bold mb-6 flex items-center gap-3" style={{ color: '#1e263e' }}>
-                <BarChart3 className="w-7 h-7" style={{ color: '#3772ff' }} />
-                Консультации по статусу
-              </h2>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={reportData.consultation_report.by_status}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="status" stroke="#6b7280" style={{ fontSize: '14px' }} />
-                  <YAxis stroke="#6b7280" style={{ fontSize: '14px' }} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '12px',
-                      padding: '12px'
-                    }}
-                  />
-                  <Bar dataKey="count" radius={[8, 8, 0, 0]}>
-                    {reportData.consultation_report.by_status.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={getStatusColor(entry.status)} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <SectionTitle>Возрастные группы пациентов</SectionTitle>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={data.patient_report.by_age_group} barSize={32}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+              <XAxis dataKey="age_group" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+              <Tooltip content={<ChartTip />} />
+              <Bar dataKey="count" name="Пациентов" radius={[6, 6, 0, 0]}>
+                {data.patient_report.by_age_group.map((_, i) => (
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} fillOpacity={0.85} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
 
-            {/* Top Doctors */}
-            <div className="rounded-3xl p-8 shadow-lg border border-gray-100 bg-white">
-              <h2 className="text-2xl font-bold mb-6 flex items-center gap-3" style={{ color: '#1e263e' }}>
-                <Users className="w-7 h-7" style={{ color: '#8b5cf6' }} />
-                Топ докторов
-              </h2>
-              <div className="space-y-4">
-                {reportData.consultation_report.by_doctor.map((doctor, index) => (
-                  <div key={doctor.doctor_name} className="flex items-center justify-between p-4 rounded-2xl bg-gray-50">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
-                        style={{ background: `linear-gradient(135deg, ${['#3772ff', '#8b5cf6', '#10b981', '#f59e0b'][index % 4]} 0%, ${['#2c5bcc', '#7c3aed', '#059669', '#d97706'][index % 4]} 100%)` }}
-                      >
-                        {index + 1}
-                      </div>
-                      <div>
-                        <p className="font-semibold" style={{ color: '#1e263e' }}>{doctor.doctor_name}</p>
-                        <p className="text-sm text-gray-600">{doctor.consultations} консультаций</p>
-                      </div>
+      {/* Statuses */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {[
+          { title: "Статусы консультаций", data: data.consultation_report.by_status },
+          { title: "Статусы выездов", data: data.appointment_report.by_status },
+        ].map(section => (
+          <div key={section.title} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <SectionTitle>{section.title}</SectionTitle>
+            <div className="flex items-center gap-4">
+              <div className="w-36 h-36 flex-shrink-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={section.data} cx="50%" cy="50%" innerRadius={38} outerRadius={58} dataKey="count">
+                      {section.data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex-1 space-y-2">
+                {section.data.map((s, i) => (
+                  <div key={s.status} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
+                      <span className="text-sm text-gray-600">{s.status}</span>
                     </div>
-                    <p className="font-bold" style={{ color: '#10b981' }}>
-                      {doctor.revenue.toLocaleString()} ₸
-                    </p>
+                    <span className="text-sm font-bold text-gray-900">{s.count}</span>
                   </div>
                 ))}
               </div>
             </div>
           </div>
+        ))}
+      </div>
 
-          {/* Patient Reports */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* New Patients Monthly */}
-            <div className="rounded-3xl p-8 shadow-lg border border-gray-100 bg-white">
-              <h2 className="text-2xl font-bold mb-6 flex items-center gap-3" style={{ color: '#1e263e' }}>
-                <TrendingUp className="w-7 h-7" style={{ color: '#f59e0b' }} />
-                Новые пациенты
-              </h2>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={reportData.patient_report.new_patients_monthly}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="month" stroke="#6b7280" style={{ fontSize: '14px' }} />
-                  <YAxis stroke="#6b7280" style={{ fontSize: '14px' }} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '12px',
-                      padding: '12px'
-                    }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="count"
-                    stroke="#f59e0b"
-                    strokeWidth={3}
-                    dot={{ fill: '#f59e0b', r: 5 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Patients by Age Group */}
-            <div className="rounded-3xl p-8 shadow-lg border border-gray-100 bg-white">
-              <h2 className="text-2xl font-bold mb-6 flex items-center gap-3" style={{ color: '#1e263e' }}>
-                <Users className="w-7 h-7" style={{ color: '#3772ff' }} />
-                Пациенты по возрасту
-              </h2>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={reportData.patient_report.by_age_group}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="age_group" stroke="#6b7280" style={{ fontSize: '14px' }} />
-                  <YAxis stroke="#6b7280" style={{ fontSize: '14px' }} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '12px',
-                      padding: '12px'
-                    }}
-                  />
-                  <Bar dataKey="count" fill="#3772ff" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+      {/* New Patients Trend */}
+      {data.patient_report.new_patients_monthly.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <SectionTitle>Прирост пациентов по месяцам</SectionTitle>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={data.patient_report.new_patients_monthly}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+              <Tooltip content={<ChartTip />} />
+              <Line type="monotone" dataKey="count" name="Новых пациентов" stroke="#10b981"
+                strokeWidth={2.5} dot={{ r: 4, fill: "#10b981" }} activeDot={{ r: 6 }} />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
       )}
+
     </div>
   );
 }
