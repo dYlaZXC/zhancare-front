@@ -1,4 +1,6 @@
 import type { MetadataRoute } from "next";
+import { symptoms } from "@/data/symptoms";
+import { specialists } from "@/data/specialists";
 
 async function getClinicSlugs(): Promise<string[]> {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -28,13 +30,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/data-deletion`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
   ];
 
-  const slugs = await getClinicSlugs();
-  const clinicRoutes: MetadataRoute.Sitemap = slugs.map((slug) => ({
-    url: `${base}/consultation/symptoms/${slug}`,
+  const specialistRoutes: MetadataRoute.Sitemap = Object.keys(specialists).map((slug) => ({
+    url: `${base}/specialists/${slug}`,
+    lastModified: now,
+    changeFrequency: "monthly" as const,
+    priority: 0.85,
+  }));
+
+  const symptomRoutes: MetadataRoute.Sitemap = Object.keys(symptoms).map((slug) => ({
+    url: `${base}/symptoms/${slug}`,
     lastModified: now,
     changeFrequency: "monthly" as const,
     priority: 0.8,
   }));
 
-  return [...staticRoutes, ...clinicRoutes];
+  const slugs = await getClinicSlugs();
+  const clinicRoutes: MetadataRoute.Sitemap = slugs.map((slug) => ({
+    url: `${base}/consultation/symptoms/${slug}`,
+    lastModified: now,
+    changeFrequency: "monthly" as const,
+    priority: 0.75,
+  }));
+
+  return [...staticRoutes, ...specialistRoutes, ...symptomRoutes, ...clinicRoutes];
 }
