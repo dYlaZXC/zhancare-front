@@ -801,7 +801,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
 
               {clinic?.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={clinic.logoUrl} alt={clinic.clinicName} className="h-6 sm:h-8 w-auto rounded-lg object-contain" />
+                <img src={clinic.logoUrl} alt={clinic.clinicName} className="h-6 sm:h-8 w-auto max-w-[96px] sm:max-w-[120px] rounded-lg object-contain" />
               ) : (
                 <Image src={appLogo} alt={brand.name + " logo"} height={32} className="h-6 sm:h-8 w-auto" />
               )}
