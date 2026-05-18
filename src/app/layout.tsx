@@ -19,32 +19,55 @@ const dmSans = DM_Sans({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://zhan.care"),
-  title: "ZhanCare.AI - Будущее телемедицины",
+  title: {
+    default: "ZhanCare.AI — Будущее телемедицины",
+    template: "%s | ZhanCare.AI",
+  },
   description:
-    "ZhanCare.AI — инновационная платформа для дистанционных медицинских консультаций...",
-  keywords: ["телемедицина", "медицинские консультации", "ИИ в медицине", "здоровье"],
-  authors: [
-    {
-      name: "Adilan Akhramovich",
-      url: "https://www.linkedin.com/in/adilan-akhramovich-914132158/",
-    },
+    "ZhanCare.AI — платформа для дистанционных медицинских консультаций с ИИ-ассистентом. Онлайн-консультации врачей, вызов медсестры на дом, умный анализ симптомов. Здоровье в один клик.",
+  keywords: [
+    "телемедицина", "медицинские консультации онлайн", "ИИ в медицине",
+    "врач онлайн", "вызов медсестры", "медицина казахстан", "здоровье",
+    "telemedicine", "онлайн дәрігер", "медициналық консультация",
   ],
+  authors: [{ name: "Adilan Akhramovich", url: "https://www.linkedin.com/in/adilan-akhramovich-914132158/" }],
   creator: "Adilan Akhramovich",
   publisher: "ТОО iTry, Алматы",
+  alternates: {
+    canonical: "https://zhan.care",
+    languages: {
+      "ru-KZ": "https://zhan.care",
+      "uz-UZ": "https://uz.zhan.care",
+    },
+  },
   openGraph: {
-    title: "ZhanCare.AI - Будущее телемедицины",
-    description: "ZhanCare.AI предоставляет современные технологии...",
+    title: "ZhanCare.AI — Будущее телемедицины",
+    description:
+      "Онлайн-консультации врачей, ИИ-анализ симптомов и вызов медсестры на дом. Здоровье в один клик — ZhanCare.AI.",
+    url: "https://zhan.care",
+    siteName: "ZhanCare.AI",
+    locale: "ru_RU",
+    type: "website",
     images: [
       {
         url: "/opengraph-zhancare.png",
         width: 1200,
         height: 630,
-        alt: "ZhanCare.AI - Телемедицина будущего",
+        alt: "ZhanCare.AI — Телемедицина будущего",
       },
     ],
-    locale: "ru_RU",
-    type: "website",
-    siteName: "ZhanCare.AI",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ZhanCare.AI — Будущее телемедицины",
+    description:
+      "Онлайн-консультации врачей, ИИ-анализ симптомов и вызов медсестры на дом.",
+    images: ["/opengraph-zhancare.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large" },
   },
 };
 
@@ -76,6 +99,54 @@ export default async function RootLayout({
             --brand-glow: ${brand.sidebarGlow};
           }
         `}</style>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@graph": [
+                {
+                  "@type": "WebSite",
+                  "@id": "https://zhan.care/#website",
+                  url: "https://zhan.care",
+                  name: "ZhanCare.AI",
+                  description: "Платформа для дистанционных медицинских консультаций с ИИ-ассистентом",
+                  inLanguage: ["ru-KZ", "uz-UZ"],
+                  potentialAction: {
+                    "@type": "SearchAction",
+                    target: { "@type": "EntryPoint", urlTemplate: "https://zhan.care/?q={search_term_string}" },
+                    "query-input": "required name=search_term_string",
+                  },
+                },
+                {
+                  "@type": "MedicalOrganization",
+                  "@id": "https://zhan.care/#organization",
+                  name: "ZhanCare.AI",
+                  url: "https://zhan.care",
+                  logo: {
+                    "@type": "ImageObject",
+                    url: "https://zhan.care/logosaas.png",
+                    width: 600,
+                    height: 200,
+                  },
+                  description: "Инновационная платформа телемедицины в Казахстане. Онлайн-консультации, ИИ-анализ симптомов, вызов медсестры на дом.",
+                  medicalSpecialty: "GeneralPractice",
+                  availableService: [
+                    { "@type": "MedicalTherapy", name: "Онлайн-консультация врача" },
+                    { "@type": "MedicalTherapy", name: "ИИ-анализ симптомов" },
+                    { "@type": "HomeHealthCareService", name: "Вызов медсестры на дом" },
+                  ],
+                  address: {
+                    "@type": "PostalAddress",
+                    addressCountry: "KZ",
+                    addressLocality: "Алматы",
+                  },
+                  sameAs: ["https://t.me/zhancareai"],
+                },
+              ],
+            }),
+          }}
+        />
         <Script
           strategy="afterInteractive"
           src="https://www.googletagmanager.com/gtag/js?id=G-2ZF4XS6G3Y"
