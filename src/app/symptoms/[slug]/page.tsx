@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: page.title,
       description: page.description,
       url: `https://zhan.care/symptoms/${slug}`,
-      images: [{ url: "/opengraph-zhancare.png", width: 1200, height: 630 }],
+      images: [{ url: "/opengraph-zhancare.png", width: 1200, height: 630, alt: page.h1 }],
     },
   };
 }

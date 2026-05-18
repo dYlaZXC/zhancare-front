@@ -13,11 +13,11 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "ZhanCare.AI — ИИ-врач, онлайн-консультации в Казахстане",
+    title: "ZhanCare.AI — ИИ-ассистент и онлайн-консультации в Казахстане",
     description:
       "Онлайн-консультации с врачами, ИИ-анализ симптомов и вызов медсестры на дом. Запишитесь за минуту — первый ответ за 10 секунд. Попробуйте бесплатно.",
     url: "https://zhan.care",
-    images: [{ url: "/opengraph-zhancare.png", width: 1200, height: 630 }],
+    images: [{ url: "/opengraph-zhancare.png", width: 1200, height: 630, alt: "ZhanCare.AI — ИИ-ассистент и онлайн-консультации в Казахстане" }],
   },
 };
 
