@@ -319,7 +319,7 @@ export const Footer = () => {
           viewport={{ once: true }}
           className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 max-w-7xl"
         >
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 xl:gap-16">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 xl:gap-14">
 
             {/* Brand Section */}
             <motion.div variants={itemVariants} className="lg:col-span-3">
@@ -394,6 +394,38 @@ export const Footer = () => {
               </div>
             </motion.div>
 
+            {/* Medical hub links */}
+            <motion.div variants={itemVariants} className="lg:col-span-2">
+              <div className="space-y-4">
+                <h3 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
+                  Медицина
+                  <div className="h-px flex-1 bg-gradient-to-r from-white/20 to-transparent" />
+                </h3>
+                <nav className="space-y-2">
+                  {[
+                    { href: "/symptoms",                            label: "Симптомы" },
+                    { href: "/specialists",                         label: "Специалисты" },
+                    { href: "/almaty",                              label: "Врачи в Алматы" },
+                    { href: "/almaty/specialists/kardiolog",        label: "Кардиолог в Алматы" },
+                    { href: "/almaty/specialists/pediatr",          label: "Педиатр в Алматы" },
+                    { href: "/almaty/symptoms/golovnaya-bol",       label: "Головная боль в Алматы" },
+                  ].map(({ href, label }) => (
+                    <motion.a
+                      key={href}
+                      href={href}
+                      className="block text-gray-400 hover:text-blue-400 text-sm transition-all duration-300 group flex items-center gap-2"
+                      whileHover={{ x: 5 }}
+                    >
+                      <CheckCircle className="w-3 h-3 text-blue-500/50 group-hover:text-blue-400 transition-colors" />
+                      <span className="border-b border-transparent group-hover:border-blue-400/50 transition-colors duration-300">
+                        {label}
+                      </span>
+                    </motion.a>
+                  ))}
+                </nav>
+              </div>
+            </motion.div>
+
             {/* Legal Links */}
             <motion.div variants={itemVariants} className="lg:col-span-2">
               <div className="space-y-4">
@@ -439,7 +471,7 @@ export const Footer = () => {
             </motion.div>
 
             {/* Newsletter */}
-            <motion.div variants={itemVariants} className="lg:col-span-5">
+            <motion.div variants={itemVariants} className="lg:col-span-3">
               <div className="relative">
                 {/* Glassmorphic Card Background */}
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-indigo-600/5 to-purple-600/10 rounded-2xl blur-xl" />
