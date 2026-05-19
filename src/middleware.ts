@@ -22,8 +22,18 @@ const PROTECTED_PREFIXES = [
 const AUTH_ONLY_ROUTES = ["/login"];
 
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, search } = request.nextUrl;
   const hostname = request.headers.get("host") || "";
+
+  // 301 redirect www → non-www
+  if (hostname.startsWith("www.")) {
+    const nonWww = hostname.replace(/^www\./, "");
+    return NextResponse.redirect(
+      `https://${nonWww}${pathname}${search}`,
+      { status: 301 }
+    );
+  }
+
   const brand = hostname.startsWith("uz.") ? "uz" : "kz";
 
   const isAuthenticated = !!request.cookies.get("zha_auth")?.value;

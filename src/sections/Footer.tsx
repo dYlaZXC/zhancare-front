@@ -570,23 +570,22 @@ export const Footer = () => {
               <span>&copy; {new Date().getFullYear()} {translations.rights}</span>
             </div>
 
-            {/* Made with love */}
-            {/* <div className="flex items-center gap-2 text-gray-500 text-sm">
-              <span>Made with</span>
-              <motion.div
-                animate={{
-                  scale: [1, 1.2, 1],
-                }}
-                transition={{
-                  duration: 1,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-              >
-                <Heart className="w-4 h-4 text-red-500" fill="currentColor" />
-              </motion.div>
-              <span>by ZhanCare.AI Team</span>
-            </div> */}
+            {/* Seobility badge */}
+            <a
+              href="https://www.seobility.net/en/seocheck/check?url=https%3A%2F%2Fzhan.care%2F"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="opacity-40 hover:opacity-70 transition-opacity duration-300"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="https://app.seobility.net/widget/widget.png?url=https%3A%2F%2Fzhan.care%2F"
+                alt="Seobility Score for zhan.care"
+                width={100}
+                height={40}
+                style={{ height: "40px", width: "auto" }}
+              />
+            </a>
           </motion.div>
         </motion.div>
       </div>

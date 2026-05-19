@@ -63,17 +63,25 @@ const DoctorVideoHeader: React.FC<DoctorVideoHeaderProps> = ({
     return () => clearTimeout(timer);
   }, []);
 
-  // Performance optimized timer using RAF
+  // Sync timer with started_at from API when available
   useEffect(() => {
+    if (consultation?.started_at) {
+      startTimeRef.current = new Date(consultation.started_at).getTime();
+    }
+  }, [consultation?.started_at]);
+
+  // Performance optimized timer — only runs when consultation is ongoing
+  useEffect(() => {
+    if (consultation?.status !== "ongoing") return;
     const updateDuration = () => {
       setCallDuration(Math.floor((Date.now() - startTimeRef.current) / 1000));
     };
-
+    updateDuration();
     intervalRef.current = setInterval(updateDuration, 1000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, []);
+  }, [consultation?.status]);
 
   // Simulate connection quality changes
   useEffect(() => {

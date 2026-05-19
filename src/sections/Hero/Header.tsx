@@ -13,6 +13,7 @@ import LanguageSwitcher from "./LanguageSwitcher";
 import UserDropdown from "./UserDropdown";
 import MobileMenu from "./MobileMenu";
 import Link from "next/link";
+import { Rocket, TrendingUp } from "lucide-react";
 
 // Constants
 const SCROLL_THRESHOLD = 50;
@@ -290,7 +291,7 @@ export default function Header() {
                         onClick={() => { handleScrollToSection('traction'); setTractionOpen(false); }}
                         className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-white/90 hover:bg-white/10 transition-colors"
                       >
-                        <span className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-base" style={{ background: `linear-gradient(135deg, ${brand.primary} 0%, ${brand.secondary} 100%)` }}>🚀</span>
+                        <span className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${brand.primary} 0%, ${brand.secondary} 100%)` }}><Rocket size={14} className="text-white" /></span>
                         <div>
                           <div className="font-semibold leading-tight">{tractionDropdownLabels.journey}</div>
                           <div className="text-xs text-white/50 mt-0.5">
@@ -301,17 +302,19 @@ export default function Header() {
 
                       <div className="h-px mx-3 bg-white/10" />
 
-                      {/* Item 2 — Pipeline page */}
+                      {/* Item 2 — Investor pipeline (public, read-only) */}
                       <Link
-                        href="/admin/pipeline"
+                        href="/investors"
                         onClick={() => setTractionOpen(false)}
                         className="flex items-center gap-3 px-4 py-3 text-sm text-white/90 hover:bg-white/10 transition-colors"
                       >
-                        <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-[#10b981] to-[#059669] flex items-center justify-center text-base">📊</span>
+                        <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-[#10b981] to-[#059669] flex items-center justify-center"><TrendingUp size={14} className="text-white" /></span>
                         <div>
-                          <div className="font-semibold leading-tight">{tractionDropdownLabels.pipeline}</div>
+                          <div className="font-semibold leading-tight">
+                            {language === 'ru' ? 'Для инвесторов' : language === 'kz' ? 'Инвесторларға' : language === 'uz' ? "Investorlar uchun" : 'For Investors'}
+                          </div>
                           <div className="text-xs text-white/50 mt-0.5">
-                            {language === 'ru' ? 'CRM клиник' : language === 'kz' ? 'Клиника CRM' : language === 'uz' ? "Klinikalar CRM" : 'Clinics CRM'}
+                            {language === 'ru' ? 'Статусы клиник' : language === 'kz' ? 'Клиника статустары' : language === 'uz' ? "Klinika holatlari" : 'Clinic statuses'}
                           </div>
                         </div>
                       </Link>

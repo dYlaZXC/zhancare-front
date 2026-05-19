@@ -107,7 +107,7 @@ const DoctorVideoCallPage: React.FC = () => {
     fetchConsultationData();
   }, []);
 
-  const handleEndCall = () => {
+  const handleDisconnect = () => {
     router.push("/doctor/consultations");
   };
 
@@ -348,11 +348,33 @@ const DoctorVideoCallPage: React.FC = () => {
 
   const handleGenerateReport = (data: any) => {
     console.log("Generating report with data:", data);
-    // TODO: Implement report generation
   };
 
   const handleOpenConsultationSheet = () => {
     consultationSheetRef.current?.openSheet();
+  };
+
+  const handleStartCall = async () => {
+    if (!meetingId) return;
+    try {
+      await api.post(`/consultations/${meetingId}/start-call/`);
+      setConsultation((prev) => prev ? { ...prev, status: "ongoing", started_at: new Date().toISOString() } : prev);
+      toast.success("Консультация начата");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Не удалось начать консультацию");
+    }
+  };
+
+  const handleEndCall = async () => {
+    if (!meetingId) return;
+    try {
+      await api.post(`/consultations/${meetingId}/end-call/`);
+      setConsultation((prev) => prev ? { ...prev, status: "completed", ended_at: new Date().toISOString() } : prev);
+      toast.success("Консультация завершена");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Не удалось завершить консультацию");
+    }
+    handleDisconnect();
   };
 
   return (
@@ -365,12 +387,33 @@ const DoctorVideoCallPage: React.FC = () => {
         />
       </div>
 
+      {/* Consultation status bar */}
+      {consultation?.status === "pending" && (
+        <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center justify-between">
+          <span className="text-amber-300 text-sm">Консультация ещё не начата</span>
+          <button
+            onClick={handleStartCall}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors"
+          >
+            ▶ Начать консультацию
+          </button>
+        </div>
+      )}
+      {consultation?.status === "completed" && (
+        <div className="bg-gray-700/50 border-b border-gray-600 px-4 py-2 flex items-center gap-2">
+          <span className="text-gray-400 text-sm">✓ Консультация завершена</span>
+          {consultation.duration_seconds && (
+            <span className="text-gray-500 text-sm">· {Math.floor(consultation.duration_seconds / 60)} мин</span>
+          )}
+        </div>
+      )}
+
       <div className="w-full p-4" style={{ height: 'calc(100vh - 180px)' }}>
         <DoctorVideoFrame
           meetingId={meetingId}
           safeUserName={safeUserName}
           userEmail={userEmail}
-          onDisconnect={handleEndCall}
+          onDisconnect={handleDisconnect}
           isRecording={isRecording}
           patientName={patientName}
         />

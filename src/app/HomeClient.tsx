@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { CallToAction } from "@/sections/CallToAction";
 import { Footer } from "@/sections/Footer";
 import Hero from "@/sections/MeetStyleConsultation/HeroMeetStyle";
@@ -111,6 +112,35 @@ export default function HomeClient() {
       <Traction />
       <ProductShowcase />
       <CallToAction />
+
+      {/* SEO internal links — symptoms & specialists hub */}
+      <section className="bg-[#F8FAFF] py-12 px-4">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-xl font-bold text-gray-800 mb-6 text-center">Популярные запросы</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {[
+              { href: "/symptoms/golovnaya-bol", label: "Головная боль" },
+              { href: "/symptoms/bol-v-grudi", label: "Боль в груди" },
+              { href: "/symptoms/temperatura", label: "Температура" },
+              { href: "/symptoms/bol-v-zhivote", label: "Боль в животе" },
+              { href: "/specialists/kardiolog", label: "Кардиолог" },
+              { href: "/specialists/pediatr", label: "Педиатр" },
+              { href: "/specialists/terapevt", label: "Терапевт" },
+              { href: "/specialists/nevrolog", label: "Невролог" },
+              { href: "/specialists/ginekolog", label: "Гинеколог" },
+            ].map(({ href, label }) => (
+              <Link
+                key={href}
+                href={href}
+                className="text-center text-sm text-[#3772ff] hover:text-[#2960e8] bg-white border border-gray-200 rounded-xl py-2.5 px-3 hover:border-[#3772ff] hover:shadow-sm transition-all"
+              >
+                {label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <LogoTicker />
       <ChatButton onToggle={() => setIsChatOpen((prev) => !prev)} />
       {isChatOpen && <ChatComponent onClose={() => setIsChatOpen(false)} />}

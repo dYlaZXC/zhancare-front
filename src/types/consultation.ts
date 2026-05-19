@@ -24,6 +24,7 @@ export interface Consultation {
   created_at: string;
   started_at?: string;
   ended_at?: string;
+  duration_seconds?: number | null;
   scheduled_at?: string;
   appointment_time?: string;
   symptoms?: string;

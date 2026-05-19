@@ -1,6 +1,7 @@
 import {withSentryConfig} from "@sentry/nextjs";
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  poweredByHeader: false,
   turbopack: {
     // Empty config to silence Turbopack warning, we use webpack for SVG handling
   },

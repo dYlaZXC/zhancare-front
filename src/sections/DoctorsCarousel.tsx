@@ -209,7 +209,7 @@ export const DoctorsCarousel = () => {
     : doctors.filter((doc) => doc.category === activeCategory);
 
   return (
-    <section id="specialists" className="py-20 bg-gradient-to-b from-white to-[#d2dcff] text-center overflow-hidden">
+    <section id="specialists" className="py-20 bg-gradient-to-b from-white to-[#d2dcff] text-center overflow-x-hidden">
       <motion.h2
         className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl laptop-hd:text-4xl desktop-fhd:text-5xl desktop-qhd:text-6xl desktop-4k:text-7xl font-extrabold tracking-tight mb-4 sm:mb-6 lg:mb-8"
         style={{ color: brand.secondary }}
@@ -303,15 +303,15 @@ export const DoctorsCarousel = () => {
           768: { slidesPerView: 2 },
           1024: { slidesPerView: 3 },
         }}
-        className="max-w-7xl mx-auto px-6"
+        className="max-w-7xl mx-auto px-6 pb-4"
       >
         {filteredDoctors.map((doc, index) => (
           <SwiperSlide key={index}>
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: index * 0.1 }}
+              transition={{ duration: 0.5, delay: index * 0.08 }}
               className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl overflow-hidden w-[320px] mx-auto transition-all duration-500 hover:-translate-y-2 relative border border-gray-100"
             >
               {/* Photo Section with overlay gradient */}
@@ -346,9 +346,9 @@ export const DoctorsCarousel = () => {
               {/* Info Section */}
               <div className="p-6 space-y-3">
                 {/* Name */}
-                <h3 className="text-xl font-bold text-gray-900 leading-tight min-h-[56px] line-clamp-2">
+                <p className="text-xl font-bold text-gray-900 leading-tight min-h-[56px] line-clamp-2">
                   {doc.name}
-                </h3>
+                </p>
 
                 {/* Specialty */}
                 <p className="text-sm text-gray-600 leading-relaxed min-h-[40px] line-clamp-2">

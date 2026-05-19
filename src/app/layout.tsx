@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     template: "%s | ZhanCare.AI",
   },
   description:
-    "ZhanCare.AI — платформа для дистанционных медицинских консультаций с ИИ-ассистентом. Онлайн-консультации врачей, вызов медсестры на дом, умный анализ симптомов. Здоровье в один клик.",
+    "Онлайн-консультации врачей, ИИ-анализ симптомов и вызов медсестры на дом в Казахстане. Первый ответ за 10 секунд.",
   keywords: [
     "телемедицина", "медицинские консультации онлайн", "ИИ в медицине",
     "врач онлайн", "вызов медсестры", "медицина казахстан", "здоровье",
@@ -36,6 +36,8 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://zhan.care",
     languages: {
+      "x-default": "https://zhan.care",
+      "ru": "https://zhan.care",
       "ru-KZ": "https://zhan.care",
       "uz-UZ": "https://uz.zhan.care",
     },
@@ -63,6 +65,9 @@ export const metadata: Metadata = {
     description:
       "Онлайн-консультации врачей, ИИ-анализ симптомов и вызов медсестры на дом.",
     images: ["/opengraph-zhancare.png"],
+  },
+  icons: {
+    apple: "/logo_icon.png",
   },
   robots: {
     index: true,
