@@ -319,16 +319,16 @@ export const Footer = () => {
           viewport={{ once: true }}
           className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 max-w-7xl"
         >
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 xl:gap-14">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.2fr_0.9fr_0.9fr_0.9fr_1.5fr] gap-6 lg:gap-8">
 
             {/* Brand Section */}
-            <motion.div variants={itemVariants} className="lg:col-span-3">
+            <motion.div variants={itemVariants} className="md:col-span-1">
               <div className="space-y-6 lg:space-y-8">
                 {/* Logo */}
                 <motion.div
                   whileHover={{ scale: 1.05 }}
                   transition={{ type: "spring", stiffness: 300 }}
-                  className="w-48 sm:w-56 md:w-64"
+                  className="w-40 sm:w-48 lg:w-52"
                 >
                   <Image
                     src={appLogo}
@@ -370,7 +370,7 @@ export const Footer = () => {
             </motion.div>
 
             {/* Navigation */}
-            <motion.div variants={itemVariants} className="lg:col-span-2">
+            <motion.div variants={itemVariants} className="md:col-span-1">
               <div className="space-y-4">
                 <h3 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
                   {translations.navigation.title}
@@ -395,7 +395,7 @@ export const Footer = () => {
             </motion.div>
 
             {/* Medical hub links */}
-            <motion.div variants={itemVariants} className="lg:col-span-2">
+            <motion.div variants={itemVariants} className="md:col-span-1">
               <div className="space-y-4">
                 <h3 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
                   Медицина
@@ -427,7 +427,7 @@ export const Footer = () => {
             </motion.div>
 
             {/* Legal Links */}
-            <motion.div variants={itemVariants} className="lg:col-span-2">
+            <motion.div variants={itemVariants} className="md:col-span-1">
               <div className="space-y-4">
                 <h3 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
                   {translations.legal.title}
@@ -471,7 +471,7 @@ export const Footer = () => {
             </motion.div>
 
             {/* Newsletter */}
-            <motion.div variants={itemVariants} className="lg:col-span-3">
+            <motion.div variants={itemVariants} className="md:col-span-2 lg:col-span-1">
               <div className="relative">
                 {/* Glassmorphic Card Background */}
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-indigo-600/5 to-purple-600/10 rounded-2xl blur-xl" />
