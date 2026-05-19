@@ -115,9 +115,9 @@ export const ImpactSection = () => {
                 <div className="flex justify-center items-center w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 desktop-qhd:w-20 desktop-qhd:h-20 desktop-4k:w-24 desktop-4k:h-24 mb-4 sm:mb-6 rounded-full group-hover:scale-110 transition-all duration-300" style={{ background: `linear-gradient(135deg, ${brand.primary} 0%, ${brand.secondary} 100%)` }}>
                   <FontAwesomeIcon icon={icon} className="text-xl sm:text-2xl lg:text-3xl desktop-qhd:text-4xl desktop-4k:text-5xl text-white" />
                 </div>
-                <h3 className="text-2xl sm:text-3xl lg:text-4xl desktop-qhd:text-5xl desktop-4k:text-6xl font-bold mb-2" style={{ color: brand.secondary }}>
+                <p className="text-2xl sm:text-3xl lg:text-4xl desktop-qhd:text-5xl desktop-4k:text-6xl font-bold mb-2" style={{ color: brand.secondary }}>
                   <CountUp end={stat.value} duration={2} />{stat.currency ? stat.currency : stat.percent ? "%" : "+"}
-                </h3>
+                </p>
                 <p className="text-gray-600 text-xs sm:text-sm lg:text-base desktop-qhd:text-lg desktop-4k:text-xl mt-2 text-center leading-relaxed">{stat.description}</p>
               </motion.div>
             );
@@ -162,9 +162,9 @@ export const ImpactSection = () => {
                 <div className="flex justify-center items-center w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 desktop-qhd:w-20 desktop-qhd:h-20 desktop-4k:w-24 desktop-4k:h-24 mb-4 sm:mb-6 rounded-full" style={{ background: `linear-gradient(135deg, ${brand.primary} 0%, ${brand.secondary} 100%)` }}>
                   <FontAwesomeIcon icon={icon} className="text-xl sm:text-2xl lg:text-3xl desktop-qhd:text-4xl desktop-4k:text-5xl text-white" />
                 </div>
-                <h3 className="text-lg sm:text-xl lg:text-2xl desktop-qhd:text-3xl desktop-4k:text-4xl font-bold mb-2 sm:mb-3 lg:mb-4">
+                <p className="text-lg sm:text-xl lg:text-2xl desktop-qhd:text-3xl desktop-4k:text-4xl font-bold mb-2 sm:mb-3 lg:mb-4">
                   {feature.title}
-                </h3>
+                </p>
                 <p className="text-gray-600 text-xs sm:text-sm lg:text-base desktop-qhd:text-lg desktop-4k:text-xl leading-relaxed">
                   {feature.description}
                 </p>
@@ -278,9 +278,9 @@ export const ImpactSection = () => {
                   )}
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg sm:text-xl lg:text-2xl desktop-qhd:text-3xl desktop-4k:text-4xl font-bold mb-3 sm:mb-4 transition-colors duration-300" style={{ color: brand.secondary }}>
+                  <p className="text-lg sm:text-xl lg:text-2xl desktop-qhd:text-3xl desktop-4k:text-4xl font-bold mb-3 sm:mb-4 transition-colors duration-300" style={{ color: brand.secondary }}>
                     {story.title}
-                  </h3>
+                  </p>
                   <p className="text-gray-600 text-sm sm:text-base lg:text-lg desktop-qhd:text-xl desktop-4k:text-2xl leading-relaxed max-w-md mx-auto">
                     {story.description}
                   </p>

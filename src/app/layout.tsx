@@ -20,11 +20,11 @@ const dmSans = DM_Sans({ subsets: ["latin"] });
 export const metadata: Metadata = {
   metadataBase: new URL("https://zhan.care"),
   title: {
-    default: "ZhanCare.AI — Будущее телемедицины",
+    default: "Консультация врача онлайн за 5 минут | ZhanCare.AI",
     template: "%s | ZhanCare.AI",
   },
   description:
-    "Онлайн-консультации врачей, ИИ-анализ симптомов и вызов медсестры на дом в Казахстане. Первый ответ за 10 секунд.",
+    "AI-анализ симптомов, подбор врача и онлайн-консультация через ZhanCare.AI. Найдите нужного специалиста за несколько минут.",
   keywords: [
     "телемедицина", "медицинские консультации онлайн", "ИИ в медицине",
     "врач онлайн", "вызов медсестры", "медицина казахстан", "здоровье",
@@ -34,16 +34,14 @@ export const metadata: Metadata = {
   creator: "Adilan Akhramovich",
   publisher: "ТОО iTry, Алматы",
   alternates: {
-    canonical: "https://zhan.care",
+    canonical: "https://zhan.care/",
     languages: {
-      "x-default": "https://zhan.care",
-      "ru": "https://zhan.care",
-      "ru-KZ": "https://zhan.care",
-      "uz-UZ": "https://uz.zhan.care",
+      "ru": "https://zhan.care/",
+      "x-default": "https://zhan.care/",
     },
   },
   openGraph: {
-    title: "ZhanCare.AI — Будущее телемедицины",
+    title: "Консультация врача онлайн за 5 минут | ZhanCare.AI",
     description:
       "Онлайн-консультации врачей, ИИ-анализ симптомов и вызов медсестры на дом. Здоровье в один клик — ZhanCare.AI.",
     url: "https://zhan.care",
@@ -96,14 +94,14 @@ export default async function RootLayout({
   return (
     <html lang={brandId === "uz" ? "uz" : "ru"} className="relative">
       <head>
-        <style>{`
+        <style dangerouslySetInnerHTML={{ __html: `
           :root {
             --brand-primary: ${brand.primary};
             --brand-secondary: ${brand.secondary};
             --brand-sidebar-gradient: ${brand.sidebarGradient};
             --brand-glow: ${brand.sidebarGlow};
           }
-        `}</style>
+        ` }} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

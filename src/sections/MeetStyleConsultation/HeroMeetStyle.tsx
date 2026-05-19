@@ -225,9 +225,9 @@ export default function HeroMeetStyle() {
               >
                 <FontAwesomeIcon icon={faClock} className="text-white text-2xl" />
               </motion.div>
-              <h3 className="text-xl font-bold text-white mb-3 text-center group-hover:text-[#c1d3ff] transition-colors">
+              <p className="text-xl font-bold text-white mb-3 text-center group-hover:text-[#c1d3ff] transition-colors">
                 {t.features[0].title}
-              </h3>
+              </p>
               <p className="text-gray-300 text-sm text-center leading-relaxed group-hover:text-gray-200 transition-colors">
                 {t.features[0].description}
               </p>
@@ -257,9 +257,9 @@ export default function HeroMeetStyle() {
               >
                 <FontAwesomeIcon icon={faUserMd} className="text-white text-2xl" />
               </motion.div>
-              <h3 className="text-xl font-bold text-white mb-3 text-center group-hover:text-[#c1d3ff] transition-colors">
+              <p className="text-xl font-bold text-white mb-3 text-center group-hover:text-[#c1d3ff] transition-colors">
                 {t.features[1].title}
-              </h3>
+              </p>
               <p className="text-gray-300 text-sm text-center leading-relaxed group-hover:text-gray-200 transition-colors">
                 {t.features[1].description}
               </p>
@@ -289,9 +289,9 @@ export default function HeroMeetStyle() {
               >
                 <FontAwesomeIcon icon={faShieldAlt} className="text-white text-2xl" />
               </motion.div>
-              <h3 className="text-xl font-bold text-white mb-3 text-center group-hover:text-[#c1d3ff] transition-colors">
+              <p className="text-xl font-bold text-white mb-3 text-center group-hover:text-[#c1d3ff] transition-colors">
                 {t.features[2].title}
-              </h3>
+              </p>
               <p className="text-gray-300 text-sm text-center leading-relaxed group-hover:text-gray-200 transition-colors">
                 {t.features[2].description}
               </p>

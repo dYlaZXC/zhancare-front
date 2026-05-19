@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import HomeClient from "./HomeClient";
 
 export const metadata: Metadata = {
-  title: "ZhanCare.AI — Будущее телемедицины",
+  title: "Консультация врача онлайн за 5 минут | ZhanCare.AI",
   description:
-    "ZhanCare.AI — платформа для дистанционных медицинских консультаций с ИИ-ассистентом. Онлайн-консультации врачей, вызов медсестры на дом, умный анализ симптомов. Здоровье в один клик.",
+    "AI-анализ симптомов, подбор врача и онлайн-консультация через ZhanCare.AI. Найдите нужного специалиста за несколько минут.",
   alternates: {
-    canonical: "https://zhan.care",
+    canonical: "https://zhan.care/",
     languages: {
-      "ru-KZ": "https://zhan.care",
-      "uz-UZ": "https://uz.zhan.care",
+      "ru": "https://zhan.care/",
+      "x-default": "https://zhan.care/",
     },
   },
   openGraph: {
