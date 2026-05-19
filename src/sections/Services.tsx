@@ -233,7 +233,7 @@ export const Services = () => {
                       <div className="p-6 text-white rounded-full shadow-md group-hover:scale-110 transition-all duration-300" style={{ background: `linear-gradient(135deg, ${brand.primary} 0%, ${brand.secondary} 100%)` }}>
                         <FontAwesomeIcon icon={iconMapping[service.icon]} className="text-3xl" />
                       </div>
-                      <h5 className="text-2xl font-bold text-gray-800">{service.title}</h5>
+                      <p className="text-2xl font-bold text-gray-800">{service.title}</p>
                       <p className="text-gray-500 leading-relaxed">{service.description}</p>
                       
                       {/* Learn More Button */}
@@ -315,15 +315,15 @@ export const Services = () => {
                         <div className="inline-flex p-3 bg-white/20 text-white rounded-xl shadow-lg mb-3 backdrop-blur-sm">
                           <FontAwesomeIcon icon={iconMapping[service.icon]} className="text-xl" />
                         </div>
-                        <h5 className="text-lg font-bold mb-2">{service.title}</h5>
+                        <p className="text-lg font-bold mb-2">{service.title}</p>
                         <div className="w-16 h-0.5 bg-white/30 mx-auto"></div>
                       </div>
                       
                       {/* Details List */}
                       <div className="flex-1">
-                        <h6 className="text-xs font-semibold text-white/80 uppercase tracking-wider mb-3">
+                        <p className="text-xs font-semibold text-white/80 uppercase tracking-wider mb-3">
                           {staticTranslations.whatIncluded}
-                        </h6>
+                        </p>
                         <ul className="space-y-2">
                           {service.details.map((detail, i) => (
                             <motion.li

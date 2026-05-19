@@ -518,15 +518,14 @@ export const Footer = () => {
                       </h4>
                       <div className="flex items-center gap-2.5">
                         {[
-                          { Icon: SocialX, label: "X (Twitter)", href: "#" },
-                          { Icon: SocialInsta, label: "Instagram", href: "#" },
-                          { Icon: SocialLinkedin, label: "LinkedIn", href: "#" },
-                          { Icon: SocialPin, label: "Pinterest", href: "#" },
-                          { Icon: SocialYoutube, label: "YouTube", href: "#" },
+                          { Icon: SocialX,        label: "X (Twitter)" },
+                          { Icon: SocialInsta,    label: "Instagram" },
+                          { Icon: SocialLinkedin, label: "LinkedIn" },
+                          { Icon: SocialPin,      label: "Pinterest" },
+                          { Icon: SocialYoutube,  label: "YouTube" },
                         ].map((social, index) => (
-                          <motion.a
+                          <motion.div
                             key={index}
-                            href={social.href}
                             aria-label={social.label}
                             className="group relative w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 hover:bg-gradient-to-br hover:from-blue-500/20 hover:to-indigo-500/20 border border-white/10 hover:border-blue-500/50 transition-all duration-300"
                             whileHover={{ scale: 1.1, y: -2 }}
@@ -537,7 +536,7 @@ export const Footer = () => {
                             </div>
                             {/* Glow on hover */}
                             <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 opacity-0 group-hover:opacity-20 blur transition-opacity duration-300" />
-                          </motion.a>
+                          </motion.div>
                         ))}
                       </div>
                     </div>
