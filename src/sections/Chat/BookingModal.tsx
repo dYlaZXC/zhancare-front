@@ -70,6 +70,13 @@ const formatDate = (timeString: string, language: string): string => {
   });
 };
 
+const localDateStr = (d: Date): string => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
 const generateCalendarDates = (daysCount: number = 14) => {
   const dates = [];
   const today = new Date();
@@ -78,7 +85,7 @@ const generateCalendarDates = (daysCount: number = 14) => {
     const date = new Date(today);
     date.setDate(today.getDate() + i);
     dates.push({
-      date: date.toISOString().split("T")[0],
+      date: localDateStr(date),           // local date, not UTC
       dayName: date.toLocaleDateString("ru-RU", { weekday: "short" }),
       dayNumber: date.getDate(),
       isToday: i === 0,
@@ -238,7 +245,7 @@ export default function BookingModal({
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [timeslots, setTimeslots] = useState<TimeSlot[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split("T")[0]
+    localDateStr(new Date())
   );
   const [selectedTimeslot, setSelectedTimeslot] = useState<TimeSlot | null>(null);
   const [loading, setLoading] = useState(false);
@@ -296,9 +303,16 @@ export default function BookingModal({
     date: selectedDate,
     enabled: step === "timeslots",
     onSlotBooked: useCallback(({ scheduled_time }) => {
+      // Both WS scheduled_time and slot.start_utc are UTC ISO strings.
+      // Truncate to minute precision ("YYYY-MM-DDTHH:MM") for comparison.
+      const toUtcMin = (s: string) => {
+        const d = new Date(s);
+        return isNaN(d.getTime()) ? s.slice(0, 16) : d.toISOString().slice(0, 16);
+      };
+      const wsKey = toUtcMin(scheduled_time);
       setTimeslots((prev) =>
         prev.map((slot) =>
-          slot.start_time.slice(0, 16) === scheduled_time.slice(0, 16)
+          toUtcMin(slot.start_utc ?? slot.start_time) === wsKey
             ? { ...slot, is_booked: true, available_spots: 0 }
             : slot
         )
@@ -370,8 +384,8 @@ export default function BookingModal({
       if (doctorData?.slots?.length) {
         const now = new Date();
         const converted: TimeSlot[] = doctorData.slots
-          .map((slot: { start: string; end: string; status: string }) => {
-            // Keep as local datetime string — do NOT convert to UTC via toISOString()
+          .map((slot: { start: string; end: string; status: string; start_utc?: string }) => {
+            // Keep display strings as local — do NOT convert to UTC via toISOString()
             const startLocal = `${targetDate}T${slot.start}:00`;
             const endLocal = `${targetDate}T${slot.end}:00`;
             const isBooked = slot.status === "booked";
@@ -379,6 +393,7 @@ export default function BookingModal({
               id: new Date(startLocal).getTime() + doctorId,
               start_time: startLocal,
               end_time: endLocal,
+              start_utc: slot.start_utc,   // UTC ISO from backend; sent as scheduled_time
               available_spots: isBooked ? 0 : 1,
               max_consultations: 1,
               is_booked: isBooked,
@@ -474,10 +489,11 @@ export default function BookingModal({
 
     setBookingLoading(true);
     try {
-      // Send as local ISO string (no UTC conversion) — backend stores times as-is
+      // Send start_utc (from API) — backend validates against the doctor's clinic TZ grid.
+      // Fall back to local string only for slots created without start_utc (e.g. legacy data).
       const bookingData: any = {
         doctor_id: selectedDoctor.id,
-        scheduled_time: selectedTimeslot.start_time, // "YYYY-MM-DDTHH:MM:00" local, no offset
+        scheduled_time: selectedTimeslot.start_utc ?? selectedTimeslot.start_time,
         consultation_type: consultationType ?? "online",
       };
 

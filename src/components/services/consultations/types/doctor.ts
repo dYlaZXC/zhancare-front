@@ -53,8 +53,9 @@ export interface Doctor {
 
 export interface TimeSlot {
   id: number;
-  start_time: string;
+  start_time: string;   // local display string, e.g. "2026-03-15T09:00:00"
   end_time: string;
+  start_utc?: string;   // UTC ISO for booking, e.g. "2026-03-15T04:00:00Z"
   // AppointmentSlot fields
   location_type?: string | null;
   status?: string;
