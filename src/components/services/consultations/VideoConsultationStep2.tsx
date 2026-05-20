@@ -90,7 +90,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
       const now = new Date();
       const doctorRows: Array<{
         doctor_id: number;
-        slots: Array<{ start: string; end: string; status: string }>;
+        slots: Array<{ start: string; end: string; status: string; start_utc?: string }>;
       }> = data.doctors || [];
 
       setDoctorTimeslots(prev => {
@@ -104,6 +104,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
                 id: new Date(startLocal).getTime() + doctor_id,
                 start_time: startLocal,
                 end_time: endLocal,
+                start_utc: slot.start_utc,   // UTC ISO from backend; sent as scheduled_time
                 available_spots: slot.status === 'free' ? 1 : 0,
                 max_consultations: 1,
                 is_booked: slot.status === 'booked',
@@ -188,10 +189,9 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
         [bookingDoctorId]: prev[bookingDoctorId]?.filter(slot => slot.id !== selectedTimeslot.id) || []
       }));
 
-      const localDate = new Date(selectedTimeslot.start_time);
       const consultationData: any = {
         scheduled_at: selectedTimeslot.start_time,
-        scheduled_time: localDate.toISOString(),
+        scheduled_time: selectedTimeslot.start_utc ?? selectedTimeslot.start_time,
         doctor_id: bookingDoctorId,
       };
 

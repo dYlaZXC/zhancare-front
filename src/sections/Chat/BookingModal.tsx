@@ -39,6 +39,11 @@ interface BookingModalProps {
     isGuest?: boolean;
     meetingId?: string;
     consultationId?: number;
+    consultationType?: 'online' | 'offline';
+    clinicName?: string;
+    clinicAddress?: string;
+    roomNumber?: string | null;
+    gis2Url?: string;
   }) => void;
   language: string;
   preselectedDoctor?: Doctor | null;
@@ -530,6 +535,11 @@ export default function BookingModal({
           isGuest: !isLoggedIn,
           meetingId: res.data?.meeting_id ?? res.data?.consultation?.meeting_id ?? undefined,
           consultationId: res.data?.consultation?.id ?? undefined,
+          consultationType,
+          clinicName: selectedDoctor.clinic?.name,
+          clinicAddress: selectedDoctor.clinic?.address,
+          roomNumber: selectedDoctor.room_number,
+          gis2Url: selectedDoctor.clinic?.gis2_url,
         });
         onClose();
       }

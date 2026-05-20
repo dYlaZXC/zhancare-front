@@ -28,6 +28,8 @@ import {
   faHospital,
   faLocationDot,
   faLocationCrosshairs,
+  faDoorOpen,
+  faMapLocationDot,
 } from "@fortawesome/free-solid-svg-icons";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
@@ -54,6 +56,11 @@ interface BookingConfirmationData {
   formattedTime: string;
   meetingId?: string;
   consultationId?: number;
+  consultationType?: 'online' | 'offline';
+  clinicName?: string;
+  clinicAddress?: string;
+  roomNumber?: string | null;
+  gis2Url?: string;
 }
 
 type ConsultationFlow = 'online' | 'offline' | 'diagnostics';
@@ -586,6 +593,11 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
     isGuest?: boolean;
     meetingId?: string;
     consultationId?: number;
+    consultationType?: 'online' | 'offline';
+    clinicName?: string;
+    clinicAddress?: string;
+    roomNumber?: string | null;
+    gis2Url?: string;
   }) => {
     const date = new Date(bookingDetails.scheduledTime);
     const locale = language === "kz" ? "kk-KZ" : language === "en" ? "en-US" : "ru-RU";
@@ -604,6 +616,11 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
           formattedTime,
           meetingId: bookingDetails.meetingId,
           consultationId: bookingDetails.consultationId,
+          consultationType: bookingDetails.consultationType,
+          clinicName: bookingDetails.clinicName,
+          clinicAddress: bookingDetails.clinicAddress,
+          roomNumber: bookingDetails.roomNumber,
+          gis2Url: bookingDetails.gis2Url,
         },
       }
     ]);
@@ -690,7 +707,12 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
           // Fallback to random doctors
           const doctors = await aiService.getRandomDoctors();
           const listLabels = { en: "Available doctors for online consultation:", ru: "Доступные врачи для онлайн-консультации:", kz: "Онлайн кеңеске қолжетімді дәрігерлер:" };
-          setMessages(prev => [...prev, { role: "doctors-list", content: listLabels[lang] ?? listLabels.ru, doctors }]);
+          const emptyLabels = { en: "Sorry, no doctors are available at the moment. Please try again later.", ru: "Извините, в данный момент нет доступных врачей. Пожалуйста, попробуйте позже.", kz: "Кешіріңіз, қазіргі уақытта қолжетімді дәрігерлер жоқ. Кейінірек қайталап көріңіз." };
+          if (doctors.length > 0) {
+            setMessages(prev => [...prev, { role: "doctors-list", content: listLabels[lang] ?? listLabels.ru, doctors }]);
+          } else {
+            setMessages(prev => [...prev, { role: "assistant", content: emptyLabels[lang] ?? emptyLabels.ru }]);
+          }
         }
       } else if (type === "offline") {
         const listLabel = { en: "Nearest doctors for in-person visit:", ru: "Ближайшие врачи для приёма:", kz: "Жақын маңдағы дәрігерлер:" }[lang] ?? "Ближайшие врачи для приёма:";
@@ -985,13 +1007,20 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                   </div>
                 ) : message.role === "booking-confirmation" && message.bookingConfirmation ? (() => {
                   const bc = message.bookingConfirmation;
+                  const isOfflineBooking = bc.consultationType === 'offline';
                   const labels = {
-                    title:   { en: "Appointment Confirmed!", ru: "Запись подтверждена!", kz: "Жазылу расталды!" },
-                    booked:  { en: `You have successfully booked an appointment with`, ru: `Вы успешно записались к врачу`, kz: `Дәрігерге сәтті жазылдыңыз:` },
-                    date:    { en: "Date", ru: "Дата", kz: "Күні" },
-                    time:    { en: "Time", ru: "Время", kz: "Уақыты" },
-                    type:    { en: "Online video consultation", ru: "Онлайн видеоконсультация", kz: "Онлайн бейне кеңес" },
-                    remind:  { en: "You will receive a reminder before your appointment.", ru: "Вы получите напоминание перед консультацией.", kz: "Кеңес алдында еске салу аласыз." },
+                    title:        { en: "Appointment Confirmed!", ru: "Запись подтверждена!", kz: "Жазылу расталды!" },
+                    booked:       { en: "You have successfully booked an appointment with", ru: "Вы успешно записались к врачу", kz: "Дәрігерге сәтті жазылдыңыз:" },
+                    date:         { en: "Date", ru: "Дата", kz: "Күні" },
+                    time:         { en: "Time", ru: "Время", kz: "Уақыты" },
+                    typeOnline:   { en: "Online video consultation", ru: "Онлайн видеоконсультация", kz: "Онлайн бейне кеңес" },
+                    typeOffline:  { en: "In-person visit", ru: "Оффлайн приём у врача", kz: "Офлайн дәрігерге баю" },
+                    clinic:       { en: "Clinic", ru: "Клиника", kz: "Клиника" },
+                    address:      { en: "Address", ru: "Адрес", kz: "Мекенжай" },
+                    room:         { en: "Room", ru: "Кабинет", kz: "Кабинет" },
+                    map:          { en: "Open on map", ru: "Открыть на карте", kz: "Картада ашу" },
+                    remind:       { en: "You will receive a reminder before your appointment.", ru: "Вы получите напоминание перед приёмом.", kz: "Қабылдау алдында еске салу аласыз." },
+                    remindOnline: { en: "You will receive a reminder before your consultation.", ru: "Вы получите напоминание перед консультацией.", kz: "Кеңес алдында еске салу аласыз." },
                   };
                   const l = language as "en" | "ru" | "kz";
                   return (
@@ -1005,14 +1034,20 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                       <div className="flex-1">
                         <div
                           className="rounded-2xl sm:rounded-3xl overflow-hidden shadow-lg border"
-                          style={{ background: "white", borderColor: "#e1eaff" }}
+                          style={{ background: "white", borderColor: isOfflineBooking ? "#d1fae5" : "#e1eaff" }}
                         >
-                          {/* Green header */}
-                          <div className="px-5 py-4 flex items-center gap-3" style={{ background: "linear-gradient(135deg, #10b981 0%, #059669 100%)" }}>
+                          {/* Header */}
+                          <div
+                            className="px-5 py-4 flex items-center gap-3"
+                            style={{ background: isOfflineBooking ? "linear-gradient(135deg, #059669 0%, #047857 100%)" : "linear-gradient(135deg, #10b981 0%, #059669 100%)" }}
+                          >
                             <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
-                              <FontAwesomeIcon icon={faCircleCheck} className="text-white text-lg" />
+                              <FontAwesomeIcon icon={isOfflineBooking ? faHouse : faCircleCheck} className="text-white text-lg" />
                             </div>
-                            <p className="text-white font-bold text-sm sm:text-base">{labels.title[l]}</p>
+                            <div>
+                              <p className="text-white font-bold text-sm sm:text-base">{labels.title[l]}</p>
+                              <p className="text-white/80 text-xs">{isOfflineBooking ? labels.typeOffline[l] : labels.typeOnline[l]}</p>
+                            </div>
                           </div>
 
                           {/* Body */}
@@ -1055,23 +1090,74 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
 
                             <div className="border-t border-gray-100" />
 
-                            {/* Type row */}
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: accentLight }}>
-                                <FontAwesomeIcon icon={faVideo} className="text-sm" style={{ color: accentDark }} />
+                            {/* Offline: clinic + address + room + map */}
+                            {isOfflineBooking ? (
+                              <div className="space-y-2.5">
+                                {bc.clinicName && (
+                                  <div className="flex items-start gap-3">
+                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "#f0fdf4" }}>
+                                      <FontAwesomeIcon icon={faHospital} className="text-sm" style={{ color: "#059669" }} />
+                                    </div>
+                                    <div>
+                                      <p className="text-xs text-gray-500">{labels.clinic[l]}</p>
+                                      <p className="font-bold text-gray-900 text-sm">{bc.clinicName}</p>
+                                    </div>
+                                  </div>
+                                )}
+                                {bc.clinicAddress && (
+                                  <div className="flex items-start gap-3">
+                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "#f0fdf4" }}>
+                                      <FontAwesomeIcon icon={faLocationDot} className="text-sm" style={{ color: "#059669" }} />
+                                    </div>
+                                    <div>
+                                      <p className="text-xs text-gray-500">{labels.address[l]}</p>
+                                      <p className="font-semibold text-gray-800 text-sm">{bc.clinicAddress}</p>
+                                    </div>
+                                  </div>
+                                )}
+                                {bc.roomNumber && (
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "#f0fdf4" }}>
+                                      <FontAwesomeIcon icon={faDoorOpen} className="text-sm" style={{ color: "#059669" }} />
+                                    </div>
+                                    <div>
+                                      <p className="text-xs text-gray-500">{labels.room[l]}</p>
+                                      <p className="font-bold text-gray-900 text-sm">№{bc.roomNumber}</p>
+                                    </div>
+                                  </div>
+                                )}
+                                {bc.gis2Url && (
+                                  <a
+                                    href={bc.gis2Url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-lg"
+                                    style={{ background: "#f0fdf4", color: "#059669", border: "1px solid #a7f3d0" }}
+                                  >
+                                    <FontAwesomeIcon icon={faMapLocationDot} className="text-xs" />
+                                    {labels.map[l]}
+                                  </a>
+                                )}
                               </div>
-                              <p className="text-sm font-medium text-gray-700">{labels.type[l]}</p>
-                            </div>
+                            ) : (
+                              /* Online: type badge */
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: accentLight }}>
+                                  <FontAwesomeIcon icon={faVideo} className="text-sm" style={{ color: accentDark }} />
+                                </div>
+                                <p className="text-sm font-medium text-gray-700">{labels.typeOnline[l]}</p>
+                              </div>
+                            )}
 
                             {/* Reminder note */}
                             <div className="flex items-start gap-3 rounded-xl px-3 py-2.5" style={{ background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
                               <FontAwesomeIcon icon={faBell} className="text-xs mt-0.5 flex-shrink-0" style={{ color: "#10b981" }} />
-                              <p className="text-xs text-green-800">{labels.remind[l]}</p>
+                              <p className="text-xs text-green-800">{isOfflineBooking ? labels.remind[l] : labels.remindOnline[l]}</p>
                             </div>
 
                             {/* Action buttons */}
                             <div className="flex flex-col gap-2 pt-1">
-                              {bc.meetingId && (
+                              {!isOfflineBooking && bc.meetingId && (
                                 <button
                                   onClick={() => router.push(`/video-call/patient?meetingId=${bc.meetingId}`)}
                                   className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all"
