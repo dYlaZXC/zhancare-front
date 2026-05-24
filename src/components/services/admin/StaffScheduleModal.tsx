@@ -254,7 +254,6 @@ export default function StaffScheduleModal({
   const [plannerLoading, setPlannerLoading] = useState(false);
   const [plannerSaving, setPlannerSaving] = useState(false);
   const [plannerDirty, setPlannerDirty] = useState(false);
-  const [syncBothTypes, setSyncBothTypes] = useState(true);
 
   // Overrides (legacy, hidden behind `false &&` in template tab)
   const [overrides, setOverrides] = useState<any[]>([]);
@@ -737,21 +736,24 @@ export default function StaffScheduleModal({
       toast.error("⛔ Конфликт времени с другим типом расписания. Исправьте время перед сохранением.");
       return;
     }
-    const otherType = plannerConsultationType === "online" ? "offline" : "online";
-    const payload = {
-      date: day.date,
-      is_day_off: day.is_day_off,
-      note: day.note || "",
-      ...(day.is_day_off ? {} : { start_time: day.start_time || "09:00", end_time: day.end_time || "18:00" }),
-    };
     try {
-      const saves = [
-        api.post(`/staff/${member.id}/availability/`, { ...payload, consultation_type: plannerConsultationType }),
-      ];
-      if (syncBothTypes) {
-        saves.push(api.post(`/staff/${member.id}/availability/`, { ...payload, consultation_type: otherType }));
+      if (day.is_day_off) {
+        await api.post(`/staff/${member.id}/availability/`, {
+          date: day.date,
+          consultation_type: plannerConsultationType,
+          is_day_off: true,
+          note: day.note || "",
+        });
+      } else {
+        await api.post(`/staff/${member.id}/availability/`, {
+          date: day.date,
+          consultation_type: plannerConsultationType,
+          is_day_off: false,
+          start_time: day.start_time || "09:00",
+          end_time: day.end_time || "18:00",
+          note: day.note || "",
+        });
       }
-      await Promise.all(saves);
       await fetchPlannerWeek(member.id, plannerWeekStart, plannerConsultationType);
       await fetchScheduleHistory(member.id);
       toast.success("Сохранено");
@@ -798,37 +800,24 @@ export default function StaffScheduleModal({
       return;
     }
     setPlannerSaving(true);
-    const otherType = plannerConsultationType === "online" ? "offline" : "online";
     try {
-      const saveCalls = plannerDays.map((day) =>
-        api.post(`/staff/${member.id}/availability/`, {
-          date: day.date,
-          consultation_type: plannerConsultationType,
-          is_day_off: day.is_day_off,
-          start_time: day.is_day_off ? null : day.start_time || "09:00",
-          end_time: day.is_day_off ? null : day.end_time || "18:00",
-          note: day.note || "",
-        })
+      await Promise.all(
+        plannerDays.map((day) =>
+          api.post(`/staff/${member.id}/availability/`, {
+            date: day.date,
+            consultation_type: plannerConsultationType,
+            is_day_off: day.is_day_off,
+            start_time: day.is_day_off ? null : day.start_time || "09:00",
+            end_time: day.is_day_off ? null : day.end_time || "18:00",
+            note: day.note || "",
+          })
+        )
       );
-      // When syncBothTypes is on, mirror the same schedule to the other consultation type
-      const syncCalls = syncBothTypes
-        ? plannerDays.map((day) =>
-            api.post(`/staff/${member.id}/availability/`, {
-              date: day.date,
-              consultation_type: otherType,
-              is_day_off: day.is_day_off,
-              start_time: day.is_day_off ? null : day.start_time || "09:00",
-              end_time: day.is_day_off ? null : day.end_time || "18:00",
-              note: day.note || "",
-            })
-          )
-        : [];
-      await Promise.all([...saveCalls, ...syncCalls]);
       await fetchPlannerWeek(member.id, plannerWeekStart, plannerConsultationType);
       await fetchScheduleHistory(member.id);
       setPlannerDirty(false);
       onSaved?.();
-      toast.success(syncBothTypes ? "Неделя сохранена (онлайн + оффлайн)" : "Неделя сохранена");
+      toast.success("Неделя сохранена");
     } catch (e: any) {
       toast.error(e?.response?.data?.error || "Ошибка сохранения");
     } finally {
@@ -975,30 +964,6 @@ export default function StaffScheduleModal({
                       <Home className="w-4 h-4" /> Оффлайн
                     </button>
                   </div>
-
-                  {/* Sync both types toggle */}
-                  <label className="flex items-center gap-3 px-1 cursor-pointer select-none">
-                    <div
-                      onClick={() => setSyncBothTypes((v) => !v)}
-                      className={`w-10 h-6 rounded-full transition-colors relative flex-shrink-0 ${
-                        syncBothTypes ? "bg-indigo-500" : "bg-gray-300"
-                      }`}
-                    >
-                      <span
-                        className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${
-                          syncBothTypes ? "left-5" : "left-1"
-                        }`}
-                      />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-gray-700">
-                        Применить к обоим типам
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Сохранить одно расписание для онлайн и оффлайн
-                      </p>
-                    </div>
-                  </label>
 
                   {/* Week nav */}
                   <div
