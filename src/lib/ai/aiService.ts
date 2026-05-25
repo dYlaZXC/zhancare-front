@@ -8,6 +8,7 @@ import type {
   SymptomAnalysisRequest,
   SymptomAnalysisResult,
   DoctorRecommendation,
+  DiagnosticsServiceItem,
 } from "./types";
 
 const API = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
@@ -44,6 +45,10 @@ export const aiService = {
       };
     }
 
+    const randomDoctorsUrl = req.clinicSlug
+      ? `${API}/consultations/get-random-doctors/?clinic_slug=${encodeURIComponent(req.clinicSlug)}`
+      : `${API}/consultations/get-random-doctors/`;
+
     const [recRes, altRes] = await Promise.all([
       fetch(`${API}/consultations/ai-recommend/`, {
         method: "POST",
@@ -55,9 +60,7 @@ export const aiService = {
           ...(req.clinicSlug ? { clinic_slug: req.clinicSlug } : {}),
         }),
       }),
-      fetch(`${API}/consultations/get-random-doctors/`, {
-        credentials: "include",
-      }),
+      fetch(randomDoctorsUrl, { credentials: "include" }),
     ]);
 
     if (!recRes.ok) throw new Error(`AI API error: ${recRes.status}`);
@@ -92,23 +95,36 @@ export const aiService = {
   },
 
   /** Fetch a random selection of available doctors (used for "show other doctors"). */
-  async getRandomDoctors(): Promise<DoctorRecommendation[]> {
-    const res = await fetch(`${API}/consultations/get-random-doctors/`, {
+  async getRandomDoctors(clinicSlug?: string): Promise<DoctorRecommendation[]> {
+    const url = clinicSlug
+      ? `${API}/consultations/get-random-doctors/?clinic_slug=${encodeURIComponent(clinicSlug)}`
+      : `${API}/consultations/get-random-doctors/`;
+    const res = await fetch(url, { credentials: "include" });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.success ? (data.doctors as DoctorRecommendation[]) : [];
+  },
+
+  /** Fetch diagnostic services for a clinic. */
+  async getDiagnosticsServices(clinicId: number): Promise<DiagnosticsServiceItem[]> {
+    const res = await fetch(`${API}/diagnostics/services/?clinic=${clinicId}`, {
       credentials: "include",
     });
     if (!res.ok) return [];
     const data = await res.json();
-    return data.success ? (data.doctors as DoctorRecommendation[]) : [];
+    return Array.isArray(data) ? data : (data.results ?? []);
   },
 
   /** Fetch available offline doctors sorted by distance to the patient's coordinates. */
   async getNearbyOfflineDoctors(
     lat: number,
     lng: number,
-    specialty?: string
+    specialty?: string,
+    clinicSlug?: string
   ): Promise<DoctorRecommendation[]> {
     const params = new URLSearchParams({ lat: String(lat), lng: String(lng) });
     if (specialty) params.set("specialty", specialty);
+    if (clinicSlug) params.set("clinic_slug", clinicSlug);
     const res = await fetch(
       `${API}/consultations/nearby-doctors/?${params.toString()}`,
       { credentials: "include" }

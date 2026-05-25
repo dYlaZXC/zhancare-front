@@ -42,6 +42,17 @@ export interface DoctorRecommendation {
   reason?: string;
 }
 
+export interface DiagnosticsServiceItem {
+  id: number;
+  name: string;
+  description?: string | null;
+  price?: string | null;
+  duration_minutes: number;
+  category: string;
+  category_label: string;
+  clinic_name: string;
+}
+
 export interface SymptomAnalysisRequest {
   symptoms: string;
   language?: string;

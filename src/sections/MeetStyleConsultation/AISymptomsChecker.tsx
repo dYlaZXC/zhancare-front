@@ -39,7 +39,7 @@ import BookingModal from "@/sections/Chat/BookingModal";
 import LanguageSwitcher from "@/sections/Hero/LanguageSwitcher";
 import type { Doctor } from "@/components/services/consultations/types/doctor";
 import { aiService, isInjectionAttempt, CHAT_ENDPOINT, CHAT_UPLOAD_ENDPOINT } from "@/lib/ai";
-import type { ClinicContext, DoctorRecommendation } from "@/lib/ai";
+import type { ClinicContext, DoctorRecommendation, DiagnosticsServiceItem } from "@/lib/ai";
 import { buildWhatsAppLink, consultationWhatsAppMessage } from "@/lib/whatsapp";
 
 interface TimeSlot {
@@ -66,11 +66,12 @@ interface BookingConfirmationData {
 type ConsultationFlow = 'online' | 'offline' | 'diagnostics';
 
 interface Message {
-  role: "user" | "assistant" | "doctor-card" | "doctors-list" | "time-slots" | "booking-confirmation" | "consultation-type-selector" | "geolocation-prompt";
+  role: "user" | "assistant" | "doctor-card" | "doctors-list" | "diagnostics-list" | "time-slots" | "booking-confirmation" | "consultation-type-selector" | "geolocation-prompt";
   content: string;
   doctor?: DoctorRecommendation;
   doctors?: DoctorRecommendation[];
   otherDoctors?: DoctorRecommendation[];
+  diagnosticsServices?: DiagnosticsServiceItem[];
   timeSlots?: TimeSlot[];
   doctorId?: number;
   doctorName?: string;
@@ -629,7 +630,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
   const handleShowOtherDoctors = async () => {
     setIsLoading(true);
     try {
-      const doctors = await aiService.getRandomDoctors();
+      const doctors = await aiService.getRandomDoctors(clinic?.clinicSlug);
 
       if (doctors.length > 0) {
         const listLabels: Record<string, string> = {
@@ -705,7 +706,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
           }]);
         } else {
           // Fallback to random doctors
-          const doctors = await aiService.getRandomDoctors();
+          const doctors = await aiService.getRandomDoctors(clinic?.clinicSlug);
           const listLabels = { en: "Available doctors for online consultation:", ru: "Доступные врачи для онлайн-консультации:", kz: "Онлайн кеңеске қолжетімді дәрігерлер:" };
           const emptyLabels = { en: "Sorry, no doctors are available at the moment. Please try again later.", ru: "Извините, в данный момент нет доступных врачей. Пожалуйста, попробуйте позже.", kz: "Кешіріңіз, қазіргі уақытта қолжетімді дәрігерлер жоқ. Кейінірек қайталап көріңіз." };
           if (doctors.length > 0) {
@@ -722,8 +723,8 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
         const fetchOfflineDoctors = async (lat?: number, lng?: number) => {
           const label = (lat !== undefined) ? listLabel : geoUnavailLabel;
           const doctors = lat !== undefined
-            ? await aiService.getNearbyOfflineDoctors(lat, lng!)
-            : await aiService.getRandomDoctors();
+            ? await aiService.getNearbyOfflineDoctors(lat, lng!, undefined, clinic?.clinicSlug)
+            : await aiService.getRandomDoctors(clinic?.clinicSlug);
           if (doctors.length > 0) {
             setMessages(prev => [...prev, { role: "doctors-list", content: label, doctors, consultationType: "offline" }]);
           } else {
@@ -750,12 +751,12 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
           await fetchOfflineDoctors();
         }
       } else {
-        // diagnostics
-        const doctors = await aiService.getRandomDoctors();
-        const label = { en: "Available specialists for diagnostics:", ru: "Специалисты для диагностики:", kz: "Диагностикаға арналған мамандар:" }[lang] ?? "Специалисты для диагностики:";
-        const emptyLabel = { en: "No available doctors at the moment. Try again later.", ru: "В данный момент нет доступных врачей. Попробуйте позже.", kz: "Қазіргі уақытта дәрігерлер жоқ. Кейінірек қайталаңыз." }[lang] ?? "В данный момент нет доступных врачей.";
-        if (doctors.length > 0) {
-          setMessages(prev => [...prev, { role: "doctors-list", content: label, doctors }]);
+        // diagnostics — show clinic's diagnostic services, not doctors
+        const label = { en: "Available diagnostic services:", ru: "Доступные услуги диагностики:", kz: "Қолжетімді диагностикалық қызметтер:" }[lang] ?? "Доступные услуги диагностики:";
+        const emptyLabel = { en: "No diagnostic services available at the moment.", ru: "В данный момент диагностические услуги недоступны.", kz: "Қазіргі уақытта диагностикалық қызметтер жоқ." }[lang] ?? "В данный момент диагностические услуги недоступны.";
+        const services = clinic?.clinicId ? await aiService.getDiagnosticsServices(clinic.clinicId) : [];
+        if (services.length > 0) {
+          setMessages(prev => [...prev, { role: "diagnostics-list", content: label, diagnosticsServices: services }]);
         } else {
           setMessages(prev => [...prev, { role: "assistant", content: emptyLabel }]);
         }
@@ -1754,6 +1755,39 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                       )}
                     </div>
                   </div>
+                  );
+                })() : message.role === "diagnostics-list" && message.diagnosticsServices ? (() => {
+                  const services = message.diagnosticsServices;
+                  const categoryColors: Record<string, string> = {
+                    lab: "#2563eb", imaging: "#7c3aed", cardio: "#dc2626",
+                    neuro: "#0891b2", ortho: "#16a34a", ophtha: "#d97706",
+                    peds: "#db2777", micro: "#65a30d",
+                  };
+                  return (
+                    <div className="space-y-2 w-full max-w-sm">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">{message.content}</p>
+                      {services.map((svc) => (
+                        <div key={svc.id} className="rounded-2xl p-4 shadow-md" style={{ background: "linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)" }}>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white font-semibold text-sm leading-tight">{svc.name}</p>
+                              {svc.description && (
+                                <p className="text-blue-200 text-xs mt-1 line-clamp-2">{svc.description}</p>
+                              )}
+                              <div className="flex flex-wrap items-center gap-2 mt-2">
+                                <span className="text-xs px-2 py-0.5 rounded-full font-medium text-white" style={{ background: categoryColors[svc.category] ?? "#374151" }}>
+                                  {svc.category_label}
+                                </span>
+                                <span className="text-blue-200 text-xs">⏱ {svc.duration_minutes} мин</span>
+                                {svc.price && (
+                                  <span className="text-white text-xs font-semibold">{Number(svc.price).toLocaleString()} ₸</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   );
                 })() : message.role === "consultation-type-selector" ? (() => {
                   const isSelected = !!message.selectedConsultationType;
