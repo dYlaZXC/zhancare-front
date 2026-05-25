@@ -423,7 +423,7 @@ export function Traction() {
                   </div>
 
                   {/* Mobile: full-width card */}
-                  <div className="md:hidden w-full">
+                  <div className="md:hidden w-full" aria-hidden="true">
                     <MilestoneCard m={m} brand={brand} />
                   </div>
                 </motion.div>
