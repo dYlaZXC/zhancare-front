@@ -24,6 +24,7 @@ import {
   faHospital,
   faComments,
   faPaperPlane,
+  faGaugeHigh,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useState, useEffect, useRef } from "react";
@@ -42,6 +43,7 @@ type SubMenuItem = { id: string; icon: any; title: string; color: string; href: 
 type MenuItem = { id: string; icon: any; title: string; color: string; href?: string; superOnly?: boolean; children?: SubMenuItem[] };
 
 const adminMenu: MenuItem[] = [
+  { id: "dashboard", icon: faGaugeHigh, title: "Дашборд", color: "#a855f7", href: "/admin/dashboard", superOnly: true },
   { id: "profile", icon: faUser, title: "Профиль", color: "#3772ff", href: "/admin/profile" },
   {
     id: "management",
