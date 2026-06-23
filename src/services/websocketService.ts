@@ -298,9 +298,12 @@ class WebSocketService {
 
     // console.log('🔌 Connecting to Django Channels WebSocket...');
 
-    // ✅ Use the centralized URL configuration
+    // ✅ Use the centralized URL configuration. Auth is no longer carried in
+    // the URL — the browser attaches the httpOnly zha_access cookie to the WS
+    // handshake automatically, and the backend's JWTCookieAuthMiddleware
+    // resolves scope['user'] from it before the consumer accepts.
     const baseWsUrl = getWebSocketURL();
-    const wsUrl = `${baseWsUrl}/socketio/?token=${encodeURIComponent(this.token)}`;
+    const wsUrl = `${baseWsUrl}/socketio/`;
 
     // console.log('🔍 Debug info:', {
     //   baseWsUrl,
@@ -499,11 +502,13 @@ class WebSocketService {
 
         switch (data.type) {
           case 'connect':
-            console.log('🔌 WebSocket connected, sending authentication...');
+            // The backend only accepts the connection after authenticating
+            // the zha_access cookie (see JWTCookieAuthMiddleware) — no
+            // separate authenticate message needed.
+            console.log('🔌 WebSocket connected and authenticated');
+            this.state.isAuthenticated = true;
             this.triggerCallbacks('connect', data.data);
-
-            // Send authentication message
-            this.sendMessage('authenticate', { token: this.token });
+            this.triggerCallbacks('authenticated', data.data);
             break;
           case 'authenticated':
             console.log('✅ WebSocket authenticated:', data.data);
@@ -697,23 +702,6 @@ class WebSocketService {
       console.error('❌ Failed to send WebSocket message:', error);
       return false;
     }
-  }
-
-  /**
-   * Authenticate with the server (if needed after connection)
-   */
-  authenticate(token: string) {
-    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-      console.warn('⚠️ Cannot authenticate: WebSocket not connected');
-      return;
-    }
-
-    // console.log('🔐 Authenticating with WebSocket...');
-    this.token = token;
-
-    this.sendMessage('authenticate', {
-      token: token
-    });
   }
 
   /**

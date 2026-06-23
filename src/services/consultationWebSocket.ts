@@ -130,9 +130,9 @@ class ConsultationWebSocketService {
       this.reconnectAttempts = 0;
       this.reconnectDelay = 1000;
 
-      // Authenticate immediately after connection
-      this.authenticate();
-
+      // No post-connect auth message needed — the browser's httpOnly
+      // zha_access cookie rides along on the WS handshake automatically,
+      // and the backend authenticates before accepting the connection.
       this.config.onConnect?.();
     };
 
@@ -164,23 +164,6 @@ class ConsultationWebSocketService {
       }
       this.config.onError?.('WebSocket connection error');
     };
-  }
-
-  /**
-   * Authenticate user and join appropriate groups
-   */
-  private authenticate(): void {
-    if (!this.ws || !this.token) return;
-
-    const authMessage = {
-      type: 'authenticate',
-      token: this.token,
-      user_role: this.userRole,
-      user_id: this.config.userId
-    };
-
-    // console.log('🔐 Authenticating consultation WebSocket:', { role: this.userRole });
-    this.send(authMessage);
   }
 
   /**

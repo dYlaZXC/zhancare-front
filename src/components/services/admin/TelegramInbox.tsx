@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "react-toastify";
 import { api, getWebSocketURL } from "@/utils/api";
+import { useAuth } from "@/context/AuthContext";
 
 interface TgMessage {
   id: number;
@@ -69,6 +70,7 @@ const TgIcon = ({ className }: { className?: string }) => (
 );
 
 export default function TelegramInbox() {
+  const { user } = useAuth();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [allMsgs, setAllMsgs] = useState<TgMessage[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
@@ -103,10 +105,12 @@ export default function TelegramInbox() {
   }, []);
 
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
-    if (!token) return;
+    if (!user) return;
     const base = getWebSocketURL().replace(/\/$/, "");
-    const wsUrl = `${base}/telegram/?token=${encodeURIComponent(token)}`;
+    // Auth is no longer carried in the URL — the browser attaches the httpOnly
+    // zha_access cookie to the WS handshake automatically, and the backend's
+    // JWTCookieAuthMiddleware authenticates before the consumer accepts.
+    const wsUrl = `${base}/telegram/`;
 
     const connect = () => {
       const ws = new WebSocket(wsUrl);
@@ -147,7 +151,7 @@ export default function TelegramInbox() {
 
     connect();
     return () => { wsRef.current?.close(); };
-  }, []);
+  }, [user]);
 
   useEffect(() => { fetchContacts(); }, [fetchContacts]);
 

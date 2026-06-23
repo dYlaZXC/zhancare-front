@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "react-toastify";
 import { api, getWebSocketURL } from "@/utils/api";
+import { useAuth } from "@/context/AuthContext";
 
 interface WaMessage {
   id: number;
@@ -60,6 +61,7 @@ const WaIcon = ({ className }: { className?: string }) => (
 );
 
 export default function WhatsAppInbox({ initialPhone }: { initialPhone?: string } = {}) {
+  const { user } = useAuth();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [incomingMsgs, setIncomingMsgs] = useState<WaMessage[]>([]);
   const [selected, setSelected] = useState<string | null>(initialPhone ?? null);
@@ -96,10 +98,12 @@ export default function WhatsAppInbox({ initialPhone }: { initialPhone?: string 
   }, []);
 
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
-    if (!token) return;
+    if (!user) return;
     const base = getWebSocketURL().replace(/\/$/, "");
-    const wsUrl = `${base}/whatsapp/?token=${encodeURIComponent(token)}`;
+    // Auth is no longer carried in the URL — the browser attaches the httpOnly
+    // zha_access cookie to the WS handshake automatically, and the backend's
+    // JWTCookieAuthMiddleware authenticates before the consumer accepts.
+    const wsUrl = `${base}/whatsapp/`;
 
     const connect = () => {
       const ws = new WebSocket(wsUrl);
@@ -141,7 +145,7 @@ export default function WhatsAppInbox({ initialPhone }: { initialPhone?: string 
 
     connect();
     return () => { wsRef.current?.close(); };
-  }, []);
+  }, [user]);
 
   useEffect(() => { fetchContacts(); }, [fetchContacts]);
 

@@ -16,7 +16,7 @@ interface UseWebSocketOptions {
 }
 
 export const useWebSocket = (options: UseWebSocketOptions = {}) => {
-  const { token, user, isDoctor, isNurse } = useAuth();
+  const { token, user } = useAuth();
   const ws = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -41,7 +41,11 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       // For development, use the Django backend port
       const host = process.env.NODE_ENV === 'development' ? 'localhost:8002' : window.location.host;
-      const wsUrl = `${protocol}//${host}/ws/consultations/?token=${token}`;
+      // Auth is no longer carried in the URL — the browser attaches the
+      // httpOnly zha_access cookie to the WS handshake automatically
+      // (same-site for any *.zhan.care host). The backend's JWTCookieAuthMiddleware
+      // resolves scope['user'] from that cookie before the consumer even accepts.
+      const wsUrl = `${protocol}//${host}/ws/consultations/`;
 
       // console.log('🔌 Attempting WebSocket connection:', wsUrl);
 
@@ -52,14 +56,6 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
         setIsConnected(true);
         setReconnectAttempts(0);
         options.onConnect?.();
-
-        // Send authentication message
-        ws.current?.send(JSON.stringify({
-          type: 'authenticate',
-          token: token,
-          user_id: user.id,
-          user_role: isDoctor ? 'doctor' : isNurse ? 'nurse' : 'patient'
-        }));
       };
 
       ws.current.onmessage = (event) => {

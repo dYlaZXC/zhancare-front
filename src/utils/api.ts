@@ -108,8 +108,10 @@ async function refreshAccessToken(): Promise<string> {
   console.log("🔄 Attempting to refresh access token...");
 
   try {
-    // Call the JWT refresh endpoint (simplejwt format)
-    const response = await axios.post(`${baseURL}/auth/token/refresh/`, {
+    // Call the JWT refresh endpoint (simplejwt format). Uses axiosInstance
+    // (not bare axios) so withCredentials:true applies and the httpOnly
+    // zha_access/zha_refresh cookies are sent/received alongside the JSON body.
+    const response = await axiosInstance.post(`/auth/token/refresh/`, {
       refresh: refreshToken,
     });
 
