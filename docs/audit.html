@@ -60,10 +60,18 @@
       </div>
     </div>
 
+    <div class="callout ok" style="margin-bottom:0">
+      <strong>Обновлено 2026-06-24:</strong> все 4 CRITICAL и 4 из 5 HIGH в
+      <code>zhancare-back</code> закрыты (плюс отдельный прод-инцидент с Redis,
+      не входивший в исходный аудит). Полный список изменений и что осталось —
+      в <a href="REMEDIATION_PLAN.md">REMEDIATION_PLAN.md</a>. Цифры ниже —
+      актуальное состояние, не снимок на момент первого прохода.
+    </div>
+
     <div class="stat-row">
-      <div class="stat"><div class="label">Critical</div><div class="value" style="color:var(--red)">5</div></div>
-      <div class="stat"><div class="label">High</div><div class="value" style="color:var(--amber)">8</div></div>
-      <div class="stat"><div class="label">Medium</div><div class="value">12</div></div>
+      <div class="stat"><div class="label">Critical</div><div class="value" style="color:var(--red)">1</div></div>
+      <div class="stat"><div class="label">High</div><div class="value" style="color:var(--amber)">4</div></div>
+      <div class="stat"><div class="label">Medium</div><div class="value">9</div></div>
       <div class="stat"><div class="label">Low</div><div class="value">6</div></div>
       <div class="stat"><div class="label">Репозиториев</div><div class="value">3</div></div>
     </div>
@@ -77,21 +85,21 @@
         Методология и веса — ниже, чтобы цифра не выглядела взятой из воздуха.
       </p>
 
-      <div class="card" style="border-color:var(--red); background:rgba(229,72,77,0.07); text-align:center; padding:36px 24px;">
+      <div class="card" style="border-color:var(--green); background:rgba(25,195,125,0.07); text-align:center; padding:36px 24px;">
         <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-dim)">Общая оценка по системе (взвешенная)</div>
-        <div style="font-size:68px;font-weight:800;color:var(--red);margin:10px 0;line-height:1">
-          43<span style="font-size:26px;color:var(--text-dim);font-weight:600">/100</span>
+        <div style="font-size:68px;font-weight:800;color:var(--green);margin:10px 0;line-height:1">
+          82<span style="font-size:26px;color:var(--text-dim);font-weight:600">/100</span>
         </div>
-        <span class="badge" style="background:rgba(229,72,77,.18);border-color:var(--red);color:#ffb3b6;font-size:13px;padding:6px 16px">
-          Высокий риск — нужны срочные действия до следующего релиза
+        <span class="badge" style="background:rgba(25,195,125,.18);border-color:var(--green);color:#a0f0c8;font-size:13px;padding:6px 16px">
+          Низкий риск — было 43/100 до фиксов 2026-06-24
         </span>
       </div>
 
       <div class="grid-2" style="margin-top:18px">
-        <div class="card" style="text-align:center;border-color:var(--red)">
+        <div class="card" style="text-align:center;border-color:var(--green)">
           <div style="font-size:11px;color:var(--text-dim);text-transform:uppercase">zhancare-back</div>
-          <div style="font-size:36px;font-weight:800;color:var(--red)">10<span style="font-size:16px;color:var(--text-dim)">/100</span></div>
-          <div style="font-size:12px;color:var(--text-dim)">Критический риск</div>
+          <div style="font-size:36px;font-weight:800;color:var(--green)">88<span style="font-size:16px;color:var(--text-dim)">/100</span></div>
+          <div style="font-size:12px;color:var(--text-dim)">Низкий риск (было 10/100)</div>
         </div>
         <div class="card" style="text-align:center;border-color:var(--border)">
           <div style="font-size:11px;color:var(--text-dim);text-transform:uppercase">zhancareai</div>
@@ -136,13 +144,12 @@ Overall = Score(back)×0.5 + Score(zhancareai)×0.3 + Score(academy)×0.2</code>
       </table>
 
       <div class="callout warn">
-        <strong>Что тянет общую оценку вниз сильнее всего:</strong> 4 CRITICAL в
-        zhancare-back (захардкоженные секреты, fail-open платёжный webhook,
-        брутфорсимый гостевой вход, IDOR в профиле) — на репозиторий с весом 0.5 в
-        общей формуле. Закрытие именно этих четырёх пунктов поднимет
-        <code>zhancare-back</code> до ~58/100, а общую оценку системы — примерно
-        до <strong>67/100</strong> (низкий риск), без изменений в остальных двух
-        репозиториях.
+        <strong>Что тянет общую оценку вниз сейчас:</strong> единственный
+        оставшийся CRITICAL — живые секреты в закоммиченном <code>.env</code>
+        в <code>zhancareai</code> (вес 0.3 в формуле). Закрытие именно этого
+        пункта плюс XSS/CSRF из того же репозитория поднимет общую оценку
+        системы выше 90/100. Полный список оставшегося — в
+        <a href="REMEDIATION_PLAN.md">REMEDIATION_PLAN.md</a>.
       </div>
     </section>
 
@@ -212,59 +219,59 @@ Overall = Score(back)×0.5 + Score(zhancareai)×0.3 + Score(academy)×0.2</code>
 
       <table>
         <tr><th>Severity</th><th>Находка</th><th>Где</th><th>Что делать</th></tr>
-        <tr>
-          <td><span class="badge" style="background:rgba(229,72,77,.18);border-color:var(--red);color:#ffb3b6">CRITICAL</span></td>
+        <tr style="opacity:.6">
+          <td><span class="badge" style="background:rgba(229,72,77,.18);border-color:var(--red);color:#ffb3b6">CRITICAL</span> ✅</td>
           <td>Секреты с fallback-значениями в коде (<code>os.getenv(key, 'literal-secret')</code>): SECRET_KEY, пароль БД (дважды), Mistral, Telegram bot token, LiveKit, email-пароль, TipTopPay ключи</td>
           <td><code>settings.py:31,443,448,466,482,490-491,593,622-623</code></td>
-          <td>Заменить на <code>os.environ[...]</code> (падать при отсутствии). Ротировать все секреты. После ротации SECRET_KEY — инвалидировать все текущие токены/сессии</td>
+          <td><strong>Закрыто 2026-06-24.</strong> Перенесены в <code>.env</code>, код теперь <code>os.environ[...]</code>. При повторном поиске нашлось и зачищено ещё ~15 копий тех же/других секретов по всему репо (детали — REMEDIATION_PLAN.md). Ротация значений — отдельная незакрытая задача</td>
         </tr>
-        <tr>
-          <td><span class="badge" style="background:rgba(229,72,77,.18);border-color:var(--red);color:#ffb3b6">CRITICAL</span></td>
+        <tr style="opacity:.6">
+          <td><span class="badge" style="background:rgba(229,72,77,.18);border-color:var(--red);color:#ffb3b6">CRITICAL</span> ✅</td>
           <td><code>_verify_tiptop_hmac</code> возвращает <code>True</code>, если секрет пуст ИЛИ заголовок HMAC отсутствует — комментарий в коде буквально говорит «skip verification»</td>
           <td><code>payments/views.py:121-133</code> (вызывается из webhook-view с <code>AllowAny</code>)</td>
-          <td>Отклонять запрос при отсутствии заголовка или незаданном секрете — никогда не трактовать «нет заголовка» как «доверяем»</td>
+          <td><strong>Закрыто 2026-06-24.</strong> Оба случая теперь отказ. Заодно добавлена идемпотентность по <code>transaction_id</code> и сверка <code>Amount</code> (см. HIGH-пункты ниже)</td>
         </tr>
-        <tr>
-          <td><span class="badge" style="background:rgba(229,72,77,.18);border-color:var(--red);color:#ffb3b6">CRITICAL</span></td>
+        <tr style="opacity:.6">
+          <td><span class="badge" style="background:rgba(229,72,77,.18);border-color:var(--red);color:#ffb3b6">CRITICAL</span> ✅</td>
           <td><code>verify_access_code</code> — без rate limiting, код генерируется через <code>random.choices</code> (не CSPRNG), при совпадении выдаёт полный <code>RefreshToken</code></td>
           <td><code>consultations/views.py:1420-1488</code>, <code>consultations/models.py:10-15</code></td>
-          <td><code>ScopedRateThrottle</code> (5/мин по IP + жёсткий общий лимит по коду), <code>secrets.choice</code> вместо <code>random</code>, lockout после N неудачных попыток</td>
+          <td><strong>Закрыто 2026-06-24.</strong> <code>secrets.choice</code> в генераторе; добавлен per-IP <code>ScopedRateThrottle</code> (5/мин) + отдельный платформенный лимит (30/мин по всем IP сразу) вместо точечного lockout по коду</td>
         </tr>
-        <tr>
-          <td><span class="badge" style="background:rgba(229,72,77,.18);border-color:var(--red);color:#ffb3b6">CRITICAL</span></td>
+        <tr style="opacity:.6">
+          <td><span class="badge" style="background:rgba(229,72,77,.18);border-color:var(--red);color:#ffb3b6">CRITICAL</span> ✅</td>
           <td><code>update_profile_by_id</code> / <code>profile_by_id</code> — нет проверки, что вызывающий — владелец профиля или админ</td>
           <td><code>common/views/profile.py:96-108,163-178</code></td>
-          <td>Добавить явную проверку «self or admin» перед обработкой; проверить, какие поля сериализатора доступны на запись</td>
+          <td><strong>Закрыто 2026-06-24.</strong> Оказался и третий эндпоинт с той же дырой — <code>partial_update_profile_by_id</code> (PATCH), не пойманный первым проходом. У ViewSet вообще не было <code>permission_classes</code> — баг был хуже описанного. Добавлены <code>IsAuthenticated</code> + self-or-admin на все 3. Сериализатор проверен — privilege-escalation полей нет</td>
         </tr>
-        <tr>
-          <td><span class="badge" style="background:rgba(245,166,35,.18);border-color:var(--amber);color:#ffd9a0">HIGH</span></td>
+        <tr style="opacity:.6">
+          <td><span class="badge" style="background:rgba(245,166,35,.18);border-color:var(--amber);color:#ffd9a0">HIGH</span> ✅</td>
           <td>Пароль БД из settings.py повторён как «реальный» пример в документации</td>
           <td><code>docs/DEPLOYMENT_GUIDE.md:161</code></td>
-          <td>Заменить на плейсхолдер</td>
+          <td><strong>Закрыто.</strong> Плюс тот же пароль нашёлся ещё в 5 других файлах (docs, one_time_scripts, docker-compose.yml) — все зачищены</td>
         </tr>
-        <tr>
-          <td><span class="badge" style="background:rgba(245,166,35,.18);border-color:var(--amber);color:#ffd9a0">HIGH</span></td>
+        <tr style="opacity:.6">
+          <td><span class="badge" style="background:rgba(245,166,35,.18);border-color:var(--amber);color:#ffd9a0">HIGH</span> ✅</td>
           <td>Нет проверки идемпотентности по <code>transaction_id</code> на Pay-webhook — повтор/replay webhook'а проходит повторно</td>
           <td><code>payments/views.py:197-241</code></td>
-          <td>Уникальный constraint/проверка по <code>transaction_id</code> до обработки</td>
+          <td><strong>Закрыто.</strong> Повторный webhook на уже оплаченный <code>invoice_id</code> — no-op; добавлена и сверка <code>Amount</code> (раньше это делал только Check-webhook)</td>
         </tr>
         <tr>
           <td><span class="badge" style="background:rgba(245,166,35,.18);border-color:var(--amber);color:#ffd9a0">HIGH</span></td>
           <td>Kaspi-интеграция: нет проверки подписи входящих вызовов, хардкоженный «заглушечный» QR, сумма платежа берётся из ответа Kaspi без сверки</td>
           <td><code>payments/views.py:37-116</code> (QR — строка 55, сумма — строка 106)</td>
-          <td>Сверять ожидаемую сумму на сервере, реальный QR/service ID, не доверять ответу гейтвея «на слово»</td>
+          <td><strong>Не закрыто, заблокировано:</strong> нет источника «ожидаемой» цены вызова на дом для сверки — нужен product-инпут, сколько должен стоить вызов и где это хранить, до того как писать код</td>
         </tr>
-        <tr>
-          <td><span class="badge" style="background:rgba(245,166,35,.18);border-color:var(--amber);color:#ffd9a0">HIGH</span></td>
+        <tr style="opacity:.6">
+          <td><span class="badge" style="background:rgba(245,166,35,.18);border-color:var(--amber);color:#ffd9a0">HIGH</span> ✅</td>
           <td>Presigned upload медицинских документов: <code>file_type</code> без allow-list (любой <code>Content-Type</code>, включая <code>text/html</code>), <code>filename</code> не санитизируется</td>
           <td><code>common/views/medical_documents.py:205-273</code>, <code>common/serializers/medical_document.py:95-101</code></td>
-          <td>Allow-list MIME-типов/расширений, <code>os.path.basename()</code> на filename</td>
+          <td><strong>Закрыто.</strong> Общий <code>validate_uploaded_file()</code>/<code>sanitize_upload_filename()</code> в <code>storage_utils.py</code>, применён здесь и в двух пунктах ниже одним проходом</td>
         </tr>
-        <tr>
-          <td><span class="badge" style="background:rgba(245,166,35,.18);border-color:var(--amber);color:#ffd9a0">HIGH</span></td>
+        <tr style="opacity:.6">
+          <td><span class="badge" style="background:rgba(245,166,35,.18);border-color:var(--amber);color:#ffd9a0">HIGH</span> ✅</td>
           <td><code>doctor_upload</code>/<code>admin_upload</code> — без проверки типа файла и лимита размера (в отличие от загрузки аватара/лого)</td>
           <td><code>common/views/medical_documents.py:306-322,338-371</code></td>
-          <td>Применить тот же валидатор, что в <code>profile.py:147-152</code> / <code>clinics/views.py:768-773</code>, везде</td>
+          <td><strong>Закрыто</strong> тем же общим валидатором, что и presigned upload выше</td>
         </tr>
       </table>
     </section>
@@ -274,10 +281,10 @@ Overall = Score(back)×0.5 + Score(zhancareai)×0.3 + Score(academy)×0.2</code>
       <h2><span class="num">2</span>zhancare-back — Medium / Low</h2>
       <table>
         <tr><th>Severity</th><th>Находка</th><th>Где</th></tr>
-        <tr><td>MEDIUM</td><td>Pay-webhook (в отличие от Check-webhook) не сверяет <code>Amount</code> перед статусом «paid»</td><td><code>payments/views.py:286-288</code> (Check) vs Pay-webhook без проверки</td></tr>
+        <tr style="opacity:.6"><td>MEDIUM ✅</td><td>Pay-webhook (в отличие от Check-webhook) не сверяет <code>Amount</code> перед статусом «paid» — <strong>закрыто</strong> вместе с идемпотентностью (раздел 1)</td><td><code>payments/views.py:286-288</code></td></tr>
         <tr><td>MEDIUM</td><td><code>.env</code>/<code>.env.prod</code> с реальными ключами Yandex Storage и TipTopPay в рабочей директории (не в git, но на диске)</td><td><code>/.env:2-3,8,22-24</code></td></tr>
-        <tr><td>MEDIUM</td><td>Валидация загрузки файлов несогласована между эндпоинтами — нет общего валидатора</td><td><code>medical_documents.py</code> vs <code>profile.py</code>/<code>clinics/views.py</code></td></tr>
-        <tr><td>MEDIUM</td><td>Нужно явно проверить, какие поля <code>UserProfileSerializer</code> доступны на запись (усиливает IDOR выше, если там есть role-подобные поля)</td><td>сериализатор профиля</td></tr>
+        <tr style="opacity:.6"><td>MEDIUM ✅</td><td>Валидация загрузки файлов несогласована между эндпоинтами — <strong>закрыто</strong>, единый <code>validate_uploaded_file()</code> в <code>storage_utils.py</code></td><td><code>medical_documents.py</code> vs <code>profile.py</code>/<code>clinics/views.py</code></td></tr>
+        <tr style="opacity:.6"><td>MEDIUM ✅</td><td>Проверены поля <code>UserProfileSerializer</code> — <strong>не баг</strong>: <code>Meta.fields</code> не включает role/is_staff-подобные поля, <code>roles</code> — read-only <code>SerializerMethodField</code></td><td>сериализатор профиля</td></tr>
         <tr><td>MEDIUM</td><td><code>ALLOWED_HOSTS</code> включает wildcard <code>.vercel.app</code> — шире необходимого</td><td><code>settings.py:41</code></td></tr>
         <tr><td>MEDIUM</td><td><code>requirements.txt</code> — версии не закреплены (кроме <code>django&lt;5.0</code>), риск непредсказуемого <code>pip install</code></td><td><code>requirements.txt</code></td></tr>
         <tr><td>LOW</td><td>Debug <code>print()</code> на каждый запрос логирует объект User и роль — PII в логах/агрегаторах</td><td><code>consultations/views.py:47-53</code></td></tr>
