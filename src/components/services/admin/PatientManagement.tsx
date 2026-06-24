@@ -84,7 +84,7 @@ function ContactMenu({ patient }: { patient: Patient }) {
 
   const goTelegram = () => {
     setOpen(false);
-    router.push("/admin/telegram");
+    router.push(`/admin/telegram?patientId=${patient.id}`);
   };
 
   return (

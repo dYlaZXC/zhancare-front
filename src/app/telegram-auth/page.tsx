@@ -194,7 +194,6 @@ const TelegramAuthPage = () => {
     setLoading(true);
 
     const payload = {
-      email: data.email.trim(),
       phone: data.phone.trim() || null,
       password: data.password,
       first_name: data.first_name.trim(),

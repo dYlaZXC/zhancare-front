@@ -2,7 +2,7 @@
 
 import { useState, useCallback, FormEvent } from "react";
 import { motion } from "framer-motion";
-import { Mail, Phone, User, Lock, Loader2, Shield } from "lucide-react";
+import { Phone, User, Lock, Loader2, Shield } from "lucide-react";
 import AuthInput from "./AuthInput";
 import PhoneInput from "@/components/ui/PhoneInput";
 import PdfViewerModal from "../PdfViewerModal";
@@ -17,7 +17,6 @@ interface RegisterFormProps {
 export interface RegisterFormData {
   first_name: string;
   last_name: string;
-  email: string;
   phone: string;
   password: string;
   confirmPassword: string;
@@ -30,7 +29,6 @@ const RegisterForm = ({ translations, onSubmit, loading, language = "en" }: Regi
   const [formData, setFormData] = useState<RegisterFormData>({
     first_name: "",
     last_name: "",
-    email: "",
     phone: "",
     password: "",
     confirmPassword: "",
@@ -74,11 +72,6 @@ const RegisterForm = ({ translations, onSubmit, loading, language = "en" }: Regi
     });
   };
 
-  const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
   const validatePassword = (password: string): boolean => {
     return password.length >= 8;
   };
@@ -94,8 +87,8 @@ const RegisterForm = ({ translations, onSubmit, loading, language = "en" }: Regi
       errors.last_name = "Фамилия обязательна";
     }
 
-    if (!formData.email || !validateEmail(formData.email)) {
-      errors.email = "Введите корректный email адрес";
+    if (!formData.phone || formData.phone.replace(/\D/g, "").length < 10) {
+      errors.phone = "Введите номер телефона";
     }
 
     if (!formData.password || !validatePassword(formData.password)) {
@@ -178,19 +171,6 @@ const RegisterForm = ({ translations, onSubmit, loading, language = "en" }: Regi
         />
       </div>
 
-      {/* Email */}
-      <AuthInput
-        name="email"
-        type="email"
-        placeholder={translations.email}
-        icon={Mail}
-        value={formData.email}
-        autoComplete="email"
-        onChange={handleChange}
-        validationError={validationErrors.email}
-        loading={loading}
-      />
-
       {/* Phone */}
       <PhoneInput
         name="phone"
@@ -247,7 +227,7 @@ const RegisterForm = ({ translations, onSubmit, loading, language = "en" }: Regi
             disabled={loading}
             className="mt-1 w-4 h-4 text-[#3772ff] bg-white/5 border-gray-300 rounded focus:ring-[#3772ff] focus:ring-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           />
-          <label htmlFor="consentPersonalData" className="text-sm text-gray-300 leading-tight cursor-pointer">
+          <label htmlFor="consentPersonalData" className="text-sm text-black leading-tight cursor-pointer">
             {translations.consentPersonalData}{" "}
             <button
               type="button"
@@ -277,7 +257,7 @@ const RegisterForm = ({ translations, onSubmit, loading, language = "en" }: Regi
             disabled={loading}
             className="mt-1 w-4 h-4 text-[#3772ff] bg-white/5 border-gray-300 rounded focus:ring-[#3772ff] focus:ring-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           />
-          <label htmlFor="consentInformAgreement" className="text-sm text-gray-300 leading-tight cursor-pointer">
+          <label htmlFor="consentInformAgreement" className="text-sm text-black leading-tight cursor-pointer">
             {translations.consentInformAgreement}{" "}
             <button
               type="button"
@@ -307,7 +287,7 @@ const RegisterForm = ({ translations, onSubmit, loading, language = "en" }: Regi
             disabled={loading}
             className="mt-1 w-4 h-4 text-[#3772ff] bg-white/5 border-gray-300 rounded focus:ring-[#3772ff] focus:ring-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           />
-          <label htmlFor="consentOffer" className="text-sm text-gray-300 leading-tight cursor-pointer">
+          <label htmlFor="consentOffer" className="text-sm text-black leading-tight cursor-pointer">
             {translations.consentOffer}{" "}
             <button
               type="button"

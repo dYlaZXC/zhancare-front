@@ -69,7 +69,7 @@ const TgIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-export default function TelegramInbox() {
+export default function TelegramInbox({ initialPatientId }: { initialPatientId?: number } = {}) {
   const { user } = useAuth();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [allMsgs, setAllMsgs] = useState<TgMessage[]>([]);
@@ -81,6 +81,12 @@ export default function TelegramInbox() {
   const [wsStatus, setWsStatus] = useState<"connecting" | "connected" | "disconnected">("connecting");
   const [unread, setUnread] = useState<Map<number, number>>(new Map());
   const [filter, setFilter] = useState<"all" | "unread" | "read">("all");
+  // Telegram bots can only message chats the user already started — unlike
+  // WhatsApp's "send to any phone number". So opening a specific patient's
+  // conversation requires first checking whether one exists at all.
+  const [patientLookup, setPatientLookup] = useState<"idle" | "loading" | "found" | "not_found">(
+    initialPatientId ? "loading" : "idle"
+  );
   const bottomRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const selectedRef = useRef<number | null>(null);
@@ -154,6 +160,23 @@ export default function TelegramInbox() {
   }, [user]);
 
   useEffect(() => { fetchContacts(); }, [fetchContacts]);
+
+  useEffect(() => {
+    if (!initialPatientId) return;
+    (async () => {
+      try {
+        const { data } = await api.get("/tg/conversation/", { params: { patient_id: initialPatientId } });
+        if (data.found) {
+          setSelected(data.chat_id);
+          setPatientLookup("found");
+        } else {
+          setPatientLookup("not_found");
+        }
+      } catch {
+        setPatientLookup("not_found");
+      }
+    })();
+  }, [initialPatientId]);
 
   useEffect(() => {
     if (wsStatus !== "disconnected") return;
@@ -468,9 +491,15 @@ export default function TelegramInbox() {
           >
             <TgIcon className="w-12 h-12 fill-white" />
           </div>
-          <div className="text-center">
+          <div className="text-center max-w-xs px-4">
             <p className="text-gray-700 font-semibold text-lg">Telegram Inbox</p>
-            <p className="text-gray-400 text-sm mt-1">Выберите контакт для переписки</p>
+            <p className="text-gray-400 text-sm mt-1">
+              {patientLookup === "not_found"
+                ? "Этот пациент ещё не писал нашему Telegram-боту — переписки пока нет. Бот не может написать первым: попросите пациента самого открыть бота и отправить любое сообщение."
+                : patientLookup === "loading"
+                ? "Ищем переписку с пациентом..."
+                : "Выберите контакт для переписки"}
+            </p>
           </div>
           <div className="flex items-center gap-2 px-4 py-2 rounded-full text-xs" style={{ background: "rgba(0,136,204,0.1)", color: "#005f8e" }}>
             <span className={`w-2 h-2 rounded-full ${wsStatus === "connected" ? "bg-blue-500" : wsStatus === "connecting" ? "bg-yellow-400 animate-pulse" : "bg-red-400"}`} />

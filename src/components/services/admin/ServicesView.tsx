@@ -10,6 +10,7 @@ import {
   FlaskConical, ScanLine, Heart, Brain, Bone, Eye, Baby, Microscope,
   ClipboardList, Clock, Banknote, ToggleLeft, ToggleRight,
   CalendarCheck, User, ChevronDown, CalendarDays,
+  Phone, Mail, MapPin, FileText, StickyNote, Search, BadgeInfo,
 } from "lucide-react";
 
 const CATEGORIES = [
@@ -52,11 +53,17 @@ interface Service {
 interface Appointment {
   id: number;
   patient_name: string;
+  patient_phone: string | null;
+  patient_email: string | null;
   service_name: string;
+  service_display: Service | null;
   category: string;
+  clinic_name: string | null;
+  clinic_address: string | null;
   appointment_time: string;
   status: string;
   notes: string;
+  created_at: string;
 }
 
 const WEEKDAYS = [
@@ -88,6 +95,18 @@ export function ServicesView({ user }: { user: any }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [apptStatusFilter, setApptStatusFilter] = useState("all");
+  const [apptSearch, setApptSearch] = useState("");
+  const [drawerApptId, setDrawerApptId] = useState<number | null>(null);
+  const [openStatusMenuId, setOpenStatusMenuId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (openStatusMenuId === null) return;
+    const handler = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest('[data-status-root]')) setOpenStatusMenuId(null);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [openStatusMenuId]);
 
   const fetchServices = useCallback(async () => {
     setLoading(true);
@@ -201,7 +220,17 @@ export function ServicesView({ user }: { user: any }) {
   };
 
   const filtered = services.filter(s => catFilter === "all" || s.category === catFilter);
-  const filteredAppts = appointments.filter(a => apptStatusFilter === "all" || a.status === apptStatusFilter);
+  const apptSearchLower = apptSearch.trim().toLowerCase();
+  const filteredAppts = appointments.filter(a => {
+    if (apptStatusFilter !== "all" && a.status !== apptStatusFilter) return false;
+    if (!apptSearchLower) return true;
+    return (
+      a.patient_name?.toLowerCase().includes(apptSearchLower) ||
+      a.service_name?.toLowerCase().includes(apptSearchLower) ||
+      a.patient_phone?.toLowerCase().includes(apptSearchLower) ||
+      a.patient_email?.toLowerCase().includes(apptSearchLower)
+    );
+  });
   const totalActive = services.filter(s => s.is_active).length;
   const pendingAppts = appointments.filter(a => ["scheduled", "confirmed"].includes(a.status)).length;
 
@@ -209,9 +238,9 @@ export function ServicesView({ user }: { user: any }) {
     <div className="w-full space-y-5">
 
       {/* HEADER */}
-      <div className="relative rounded-3xl overflow-hidden" style={{ background: "linear-gradient(135deg, #0c1445 0%, #1e2a5e 40%, #0ea5e9 100%)" }}>
+      <div className="relative rounded-3xl overflow-hidden" style={{ background: "linear-gradient(135deg, #12263a 0%, #1e263e 25%, #29358f 75%, #3772ff 100%)" }}>
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-16 -left-16 w-72 h-72 rounded-full blur-3xl opacity-20" style={{ background: "radial-gradient(circle, #0ea5e9, transparent)" }} />
+          <div className="absolute -top-16 -left-16 w-72 h-72 rounded-full blur-3xl opacity-20" style={{ background: "radial-gradient(circle, #3772ff, transparent)" }} />
         </div>
         <div className="relative px-8 py-7 flex flex-col sm:flex-row sm:items-center gap-5">
           <div className="flex-1">
@@ -221,16 +250,16 @@ export function ServicesView({ user }: { user: any }) {
               </div>
               <h1 className="text-2xl font-black text-white">Услуги клиники</h1>
             </div>
-            <p className="text-sky-200/80 text-sm">Управление диагностическими услугами и записями пациентов</p>
+            <p className="text-[#c1d3ff] text-sm">Управление диагностическими услугами и записями пациентов</p>
           </div>
           <div className="flex gap-3 flex-shrink-0">
             <div className="text-center px-5 py-3 rounded-2xl" style={{ background: "rgba(255,255,255,0.1)" }}>
               <p className="text-2xl font-black text-white">{totalActive}</p>
-              <p className="text-sky-200 text-xs mt-0.5">Активных услуг</p>
+              <p className="text-[#c1d3ff] text-xs mt-0.5">Активных услуг</p>
             </div>
             <div className="text-center px-5 py-3 rounded-2xl" style={{ background: "rgba(255,255,255,0.1)" }}>
               <p className="text-2xl font-black text-white">{pendingAppts}</p>
-              <p className="text-sky-200 text-xs mt-0.5">Ожидают записи</p>
+              <p className="text-[#c1d3ff] text-xs mt-0.5">Ожидают записи</p>
             </div>
           </div>
         </div>
@@ -246,7 +275,7 @@ export function ServicesView({ user }: { user: any }) {
           return (
             <button key={t.id} onClick={() => setActiveTab(t.id)}
               className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-bold transition-all ${active ? "text-white shadow-md" : "text-gray-500 hover:text-gray-700"}`}
-              style={active ? { background: "linear-gradient(135deg, #0ea5e9, #6366f1)" } : {}}>
+              style={active ? { background: "linear-gradient(135deg, #3772ff 0%, #2c5bcc 100%)" } : {}}>
               <t.Icon size={15} /> {t.label}
             </button>
           );
@@ -340,13 +369,30 @@ export function ServicesView({ user }: { user: any }) {
       {/* APPOINTMENTS TAB */}
       {activeTab === "appointments" && (
         <div className="space-y-4">
-          <div className="flex flex-wrap gap-1.5">
-            {[{ id: "all", label: "Все" }, ...Object.entries(STATUS_MAP).map(([id, v]) => ({ id, label: v.label }))].map(f => (
-              <button key={f.id} onClick={() => setApptStatusFilter(f.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${apptStatusFilter === f.id ? "bg-sky-500 text-white border-transparent" : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"}`}>
-                {f.label}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative flex-1 min-w-[200px] max-w-xs">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input value={apptSearch} onChange={e => setApptSearch(e.target.value)}
+                placeholder="Поиск по пациенту, услуге, телефону..."
+                className="w-full pl-9 pr-3 py-2 rounded-xl border text-xs outline-none transition-all"
+                style={{ borderColor: "#e8e8e8", color: "#1b1b1b" }}
+                onFocus={e => { e.currentTarget.style.borderColor = "#3772ff"; e.currentTarget.style.boxShadow = "0 0 0 4px #ebf1ff"; }}
+                onBlur={e => { e.currentTarget.style.borderColor = "#e8e8e8"; e.currentTarget.style.boxShadow = "none"; }} />
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {[{ id: "all", label: "Все" }, ...Object.entries(STATUS_MAP).map(([id, v]) => ({ id, label: v.label }))].map(f => {
+                const active = apptStatusFilter === f.id;
+                return (
+                  <button key={f.id} onClick={() => setApptStatusFilter(f.id)}
+                    className="px-3 py-1.5 rounded-xl text-xs font-bold border transition-all"
+                    style={active
+                      ? { background: "#3772ff", color: "#fff", borderColor: "transparent" }
+                      : { background: "#fff", color: "#1b1b1b", borderColor: "#e8e8e8" }}>
+                    {f.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
           {apptLoading ? (
             <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-sky-500" /></div>
@@ -361,52 +407,204 @@ export function ServicesView({ user }: { user: any }) {
                 const st = STATUS_MAP[a.status] ?? STATUS_MAP.scheduled;
                 const catInfo = CATEGORIES.find(c => c.id === a.category);
                 const dt = new Date(a.appointment_time);
+                const nameParts = a.patient_name?.split(" ").filter(Boolean) ?? [];
+                const looksLikeName = nameParts.length >= 1 && /^[A-Za-zА-Яа-яЁё]/.test(nameParts[0]);
+                const initials = looksLikeName
+                  ? nameParts.slice(0, 2).map(p => p[0]).join("").toUpperCase()
+                  : (a.patient_name?.slice(0, 2).toUpperCase() || "?");
                 return (
-                  <div key={a.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="w-9 h-9 rounded-xl bg-sky-50 flex items-center justify-center flex-shrink-0">
-                        <User size={15} className="text-sky-500" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-gray-800 truncate">{a.patient_name}</p>
-                        <p className="text-xs text-gray-500 truncate">{a.service_name}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-gray-500 flex-shrink-0">
-                      {catInfo && (
-                        <div className="flex items-center gap-1">
-                          <catInfo.icon size={11} style={{ color: catInfo.color }} />
-                          <span>{catInfo.label}</span>
+                  <motion.div key={a.id} layout
+                    className="rounded-3xl p-6 border-2 transition-all bg-white shadow-sm hover:shadow-md"
+                    style={{ borderColor: "#e8e8e8" }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = "#c1d3ff"}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = "#e8e8e8"}>
+                    <div className="flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        {/* Avatar */}
+                        <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-xl font-bold flex-shrink-0"
+                          style={{ background: "linear-gradient(135deg, #3772ff 0%, #2c5bcc 100%)" }}>
+                          {initials}
                         </div>
-                      )}
-                      <div className="flex items-center gap-1">
-                        <CalendarCheck size={11} />
-                        <span>{dt.toLocaleDateString("ru-RU")} {dt.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}</span>
+                        <div className="min-w-0">
+                          {/* Service + badges */}
+                          <div className="flex items-center gap-2 flex-wrap mb-2">
+                            <p className="text-lg font-bold text-gray-800 truncate">{a.service_name}</p>
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold border ${st.bg} ${st.color}`}>{st.label}</span>
+                            {catInfo && (
+                              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
+                                style={{ background: `${catInfo.color}18`, color: catInfo.color }}>
+                                <catInfo.icon size={12} /> {catInfo.label}
+                              </span>
+                            )}
+                          </div>
+                          {/* Sub-line: patient name + contacts + date */}
+                          <div className="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
+                            <span className="flex items-center gap-1.5"><User size={14} /> {a.patient_name}</span>
+                            {a.patient_phone && <span className="flex items-center gap-1.5"><Phone size={14} /> {a.patient_phone}</span>}
+                            <span className="flex items-center gap-1.5"><CalendarCheck size={14} /> {dt.toLocaleDateString("ru-RU")} {dt.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}</span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border ${st.bg} ${st.color}`}>{st.label}</span>
-                      <div className="relative group">
-                        <button className="flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-50 border border-gray-200 text-xs text-gray-600 hover:bg-gray-100 transition-all">
-                          <ChevronDown size={11} />
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-2.5 flex-shrink-0">
+                        <div className="relative" data-status-root>
+                          <button onClick={() => setOpenStatusMenuId(prev => prev === a.id ? null : a.id)}
+                            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border text-sm font-semibold transition-all"
+                            style={{ background: "#e8e8e8", borderColor: "#dddddd", color: "#1b1b1b" }}>
+                            Статус <ChevronDown size={13} className={`transition-transform ${openStatusMenuId === a.id ? "rotate-180" : ""}`} />
+                          </button>
+                          {openStatusMenuId === a.id && (
+                            <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-lg border border-gray-100 z-20 min-w-[170px]">
+                              {Object.entries(STATUS_MAP).map(([sid, sv]) => (
+                                <button key={sid} onClick={() => { handleApptStatus(a.id, sid); setOpenStatusMenuId(null); }}
+                                  className="w-full text-left px-3.5 py-2.5 text-sm hover:bg-gray-50 transition-colors first:rounded-t-xl last:rounded-b-xl">
+                                  <span className={`font-semibold ${sv.color}`}>{sv.label}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <button onClick={() => setDrawerApptId(a.id)}
+                          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-all shadow-sm hover:shadow-md"
+                          style={{ background: "linear-gradient(135deg, #3772ff 0%, #2c5bcc 100%)" }}>
+                          <BadgeInfo size={15} /> <span className="hidden sm:inline">Подробнее</span>
                         </button>
-                        <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-lg border border-gray-100 z-20 min-w-[160px] hidden group-hover:block">
-                          {Object.entries(STATUS_MAP).map(([sid, sv]) => (
-                            <button key={sid} onClick={() => handleApptStatus(a.id, sid)}
-                              className="w-full text-left px-3 py-2 text-xs hover:bg-gray-50 transition-colors first:rounded-t-xl last:rounded-b-xl">
-                              <span className={`font-semibold ${sv.color}`}>{sv.label}</span>
-                            </button>
-                          ))}
-                        </div>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 );
               })}
             </div>
           )}
         </div>
       )}
+
+      {/* APPOINTMENT DETAILS DRAWER */}
+      <AnimatePresence>
+        {drawerApptId !== null && (() => {
+          const a = appointments.find(x => x.id === drawerApptId);
+          if (!a) return null;
+          const st = STATUS_MAP[a.status] ?? STATUS_MAP.scheduled;
+          const catInfo = CATEGORIES.find(c => c.id === a.category);
+          const dt = new Date(a.appointment_time);
+          const createdDt = a.created_at ? new Date(a.created_at) : null;
+          return (
+            <div className="fixed inset-0 z-50 overflow-hidden">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                onClick={() => setDrawerApptId(null)}
+                className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+              <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
+                transition={{ type: "spring", damping: 30, stiffness: 300 }}
+                className="absolute right-0 top-0 bottom-0 w-full max-w-md bg-white shadow-2xl flex flex-col">
+                <div className="flex-shrink-0 px-6 py-5 flex items-center justify-between"
+                  style={{ background: "linear-gradient(135deg, #12263a 0%, #1e263e 25%, #29358f 75%, #3772ff 100%)" }}>
+                  <div className="text-white min-w-0">
+                    <h2 className="text-lg font-bold truncate">{a.patient_name}</h2>
+                    <p className="text-blue-100 text-xs mt-0.5">Запись №{a.id}</p>
+                  </div>
+                  <button onClick={() => setDrawerApptId(null)} className="p-2 rounded-xl hover:bg-white/20 transition-colors flex-shrink-0">
+                    <X size={18} className="text-white" />
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+                  {/* Status changer */}
+                  <div>
+                    <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2 block">Статус</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Object.entries(STATUS_MAP).map(([sid, sv]) => (
+                        <button key={sid} onClick={() => handleApptStatus(a.id, sid)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                            a.status === sid ? `${sv.bg} ${sv.color} ring-2 ring-offset-1 ring-sky-300` : "bg-white text-gray-400 border-gray-200 hover:border-gray-300"
+                          }`}>
+                          {sv.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Contact info */}
+                  <div className="rounded-2xl border border-gray-100 p-4 space-y-2.5">
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Контакты пациента</p>
+                    {a.patient_phone ? (
+                      <a href={`tel:${a.patient_phone}`} className="flex items-center gap-2.5 text-sm text-gray-700 hover:text-sky-600 transition-colors">
+                        <Phone size={14} className="text-gray-400 flex-shrink-0" /> {a.patient_phone}
+                      </a>
+                    ) : (
+                      <p className="flex items-center gap-2.5 text-sm text-gray-400"><Phone size={14} className="flex-shrink-0" /> Телефон не указан</p>
+                    )}
+                    {a.patient_email ? (
+                      <a href={`mailto:${a.patient_email}`} className="flex items-center gap-2.5 text-sm text-gray-700 hover:text-sky-600 transition-colors">
+                        <Mail size={14} className="text-gray-400 flex-shrink-0" /> {a.patient_email}
+                      </a>
+                    ) : (
+                      <p className="flex items-center gap-2.5 text-sm text-gray-400"><Mail size={14} className="flex-shrink-0" /> Email не указан</p>
+                    )}
+                  </div>
+
+                  {/* Service info */}
+                  <div className="rounded-2xl border border-gray-100 p-4 space-y-2.5">
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Услуга</p>
+                    <div className="flex items-center gap-2.5">
+                      {catInfo && (
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${catInfo.color}18` }}>
+                          <catInfo.icon size={14} style={{ color: catInfo.color }} />
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-sm font-bold text-gray-800">{a.service_name}</p>
+                        {catInfo && <p className="text-[11px] text-gray-400">{catInfo.label}</p>}
+                      </div>
+                    </div>
+                    {a.service_display?.description && (
+                      <p className="text-xs text-gray-500">{a.service_display.description}</p>
+                    )}
+                    <div className="flex items-center gap-4 text-xs text-gray-500 flex-wrap pt-1">
+                      {a.service_display?.duration_minutes != null && (
+                        <span className="flex items-center gap-1"><Clock size={11} /> {a.service_display.duration_minutes} мин</span>
+                      )}
+                      {a.service_display?.price && (
+                        <span className="flex items-center gap-1 font-semibold text-emerald-600">
+                          <Banknote size={11} /> {formatPrice(a.service_display.price, a.service_display.currency || clinicCurrency)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Appointment time */}
+                  <div className="rounded-2xl border border-gray-100 p-4 space-y-2.5">
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Запись</p>
+                    <p className="flex items-center gap-2.5 text-sm text-gray-700">
+                      <CalendarCheck size={14} className="text-gray-400 flex-shrink-0" />
+                      {dt.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}, {dt.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                    {(a.clinic_name || a.clinic_address) && (
+                      <p className="flex items-center gap-2.5 text-sm text-gray-700">
+                        <MapPin size={14} className="text-gray-400 flex-shrink-0" />
+                        {[a.clinic_name, a.clinic_address].filter(Boolean).join(", ")}
+                      </p>
+                    )}
+                    {createdDt && (
+                      <p className="flex items-center gap-2.5 text-xs text-gray-400">
+                        <FileText size={12} className="flex-shrink-0" /> Записан {createdDt.toLocaleDateString("ru-RU")} в {createdDt.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Notes */}
+                  <div className={`rounded-2xl border p-4 space-y-1.5 ${a.notes ? "border-amber-100 bg-amber-50/50" : "border-gray-100"}`}>
+                    <p className={`text-[11px] font-bold uppercase tracking-widest flex items-center gap-1.5 ${a.notes ? "text-amber-600" : "text-gray-400"}`}>
+                      <StickyNote size={11} /> Заметка
+                    </p>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{a.notes || "Без заметок"}</p>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          );
+        })()}
+      </AnimatePresence>
 
       {/* ADD / EDIT MODAL */}
       <AnimatePresence>

@@ -983,10 +983,12 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     setIsGlobalAdmin(isGlobal);
 
     // If global admin, fetch list of clinics
+    // /clinics/ is paginated (12/page, max 50) — request the max page size
+    // since this dropdown needs the full list, not one page of it.
     if (isGlobal) {
       try {
-        const response = await api.get("/clinics/");
-        setClinics(response.data);
+        const response = await api.get("/clinics/", { params: { page_size: 50 } });
+        setClinics(response.data.results ?? response.data);
       } catch (err) {
         console.error("Error fetching clinics:", err);
       }

@@ -72,7 +72,7 @@ const AuthPopup = () => {
 
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
   useEffect(() => { if (isAuthOpen) setActiveTab(authDefaultTab); }, [isAuthOpen, authDefaultTab]);
-  const [loginMethod, setLoginMethod] = useState<"email" | "phone">("email");
+  const [loginMethod, setLoginMethod] = useState<"email" | "phone">("phone");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -231,7 +231,6 @@ const AuthPopup = () => {
     const cleanPhone = data.phone ? data.phone.replace(/[^\d+]/g, '') : null;
 
     const payload = {
-      email: data.email.trim(),
       phone: cleanPhone,
       password: data.password,
       first_name: data.first_name.trim(),
@@ -247,7 +246,6 @@ const AuthPopup = () => {
 🆕 *Новая регистрация*
 
 👤 *Имя:* ${data.first_name} ${data.last_name}
-📧 *Email:* ${data.email}
 📱 *Телефон:* ${data.phone || 'Не указан'}
 🖥 *Устройство:* ${getDeviceName()}
 📍 *Источник:* Website Registration
@@ -400,7 +398,7 @@ const AuthPopup = () => {
                     >
                       {/* Email / Phone toggle */}
                       <div className="flex rounded-xl border border-[#e8e8e8] overflow-hidden mb-5">
-                        {(["email", "phone"] as const).map(m => (
+                        {(["phone", "email"] as const).map(m => (
                           <button
                             key={m}
                             type="button"
