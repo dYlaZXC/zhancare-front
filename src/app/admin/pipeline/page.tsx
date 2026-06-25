@@ -138,18 +138,36 @@ function StatCard({ label, value, sub, icon, gradient }: {
 
 function ClinicKanbanCard({ clinic, onStageChange }: { clinic: Clinic; onStageChange: (id: number, stage: string) => void }) {
   const [stageMenu, setStageMenu] = useState(false);
+  const [menuAnchor, setMenuAnchor] = useState({ left: 0, width: 0, bottom: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
+  const menuBtnRef = useRef<HTMLButtonElement>(null);
 
   const stageColor = STAGES.find(s => s.key === clinic.pipeline_stage)?.color ?? "#64748b";
   const firstPhone = clinic.phones?.[0] ? phoneEntryToString(clinic.phones[0]) : undefined;
   const firstTelegram = clinic.telegram?.[0];
 
+  const openStageMenu = () => {
+    const rect = menuBtnRef.current?.getBoundingClientRect();
+    if (rect) setMenuAnchor({ left: rect.left, width: rect.width, bottom: window.innerHeight - rect.top + 6 });
+    setStageMenu(v => !v);
+  };
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setStageMenu(false);
+      const target = e.target as Element;
+      if (menuRef.current?.contains(target)) return;
+      if (target.closest("[data-stage-menu-portal]")) return;
+      setStageMenu(false);
     };
     if (stageMenu) document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
+  }, [stageMenu]);
+
+  useEffect(() => {
+    if (!stageMenu) return;
+    const close = () => setStageMenu(false);
+    document.addEventListener("scroll", close, { capture: true, passive: true });
+    return () => document.removeEventListener("scroll", close, { capture: true });
   }, [stageMenu]);
 
   return (
@@ -230,20 +248,23 @@ function ClinicKanbanCard({ clinic, onStageChange }: { clinic: Clinic; onStageCh
         {/* Stage move */}
         <div className="relative" ref={menuRef}>
           <button
-            onClick={() => setStageMenu(v => !v)}
+            ref={menuBtnRef}
+            onClick={openStageMenu}
             className="w-full flex items-center justify-between text-[11px] font-semibold text-gray-500 bg-gray-50 hover:bg-gray-100 rounded-xl px-3 py-2 transition-colors border border-gray-100 hover:border-gray-200"
           >
             <span>Переместить в этап</span>
             <ChevronDown className={`w-3.5 h-3.5 transition-transform ${stageMenu ? "rotate-180" : ""}`} />
           </button>
-          <AnimatePresence>
-            {stageMenu && (
+          {stageMenu && typeof document !== "undefined" && createPortal(
+            <AnimatePresence>
               <motion.div
+                data-stage-menu-portal
                 initial={{ opacity: 0, y: -4, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -4, scale: 0.97 }}
                 transition={{ duration: 0.12 }}
-                className="absolute bottom-full left-0 mb-1.5 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 z-30 overflow-hidden py-1.5"
+                style={{ position: "fixed", left: menuAnchor.left, width: menuAnchor.width, bottom: menuAnchor.bottom, zIndex: 9999 }}
+                className="min-w-[14rem] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden py-1.5"
               >
                 {STAGES.map(s => (
                   <button
@@ -263,8 +284,9 @@ function ClinicKanbanCard({ clinic, onStageChange }: { clinic: Clinic; onStageCh
                   </button>
                 ))}
               </motion.div>
-            )}
-          </AnimatePresence>
+            </AnimatePresence>,
+            document.body
+          )}
         </div>
       </div>
     </motion.div>
