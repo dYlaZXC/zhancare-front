@@ -43,7 +43,17 @@ type SubMenuItem = { id: string; icon: any; title: string; color: string; href: 
 type MenuItem = { id: string; icon: any; title: string; color: string; href?: string; superOnly?: boolean; children?: SubMenuItem[] };
 
 const adminMenu: MenuItem[] = [
-  { id: "dashboard", icon: faGaugeHigh, title: "Дашборд", color: "#a855f7", href: "/admin/dashboard", superOnly: true },
+  {
+    id: "overview",
+    icon: faGaugeHigh,
+    title: "Обзор",
+    color: "#a855f7",
+    superOnly: true,
+    children: [
+      { id: "dashboard", icon: faGaugeHigh, title: "Дашборд", color: "#a855f7", href: "/admin/dashboard" },
+      { id: "pipeline", icon: faFunnelDollar, title: "Pipeline клиник", color: "#10b981", href: "/admin/pipeline" },
+    ],
+  },
   { id: "profile", icon: faUser, title: "Профиль", color: "#3772ff", href: "/admin/profile" },
   {
     id: "management",
@@ -80,7 +90,6 @@ const adminMenu: MenuItem[] = [
       { id: "telegram", icon: faPaperPlane, title: "Telegram", color: "#0088cc", href: "/admin/telegram" },
     ],
   },
-  { id: "pipeline", icon: faFunnelDollar, title: "Pipeline клиник", color: "#10b981", href: "/admin/pipeline", superOnly: true },
 ];
 
 export interface AdminSidebarProps {

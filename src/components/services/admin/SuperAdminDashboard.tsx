@@ -8,8 +8,9 @@ import {
 import { api } from "@/utils/api";
 import {
   Building2, Users, UserCheck, Activity, TrendingUp,
-  RefreshCw, Wifi, Star, Calendar, ChevronRight,
+  RefreshCw, Wifi, Star, ChevronRight,
 } from "lucide-react";
+import { BRAND, BLUE, SectionTitle, ChartTip, KPICard } from "./dashboardUI";
 
 interface User { id: number; email: string; first_name: string; last_name: string; }
 
@@ -31,14 +32,11 @@ interface Stats {
   clinics_breakdown: ClinicRow[];
 }
 
-const KPI_CARDS = (s: Stats) => [
-  { label: "Клиник", value: s.total_clinics, icon: Building2, color: "#a855f7", bg: "rgba(168,85,247,0.12)" },
-  { label: "Врачей всего", value: s.total_doctors, icon: Users, color: "#3772ff", bg: "rgba(55,114,255,0.12)" },
-  { label: "Онлайн сейчас", value: s.online_doctors, icon: Wifi, color: "#10b981", bg: "rgba(16,185,129,0.12)" },
-  { label: "Пациентов", value: s.total_patients, icon: UserCheck, color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
-  { label: "Консультаций сегодня", value: s.completed_consultations_today, icon: Activity, color: "#ec4899", bg: "rgba(236,72,153,0.12)" },
-  { label: "Доход за месяц", value: `${(s.total_revenue_month / 1000).toFixed(0)}K ₸`, icon: TrendingUp, color: "#06b6d4", bg: "rgba(6,182,212,0.12)" },
-];
+function fmtKZT(n: number) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)} млн ₸`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)} тыс ₸`;
+  return `${n} ₸`;
+}
 
 const STATUS_COLORS = ["#f59e0b", "#3772ff", "#10b981", "#ef4444"];
 const STATUS_LABELS: Record<string, string> = {
@@ -74,110 +72,103 @@ export default function SuperAdminDashboard({ user }: { user: User }) {
     return () => clearInterval(t);
   }, [load]);
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <div className="w-16 h-16 rounded-2xl animate-pulse" style={{ background: BRAND }} />
+        <p className="text-gray-500 font-medium animate-pulse">Загрузка панели...</p>
+      </div>
+    );
+  }
 
-  if (!stats) return (
-    <div className="p-8 text-center text-gray-400">Не удалось загрузить данные</div>
-  );
+  if (!stats) {
+    return <div className="p-8 text-center text-gray-400">Не удалось загрузить данные</div>;
+  }
 
   const pieData = Object.entries(stats.consultation_status_distribution).map(([k, v]) => ({
     name: STATUS_LABELS[k], value: v,
   }));
 
   return (
-    <div className="p-4 sm:p-6 space-y-6 min-h-screen" style={{ background: "linear-gradient(135deg, #0e121d 0%, #131928 100%)" }}>
+    <div className="space-y-6 pb-12">
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white">Платформа ZhanCare.AI</h1>
-          <p className="text-sm text-gray-400 mt-0.5">
-            Обновлено: {lastUpdated ? lastUpdated.toLocaleTimeString("ru-RU") : "—"} · автообновление 30с
-          </p>
+      <div className="rounded-2xl p-6 text-white" style={{ background: BRAND }}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-black">Платформа ZhanCare.AI</h1>
+            <p className="text-blue-200 text-sm mt-0.5">
+              Обновлено: {lastUpdated ? lastUpdated.toLocaleTimeString("ru-RU") : "—"} · автообновление 30с
+            </p>
+          </div>
+          <button
+            onClick={() => load(true)}
+            disabled={refreshing}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 hover:bg-white/20 transition-colors text-sm font-medium text-white"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+            Обновить
+          </button>
         </div>
-        <button
-          onClick={() => load(true)}
-          disabled={refreshing}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all"
-          style={{ background: "rgba(168,85,247,0.15)", color: "#a855f7", border: "1px solid rgba(168,85,247,0.3)" }}
-        >
-          <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
-          Обновить
-        </button>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
-        {KPI_CARDS(stats).map((card) => (
-          <div key={card.label} className="rounded-2xl p-4 flex flex-col gap-2"
-            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: card.bg }}>
-              <card.icon size={18} style={{ color: card.color }} />
-            </div>
-            <p className="text-2xl font-bold text-white">{card.value}</p>
-            <p className="text-xs text-gray-400 leading-tight">{card.label}</p>
-          </div>
-        ))}
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
+        <KPICard label="Клиник" value={String(stats.total_clinics)} icon={Building2} color="#8b5cf6" />
+        <KPICard label="Врачей всего" value={String(stats.total_doctors)} icon={Users} color={BLUE} />
+        <KPICard label="Онлайн сейчас" value={String(stats.online_doctors)} icon={Wifi} color="#10b981" />
+        <KPICard label="Пациентов" value={String(stats.total_patients)} icon={UserCheck} color="#f59e0b" />
+        <KPICard label="Консультаций сегодня" value={String(stats.completed_consultations_today)} icon={Activity} color="#ec4899" />
+        <KPICard label="Доход за месяц" value={fmtKZT(stats.total_revenue_month)} icon={TrendingUp} color="#06b6d4" />
       </div>
 
       {/* Charts row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
         {/* 7-day trend */}
-        <div className="lg:col-span-2 rounded-2xl p-5"
-          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-          <p className="text-sm font-semibold text-white mb-4">Консультации за 7 дней</p>
-          <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={stats.analytics_data} margin={{ top: 0, right: 0, left: -30, bottom: 0 }}>
+        <div className="xl:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <SectionTitle>Консультации за 7 дней</SectionTitle>
+          <ResponsiveContainer width="100%" height={220}>
+            <AreaChart data={stats.analytics_data}>
               <defs>
                 <linearGradient id="gConsult" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3772ff" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="#3772ff" stopOpacity={0} />
+                  <stop offset="5%" stopColor={BLUE} stopOpacity={0.3} />
+                  <stop offset="95%" stopColor={BLUE} stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="gDone" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
                   <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-              <XAxis dataKey="day" tick={{ fill: "#6b7280", fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: "#6b7280", fontSize: 11 }} axisLine={false} tickLine={false} />
-              <Tooltip
-                contentStyle={{ background: "#1e293b", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: "#f1f5f9", fontSize: 12 }}
-                cursor={{ stroke: "rgba(255,255,255,0.1)" }}
-              />
-              <Area type="monotone" dataKey="consultations" name="Всего" stroke="#3772ff" strokeWidth={2} fill="url(#gConsult)" />
-              <Area type="monotone" dataKey="completed_consultations" name="Завершено" stroke="#10b981" strokeWidth={2} fill="url(#gDone)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+              <XAxis dataKey="day" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+              <Tooltip content={<ChartTip />} />
+              <Area type="monotone" dataKey="consultations" name="Всего" stroke={BLUE} strokeWidth={2.5} fill="url(#gConsult)" />
+              <Area type="monotone" dataKey="completed_consultations" name="Завершено" stroke="#10b981" strokeWidth={2.5} fill="url(#gDone)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
 
         {/* Status pie */}
-        <div className="rounded-2xl p-5"
-          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-          <p className="text-sm font-semibold text-white mb-4">Статусы консультаций</p>
-          <ResponsiveContainer width="100%" height={140}>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <SectionTitle>Статусы консультаций</SectionTitle>
+          <ResponsiveContainer width="100%" height={150}>
             <PieChart>
-              <Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={65} dataKey="value" paddingAngle={3}>
+              <Pie data={pieData} cx="50%" cy="50%" innerRadius={42} outerRadius={65} dataKey="value" paddingAngle={3}>
                 {pieData.map((_, i) => <Cell key={i} fill={STATUS_COLORS[i % STATUS_COLORS.length]} />)}
               </Pie>
-              <Tooltip
-                contentStyle={{ background: "#1e293b", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: "#f1f5f9", fontSize: 12 }}
-              />
+              <Tooltip content={<ChartTip />} />
             </PieChart>
           </ResponsiveContainer>
-          <div className="space-y-1.5 mt-2">
+          <div className="space-y-2 mt-2">
             {pieData.map((d, i) => (
-              <div key={d.name} className="flex items-center justify-between text-xs">
-                <span className="flex items-center gap-1.5 text-gray-400">
-                  <span className="w-2 h-2 rounded-full" style={{ background: STATUS_COLORS[i] }} />
+              <div key={d.name} className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-1.5 text-gray-500">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: STATUS_COLORS[i] }} />
                   {d.name}
                 </span>
-                <span className="text-white font-medium">{d.value}</span>
+                <span className="text-gray-900 font-bold">{d.value}</span>
               </div>
             ))}
           </div>
@@ -185,76 +176,71 @@ export default function SuperAdminDashboard({ user }: { user: User }) {
       </div>
 
       {/* Revenue bar */}
-      <div className="rounded-2xl p-5"
-        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-        <p className="text-sm font-semibold text-white mb-4">Выручка по дням (₸)</p>
-        <ResponsiveContainer width="100%" height={120}>
-          <BarChart data={stats.analytics_data} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-            <XAxis dataKey="day" tick={{ fill: "#6b7280", fontSize: 11 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: "#6b7280", fontSize: 11 }} axisLine={false} tickLine={false} />
-            <Tooltip
-              contentStyle={{ background: "#1e293b", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: "#f1f5f9", fontSize: 12 }}
-              formatter={(v: number) => [`${v.toLocaleString()} ₸`, "Выручка"]}
-            />
-            <Bar dataKey="revenue" name="Выручка" fill="#a855f7" radius={[4, 4, 0, 0]} />
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <SectionTitle>Выручка по дням (₸)</SectionTitle>
+        <ResponsiveContainer width="100%" height={160}>
+          <BarChart data={stats.analytics_data} barSize={28}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+            <XAxis dataKey="day" tick={{ fontSize: 11 }} />
+            <YAxis tick={{ fontSize: 11 }} tickFormatter={v => fmtKZT(v)} width={70} />
+            <Tooltip content={<ChartTip />} formatter={(v: any) => fmtKZT(Number(v))} />
+            <Bar dataKey="revenue" name="Выручка" fill="#8b5cf6" fillOpacity={0.85} radius={[6, 6, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
       {/* Clinics breakdown table */}
-      <div className="rounded-2xl overflow-hidden"
-        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-        <div className="px-5 py-4 flex items-center justify-between border-b" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
-          <p className="text-sm font-semibold text-white">Клиники платформы</p>
-          <a href="/admin/clinics" className="flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 transition-colors">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 flex items-center justify-between border-b border-gray-100">
+          <SectionTitle>Клиники платформы</SectionTitle>
+          <a href="/admin/clinics" className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors">
             Управление <ChevronRight size={12} />
           </a>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+              <tr className="border-b border-gray-100">
                 {["Клиника", "Город", "Врачей", "Онлайн", "Сегодня", "Активных", "Рейтинг"].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {stats.clinics_breakdown.map((c, i) => (
                 <tr key={c.id}
-                  className="transition-colors hover:bg-white/[0.03]"
-                  style={{ borderBottom: i < stats.clinics_breakdown.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}
+                  className="transition-colors hover:bg-gray-50"
+                  style={{ borderBottom: i < stats.clinics_breakdown.length - 1 ? "1px solid #f3f4f6" : "none" }}
                 >
-                  <td className="px-4 py-3">
+                  <td className="px-6 py-3">
                     <div className="flex items-center gap-2.5">
                       {c.logo
-                        ? <img src={c.logo} alt="" className="w-7 h-7 rounded-lg object-cover" />
-                        : <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold"
-                            style={{ background: "linear-gradient(135deg, #3772ff, #a855f7)" }}>
+                        ? <img src={c.logo} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                        : <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold"
+                            style={{ background: BRAND }}>
                             {c.name[0]}
                           </div>
                       }
-                      <span className="text-white font-medium text-sm">{c.name}</span>
+                      <span className="text-gray-900 font-bold text-sm">{c.name}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">{c.city ?? "—"}</td>
-                  <td className="px-4 py-3 text-white">{c.doctors}</td>
-                  <td className="px-4 py-3">
-                    <span className="flex items-center gap-1 text-emerald-400 font-medium">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <td className="px-6 py-3 text-gray-500 text-xs">{c.city ?? "—"}</td>
+                  <td className="px-6 py-3 text-gray-900 font-medium">{c.doctors}</td>
+                  <td className="px-6 py-3">
+                    <span className="flex items-center gap-1 text-emerald-600 font-bold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                       {c.online_doctors}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-white">{c.consultations_today}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-6 py-3 text-gray-900 font-medium">{c.consultations_today}</td>
+                  <td className="px-6 py-3">
                     {c.active_consultations > 0
-                      ? <span className="px-2 py-0.5 rounded-full text-xs font-medium text-blue-300" style={{ background: "rgba(55,114,255,0.15)" }}>{c.active_consultations}</span>
-                      : <span className="text-gray-600">—</span>
+                      ? <span className="px-2 py-0.5 rounded-full text-xs font-semibold text-blue-600 bg-blue-50">{c.active_consultations}</span>
+                      : <span className="text-gray-300">—</span>
                     }
                   </td>
-                  <td className="px-4 py-3">
-                    <span className="flex items-center gap-1 text-amber-400 text-xs font-medium">
+                  <td className="px-6 py-3">
+                    <span className="flex items-center gap-1 text-amber-500 text-xs font-bold">
                       <Star size={11} />
                       {c.rating > 0 ? c.rating.toFixed(1) : "—"}
                     </span>
@@ -262,7 +248,7 @@ export default function SuperAdminDashboard({ user }: { user: User }) {
                 </tr>
               ))}
               {stats.clinics_breakdown.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500 text-sm">Клиник не найдено</td></tr>
+                <tr><td colSpan={7} className="px-6 py-8 text-center text-gray-400 text-sm">Клиник не найдено</td></tr>
               )}
             </tbody>
           </table>

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-toastify";
 import { api } from "@/utils/api";
+import { phoneEntryToString } from "@/utils/phoneFormat";
 import {
   Search,
   Edit,
@@ -190,7 +191,7 @@ const ClinicFormModal = ({
         address: initial.address || "",
         working_hours: initial.working_hours || "",
         is_private: initial.is_private,
-        phones: initial.phones || [],
+        phones: (initial.phones || []).map(phoneEntryToString),
         emails: initial.emails || [],
         websites: initial.websites || [],
         instagram: initial.instagram || "",
@@ -541,7 +542,7 @@ const ClinicRow = ({
         {clinic.phones && clinic.phones.length > 0 && (
           <div className="flex items-center gap-1 text-xs text-gray-600">
             <Phone className="w-3 h-3 text-gray-400" />
-            {clinic.phones[0]}
+            {phoneEntryToString(clinic.phones[0])}
             {clinic.phones.length > 1 && (
               <span className="text-gray-400">+{clinic.phones.length - 1}</span>
             )}

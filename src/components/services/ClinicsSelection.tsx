@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { api } from "@/utils/api";
 import { useAuth } from "@/context/AuthContext";
+import { phoneEntryToString } from "@/utils/phoneFormat";
 import PatientConsultationsTable from "./consultations/PatientConsultationsTable";
 
 interface Clinic {
@@ -1207,7 +1208,7 @@ const ClinicsSelection: React.FC<ClinicsSelectionProps> = ({ onSelectClinic, onS
                     onClick={(e) => {
                       e.stopPropagation();
                       if (selectedClinic.phones && selectedClinic.phones.length > 0) {
-                        window.location.href = `tel:${selectedClinic.phones[0]}`;
+                        window.location.href = `tel:${phoneEntryToString(selectedClinic.phones[0])}`;
                       }
                     }}
                     disabled={!selectedClinic.phones || selectedClinic.phones.length === 0}

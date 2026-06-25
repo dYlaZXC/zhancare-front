@@ -28,6 +28,7 @@ import { useAuth } from "@/context/AuthContext";
 import BannerPicker, { useBanner } from "@/components/profile/BannerPicker";
 import PhoneInput from "@/components/ui/PhoneInput";
 import { CURRENCIES } from "@/utils/currency";
+import { phoneEntryToString } from "@/utils/phoneFormat";
 import { useClinicCurrency } from "@/context/BrandContext";
 
 const BACKEND = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') ?? 'http://127.0.0.1:8000';
@@ -138,7 +139,7 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
       if (res.data.clinic_info) {
         const ci = res.data.clinic_info;
         const firstPhone = Array.isArray(ci.phones) && ci.phones.length > 0
-          ? (typeof ci.phones[0] === 'string' ? ci.phones[0] : ci.phones[0]?.number ?? '')
+          ? phoneEntryToString(ci.phones[0])
           : '';
         setClinicForm({
           name: ci.name || "",

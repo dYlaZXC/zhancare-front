@@ -36,3 +36,16 @@ export function toE164(phone: string): string {
 export function isPhoneComplete(phone: string): boolean {
   return phone.replace(/\D/g, "").length === 11;
 }
+
+/**
+ * Some legacy clinic rows store phones as { number: "..." } instead of a
+ * plain string (a since-fixed backend bug). Normalize defensively so any
+ * spot rendering a raw phones[] entry never crashes.
+ */
+export function phoneEntryToString(entry: unknown): string {
+  if (typeof entry === "string") return entry;
+  if (entry && typeof entry === "object" && "number" in entry) {
+    return String((entry as { number: unknown }).number ?? "");
+  }
+  return entry == null ? "" : String(entry);
+}

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { api } from "@/utils/api";
 import { useAuth } from "@/context/AuthContext";
+import { phoneEntryToString } from "@/utils/phoneFormat";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -140,7 +141,7 @@ function ClinicKanbanCard({ clinic, onStageChange }: { clinic: Clinic; onStageCh
   const menuRef = useRef<HTMLDivElement>(null);
 
   const stageColor = STAGES.find(s => s.key === clinic.pipeline_stage)?.color ?? "#64748b";
-  const firstPhone = clinic.phones?.[0];
+  const firstPhone = clinic.phones?.[0] ? phoneEntryToString(clinic.phones[0]) : undefined;
   const firstTelegram = clinic.telegram?.[0];
 
   useEffect(() => {
@@ -702,8 +703,8 @@ export default function PipelinePage() {
                         <div className="flex flex-col gap-1">
                           {c.instagram && <a href={c.instagram} target="_blank" rel="noopener noreferrer"
                             className="flex items-center gap-1 text-[11px] text-pink-600 hover:underline font-medium"><Instagram className="w-3 h-3" />Instagram</a>}
-                          {c.phones?.[0] && <a href={`tel:${c.phones[0]}`}
-                            className="flex items-center gap-1 text-[11px] text-blue-600 hover:underline font-medium"><Phone className="w-3 h-3" />{c.phones[0].slice(0, 16)}</a>}
+                          {c.phones?.[0] && <a href={`tel:${phoneEntryToString(c.phones[0])}`}
+                            className="flex items-center gap-1 text-[11px] text-blue-600 hover:underline font-medium"><Phone className="w-3 h-3" />{phoneEntryToString(c.phones[0]).slice(0, 16)}</a>}
                           {c.telegram?.[0] && <a href={c.telegram[0]} target="_blank" rel="noopener noreferrer"
                             className="flex items-center gap-1 text-[11px] text-sky-600 hover:underline font-medium"><MessageCircle className="w-3 h-3" />Telegram</a>}
                         </div>
@@ -1015,7 +1016,7 @@ function PipelineMapView({ clinics, loading, fullHeight, topOffset = 16 }: { cli
 
       const icon = L.divIcon({ html, className: "", iconSize: [cardW, cardH], iconAnchor: [cardW / 2, cardH] });
       const marker = L.marker([c.latitude!, c.longitude!], { icon });
-      marker.bindPopup(`<div style="min-width:220px;font-family:system-ui"><div style="font-size:14px;font-weight:700;color:#0f172a;padding-bottom:6px;border-bottom:1px solid #f1f5f9;margin-bottom:6px">${c.name}</div><div style="font-size:12px;line-height:1.9;color:#475569">${c.district_name ? `<div>📍 <b>${c.district_name}</b></div>` : ""}${c.description ? `<div style="color:#64748b;margin-top:2px">${c.description.slice(0,120)}${c.description.length>120?"…":""}</div>` : ""}${c.phones?.[0] ? `<div>📞 ${c.phones[0]}</div>` : ""}${c.instagram ? `<div>📸 <a href="${c.instagram}" target="_blank" style="color:#e1306c;font-weight:600">Instagram</a></div>` : ""}<div style="margin-top:8px;display:flex;gap:5px;flex-wrap:wrap"><span style="padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;background:${sc}22;color:${sc};border:1px solid ${sc}44">${stageName}</span>${c.priority ? `<span style="padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;background:${prBg};color:${prTxt}">Приоритет ${c.priority}</span>` : ""}</div></div></div>`);
+      marker.bindPopup(`<div style="min-width:220px;font-family:system-ui"><div style="font-size:14px;font-weight:700;color:#0f172a;padding-bottom:6px;border-bottom:1px solid #f1f5f9;margin-bottom:6px">${c.name}</div><div style="font-size:12px;line-height:1.9;color:#475569">${c.district_name ? `<div>📍 <b>${c.district_name}</b></div>` : ""}${c.description ? `<div style="color:#64748b;margin-top:2px">${c.description.slice(0,120)}${c.description.length>120?"…":""}</div>` : ""}${c.phones?.[0] ? `<div>📞 ${phoneEntryToString(c.phones[0])}</div>` : ""}${c.instagram ? `<div>📸 <a href="${c.instagram}" target="_blank" style="color:#e1306c;font-weight:600">Instagram</a></div>` : ""}<div style="margin-top:8px;display:flex;gap:5px;flex-wrap:wrap"><span style="padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;background:${sc}22;color:${sc};border:1px solid ${sc}44">${stageName}</span>${c.priority ? `<span style="padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;background:${prBg};color:${prTxt}">Приоритет ${c.priority}</span>` : ""}</div></div></div>`);
       return marker;
     });
     clusterRef.current.addLayers(markers);
