@@ -100,7 +100,7 @@ const CardHeader = ({ icon: Icon, title, subtitle, iconBg, badge }: {
   <div className="flex items-center justify-between mb-6">
     <div className="flex items-center gap-3">
       <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: iconBg }}>
-        <Icon className="w-4 h-4" style={{ color: iconBg.includes('ebf1ff') ? '#3772ff' : iconBg.includes('ede9fe') ? '#8b5cf6' : '#10b981' }} />
+        <Icon className="w-4 h-4" style={{ color: iconBg.includes('ebf1ff') || iconBg.includes('dbeafe') ? '#3772ff' : '#10b981' }} />
       </div>
       <div>
         <h2 className="text-sm font-bold text-gray-800">{title}</h2>
@@ -250,7 +250,7 @@ export default function DoctorProfileInfo() {
         {!banner && (
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
             <div className="absolute -top-16 -left-16 w-72 h-72 rounded-full blur-3xl opacity-30" style={{ background: 'radial-gradient(circle, #3772ff, transparent)' }} />
-            <div className="absolute -bottom-20 right-10 w-64 h-64 rounded-full blur-3xl opacity-20" style={{ background: 'radial-gradient(circle, #6048f5, transparent)' }} />
+            <div className="absolute -bottom-20 right-10 w-64 h-64 rounded-full blur-3xl opacity-20" style={{ background: 'radial-gradient(circle, #2956bf, transparent)' }} />
             <svg className="absolute right-0 top-0 h-full opacity-5" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice">
               <defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="white" strokeWidth="0.5"/></pattern></defs>
               <rect width="200" height="200" fill="url(#grid)" />
@@ -262,7 +262,7 @@ export default function DoctorProfileInfo() {
           {/* Avatar */}
           <div className="relative flex-shrink-0" ref={avatarMenuRef}>
             <div className="w-28 h-28 rounded-3xl overflow-hidden border-4 border-white shadow-2xl"
-                 style={{ background: avatarPreview ? 'transparent' : 'linear-gradient(135deg, #3772ff 0%, #6048f5 100%)' }}>
+                 style={{ background: avatarPreview ? 'transparent' : 'linear-gradient(135deg, #3772ff 0%, #2956bf 100%)' }}>
               {avatarPreview
                 ? <img src={avatarPreview} alt="avatar" className="w-full h-full object-cover" />
                 : <div className="w-full h-full flex items-center justify-center"><span className="text-white font-black text-4xl">{initials}</span></div>}
@@ -326,7 +326,7 @@ export default function DoctorProfileInfo() {
       </div>
 
       {/* ── PERSONAL INFO ── */}
-      <Card accentColor="linear-gradient(to bottom, #3772ff, #6048f5)" delay={0.05}>
+      <Card accentColor="linear-gradient(to bottom, #3772ff, #2956bf)" delay={0.05}>
         <CardHeader icon={User} title="Личные данные" subtitle="Основная информация профиля"
           iconBg="linear-gradient(135deg, #ebf1ff, #d6e4ff)"
           badge={<div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold text-blue-600 bg-blue-50 border border-blue-100"><Lock className="w-3 h-3" /> Защищено</div>} />
@@ -345,14 +345,14 @@ export default function DoctorProfileInfo() {
           </div>
         </div>
         <div className="mt-6 flex justify-end">
-          <SaveButton saving={saving} saved={saved} onClick={handleSave} color="linear-gradient(135deg, #3772ff 0%, #6048f5 100%)" />
+          <SaveButton saving={saving} saved={saved} onClick={handleSave} color="linear-gradient(135deg, #3772ff 0%, #2956bf 100%)" />
         </div>
       </Card>
 
       {/* ── PROFESSIONAL INFO ── */}
-      <Card accentColor="linear-gradient(to bottom, #6048f5, #8b5cf6)" delay={0.1}>
+      <Card accentColor="linear-gradient(to bottom, #2956bf, #214499)" delay={0.1}>
         <CardHeader icon={Stethoscope} title="Профессиональная информация" subtitle="Специализация, опыт и образование"
-          iconBg="linear-gradient(135deg, #ede9fe, #ddd6fe)" />
+          iconBg="linear-gradient(135deg, #dbeafe, #bfdbfe)" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <InputField label="Тип врача / Должность" value={form.doctor_type} onChange={v => setForm(p => ({ ...p, doctor_type: v }))} icon={Stethoscope} placeholder="Кардиолог, Терапевт..." />
           <InputField label="Опыт работы (лет)" value={form.years_of_experience} onChange={v => setForm(p => ({ ...p, years_of_experience: v }))} icon={Award} placeholder="5" type="number" />
@@ -384,7 +384,7 @@ export default function DoctorProfileInfo() {
           </div>
         </div>
         <div className="mt-6 flex justify-end">
-          <SaveButton saving={saving} saved={saved} onClick={handleSave} color="linear-gradient(135deg, #6048f5 0%, #8b5cf6 100%)" />
+          <SaveButton saving={saving} saved={saved} onClick={handleSave} color="linear-gradient(135deg, #2956bf 0%, #214499 100%)" />
         </div>
       </Card>
 

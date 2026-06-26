@@ -278,7 +278,7 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
         {!banner && (
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
             <div className="absolute -top-16 -left-16 w-72 h-72 rounded-full blur-3xl opacity-30" style={{ background: 'radial-gradient(circle, #3772ff 0%, transparent 70%)' }} />
-            <div className="absolute -bottom-20 right-10 w-64 h-64 rounded-full blur-3xl opacity-20" style={{ background: 'radial-gradient(circle, #8b5cf6 0%, transparent 70%)' }} />
+            <div className="absolute -bottom-20 right-10 w-64 h-64 rounded-full blur-3xl opacity-20" style={{ background: 'radial-gradient(circle, #2956bf 0%, transparent 70%)' }} />
             <div className="absolute top-8 right-1/3 w-40 h-40 rounded-full blur-2xl opacity-10" style={{ background: 'radial-gradient(circle, #60a5fa 0%, transparent 70%)' }} />
             <svg className="absolute right-0 top-0 h-full opacity-5" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice">
               <defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="white" strokeWidth="0.5"/></pattern></defs>
@@ -296,7 +296,7 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
           {/* Avatar */}
           <div className="relative flex-shrink-0" ref={avatarMenuRef}>
             <div className="w-28 h-28 rounded-3xl overflow-hidden border-4 border-white shadow-2xl"
-                 style={{ background: avatarPreview ? 'transparent' : 'linear-gradient(135deg, #3772ff 0%, #8b5cf6 100%)' }}>
+                 style={{ background: avatarPreview ? 'transparent' : 'linear-gradient(135deg, #3772ff 0%, #2956bf 100%)' }}>
               {avatarPreview ? (
                 <img src={avatarPreview} alt="avatar" className="w-full h-full object-cover" />
               ) : (
@@ -363,8 +363,8 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
                 {personalForm.first_name} {personalForm.last_name}
               </h1>
               {stats?.is_super_admin && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-purple-200 border border-purple-400/40"
-                      style={{ background: 'rgba(139,92,246,0.25)' }}>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-blue-200 border border-blue-400/40"
+                      style={{ background: 'rgba(55,114,255,0.25)' }}>
                   <Sparkles className="w-3 h-3" /> Супер Админ
                 </span>
               )}
@@ -393,7 +393,7 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
         className="relative bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
 
         {/* Left accent bar */}
-        <div className="absolute left-0 top-0 w-1.5 h-full" style={{ background: 'linear-gradient(to bottom, #3772ff, #6048f5)' }} />
+        <div className="absolute left-0 top-0 w-1.5 h-full" style={{ background: 'linear-gradient(to bottom, #3772ff, #2956bf)' }} />
 
         <div className="px-8 py-6">
           {/* Header */}
@@ -435,7 +435,7 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
               disabled={savingPersonal}
               whileTap={{ scale: 0.97 }}
               className="relative flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white shadow-lg hover:shadow-xl disabled:opacity-50 transition-all overflow-hidden"
-              style={{ background: 'linear-gradient(135deg, #3772ff 0%, #6048f5 100%)' }}
+              style={{ background: 'linear-gradient(135deg, #3772ff 0%, #2956bf 100%)' }}
             >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 -translate-x-full hover:translate-x-full transition-transform duration-700" />
               {savingPersonal ? (
@@ -613,16 +613,16 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
       {/* ── SUPER ADMIN BADGE ─────────────────────────────────── */}
       {stats?.is_super_admin && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          className="relative rounded-3xl p-6 flex items-center gap-5 overflow-hidden border border-purple-200/50"
-          style={{ background: 'linear-gradient(135deg, #faf5ff 0%, #f3e8ff 50%, #ede9fe 100%)' }}>
-          <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full blur-3xl opacity-30" style={{ background: 'radial-gradient(circle, #8b5cf6, transparent)' }} />
+          className="relative rounded-3xl p-6 flex items-center gap-5 overflow-hidden border border-blue-200/50"
+          style={{ background: 'linear-gradient(135deg, #ebf1ff 0%, #e1eaff 50%, #c1d3ff 100%)' }}>
+          <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full blur-3xl opacity-30" style={{ background: 'radial-gradient(circle, #3772ff, transparent)' }} />
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0"
-               style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)' }}>
+               style={{ background: 'linear-gradient(135deg, #3772ff 0%, #2956bf 100%)' }}>
             <Shield className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h3 className="font-black text-base text-purple-900">Системный Администратор</h3>
-            <p className="text-sm text-purple-700 mt-0.5">Полный доступ ко всем клиникам и ресурсам платформы</p>
+            <h3 className="font-black text-base text-blue-900">Системный Администратор</h3>
+            <p className="text-sm text-blue-700 mt-0.5">Полный доступ ко всем клиникам и ресурсам платформы</p>
           </div>
         </motion.div>
       )}

@@ -405,10 +405,10 @@ export default function NurseProfileDashboard() {
 
       {/* ── CLINIC INFO (read-only) ── */}
       {profile.clinic && (
-        <Card accentColor="linear-gradient(to bottom, #8b5cf6, #7c3aed)" delay={0.15}>
+        <Card accentColor="linear-gradient(to bottom, #0e9b8a, #0c7d70)" delay={0.15}>
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #ede9fe, #ddd6fe)" }}>
-              <Building2 className="w-4 h-4 text-violet-600" />
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #ccfbf1, #99f6e4)" }}>
+              <Building2 className="w-4 h-4 text-teal-600" />
             </div>
             <div>
               <h2 className="text-sm font-bold text-gray-800">Место работы</h2>

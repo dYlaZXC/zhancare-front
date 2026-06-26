@@ -470,7 +470,7 @@ export default function PatientProfileDashboard() {
             <div className="absolute -top-16 -left-16 w-72 h-72 rounded-full blur-3xl opacity-30"
                  style={{ background: "radial-gradient(circle, #3772ff, transparent)" }} />
             <div className="absolute -bottom-20 right-10 w-64 h-64 rounded-full blur-3xl opacity-20"
-                 style={{ background: "radial-gradient(circle, #8b5cf6, transparent)" }} />
+                 style={{ background: "radial-gradient(circle, #2956bf, transparent)" }} />
             <svg className="absolute right-0 top-0 h-full opacity-5" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice">
               <defs><pattern id="grid-patient" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="white" strokeWidth="0.5" /></pattern></defs>
               <rect width="200" height="200" fill="url(#grid-patient)" />
@@ -603,7 +603,7 @@ export default function PatientProfileDashboard() {
       </Card>
 
       {/* ── MEDICAL DETAILS ── */}
-      <Card accentColor="linear-gradient(to bottom, #3772ff, #6048f5)" delay={0.1}>
+      <Card accentColor="linear-gradient(to bottom, #3772ff, #2956bf)" delay={0.1}>
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #ebf1ff, #d6e4ff)" }}>
@@ -615,7 +615,7 @@ export default function PatientProfileDashboard() {
             </div>
           </div>
           <div className="hidden sm:block w-24 h-1.5 rounded-full bg-gray-100 overflow-hidden">
-            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${medPct}%`, background: "linear-gradient(135deg, #3772ff, #6048f5)" }} />
+            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${medPct}%`, background: "linear-gradient(135deg, #3772ff, #2956bf)" }} />
           </div>
         </div>
 
@@ -642,7 +642,7 @@ export default function PatientProfileDashboard() {
         </div>
 
         <div className="mt-6 flex justify-end">
-          <SaveButton saving={savingMedical} saved={savedMedical} onClick={handleSaveMedical} color="linear-gradient(135deg, #3772ff 0%, #6048f5 100%)" />
+          <SaveButton saving={savingMedical} saved={savedMedical} onClick={handleSaveMedical} color="linear-gradient(135deg, #3772ff 0%, #2956bf 100%)" />
         </div>
       </Card>
 
