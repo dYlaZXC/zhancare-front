@@ -36,6 +36,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import Image from "next/image";
 import { useBrand } from "@/context/BrandContext";
 import BookingModal from "@/sections/Chat/BookingModal";
+import DiagnosticsBookingModal from "@/sections/Chat/DiagnosticsBookingModal";
 import LanguageSwitcher from "@/sections/Hero/LanguageSwitcher";
 import type { Doctor } from "@/components/services/consultations/types/doctor";
 import { aiService, isInjectionAttempt, CHAT_ENDPOINT, CHAT_UPLOAD_ENDPOINT } from "@/lib/ai";
@@ -56,11 +57,12 @@ interface BookingConfirmationData {
   formattedTime: string;
   meetingId?: string;
   consultationId?: number;
-  consultationType?: 'online' | 'offline';
+  consultationType?: 'online' | 'offline' | 'diagnostics';
   clinicName?: string;
   clinicAddress?: string;
   roomNumber?: string | null;
   gis2Url?: string;
+  price?: string | null;
 }
 
 type ConsultationFlow = 'online' | 'offline' | 'diagnostics';
@@ -300,6 +302,8 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [preselectedDoctor, setPreselectedDoctor] = useState<Doctor | null>(null);
   const [bookingConsultationType, setBookingConsultationType] = useState<'online' | 'offline'>('online');
+  const [isDiagBookingOpen, setIsDiagBookingOpen] = useState(false);
+  const [selectedDiagService, setSelectedDiagService] = useState<DiagnosticsServiceItem | null>(null);
   const [streamingText, setStreamingText] = useState("");
   const [accumulatedSymptoms, setAccumulatedSymptoms] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -627,6 +631,39 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
     ]);
   }, [language]);
 
+  const handleBookDiagnosticsService = (service: DiagnosticsServiceItem) => {
+    setSelectedDiagService(service);
+    setIsDiagBookingOpen(true);
+  };
+
+  const handleDiagnosticsBookingComplete = useCallback((details: {
+    serviceName: string;
+    scheduledTime: string;
+    price?: string | null;
+    durationMinutes: number;
+  }) => {
+    const date = new Date(details.scheduledTime);
+    const locale = language === "kz" ? "kk-KZ" : language === "en" ? "en-US" : "ru-RU";
+    const formattedDate = date.toLocaleDateString(locale, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+    const formattedTime = date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "booking-confirmation",
+        content: "",
+        bookingConfirmation: {
+          doctorName: details.serviceName,
+          doctorType: "",
+          formattedDate,
+          formattedTime,
+          consultationType: "diagnostics",
+          price: details.price,
+        },
+      },
+    ]);
+  }, [language]);
+
   const handleShowOtherDoctors = async () => {
     setIsLoading(true);
     try {
@@ -754,7 +791,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
         // diagnostics — show clinic's diagnostic services, not doctors
         const label = { en: "Available diagnostic services:", ru: "Доступные услуги диагностики:", kz: "Қолжетімді диагностикалық қызметтер:" }[lang] ?? "Доступные услуги диагностики:";
         const emptyLabel = { en: "No diagnostic services available at the moment.", ru: "В данный момент диагностические услуги недоступны.", kz: "Қазіргі уақытта диагностикалық қызметтер жоқ." }[lang] ?? "В данный момент диагностические услуги недоступны.";
-        const services = clinic?.clinicId ? await aiService.getDiagnosticsServices(clinic.clinicId) : [];
+        const services = await aiService.getDiagnosticsServices(clinic?.clinicId);
         if (services.length > 0) {
           setMessages(prev => [...prev, { role: "diagnostics-list", content: label, diagnosticsServices: services }]);
         } else {
@@ -1006,7 +1043,83 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                       </div>
                     </div>
                   </div>
-                ) : message.role === "booking-confirmation" && message.bookingConfirmation ? (() => {
+                ) : message.role === "booking-confirmation" && message.bookingConfirmation?.consultationType === "diagnostics" ? (() => {
+                  const bc = message.bookingConfirmation;
+                  const l = language as "en" | "ru" | "kz";
+                  const labels = {
+                    title: { en: "Booking confirmed!", ru: "Запись подтверждена!", kz: "Жазылу расталды!" },
+                    service: { en: "Diagnostic service", ru: "Услуга диагностики", kz: "Диагностикалық қызмет" },
+                    date: { en: "Date", ru: "Дата", kz: "Күні" },
+                    time: { en: "Time", ru: "Время", kz: "Уақыты" },
+                    price: { en: "Price", ru: "Стоимость", kz: "Бағасы" },
+                    remind: { en: "You will receive a reminder before your appointment.", ru: "Вы получите напоминание перед визитом.", kz: "Қабылдау алдында еске салу аласыз." },
+                  };
+                  return (
+                    <div className="max-w-[90%] sm:max-w-[85%] flex gap-2 sm:gap-3">
+                      <div
+                        className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 mt-1"
+                        style={{ background: "linear-gradient(135deg, #3772ff 0%, #2956bf 100%)" }}
+                      >
+                        <FontAwesomeIcon icon={faRobot} className="text-white text-xs sm:text-sm" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="rounded-2xl sm:rounded-3xl overflow-hidden shadow-lg border bg-white" style={{ borderColor: "#e1eaff" }}>
+                          <div className="px-5 py-4 flex items-center gap-3" style={{ background: "linear-gradient(135deg, #10b981 0%, #059669 100%)" }}>
+                            <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
+                              <FontAwesomeIcon icon={faCircleCheck} className="text-white text-lg" />
+                            </div>
+                            <p className="text-white font-bold text-sm sm:text-base">{labels.title[l]}</p>
+                          </div>
+                          <div className="px-5 py-4 space-y-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: accentLight }}>
+                                <FontAwesomeIcon icon={faStethoscope} className="text-sm" style={{ color: accentDark }} />
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500">{labels.service[l]}</p>
+                                <p className="font-bold text-gray-900 text-sm">{bc.doctorName}</p>
+                              </div>
+                            </div>
+                            <div className="border-t border-gray-100" />
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: accentLight }}>
+                                <FontAwesomeIcon icon={faCalendarDays} className="text-sm" style={{ color: accentDark }} />
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500">{labels.date[l]}</p>
+                                <p className="font-bold text-gray-900 text-sm">{bc.formattedDate}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: accentLight }}>
+                                <FontAwesomeIcon icon={faClock} className="text-sm" style={{ color: accentDark }} />
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500">{labels.time[l]}</p>
+                                <p className="font-bold text-gray-900 text-sm">{bc.formattedTime}</p>
+                              </div>
+                            </div>
+                            {bc.price && (
+                              <div className="border-t border-gray-100 pt-3 flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: accentLight }}>
+                                  <span className="text-sm font-bold" style={{ color: accentDark }}>₸</span>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-gray-500">{labels.price[l]}</p>
+                                  <p className="font-bold text-gray-900 text-sm">{Number(bc.price).toLocaleString()} ₸</p>
+                                </div>
+                              </div>
+                            )}
+                            <div className="flex items-start gap-3 rounded-xl px-3 py-2.5" style={{ background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
+                              <FontAwesomeIcon icon={faBell} className="text-xs mt-0.5 flex-shrink-0" style={{ color: "#10b981" }} />
+                              <p className="text-xs text-green-800">{labels.remind[l]}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })() : message.role === "booking-confirmation" && message.bookingConfirmation ? (() => {
                   const bc = message.bookingConfirmation;
                   const isOfflineBooking = bc.consultationType === 'offline';
                   const labels = {
@@ -1312,6 +1425,11 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                                     <span className="text-amber-200">{message.doctor.clinic.rating.toFixed(1)}</span>
                                   </div>
                                 )}
+                                {message.doctor.online_consultation_price != null && (
+                                  <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold" style={{ background: "rgba(16,185,129,0.18)" }}>
+                                    <span className="text-emerald-200">{message.doctor.online_consultation_price.toLocaleString()} ₸</span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -1399,13 +1517,20 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                                       </div>
                                     </div>
 
-                                    {/* Experience */}
-                                    {doc.years_of_experience && (
-                                      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] mb-2.5" style={{ background: "rgba(255,255,255,0.15)" }}>
-                                        <FontAwesomeIcon icon={faBolt} className="text-amber-300 text-[9px]" />
-                                        <span className="text-white font-medium">{doc.years_of_experience} {labels.experience[lang as keyof typeof labels.experience]}</span>
-                                      </div>
-                                    )}
+                                    {/* Experience + price */}
+                                    <div className="flex flex-wrap gap-1.5 mb-2.5">
+                                      {doc.years_of_experience && (
+                                        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]" style={{ background: "rgba(255,255,255,0.15)" }}>
+                                          <FontAwesomeIcon icon={faBolt} className="text-amber-300 text-[9px]" />
+                                          <span className="text-white font-medium">{doc.years_of_experience} {labels.experience[lang as keyof typeof labels.experience]}</span>
+                                        </div>
+                                      )}
+                                      {doc.online_consultation_price != null && (
+                                        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]" style={{ background: "rgba(16,185,129,0.18)" }}>
+                                          <span className="text-emerald-200 font-medium">{doc.online_consultation_price.toLocaleString()} ₸</span>
+                                        </div>
+                                      )}
+                                    </div>
 
                                     {/* Book button */}
                                     <button
@@ -1520,12 +1645,21 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                                   <div className="flex-1">
                                     <h3 className="text-white font-bold text-sm sm:text-base mb-0.5 leading-tight">{doctor.name}</h3>
                                     <p className="text-blue-100 text-xs sm:text-sm mb-1.5">{doctorSpecialization}</p>
-                                    {doctor.years_of_experience && (
-                                      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs" style={{ background: "rgba(255, 255, 255, 0.15)" }}>
-                                        <FontAwesomeIcon icon={faBolt} className="text-amber-300 text-[9px]" />
-                                        <span className="text-white font-semibold">{doctor.years_of_experience} {labels.experience[lang as keyof typeof labels.experience]}</span>
-                                      </div>
-                                    )}
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {doctor.years_of_experience && (
+                                        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs" style={{ background: "rgba(255, 255, 255, 0.15)" }}>
+                                          <FontAwesomeIcon icon={faBolt} className="text-amber-300 text-[9px]" />
+                                          <span className="text-white font-semibold">{doctor.years_of_experience} {labels.experience[lang as keyof typeof labels.experience]}</span>
+                                        </div>
+                                      )}
+                                      {(isOffline ? doctor.offline_consultation_price : doctor.online_consultation_price) != null && (
+                                        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs" style={{ background: "rgba(16,185,129,0.2)" }}>
+                                          <span className="text-emerald-200 font-semibold">
+                                            {(isOffline ? doctor.offline_consultation_price : doctor.online_consultation_price)!.toLocaleString()} ₸
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
 
@@ -1785,6 +1919,12 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                               </div>
                             </div>
                           </div>
+                          <button
+                            onClick={() => handleBookDiagnosticsService(svc)}
+                            className="mt-3 w-full py-2 rounded-xl bg-white text-blue-700 text-xs font-bold hover:bg-blue-50 transition-colors"
+                          >
+                            {{ en: "Book", ru: "Записаться", kz: "Жазылу" }[language as "en" | "ru" | "kz"] ?? "Записаться"}
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -2065,6 +2205,15 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
         language={language}
         preselectedDoctor={preselectedDoctor}
         consultationType={bookingConsultationType}
+      />
+
+      {/* Diagnostics Booking Modal */}
+      <DiagnosticsBookingModal
+        isOpen={isDiagBookingOpen}
+        onClose={() => { setIsDiagBookingOpen(false); setSelectedDiagService(null); }}
+        onBookingComplete={handleDiagnosticsBookingComplete}
+        language={language}
+        service={selectedDiagService}
       />
     </div>
   );

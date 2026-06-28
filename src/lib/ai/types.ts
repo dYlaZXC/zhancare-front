@@ -40,6 +40,15 @@ export interface DoctorRecommendation {
   urgency: string;
   nearest_slot?: { date: string; time: string; label: string };
   reason?: string;
+  online_consultation_price?: number | null;
+  offline_consultation_price?: number | null;
+}
+
+export interface DiagnosticsServiceSchedule {
+  weekday: number; // 0=Monday .. 6=Sunday
+  start_time: string; // "HH:MM:SS"
+  end_time: string;
+  is_active: boolean;
 }
 
 export interface DiagnosticsServiceItem {
@@ -51,6 +60,7 @@ export interface DiagnosticsServiceItem {
   category: string;
   category_label: string;
   clinic_name: string;
+  schedules?: DiagnosticsServiceSchedule[];
 }
 
 export interface SymptomAnalysisRequest {

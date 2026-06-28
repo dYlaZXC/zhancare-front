@@ -1,8 +1,13 @@
 "use client";
 
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Video, Home, FlaskConical, Edit, Trash2 } from 'lucide-react';
+import { api } from '@/utils/api';
+import { toast } from 'react-toastify';
 import { ScheduleEvent } from '../types/scheduleTypes';
+import RescheduleModal from '../modals/RescheduleModal';
+import ConfirmDeleteModal from '../modals/ConfirmDeleteModal';
 
 export function getStatusColor(status: string) {
   switch (status) {
@@ -21,6 +26,7 @@ export function getStatusColor(status: string) {
 
 interface EventCardProps {
   event: ScheduleEvent;
+  onChanged?: () => void;
 }
 
 const TYPE_STYLES: Record<ScheduleEvent['type'], { accent: string; bg: string; border: string; gradientTo: string; Icon: typeof Video }> = {
@@ -29,9 +35,12 @@ const TYPE_STYLES: Record<ScheduleEvent['type'], { accent: string; bg: string; b
   diagnostics:  { accent: '#0891b2', bg: '#cffafe', border: '#a5f3fc', gradientTo: '#0e7490', Icon: FlaskConical },
 };
 
-export default function EventCard({ event }: EventCardProps) {
+export default function EventCard({ event, onChanged }: EventCardProps) {
   const statusColor = getStatusColor(event.status);
   const { accent: accentColor, bg: accentBg, border: accentBorder, gradientTo, Icon: TypeIcon } = TYPE_STYLES[event.type];
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const initials = event.patient_name
     .split(' ')
@@ -40,7 +49,22 @@ export default function EventCard({ event }: EventCardProps) {
     .slice(0, 2)
     .toUpperCase();
 
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await api.delete(`/schedule/${event.id}/`);
+      toast.success("Запись удалена");
+      setConfirmDelete(false);
+      onChanged?.();
+    } catch {
+      toast.error("Не удалось удалить запись");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
+    <>
     <motion.div
       whileHover={{ y: -1, shadow: 'lg' }}
       className="rounded-xl border cursor-pointer group overflow-hidden bg-white"
@@ -61,10 +85,20 @@ export default function EventCard({ event }: EventCardProps) {
             </span>
           </div>
           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button className="w-5 h-5 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors" title="Редактировать">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setRescheduleOpen(true); }}
+              className="w-5 h-5 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
+              title="Редактировать"
+            >
               <Edit className="w-3 h-3 text-gray-400" />
             </button>
-            <button className="w-5 h-5 flex items-center justify-center rounded-md hover:bg-red-50 transition-colors" title="Удалить">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
+              className="w-5 h-5 flex items-center justify-center rounded-md hover:bg-red-50 transition-colors"
+              title="Удалить"
+            >
               <Trash2 className="w-3 h-3 text-red-400" />
             </button>
           </div>
@@ -99,5 +133,23 @@ export default function EventCard({ event }: EventCardProps) {
         </div>
       </div>
     </motion.div>
+
+    {rescheduleOpen && (
+      <RescheduleModal
+        event={event}
+        onClose={() => setRescheduleOpen(false)}
+        onRescheduled={() => onChanged?.()}
+      />
+    )}
+
+    {confirmDelete && (
+      <ConfirmDeleteModal
+        patientName={event.patient_name}
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(false)}
+      />
+    )}
+    </>
   );
 }

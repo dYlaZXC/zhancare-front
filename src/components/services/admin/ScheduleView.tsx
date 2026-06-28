@@ -18,6 +18,7 @@ import {
   Archive,
 } from "lucide-react";
 import EventCard from "./schedule/components/EventCard";
+import SearchSelect from "./schedule/components/SearchSelect";
 import AddEventModal from "./schedule/modals/AddEventModal";
 import DateDetailsDrawer from "./schedule/modals/DateDetailsDrawer";
 import ArchivedRecordsDrawer from "./schedule/modals/ArchivedRecordsDrawer";
@@ -216,7 +217,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
               <div className="space-y-2">
                 {dayEvents.length > 0 ? (
                   dayEvents.map((event) => (
-                    <EventCard key={event.id} event={event} />
+                    <EventCard key={event.id} event={event} onChanged={fetchSchedule} />
                   ))
                 ) : (
                   <div className="text-center py-6 md:py-8 text-gray-400 text-xs md:text-sm">
@@ -506,29 +507,35 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
 
           <div className="flex gap-2 md:gap-4">
             {/* Type Filter */}
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value as any)}
-              className="flex-1 px-3 md:px-4 py-2 md:py-3 text-sm md:text-base rounded-xl md:rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
-            >
-              <option value="all">Все типы</option>
-              <option value="consultation">Онлайн</option>
-              <option value="appointment">Оффлайн</option>
-              <option value="diagnostics">Диагностика</option>
-            </select>
+            <div className="flex-1">
+              <SearchSelect
+                options={[
+                  { id: 'all', label: 'Все типы' },
+                  { id: 'consultation', label: 'Онлайн' },
+                  { id: 'appointment', label: 'Оффлайн' },
+                  { id: 'diagnostics', label: 'Диагностика' },
+                ]}
+                value={filterType}
+                onChange={(val) => setFilterType((val || 'all') as any)}
+                placeholder="Все типы"
+              />
+            </div>
 
             {/* Status Filter */}
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as any)}
-              className="flex-1 px-3 md:px-4 py-2 md:py-3 text-sm md:text-base rounded-xl md:rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
-            >
-              <option value="all">Все статусы</option>
-              <option value="scheduled">Запланировано</option>
-              <option value="in_progress">В процессе</option>
-              <option value="completed">Завершено</option>
-              <option value="cancelled">Отменено</option>
-            </select>
+            <div className="flex-1">
+              <SearchSelect
+                options={[
+                  { id: 'all', label: 'Все статусы' },
+                  { id: 'scheduled', label: 'Запланировано' },
+                  { id: 'in_progress', label: 'В процессе' },
+                  { id: 'completed', label: 'Завершено' },
+                  { id: 'cancelled', label: 'Отменено' },
+                ]}
+                value={filterStatus}
+                onChange={(val) => setFilterStatus((val || 'all') as any)}
+                placeholder="Все статусы"
+              />
+            </div>
           </div>
         </div>
       </div>

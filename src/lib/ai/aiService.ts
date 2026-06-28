@@ -105,9 +105,12 @@ export const aiService = {
     return data.success ? (data.doctors as DoctorRecommendation[]) : [];
   },
 
-  /** Fetch diagnostic services for a clinic. */
-  async getDiagnosticsServices(clinicId: number): Promise<DiagnosticsServiceItem[]> {
-    const res = await fetch(`${API}/diagnostics/services/?clinic=${clinicId}`, {
+  /** Fetch diagnostic services — for a specific clinic, or site-wide when no clinicId is given. */
+  async getDiagnosticsServices(clinicId?: number): Promise<DiagnosticsServiceItem[]> {
+    const url = clinicId
+      ? `${API}/diagnostics/services/?clinic=${clinicId}`
+      : `${API}/diagnostics/services/`;
+    const res = await fetch(url, {
       credentials: "include",
     });
     if (!res.ok) return [];
