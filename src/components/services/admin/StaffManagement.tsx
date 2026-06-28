@@ -43,6 +43,7 @@ import ScheduleTypeSelector from "./schedule/components/ScheduleTypeSelector";
 import PhoneInputUI from "@/components/ui/PhoneInput";
 import StaffScheduleModal from "./StaffScheduleModal";
 import { getCurrencySymbol } from "@/utils/currency";
+import SearchSelect from "./schedule/components/SearchSelect";
 
 /**
  * Staff member interface representing doctors and nurses.
@@ -82,6 +83,9 @@ interface StaffMember {
   // Pricing and scheduling (from profile)
   offline_consultation_price?: number;
   online_consultation_price?: number;
+  offline_doctor_share_percent?: number;
+  online_doctor_share_percent?: number;
+  diagnostics_commissions?: { id: number; service_id: number; service_name: string; doctor_share_percent: number }[];
   preferred_consultation_duration?: number; // in minutes
   room_number?: string | null;
   schedule_type?: 'weekly' | 'constant'; // Type of schedule: weekly (different each day) or constant (same every day)
@@ -437,6 +441,12 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     }).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    api.get('/diagnostics/services/').then(res => {
+      setDiagServices((res.data || []).map((s: any) => ({ id: s.id, name: s.name, price: s.price ? Number(s.price) : null })));
+    }).catch(() => {});
+  }, []);
+
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -453,6 +463,8 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     years_of_experience: '',
     offline_consultation_price: '',
     online_consultation_price: '',
+    offline_doctor_share_percent: '50',
+    online_doctor_share_percent: '50',
     preferred_consultation_duration: '',
     room_number: '',
     schedule_type: 'weekly' as 'weekly' | 'constant',  // Schedule type for doctors
@@ -504,6 +516,17 @@ export default function StaffManagement({ user }: StaffManagementProps) {
 
   // Separate state for specializations to avoid re-rendering entire form on each keystroke
   const [specializations, setSpecializations] = useState<string[]>(['']);
+
+  // Per-service diagnostics commission rows: which diagnostic tests this doctor
+  // earns a cut of when they're set as the referring doctor on a booking.
+  const [diagCommissions, setDiagCommissions] = useState<{ service_id: string; doctor_share_percent: string }[]>([]);
+  const [diagServices, setDiagServices] = useState<{ id: number; name: string; price: number | null }[]>([]);
+
+  // Create/edit modal tabs — split the long form into "basic info" vs "money" sections
+  const [activeFormTab, setActiveFormTab] = useState<'basic' | 'finance'>('basic');
+  const FINANCE_ERROR_KEYS: string[] = []; // none of the validated fields currently live in the Финансы tab
+  const hasFinanceErrors = Object.keys(formErrors).some(k => FINANCE_ERROR_KEYS.includes(k));
+  const hasBasicErrors = Object.keys(formErrors).some(k => !FINANCE_ERROR_KEYS.includes(k));
 
   // Schedule type switcher state - 'online' or 'offline'
   const [scheduleType, setScheduleType] = useState<'online' | 'offline'>('online');
@@ -972,6 +995,23 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     });
   }, []);
 
+  // Helper functions for the diagnostics-commission rows (mirrors specializations above)
+  const addDiagCommission = useCallback(() => {
+    setDiagCommissions(prev => [...prev, { service_id: '', doctor_share_percent: '20' }]);
+  }, []);
+
+  const removeDiagCommission = useCallback((index: number) => {
+    setDiagCommissions(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const handleDiagCommissionChange = useCallback((index: number, field: 'service_id' | 'doctor_share_percent', value: string) => {
+    setDiagCommissions(prev => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     fetchStaff();
     checkAdminType();
@@ -1112,11 +1152,14 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       years_of_experience: '',
       offline_consultation_price: '',
       online_consultation_price: '',
+      offline_doctor_share_percent: '50',
+      online_doctor_share_percent: '50',
       preferred_consultation_duration: '',
       room_number: '',
       schedule_type: 'weekly',
     });
     setSpecializations(['']);
+    setDiagCommissions([]);
     setWorkSchedule({
       monday: { start: '09:00', end: '18:00', enabled: false },
       tuesday: { start: '09:00', end: '18:00', enabled: false },
@@ -1241,9 +1284,14 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         years_of_experience: formData.years_of_experience ? Number(formData.years_of_experience) : null,
         offline_consultation_price: formData.offline_consultation_price ? Number(formData.offline_consultation_price) : null,
         online_consultation_price: formData.online_consultation_price ? Number(formData.online_consultation_price) : null,
+        offline_doctor_share_percent: formData.offline_doctor_share_percent ? Number(formData.offline_doctor_share_percent) : 50,
+        online_doctor_share_percent: formData.online_doctor_share_percent ? Number(formData.online_doctor_share_percent) : 50,
         preferred_consultation_duration: formData.preferred_consultation_duration ? Number(formData.preferred_consultation_duration) : null,
         room_number: formData.room_number || null,
         schedules: buildSchedulesArray(),
+        diagnostics_commissions: diagCommissions
+          .filter(r => r.service_id)
+          .map(r => ({ service_id: Number(r.service_id), doctor_share_percent: Number(r.doctor_share_percent) || 0 })),
       };
 
       const response = await api.post("/staff/", payload);
@@ -1271,11 +1319,14 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         years_of_experience: '',
         offline_consultation_price: '',
         online_consultation_price: '',
+        offline_doctor_share_percent: '50',
+        online_doctor_share_percent: '50',
         preferred_consultation_duration: '',
         room_number: '',
         schedule_type: 'weekly',
       });
       setSpecializations(['']);
+      setDiagCommissions([]);
       setWorkSchedule({
         monday: { start: '09:00', end: '18:00', enabled: false },
         tuesday: { start: '09:00', end: '18:00', enabled: false },
@@ -1363,11 +1414,19 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       years_of_experience: member.years_of_experience?.toString() || '',
       offline_consultation_price: member.offline_consultation_price?.toString() || '',
       online_consultation_price: member.online_consultation_price?.toString() || '',
+      offline_doctor_share_percent: member.offline_doctor_share_percent?.toString() || '50',
+      online_doctor_share_percent: member.online_doctor_share_percent?.toString() || '50',
       preferred_consultation_duration: member.preferred_consultation_duration?.toString() || '',
       room_number: member.room_number || '',
       schedule_type: (member.schedule_type || 'weekly') as 'weekly' | 'constant',
     });
     setSpecializations(specializationsArray);
+    setDiagCommissions(
+      (member.diagnostics_commissions || []).map(c => ({
+        service_id: String(c.service_id),
+        doctor_share_percent: String(c.doctor_share_percent),
+      }))
+    );
     setWorkSchedule(member.work_schedule || {
       monday: { start: '09:00', end: '18:00', enabled: false },
       tuesday: { start: '09:00', end: '18:00', enabled: false },
@@ -1439,6 +1498,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     // Reset to current week
     setCurrentWeekIndex(0);
 
+    setActiveFormTab('basic');
     setShowEditModal(true);
   };
 
@@ -1520,9 +1580,14 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         years_of_experience: formData.years_of_experience ? Number(formData.years_of_experience) : null,
         offline_consultation_price: formData.offline_consultation_price ? Number(formData.offline_consultation_price) : null,
         online_consultation_price: formData.online_consultation_price ? Number(formData.online_consultation_price) : null,
+        offline_doctor_share_percent: formData.offline_doctor_share_percent ? Number(formData.offline_doctor_share_percent) : 50,
+        online_doctor_share_percent: formData.online_doctor_share_percent ? Number(formData.online_doctor_share_percent) : 50,
         preferred_consultation_duration: formData.preferred_consultation_duration ? Number(formData.preferred_consultation_duration) : null,
         room_number: formData.room_number || null,
         schedules: buildSchedulesArray(),
+        diagnostics_commissions: diagCommissions
+          .filter(r => r.service_id)
+          .map(r => ({ service_id: Number(r.service_id), doctor_share_percent: Number(r.doctor_share_percent) || 0 })),
       };
 
       // Only include password if it was changed
@@ -1709,6 +1774,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
             whileTap={{ scale: 0.95 }}
             onClick={() => {
               resetForm();
+              setActiveFormTab('basic');
               setShowAddModal(true);
             }}
             className="flex items-center gap-2 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all"
@@ -1763,28 +1829,34 @@ export default function StaffManagement({ user }: StaffManagementProps) {
           </div>
 
           {/* Role Filter */}
-          <select
-            value={filterRole}
-            onChange={(e) => setFilterRole(e.target.value as any)}
-            className="px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
-          >
-            <option value="all">Все роли</option>
-            <option value="doctor">Доктора</option>
-            <option value="nurse">Медсестры</option>
-          </select>
+          <div className="w-full md:w-48">
+            <SearchSelect
+              options={[
+                { id: 'all', label: 'Все роли' },
+                { id: 'doctor', label: 'Доктора' },
+                { id: 'nurse', label: 'Медсестры' },
+              ]}
+              value={filterRole}
+              onChange={(val) => setFilterRole((val || 'all') as any)}
+              placeholder="Все роли"
+            />
+          </div>
 
           {/* Status Filter */}
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value as any)}
-            className="px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
-          >
-            <option value="all">Все статусы</option>
-            <option value="available">Доступен</option>
-            <option value="busy">Занят</option>
-            <option value="break">На перерыве</option>
-            <option value="offline">Не работает</option>
-          </select>
+          <div className="w-full md:w-48">
+            <SearchSelect
+              options={[
+                { id: 'all', label: 'Все статусы' },
+                { id: 'available', label: 'Доступен' },
+                { id: 'busy', label: 'Занят' },
+                { id: 'break', label: 'На перерыве' },
+                { id: 'offline', label: 'Не работает' },
+              ]}
+              value={filterStatus}
+              onChange={(val) => setFilterStatus((val || 'all') as any)}
+              placeholder="Все статусы"
+            />
+          </div>
 
           {/* Show Deleted Toggle */}
           <motion.button
@@ -2086,8 +2158,32 @@ export default function StaffManagement({ user }: StaffManagementProps) {
               </div>
 
               {/* Modal Body */}
-              <form onSubmit={handleAddStaff} className="p-8">
+              <form onSubmit={handleAddStaff} className="px-8 pt-8">
                 <div className="space-y-6">
+                  {/* Form tabs */}
+                  <div className="flex gap-2 p-1 bg-gray-100 rounded-2xl">
+                    {([
+                      { id: 'basic', label: 'Основное' },
+                      { id: 'finance', label: 'Финансы' },
+                    ] as const).map(tab => (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setActiveFormTab(tab.id)}
+                        className={`flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                          activeFormTab === tab.id ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                      >
+                        {tab.label}
+                        {((tab.id === 'basic' && hasBasicErrors) || (tab.id === 'finance' && hasFinanceErrors)) && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  {activeFormTab === 'basic' && (
+                  <>
                   {/* Role Selection */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-3">
@@ -2215,16 +2311,16 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
                         Пол
                       </label>
-                      <select
+                      <SearchSelect
+                        options={[
+                          { id: 'male', label: 'Мужской' },
+                          { id: 'female', label: 'Женский' },
+                          { id: 'other', label: 'Другой' },
+                        ]}
                         value={formData.gender}
-                        onChange={(e) => setFormData({ ...formData, gender: e.target.value as '' | 'male' | 'female' | 'other' })}
-                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors bg-white"
-                      >
-                        <option value="">Не указан</option>
-                        <option value="male">Мужской</option>
-                        <option value="female">Женский</option>
-                        <option value="other">Другой</option>
-                      </select>
+                        onChange={(val) => setFormData({ ...formData, gender: val as '' | 'male' | 'female' | 'other' })}
+                        placeholder="Не указан"
+                      />
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -2376,7 +2472,11 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       </div>
                     </div>
                   </div>
+                  </>
+                  )}
 
+                  {activeFormTab === 'finance' && (
+                  <>
                   {/* Consultation Prices */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
@@ -2423,6 +2523,145 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                     </div>
                   </div>
 
+                  {/* Revenue split: doctor's cut vs clinic's cut, per consultation type */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Доля врача от консультации</label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1.5">Оффлайн</label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value={formData.offline_doctor_share_percent}
+                            onChange={(e) => setFormData({ ...formData, offline_doctor_share_percent: e.target.value })}
+                            className="w-full pl-4 pr-12 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                            placeholder="50"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded-md pointer-events-none">%</span>
+                        </div>
+                        {(() => {
+                          const price = Number(formData.offline_consultation_price) || 0;
+                          const doctorAmt = Math.round(price * (Number(formData.offline_doctor_share_percent) || 0) / 100);
+                          const sym = getCurrencySymbol(clinicCurrency);
+                          return (
+                            <p className="text-xs text-gray-400 mt-1">
+                              Врач: {doctorAmt.toLocaleString('ru-RU')} {sym} · Клиника: {(price - doctorAmt).toLocaleString('ru-RU')} {sym}
+                            </p>
+                          );
+                        })()}
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1.5">Онлайн</label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value={formData.online_doctor_share_percent}
+                            onChange={(e) => setFormData({ ...formData, online_doctor_share_percent: e.target.value })}
+                            className="w-full pl-4 pr-12 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                            placeholder="50"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded-md pointer-events-none">%</span>
+                        </div>
+                        {(() => {
+                          const price = Number(formData.online_consultation_price) || 0;
+                          const doctorAmt = Math.round(price * (Number(formData.online_doctor_share_percent) || 0) / 100);
+                          const sym = getCurrencySymbol(clinicCurrency);
+                          return (
+                            <p className="text-xs text-gray-400 mt-1">
+                              Врач: {doctorAmt.toLocaleString('ru-RU')} {sym} · Клиника: {(price - doctorAmt).toLocaleString('ru-RU')} {sym}
+                            </p>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Diagnostics commissions: which tests this doctor earns a cut of when referring patients */}
+                  {formData.role === 'doctor' && (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-semibold text-gray-700">Проценты за диагностику</label>
+                        <button
+                          type="button"
+                          onClick={addDiagCommission}
+                          className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Добавить
+                        </button>
+                      </div>
+                      {diagCommissions.length === 0 ? (
+                        <p className="text-xs text-gray-400">
+                          Врач не получает процент с диагностики. Добавьте услугу, чтобы назначить комиссию за назначенные обследования.
+                        </p>
+                      ) : (
+                        <div className="space-y-3">
+                          {diagCommissions.map((row, index) => {
+                            const service = diagServices.find(s => String(s.id) === row.service_id);
+                            const price = service?.price ?? null;
+                            const pct = Number(row.doctor_share_percent) || 0;
+                            const doctorAmt = price != null ? Math.round(price * pct / 100) : null;
+                            const sym = getCurrencySymbol(clinicCurrency);
+                            return (
+                              <div key={index}>
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1">
+                                    <SearchSelect
+                                      options={diagServices.map(s => ({
+                                        id: s.id,
+                                        label: s.name,
+                                        subtitle: s.price != null ? `${s.price.toLocaleString('ru-RU')} ${getCurrencySymbol(clinicCurrency)}` : undefined,
+                                      }))}
+                                      value={row.service_id}
+                                      onChange={(val) => handleDiagCommissionChange(index, 'service_id', val)}
+                                      placeholder="Выберите услугу..."
+                                    />
+                                  </div>
+                                  <div className="relative w-28 flex-shrink-0">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max="100"
+                                      step="1"
+                                      value={row.doctor_share_percent}
+                                      onChange={(e) => handleDiagCommissionChange(index, 'doctor_share_percent', e.target.value)}
+                                      className="w-full pl-3 pr-8 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                                      placeholder="20"
+                                    />
+                                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-violet-600">%</span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeDiagCommission(index)}
+                                    className="p-2.5 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
+                                    title="Удалить"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                                {doctorAmt != null && (
+                                  <p className="text-xs text-gray-400 mt-1 ml-1">
+                                    При цене {price!.toLocaleString('ru-RU')} {sym}: врач получит {doctorAmt.toLocaleString('ru-RU')} {sym}, клиника — {(price! - doctorAmt).toLocaleString('ru-RU')} {sym}
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  </>
+                  )}
+
+                  {activeFormTab === 'basic' && (
+                  <>
                   {/* Preferred Consultation Duration */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -2550,10 +2789,12 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       </div>
                     </div>
                   )}
+                  </>
+                  )}
                 </div>
 
                 {/* Modal Footer */}
-                <div className="flex gap-4 mt-8 pt-6 border-t-2 border-gray-100">
+                <div className="sticky bottom-0 z-10 -mx-8 mt-8 flex gap-4 rounded-b-3xl border-t-2 border-gray-100 bg-white px-8 pt-6 pb-8">
                   <button
                     type="button"
                     onClick={() => { setShowAddModal(false); setFormErrors({}); }}
@@ -2627,8 +2868,32 @@ export default function StaffManagement({ user }: StaffManagementProps) {
               </div>
 
               {/* Modal Body */}
-              <form onSubmit={handleEditSubmit} className="p-8">
+              <form onSubmit={handleEditSubmit} className="px-8 pt-8">
                 <div className="space-y-6">
+                  {/* Form tabs */}
+                  <div className="flex gap-2 p-1 bg-gray-100 rounded-2xl">
+                    {([
+                      { id: 'basic', label: 'Основное' },
+                      { id: 'finance', label: 'Финансы' },
+                    ] as const).map(tab => (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setActiveFormTab(tab.id)}
+                        className={`flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                          activeFormTab === tab.id ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                      >
+                        {tab.label}
+                        {((tab.id === 'basic' && hasBasicErrors) || (tab.id === 'finance' && hasFinanceErrors)) && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  {activeFormTab === 'basic' && (
+                  <>
                   {/* Role Selection */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-3">
@@ -2755,16 +3020,16 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
                         Пол
                       </label>
-                      <select
+                      <SearchSelect
+                        options={[
+                          { id: 'male', label: 'Мужской' },
+                          { id: 'female', label: 'Женский' },
+                          { id: 'other', label: 'Другой' },
+                        ]}
                         value={formData.gender}
-                        onChange={(e) => setFormData({ ...formData, gender: e.target.value as '' | 'male' | 'female' | 'other' })}
-                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors bg-white"
-                      >
-                        <option value="">Не указан</option>
-                        <option value="male">Мужской</option>
-                        <option value="female">Женский</option>
-                        <option value="other">Другой</option>
-                      </select>
+                        onChange={(val) => setFormData({ ...formData, gender: val as '' | 'male' | 'female' | 'other' })}
+                        placeholder="Не указан"
+                      />
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -2916,7 +3181,11 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       </div>
                     </div>
                   </div>
+                  </>
+                  )}
 
+                  {activeFormTab === 'finance' && (
+                  <>
                   {/* Consultation Prices */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
@@ -2963,6 +3232,145 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                     </div>
                   </div>
 
+                  {/* Revenue split: doctor's cut vs clinic's cut, per consultation type */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Доля врача от консультации</label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1.5">Оффлайн</label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value={formData.offline_doctor_share_percent}
+                            onChange={(e) => setFormData({ ...formData, offline_doctor_share_percent: e.target.value })}
+                            className="w-full pl-4 pr-12 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                            placeholder="50"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded-md pointer-events-none">%</span>
+                        </div>
+                        {(() => {
+                          const price = Number(formData.offline_consultation_price) || 0;
+                          const doctorAmt = Math.round(price * (Number(formData.offline_doctor_share_percent) || 0) / 100);
+                          const sym = getCurrencySymbol(clinicCurrency);
+                          return (
+                            <p className="text-xs text-gray-400 mt-1">
+                              Врач: {doctorAmt.toLocaleString('ru-RU')} {sym} · Клиника: {(price - doctorAmt).toLocaleString('ru-RU')} {sym}
+                            </p>
+                          );
+                        })()}
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1.5">Онлайн</label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value={formData.online_doctor_share_percent}
+                            onChange={(e) => setFormData({ ...formData, online_doctor_share_percent: e.target.value })}
+                            className="w-full pl-4 pr-12 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                            placeholder="50"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded-md pointer-events-none">%</span>
+                        </div>
+                        {(() => {
+                          const price = Number(formData.online_consultation_price) || 0;
+                          const doctorAmt = Math.round(price * (Number(formData.online_doctor_share_percent) || 0) / 100);
+                          const sym = getCurrencySymbol(clinicCurrency);
+                          return (
+                            <p className="text-xs text-gray-400 mt-1">
+                              Врач: {doctorAmt.toLocaleString('ru-RU')} {sym} · Клиника: {(price - doctorAmt).toLocaleString('ru-RU')} {sym}
+                            </p>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Diagnostics commissions: which tests this doctor earns a cut of when referring patients */}
+                  {formData.role === 'doctor' && (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-semibold text-gray-700">Проценты за диагностику</label>
+                        <button
+                          type="button"
+                          onClick={addDiagCommission}
+                          className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Добавить
+                        </button>
+                      </div>
+                      {diagCommissions.length === 0 ? (
+                        <p className="text-xs text-gray-400">
+                          Врач не получает процент с диагностики. Добавьте услугу, чтобы назначить комиссию за назначенные обследования.
+                        </p>
+                      ) : (
+                        <div className="space-y-3">
+                          {diagCommissions.map((row, index) => {
+                            const service = diagServices.find(s => String(s.id) === row.service_id);
+                            const price = service?.price ?? null;
+                            const pct = Number(row.doctor_share_percent) || 0;
+                            const doctorAmt = price != null ? Math.round(price * pct / 100) : null;
+                            const sym = getCurrencySymbol(clinicCurrency);
+                            return (
+                              <div key={index}>
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1">
+                                    <SearchSelect
+                                      options={diagServices.map(s => ({
+                                        id: s.id,
+                                        label: s.name,
+                                        subtitle: s.price != null ? `${s.price.toLocaleString('ru-RU')} ${getCurrencySymbol(clinicCurrency)}` : undefined,
+                                      }))}
+                                      value={row.service_id}
+                                      onChange={(val) => handleDiagCommissionChange(index, 'service_id', val)}
+                                      placeholder="Выберите услугу..."
+                                    />
+                                  </div>
+                                  <div className="relative w-28 flex-shrink-0">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max="100"
+                                      step="1"
+                                      value={row.doctor_share_percent}
+                                      onChange={(e) => handleDiagCommissionChange(index, 'doctor_share_percent', e.target.value)}
+                                      className="w-full pl-3 pr-8 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                                      placeholder="20"
+                                    />
+                                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-violet-600">%</span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeDiagCommission(index)}
+                                    className="p-2.5 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
+                                    title="Удалить"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                                {doctorAmt != null && (
+                                  <p className="text-xs text-gray-400 mt-1 ml-1">
+                                    При цене {price!.toLocaleString('ru-RU')} {sym}: врач получит {doctorAmt.toLocaleString('ru-RU')} {sym}, клиника — {(price! - doctorAmt).toLocaleString('ru-RU')} {sym}
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  </>
+                  )}
+
+                  {activeFormTab === 'basic' && (
+                  <>
                   {/* Preferred Consultation Duration */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -3084,10 +3492,12 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                       </div>
                     </div>
                   )}
+                  </>
+                  )}
                 </div>
 
                 {/* Modal Footer */}
-                <div className="flex gap-4 mt-8 pt-6 border-t-2 border-gray-100">
+                <div className="sticky bottom-0 z-10 -mx-8 mt-8 flex gap-4 rounded-b-3xl border-t-2 border-gray-100 bg-white px-8 pt-6 pb-8">
                   <button
                     type="button"
                     onClick={() => {

@@ -64,6 +64,7 @@ export default function AddEventModal({
   const [formData, setFormData] = useState({
     patient_id: '',
     doctor_id: '',
+    referring_doctor_id: '',
     date: selectedDate || (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; })(),
     time: '',
     duration: 30,
@@ -186,6 +187,7 @@ export default function AddEventModal({
       setFormData({
         patient_id: '',
         doctor_id: '',
+        referring_doctor_id: '',
         date: selectedDate || dateString,
         time: '',
         duration: 30,
@@ -347,6 +349,7 @@ export default function AddEventModal({
         await api.post('/diagnostics/appointments/', {
           service_id: selectedDiagService!.id,
           patient_id: formData.patient_id,
+          doctor_id: formData.referring_doctor_id || undefined,
           scheduled_time: `${formData.date}T${formData.time}:00`,
           notes: formData.notes,
         });
@@ -412,7 +415,7 @@ export default function AddEventModal({
                 <motion.button
                   key={type}
                   type="button"
-                  onClick={() => { setConsultationType(type); setFormData(prev => ({ ...prev, doctor_id: '', time: '' })); setDiagCategory(null); setSelectedDiagService(null); }}
+                  onClick={() => { setConsultationType(type); setFormData(prev => ({ ...prev, doctor_id: '', referring_doctor_id: '', time: '' })); setDiagCategory(null); setSelectedDiagService(null); }}
                   whileHover={{ y: -2, scale: 1.02 }}
                   whileTap={{ scale: 0.97 }}
                   className="group relative flex flex-col gap-3 px-4 py-4 rounded-2xl overflow-hidden text-white text-left transition-all duration-200"
@@ -731,6 +734,23 @@ export default function AddEventModal({
                   )}
                 </div>
               )}
+
+              {/* Optional referring doctor — drives the doctor's diagnostics commission, if one is configured for this service */}
+              <div>
+                <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
+                  Назначивший врач <span className="text-gray-400 text-xs font-normal">(необязательно)</span>
+                </label>
+                <SearchSelect
+                  options={doctors.map(d => ({
+                    id: d.id,
+                    label: `${d.first_name} ${d.last_name}`,
+                    subtitle: d.specialization || undefined,
+                  }))}
+                  value={formData.referring_doctor_id}
+                  onChange={(val) => setFormData({ ...formData, referring_doctor_id: val })}
+                  placeholder="Без врача — выручка полностью клинике"
+                />
+              </div>
             </div>
           )}
 

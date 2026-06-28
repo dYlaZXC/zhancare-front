@@ -11,6 +11,7 @@ import {
   TrendingUp, Users, Stethoscope, CalendarCheck,
   RefreshCw, Activity,
   Star, Award, Target, Repeat,
+  Wallet, HandCoins, FlaskConical, Video, Home,
 } from "lucide-react";
 import { BRAND, BLUE, COLORS, SectionTitle, ChartTip, KPICard } from "./dashboardUI";
 
@@ -19,8 +20,10 @@ import { BRAND, BLUE, COLORS, SectionTitle, ChartTip, KPICard } from "./dashboar
 interface ReportData {
   revenue_report: {
     total_revenue: number;
+    clinic_revenue: number;
+    doctor_revenue: number;
     monthly_revenue: { month: string; revenue: number }[];
-    revenue_by_service: { service: string; revenue: number; count: number }[];
+    revenue_by_service: { service: string; revenue: number; count: number; clinic_revenue?: number; doctor_revenue?: number }[];
   };
   consultation_report: {
     total_consultations: number;
@@ -339,6 +342,63 @@ export default function ReportsView({ user }: { user: any }) {
             <div className="h-[220px] flex items-center justify-center text-gray-400 text-sm">Нет данных</div>
           )}
         </div>
+      </div>
+
+      {/* Money flow: clinic vs doctor split, broken down by revenue source */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <SectionTitle>Структура доходов</SectionTitle>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+          <div className="flex items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50/60 px-4 py-3">
+            <Wallet className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+            <div>
+              <p className="text-lg font-black text-gray-900">{fmtKZT(data.revenue_report.clinic_revenue)}</p>
+              <p className="text-[10px] text-emerald-700 font-semibold uppercase tracking-wide">Доход клиники</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 rounded-xl border border-violet-100 bg-violet-50/60 px-4 py-3">
+            <HandCoins className="w-5 h-5 text-violet-600 flex-shrink-0" />
+            <div>
+              <p className="text-lg font-black text-gray-900">{fmtKZT(data.revenue_report.doctor_revenue)}</p>
+              <p className="text-[10px] text-violet-700 font-semibold uppercase tracking-wide">Выплаты врачам</p>
+            </div>
+          </div>
+        </div>
+
+        {data.revenue_report.revenue_by_service.length > 0 ? (
+          <div className="space-y-2.5">
+            {data.revenue_report.revenue_by_service.map(item => {
+              const Icon = item.service.includes('онлайн') ? Video : item.service.includes('оффлайн') ? Stethoscope
+                : item.service.includes('Диагностика') ? FlaskConical : Home;
+              const hasSplit = item.clinic_revenue != null && item.doctor_revenue != null;
+              const clinicPct = hasSplit && item.revenue > 0 ? Math.round((item.clinic_revenue! / item.revenue) * 100) : 100;
+              return (
+                <div key={item.service} className="rounded-xl border border-gray-100 px-4 py-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <Icon className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      <span className="text-sm font-semibold text-gray-800">{item.service}</span>
+                      <span className="text-xs text-gray-400">· {item.count}</span>
+                    </div>
+                    <span className="text-sm font-bold text-gray-900">{fmtKZT(item.revenue)}</span>
+                  </div>
+                  {hasSplit && item.doctor_revenue! > 0 && (
+                    <>
+                      <div className="h-1.5 w-full rounded-full bg-violet-100 overflow-hidden flex">
+                        <div className="h-full bg-emerald-500" style={{ width: `${clinicPct}%` }} />
+                      </div>
+                      <div className="flex items-center justify-between mt-1 text-[10px] text-gray-400">
+                        <span>Клиника: {fmtKZT(item.clinic_revenue!)}</span>
+                        <span>Врач: {fmtKZT(item.doctor_revenue!)}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="py-10 text-center text-gray-400 text-sm">Нет данных по доходам за этот период</div>
+        )}
       </div>
 
       {/* Funnel + Weekday */}
