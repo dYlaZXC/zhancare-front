@@ -860,12 +860,10 @@ export default function AddEventModal({
                             return (
                               <button key={slot.start} type="button" disabled={slot.busy}
                                 onClick={() => { if (!slot.busy) { setFormData(f => ({ ...f, time: slot.start })); setTimePickerOpen(false); } }}
-                                className={`relative flex flex-col items-center py-2 px-1 rounded-xl transition-all ${isSelected ? 'text-white shadow-sm' : slot.busy ? 'bg-gray-50 border border-gray-100 cursor-not-allowed' : 'bg-emerald-50 border border-emerald-200 hover:text-white hover:border-transparent cursor-pointer'}`}
-                                style={isSelected ? { background: 'linear-gradient(135deg, #3772ff 0%, #2c5bcc 100%)' } : undefined}
-                                onMouseEnter={e => { if (!slot.busy && !isSelected) (e.currentTarget as HTMLButtonElement).style.background = 'linear-gradient(135deg, #3772ff 0%, #2c5bcc 100%)'; }}
-                                onMouseLeave={e => { if (!slot.busy && !isSelected) (e.currentTarget as HTMLButtonElement).style.background = ''; }}>
-                                <span className={`text-[11px] font-black leading-tight ${isSelected ? 'text-white' : slot.busy ? 'text-gray-300 line-through' : 'text-emerald-700'}`}>{slot.start}</span>
-                                <span className={`text-[9px] mt-0.5 ${isSelected ? 'text-blue-100' : slot.busy ? 'text-gray-300' : 'text-emerald-500'}`}>{slot.busy ? 'занято' : `– ${slot.end}`}</span>
+                                className={`group relative flex flex-col items-center py-2 px-1 rounded-xl transition-colors ${isSelected ? 'text-white shadow-sm' : slot.busy ? 'bg-gray-50 border border-gray-100 cursor-not-allowed' : 'bg-emerald-50 border border-emerald-200 hover:bg-[linear-gradient(135deg,#3772ff_0%,#2c5bcc_100%)] hover:border-transparent cursor-pointer'}`}
+                                style={isSelected ? { background: 'linear-gradient(135deg, #3772ff 0%, #2c5bcc 100%)' } : undefined}>
+                                <span className={`text-[11px] font-black leading-tight ${isSelected ? 'text-white' : slot.busy ? 'text-gray-300 line-through' : 'text-emerald-700 group-hover:text-white'}`}>{slot.start}</span>
+                                <span className={`text-[9px] mt-0.5 ${isSelected ? 'text-blue-100' : slot.busy ? 'text-gray-300' : 'text-emerald-500 group-hover:text-blue-100'}`}>{slot.busy ? 'занято' : `– ${slot.end}`}</span>
                               </button>
                             );
                           })}
