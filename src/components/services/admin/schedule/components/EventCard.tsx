@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from 'framer-motion';
-import { Video, Home, Edit, Trash2 } from 'lucide-react';
+import { Video, Home, FlaskConical, Edit, Trash2 } from 'lucide-react';
 import { ScheduleEvent } from '../types/scheduleTypes';
 
 export function getStatusColor(status: string) {
@@ -23,12 +23,15 @@ interface EventCardProps {
   event: ScheduleEvent;
 }
 
+const TYPE_STYLES: Record<ScheduleEvent['type'], { accent: string; bg: string; border: string; gradientTo: string; Icon: typeof Video }> = {
+  consultation: { accent: '#3772ff', bg: '#ebf1ff', border: '#c7d7ff', gradientTo: '#2c5bcc', Icon: Video },
+  appointment:  { accent: '#8b5cf6', bg: '#f3e8ff', border: '#ddd6fe', gradientTo: '#7c3aed', Icon: Home },
+  diagnostics:  { accent: '#0891b2', bg: '#cffafe', border: '#a5f3fc', gradientTo: '#0e7490', Icon: FlaskConical },
+};
+
 export default function EventCard({ event }: EventCardProps) {
   const statusColor = getStatusColor(event.status);
-  const isConsultation = event.type === 'consultation';
-  const accentColor = isConsultation ? '#3772ff' : '#8b5cf6';
-  const accentBg = isConsultation ? '#ebf1ff' : '#f3e8ff';
-  const accentBorder = isConsultation ? '#c7d7ff' : '#ddd6fe';
+  const { accent: accentColor, bg: accentBg, border: accentBorder, gradientTo, Icon: TypeIcon } = TYPE_STYLES[event.type];
 
   const initials = event.patient_name
     .split(' ')
@@ -51,9 +54,7 @@ export default function EventCard({ event }: EventCardProps) {
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5">
             <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: accentBg }}>
-              {isConsultation
-                ? <Video className="w-3 h-3" style={{ color: accentColor }} />
-                : <Home className="w-3 h-3" style={{ color: accentColor }} />}
+              <TypeIcon className="w-3 h-3" style={{ color: accentColor }} />
             </div>
             <span className="text-xs md:text-sm font-bold" style={{ color: accentColor }}>
               {event.time}
@@ -72,7 +73,7 @@ export default function EventCard({ event }: EventCardProps) {
         {/* Patient row with avatar */}
         <div className="flex items-center gap-2 mb-1.5">
           <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0"
-            style={{ background: `linear-gradient(135deg, ${accentColor}, ${isConsultation ? '#2c5bcc' : '#7c3aed'})` }}>
+            style={{ background: `linear-gradient(135deg, ${accentColor}, ${gradientTo})` }}>
             {initials}
           </div>
           <p className="text-xs md:text-sm font-semibold truncate" style={{ color: '#1e263e' }}>
@@ -80,10 +81,10 @@ export default function EventCard({ event }: EventCardProps) {
           </p>
         </div>
 
-        {/* Doctor */}
-        {(event.doctor_name || event.nurse_name) && (
+        {/* Doctor / nurse / service */}
+        {(event.doctor_name || event.nurse_name || event.service_name) && (
           <p className="text-[10px] md:text-xs text-gray-400 truncate pl-8 mb-1.5">
-            {event.doctor_name || event.nurse_name}
+            {event.doctor_name || event.nurse_name || event.service_name}
           </p>
         )}
 

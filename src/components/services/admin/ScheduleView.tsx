@@ -11,6 +11,7 @@ import {
   Search,
   Video,
   Home,
+  FlaskConical,
   Loader2,
   AlertCircle,
   Users,
@@ -24,13 +25,16 @@ import { DoctorsScheduleContent } from "./schedule/views/DoctorsScheduleContent"
 
 interface ScheduleEvent {
   id: string;
-  type: 'consultation' | 'appointment';
+  type: 'consultation' | 'appointment' | 'diagnostics';
   patient_id: number;
   patient_name: string;
   doctor_id?: number;
   doctor_name?: string;
   nurse_id?: number;
   nurse_name?: string;
+  service_name?: string;
+  category?: string;
+  clinic_name?: string;
   date: string;
   time: string;
   duration: number; // in minutes
@@ -56,7 +60,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
   const [showArchiveDrawer, setShowArchiveDrawer] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterType, setFilterType] = useState<'all' | 'consultation' | 'appointment'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'consultation' | 'appointment' | 'diagnostics'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'scheduled' | 'in_progress' | 'completed' | 'cancelled'>('all');
 
   // Doctors view specific state
@@ -335,26 +339,26 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
                     </div>
 
                     <div className="space-y-0.5 md:space-y-1">
-                      {dayEvents.slice(0, 2).map((event) => (
-                        <div
-                          key={event.id}
-                          className="text-[10px] md:text-xs p-1 md:p-1.5 rounded-md md:rounded-lg cursor-pointer hover:shadow-md transition-shadow"
-                          style={{
-                            backgroundColor: event.type === 'consultation' ? '#ebf1ff' : '#f3e8ff',
-                            color: event.type === 'consultation' ? '#3772ff' : '#8b5cf6'
-                          }}
-                        >
-                          <div className="font-semibold truncate flex items-center gap-0.5 md:gap-1">
-                            {event.type === 'consultation' ? (
-                              <Video className="w-2 h-2 md:w-3 md:h-3 flex-shrink-0" />
-                            ) : (
-                              <Home className="w-2 h-2 md:w-3 md:h-3 flex-shrink-0" />
-                            )}
-                            {event.time}
+                      {dayEvents.slice(0, 2).map((event) => {
+                        const typeStyle = event.type === 'consultation'
+                          ? { bg: '#ebf1ff', color: '#3772ff', Icon: Video }
+                          : event.type === 'diagnostics'
+                          ? { bg: '#cffafe', color: '#0891b2', Icon: FlaskConical }
+                          : { bg: '#f3e8ff', color: '#8b5cf6', Icon: Home };
+                        return (
+                          <div
+                            key={event.id}
+                            className="text-[10px] md:text-xs p-1 md:p-1.5 rounded-md md:rounded-lg cursor-pointer hover:shadow-md transition-shadow"
+                            style={{ backgroundColor: typeStyle.bg, color: typeStyle.color }}
+                          >
+                            <div className="font-semibold truncate flex items-center gap-0.5 md:gap-1">
+                              <typeStyle.Icon className="w-2 h-2 md:w-3 md:h-3 flex-shrink-0" />
+                              {event.time}
+                            </div>
+                            <div className="truncate opacity-90 hidden md:block">{event.patient_name}</div>
                           </div>
-                          <div className="truncate opacity-90 hidden md:block">{event.patient_name}</div>
-                        </div>
-                      ))}
+                        );
+                      })}
                       {dayEvents.length > 2 && (
                         <div className="text-[10px] md:text-xs text-gray-500 font-medium pl-0.5 md:pl-1">
                           +{dayEvents.length - 2}
@@ -381,7 +385,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
               Расписание
             </h1>
             <p className="text-xs md:text-base text-gray-600 truncate">
-              Управление онлайн и оффлайн консультациями
+              Консультации, выезды на дом и записи на диагностику
             </p>
           </div>
 
@@ -510,6 +514,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
               <option value="all">Все типы</option>
               <option value="consultation">Онлайн</option>
               <option value="appointment">Оффлайн</option>
+              <option value="diagnostics">Диагностика</option>
             </select>
 
             {/* Status Filter */}

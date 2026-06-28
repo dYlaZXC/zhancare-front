@@ -23,6 +23,8 @@ import {
   Search,
   CalendarDays,
   Trash2,
+  FlaskConical,
+  ChevronDown,
 } from "lucide-react";
 import { ScheduleEvent } from "../types/scheduleTypes";
 import { getStatusColor } from "../utils/scheduleUtils";
@@ -38,8 +40,6 @@ interface DateDetailsDrawerProps {
   events: ScheduleEvent[];
   onEventChanged?: () => void;
 }
-
-const GENDER_LABEL: Record<string, string> = { M: 'Мужчина', F: 'Женщина' };
 
 function CopyButton({ value, label }: { value: string; label: string }) {
   const [copied, setCopied] = useState(false);
@@ -111,7 +111,7 @@ function CopyAllButton({ event }: { event: ScheduleEvent }) {
       '📋 Консультация ZhanCare',
       '',
       `📅 Дата: ${event.date}, ${event.time} (${event.duration} мин)`,
-      `🏥 Тип: ${event.type === 'consultation' ? (isOnline ? 'Онлайн' : 'Оффлайн') : 'Выезд на дом'}`,
+      `🏥 Тип: ${event.type === 'consultation' ? (isOnline ? 'Онлайн' : 'Оффлайн') : event.type === 'diagnostics' ? 'Диагностика' : 'Выезд на дом'}`,
       `📊 Статус: ${STATUS_LABELS[event.status] ?? event.status}`,
       '',
       `👤 Пациент: ${event.patient_name}`,
@@ -130,6 +130,11 @@ function CopyAllButton({ event }: { event: ScheduleEvent }) {
     if (event.nurse_name) {
       lines.push('', `👩‍⚕️ Медсестра: ${event.nurse_name}`);
       if (event.nurse_phone) lines.push(`📞 Телефон: ${event.nurse_phone}`);
+    }
+
+    if (event.service_name) {
+      lines.push('', `🧪 Услуга: ${event.service_name}`);
+      if (event.clinic_name) lines.push(`🏥 Клиника: ${event.clinic_name}`);
     }
 
     if (link) {
@@ -163,11 +168,35 @@ function CopyAllButton({ event }: { event: ScheduleEvent }) {
   );
 }
 
-function ConsultationCard({ event, onChanged }: { event: ScheduleEvent; onChanged?: () => void }) {
+function getHeaderInfo(event: ScheduleEvent) {
   const isOnline = event.consultation_type !== 'offline';
+  if (event.type === 'consultation') {
+    return {
+      icon: <Video className="w-5 h-5" style={{ color: isOnline ? '#3772ff' : '#059669' }} />,
+      iconBg: isOnline ? '#3772ff20' : '#05966920',
+      title: isOnline ? 'Онлайн консультация' : 'Оффлайн консультация',
+    };
+  }
+  if (event.type === 'diagnostics') {
+    return {
+      icon: <FlaskConical className="w-5 h-5 text-cyan-600" />,
+      iconBg: '#0891b220',
+      title: event.service_name ? `Диагностика: ${event.service_name}` : 'Диагностика',
+    };
+  }
+  return {
+    icon: <Home className="w-5 h-5 text-violet-600" />,
+    iconBg: '#7c3aed20',
+    title: 'Выезд на дом',
+  };
+}
+
+function BookingRow({ event, onChanged }: { event: ScheduleEvent; onChanged?: () => void }) {
+  const [expanded, setExpanded] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const headerInfo = getHeaderInfo(event);
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -184,58 +213,39 @@ function ConsultationCard({ event, onChanged }: { event: ScheduleEvent; onChange
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-white border-2 border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
-    >
-      {/* Card header */}
-      <div
-        className="px-5 py-4 flex items-center justify-between"
-        style={{ background: isOnline ? 'linear-gradient(135deg, #ebf1ff 0%, #f0f7ff 100%)' : 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)' }}
+    <div>
+      <button
+        type="button"
+        onClick={() => setExpanded(v => !v)}
+        className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50/80 transition-colors text-left"
       >
-        <div className="flex items-center gap-3">
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ background: isOnline ? '#3772ff20' : '#05966920' }}
-          >
-            {event.type === 'consultation'
-              ? <Video className="w-5 h-5" style={{ color: isOnline ? '#3772ff' : '#059669' }} />
-              : <Home className="w-5 h-5 text-violet-600" />
-            }
-          </div>
-          <div>
-            <p className="text-sm font-bold" style={{ color: '#1e263e' }}>
-              {event.type === 'consultation'
-                ? (isOnline ? 'Онлайн консультация' : 'Оффлайн консультация')
-                : 'Выезд на дом'}
-            </p>
-            <div className="flex items-center gap-2 mt-0.5">
-              <Clock className="w-3 h-3 text-gray-400" />
-              <span className="text-xs text-gray-500 font-medium">
-                {event.time} · {event.duration} мин
-              </span>
-            </div>
+        <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: headerInfo.iconBg }}>
+          {headerInfo.icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-gray-800 truncate">{headerInfo.title}</p>
+          <div className="flex items-center gap-1.5 text-xs text-gray-400 mt-0.5">
+            <Clock className="w-3 h-3" />
+            {event.time} · {event.duration} мин
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <StatusBadge status={event.status} />
-          <button
-            onClick={() => setRescheduleOpen(true)}
-            title="Перенести запись"
-            className="p-1.5 rounded-lg hover:bg-blue-100 transition-colors text-blue-400 hover:text-blue-600"
-          >
-            <CalendarDays className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setConfirmDelete(true)}
-            title="Удалить запись"
-            className="p-1.5 rounded-lg hover:bg-red-100 transition-colors text-gray-400 hover:text-red-500"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
+        <StatusBadge status={event.status} />
+        <button
+          onClick={(e) => { e.stopPropagation(); setRescheduleOpen(true); }}
+          title="Перенести запись"
+          className="p-1.5 rounded-lg hover:bg-blue-100 transition-colors text-blue-400 hover:text-blue-600 flex-shrink-0"
+        >
+          <CalendarDays className="w-4 h-4" />
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
+          title="Удалить запись"
+          className="p-1.5 rounded-lg hover:bg-red-100 transition-colors text-gray-400 hover:text-red-500 flex-shrink-0"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+        <ChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+      </button>
 
       {rescheduleOpen && (
         <RescheduleModal
@@ -254,124 +264,180 @@ function ConsultationCard({ event, onChanged }: { event: ScheduleEvent; onChange
         />
       )}
 
-      <div className="p-5 space-y-4">
-        {/* Patient + Doctor grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {/* Patient */}
-          <div className="bg-blue-50/60 rounded-xl p-4 space-y-2">
-            <div className="flex items-center gap-1.5 mb-1">
-              <User className="w-3.5 h-3.5 text-blue-600" />
-              <span className="text-xs font-bold text-blue-700 uppercase tracking-wide">Пациент</span>
-            </div>
-            <p className="font-semibold text-gray-900 text-sm leading-snug">{event.patient_name}</p>
-            {event.patient_phone && (
-              <InfoRow icon={<Phone className="w-3.5 h-3.5" />} value={event.patient_phone} copyable />
-            )}
-            {event.patient_email && (
-              <InfoRow icon={<Mail className="w-3.5 h-3.5" />} value={event.patient_email} copyable />
-            )}
-            {event.patient_birth_date && (
-              <InfoRow icon={<CalendarIcon className="w-3.5 h-3.5" />} value={event.patient_birth_date} />
-            )}
-            {event.patient_gender && (
-              <InfoRow icon={<BadgeInfo className="w-3.5 h-3.5" />} value={GENDER_LABEL[event.patient_gender] ?? event.patient_gender} />
-            )}
-          </div>
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="px-5 pb-5 pt-1 space-y-3 bg-gray-50/40">
+              {/* Doctor */}
+              {event.doctor_name && (
+                <div className="bg-emerald-50/60 rounded-xl p-4 space-y-2">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Stethoscope className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="text-xs font-bold text-emerald-700 uppercase tracking-wide">Доктор</span>
+                  </div>
+                  <p className="font-semibold text-gray-900 text-sm leading-snug">{event.doctor_name}</p>
+                  {event.doctor_specialization && (
+                    <InfoRow icon={<Activity className="w-3.5 h-3.5" />} value={event.doctor_specialization} />
+                  )}
+                  {event.doctor_phone && (
+                    <InfoRow icon={<Phone className="w-3.5 h-3.5" />} value={event.doctor_phone} copyable />
+                  )}
+                  {event.doctor_email && (
+                    <InfoRow icon={<Mail className="w-3.5 h-3.5" />} value={event.doctor_email} copyable />
+                  )}
+                  {event.doctor_years_of_experience != null && (
+                    <InfoRow icon={<BadgeInfo className="w-3.5 h-3.5" />} value={`${event.doctor_years_of_experience} лет опыта`} />
+                  )}
+                </div>
+              )}
 
-          {/* Doctor */}
-          {event.doctor_name && (
-            <div className="bg-emerald-50/60 rounded-xl p-4 space-y-2">
-              <div className="flex items-center gap-1.5 mb-1">
-                <Stethoscope className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="text-xs font-bold text-emerald-700 uppercase tracking-wide">Доктор</span>
-              </div>
-              <p className="font-semibold text-gray-900 text-sm leading-snug">{event.doctor_name}</p>
-              {event.doctor_specialization && (
-                <InfoRow icon={<Activity className="w-3.5 h-3.5" />} value={event.doctor_specialization} />
+              {/* Nurse */}
+              {event.nurse_name && (
+                <div className="bg-violet-50/60 rounded-xl p-4 space-y-2">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <User className="w-3.5 h-3.5 text-violet-600" />
+                    <span className="text-xs font-bold text-violet-700 uppercase tracking-wide">Медсестра</span>
+                  </div>
+                  <p className="font-semibold text-gray-900 text-sm">{event.nurse_name}</p>
+                  {event.nurse_phone && (
+                    <InfoRow icon={<Phone className="w-3.5 h-3.5" />} value={event.nurse_phone} copyable />
+                  )}
+                  {event.nurse_email && (
+                    <InfoRow icon={<Mail className="w-3.5 h-3.5" />} value={event.nurse_email} copyable />
+                  )}
+                </div>
               )}
-              {event.doctor_phone && (
-                <InfoRow icon={<Phone className="w-3.5 h-3.5" />} value={event.doctor_phone} copyable />
-              )}
-              {event.doctor_email && (
-                <InfoRow icon={<Mail className="w-3.5 h-3.5" />} value={event.doctor_email} copyable />
-              )}
-              {event.doctor_years_of_experience != null && (
-                <InfoRow icon={<BadgeInfo className="w-3.5 h-3.5" />} value={`${event.doctor_years_of_experience} лет опыта`} />
-              )}
-            </div>
-          )}
 
-          {/* Nurse */}
-          {event.nurse_name && (
-            <div className="bg-violet-50/60 rounded-xl p-4 space-y-2">
-              <div className="flex items-center gap-1.5 mb-1">
-                <User className="w-3.5 h-3.5 text-violet-600" />
-                <span className="text-xs font-bold text-violet-700 uppercase tracking-wide">Медсестра</span>
-              </div>
-              <p className="font-semibold text-gray-900 text-sm">{event.nurse_name}</p>
-              {event.nurse_phone && (
-                <InfoRow icon={<Phone className="w-3.5 h-3.5" />} value={event.nurse_phone} copyable />
+              {/* Diagnostic service */}
+              {event.service_name && (
+                <div className="bg-cyan-50/60 rounded-xl p-4 space-y-2">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <FlaskConical className="w-3.5 h-3.5 text-cyan-600" />
+                    <span className="text-xs font-bold text-cyan-700 uppercase tracking-wide">Услуга</span>
+                  </div>
+                  <p className="font-semibold text-gray-900 text-sm leading-snug">{event.service_name}</p>
+                  {event.clinic_name && (
+                    <InfoRow icon={<BadgeInfo className="w-3.5 h-3.5" />} value={event.clinic_name} />
+                  )}
+                </div>
               )}
-              {event.nurse_email && (
-                <InfoRow icon={<Mail className="w-3.5 h-3.5" />} value={event.nurse_email} copyable />
+
+              {/* Address */}
+              {event.address && (
+                <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-purple-50/60">
+                  <MapPin className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" />
+                  <span className="text-sm text-gray-700">{event.address}</span>
+                </div>
               )}
+
+              {/* Consultation access — link + meeting id + access code */}
+              {(event.meeting_id || event.access_code) && (() => {
+                const consultLink = event.meeting_id
+                  ? `${typeof window !== 'undefined' ? window.location.origin : ''}/video-call/patient?meetingId=${event.meeting_id}`
+                  : null;
+                return (
+                  <div className="border border-gray-100 rounded-xl divide-y divide-gray-100 bg-white">
+                    {consultLink && (
+                      <div className="flex items-center gap-2.5 px-4 py-2.5">
+                        <Link className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
+                        <span className="text-xs text-gray-400 flex-shrink-0 w-24">Ссылка</span>
+                        <span className="text-xs text-blue-600 truncate flex-1 font-medium">{consultLink}</span>
+                        <CopyButton value={consultLink} label="ссылку" />
+                      </div>
+                    )}
+                    {event.meeting_id && (
+                      <div className="flex items-center gap-2.5 px-4 py-2.5">
+                        <Link className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
+                        <span className="text-xs text-gray-400 flex-shrink-0 w-24">Meeting ID</span>
+                        <span className="text-xs font-mono text-gray-500 truncate flex-1">{event.meeting_id}</span>
+                        <CopyButton value={event.meeting_id} label="Meeting ID" />
+                      </div>
+                    )}
+                    {event.access_code && (
+                      <div className="flex items-center gap-2.5 px-4 py-2.5">
+                        <KeyRound className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                        <span className="text-xs text-gray-400 flex-shrink-0 w-24">Код доступа</span>
+                        <span className="text-sm font-bold font-mono tracking-widest text-gray-800 flex-1">{event.access_code}</span>
+                        <CopyButton value={event.access_code} label="код" />
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Notes */}
+              {event.notes && (
+                <div className="bg-gray-50 rounded-xl px-4 py-3">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5">Примечания</p>
+                  <p className="text-sm text-gray-700 leading-relaxed">{event.notes}</p>
+                </div>
+              )}
+
+              {/* Copy all info button */}
+              <CopyAllButton event={event} />
             </div>
-          )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function PatientGroupCard({ events, onChanged }: { events: ScheduleEvent[]; onChanged?: () => void }) {
+  const first = events[0];
+  const sortedEvents = [...events].sort((a, b) => a.time.localeCompare(b.time));
+  const initials = first.patient_name
+    .split(' ')
+    .filter(Boolean)
+    .map(p => p[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white border-2 border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+    >
+      {/* Patient header — shown once for all their bookings on this date */}
+      <div className="px-5 py-4 flex items-center gap-3 bg-blue-50/60 border-b border-gray-100">
+        <div
+          className="w-11 h-11 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+          style={{ background: 'linear-gradient(135deg, #3772ff, #2c5bcc)' }}
+        >
+          {initials}
         </div>
-
-        {/* Address */}
-        {event.address && (
-          <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-purple-50/60">
-            <MapPin className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" />
-            <span className="text-sm text-gray-700">{event.address}</span>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-gray-900 text-sm truncate">{first.patient_name}</p>
+          <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5 flex-wrap">
+            {first.patient_phone && (
+              <span className="flex items-center gap-1 flex-shrink-0">
+                <Phone className="w-3 h-3" /> {first.patient_phone}
+              </span>
+            )}
+            {first.patient_email && (
+              <span className="flex items-center gap-1 truncate">
+                <Mail className="w-3 h-3 flex-shrink-0" /> <span className="truncate">{first.patient_email}</span>
+              </span>
+            )}
           </div>
-        )}
+        </div>
+        <span className="text-xs font-bold text-gray-400 flex-shrink-0">
+          {sortedEvents.length} {sortedEvents.length === 1 ? 'запись' : 'записи'}
+        </span>
+      </div>
 
-        {/* Consultation access — link + meeting id + access code */}
-        {(event.meeting_id || event.access_code) && (() => {
-          const consultLink = event.meeting_id
-            ? `${typeof window !== 'undefined' ? window.location.origin : ''}/video-call/patient?meetingId=${event.meeting_id}`
-            : null;
-          return (
-            <div className="border border-gray-100 rounded-xl divide-y divide-gray-100">
-              {consultLink && (
-                <div className="flex items-center gap-2.5 px-4 py-2.5">
-                  <Link className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
-                  <span className="text-xs text-gray-400 flex-shrink-0 w-24">Ссылка</span>
-                  <span className="text-xs text-blue-600 truncate flex-1 font-medium">{consultLink}</span>
-                  <CopyButton value={consultLink} label="ссылку" />
-                </div>
-              )}
-              {event.meeting_id && (
-                <div className="flex items-center gap-2.5 px-4 py-2.5">
-                  <Link className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
-                  <span className="text-xs text-gray-400 flex-shrink-0 w-24">Meeting ID</span>
-                  <span className="text-xs font-mono text-gray-500 truncate flex-1">{event.meeting_id}</span>
-                  <CopyButton value={event.meeting_id} label="Meeting ID" />
-                </div>
-              )}
-              {event.access_code && (
-                <div className="flex items-center gap-2.5 px-4 py-2.5">
-                  <KeyRound className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-                  <span className="text-xs text-gray-400 flex-shrink-0 w-24">Код доступа</span>
-                  <span className="text-sm font-bold font-mono tracking-widest text-gray-800 flex-1">{event.access_code}</span>
-                  <CopyButton value={event.access_code} label="код" />
-                </div>
-              )}
-            </div>
-          );
-        })()}
-
-        {/* Notes */}
-        {event.notes && (
-          <div className="bg-gray-50 rounded-xl px-4 py-3">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5">Примечания</p>
-            <p className="text-sm text-gray-700 leading-relaxed">{event.notes}</p>
-          </div>
-        )}
-
-        {/* Copy all info button */}
-        <CopyAllButton event={event} />
+      <div className="divide-y divide-gray-100">
+        {sortedEvents.map(event => (
+          <BookingRow key={event.id} event={event} onChanged={onChanged} />
+        ))}
       </div>
     </motion.div>
   );
@@ -409,6 +475,17 @@ export default function DateDetailsDrawer({
         e.time?.includes(q)
       )
     : sorted;
+
+  // Group bookings by patient so the same person's multiple services on this
+  // date appear under one card instead of repeating their info each time.
+  const groupsByPatient = new Map<string, ScheduleEvent[]>();
+  for (const e of filtered) {
+    const key = String(e.patient_id ?? e.patient_name);
+    if (!groupsByPatient.has(key)) groupsByPatient.set(key, []);
+    groupsByPatient.get(key)!.push(e);
+  }
+  const earliestTime = (g: ScheduleEvent[]) => g.reduce((min, e) => (e.time < min ? e.time : min), g[0].time);
+  const patientGroups = Array.from(groupsByPatient.values()).sort((a, b) => earliestTime(a).localeCompare(earliestTime(b)));
 
   return (
     <AnimatePresence>
@@ -487,10 +564,11 @@ export default function DateDetailsDrawer({
               <div className="p-5 space-y-4">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">
                   {filtered.length} {filtered.length === 1 ? 'запись' : 'записей'}
+                  {patientGroups.length > 1 && ` · ${patientGroups.length} пациента`}
                   {q && <span className="normal-case font-normal ml-1 text-blue-400">· по запросу «{search.trim()}»</span>}
                 </p>
-                {filtered.map(event => (
-                  <ConsultationCard key={event.id} event={event} onChanged={onEventChanged} />
+                {patientGroups.map(group => (
+                  <PatientGroupCard key={String(group[0].patient_id ?? group[0].patient_name)} events={group} onChanged={onEventChanged} />
                 ))}
               </div>
             )}

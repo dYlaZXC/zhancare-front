@@ -4,7 +4,7 @@
 
 export interface ScheduleEvent {
   id: string;
-  type: 'consultation' | 'appointment';
+  type: 'consultation' | 'appointment' | 'diagnostics';
   consultation_type?: 'online' | 'offline';
   // Patient
   patient_id: number;
@@ -25,6 +25,10 @@ export interface ScheduleEvent {
   nurse_name?: string;
   nurse_phone?: string;
   nurse_email?: string;
+  // Diagnostic service booking (diagnostics only)
+  service_name?: string;
+  category?: string;
+  clinic_name?: string;
   // Scheduling
   date: string;
   time: string;
@@ -33,14 +37,14 @@ export interface ScheduleEvent {
   // Access (consultations)
   meeting_id?: string;
   access_code?: string;
-  // Location (appointments)
+  // Location (appointments / diagnostics)
   address?: string;
   notes?: string;
 }
 
 export type ViewMode = 'week' | 'month' | 'doctors';
 
-export type FilterType = 'all' | 'consultation' | 'appointment';
+export type FilterType = 'all' | 'consultation' | 'appointment' | 'diagnostics';
 
 export type FilterStatus = 'all' | 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
 

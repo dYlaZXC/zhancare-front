@@ -14,19 +14,22 @@ import {
   Clock,
   User,
   Stethoscope,
+  FlaskConical,
 } from "lucide-react";
 import { api } from "@/utils/api";
 import { toast } from "react-toastify";
 
 interface ArchivedEvent {
   id: string;
-  type: "consultation" | "appointment";
+  type: "consultation" | "appointment" | "diagnostics";
   consultation_type?: "online" | "offline";
   patient_name: string;
   patient_phone?: string;
   doctor_name?: string;
   doctor_specialization?: string;
   nurse_name?: string;
+  service_name?: string;
+  clinic_name?: string;
   date: string;
   time: string;
   duration: number;
@@ -187,6 +190,11 @@ export default function ArchivedRecordsDrawer({ isOpen, onClose, onRestored }: A
                   {filtered.map(event => {
                     const isOnline = event.type === "consultation" && event.consultation_type !== "offline";
                     const isRestoring = restoringId === event.id;
+                    const iconBg = event.type === "consultation"
+                      ? (isOnline ? "#ebf1ff" : "#f0fdf4")
+                      : event.type === "diagnostics"
+                      ? "#cffafe"
+                      : "#f5f3ff";
 
                     return (
                       <div
@@ -196,14 +204,12 @@ export default function ArchivedRecordsDrawer({ isOpen, onClose, onRestored }: A
                         {/* Type icon */}
                         <div
                           className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                          style={{
-                            background: event.type === "consultation"
-                              ? (isOnline ? "#ebf1ff" : "#f0fdf4")
-                              : "#f5f3ff",
-                          }}
+                          style={{ background: iconBg }}
                         >
                           {event.type === "consultation"
                             ? <Video className="w-4.5 h-4.5" style={{ color: isOnline ? "#3772ff" : "#059669" }} />
+                            : event.type === "diagnostics"
+                            ? <FlaskConical className="w-4.5 h-4.5 text-cyan-600" />
                             : <Home className="w-4.5 h-4.5 text-violet-500" />
                           }
                         </div>
@@ -239,6 +245,12 @@ export default function ArchivedRecordsDrawer({ isOpen, onClose, onRestored }: A
                             <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
                               <User className="w-3 h-3" />
                               {event.nurse_name}
+                            </div>
+                          )}
+                          {event.service_name && (
+                            <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
+                              <FlaskConical className="w-3 h-3" />
+                              {event.service_name}
                             </div>
                           )}
                           {event.address && (
