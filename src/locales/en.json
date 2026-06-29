@@ -1,87 +1,109 @@
 {
-    "auth": {
-      "welcome": "Welcome to ZhanCare.AI!",
-      "description": "Log in if you're already registered, or create an account in just a few clicks!",
-      "login": "Log in",
-      "register": "Register",
-      "email": "Email",
-      "password": "Password",
-      "forgotPassword": "Forgot password?",
-      "loginButton": "Log in",
-      "lastName": "Last Name",
-      "firstName": "First Name",
-      "phone": "Phone",
-      "confirmPassword": "Confirm Password",
-      "registerButton": "Register",
-      "rememberMe": "Remember me",
-      "backToLogin": "Back to login",
-      "forgotPasswordTitle": "Password Recovery",
-      "enterEmail": "Enter your email",
-      "sendCode": "Send code to email",
-      "sending": "Sending...",
-      "codeSent": "Code sent to your email",
-      "failedToSend": "Failed to send code",
-      "incorrectCode": "Incorrect code. Try again.",
-      "codeExpiresIn": "Code expires in:",
-      "codeExpired": "Code expired",
-      "sendAgain": "Send again",
-      "newPassword": "New password",
-      "resetPassword": "Reset password",
-      "updating": "Updating...",
-      "passwordUpdated": "Password updated successfully",
-      "resetError": "Error resetting password",
-      "fillAllFields": "Fill all fields",
-      "passwordsMismatch": "Passwords don't match",
-      "codeDescription": "Enter the 6-digit code sent to your email",
-      "resendAvailableIn": "Resend available in:",
-      "resendCooldownMessage": "Please wait {minutes} minutes before requesting a new code",
-      "consentPersonalData": "I agree to the",
-      "consentPersonalDataLink": "consent to the collection of personal data",
-      "consentInformAgreement": "I agree to the",
-      "consentInformAgreementLink": "informed consent",
-      "consentOffer": "I agree to the",
-      "consentOfferLink": "offer agreement"
+  "auth": {
+    "welcome": "Welcome to ZhanCare.AI!",
+    "description": "Log in if you're already registered, or create an account in just a few clicks!",
+    "login": "Log in",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "loginButton": "Log in",
+    "lastName": "Last Name",
+    "firstName": "First Name",
+    "phone": "Phone",
+    "confirmPassword": "Confirm Password",
+    "registerButton": "Register",
+    "rememberMe": "Remember me",
+    "backToLogin": "Back to login",
+    "forgotPasswordTitle": "Password Recovery",
+    "enterEmail": "Enter your email",
+    "sendCode": "Send code to email",
+    "sending": "Sending...",
+    "codeSent": "Code sent to your email",
+    "failedToSend": "Failed to send code",
+    "incorrectCode": "Incorrect code. Try again.",
+    "codeExpiresIn": "Code expires in:",
+    "codeExpired": "Code expired",
+    "sendAgain": "Send again",
+    "newPassword": "New password",
+    "resetPassword": "Reset password",
+    "updating": "Updating...",
+    "passwordUpdated": "Password updated successfully",
+    "resetError": "Error resetting password",
+    "fillAllFields": "Fill all fields",
+    "passwordsMismatch": "Passwords don't match",
+    "codeDescription": "Enter the 6-digit code sent to your email",
+    "resendAvailableIn": "Resend available in:",
+    "resendCooldownMessage": "Please wait {minutes} minutes before requesting a new code",
+    "consentPersonalData": "I agree to the",
+    "consentPersonalDataLink": "consent to the collection of personal data",
+    "consentInformAgreement": "I agree to the",
+    "consentInformAgreementLink": "informed consent",
+    "consentOffer": "I agree to the",
+    "consentOfferLink": "offer agreement",
+    "loading": "Loading...",
+    "secureConnection": "Secure connection 256-bit SSL",
+    "invalidEmail": "Enter a valid email address",
+    "passwordTooShort": "Password must be at least 8 characters",
+    "invalidPhone": "Enter a valid phone number",
+    "phoneRequired": "Enter your phone number",
+    "firstNameRequired": "First name is required",
+    "lastNameRequired": "Last name is required",
+    "consentRequired": "Consent is required",
+    "accountDeactivated": "Sorry, your account has been deactivated. Please contact the administrator.",
+    "invalidPhoneOrPassword": "Incorrect phone number or password."
+  },
+  "telegramAuth": {
+    "initializing": "Initializing...",
+    "welcome": "Welcome",
+    "loginSuccess": "Successfully logged in!",
+    "loginError": "Authentication failed",
+    "invalidPhone": "Please enter a valid phone number",
+    "registrationSuccess": "Registration completed successfully!",
+    "registrationError": "Registration failed",
+    "phoneLabel": "Phone Number",
+    "phoneDescription": "We need your phone number to complete registration",
+    "completeRegistration": "Complete Registration",
+    "authenticating": "Authenticating...",
+    "checkingAccount": "Checking your account...",
+    "secureAuth": "Secure authentication via Telegram"
+  },
+  "hero": {
+    "navigation": {
+      "hero": "Home",
+      "ai-chat": "AI Chat",
+      "services": "Services",
+      "specialists": "Specialists",
+      "modules": "Modules",
+      "traction": "Our Journey",
+      "contacts": "Contacts"
     },
-    "telegramAuth": {
-      "initializing": "Initializing...",
-      "welcome": "Welcome",
-      "loginSuccess": "Successfully logged in!",
-      "loginError": "Authentication failed",
-      "invalidPhone": "Please enter a valid phone number",
-      "registrationSuccess": "Registration completed successfully!",
-      "registrationError": "Registration failed",
-      "phoneLabel": "Phone Number",
-      "phoneDescription": "We need your phone number to complete registration",
-      "completeRegistration": "Complete Registration",
-      "authenticating": "Authenticating...",
-      "checkingAccount": "Checking your account...",
-      "secureAuth": "Secure authentication via Telegram"
+    "content": {
+      "heroHeading": "Next-generation telemedicine – health at one click!",
+      "heroDescription": "We provide remote medical consultations, AI tools for doctors, and convenient connection between patients and physicians.",
+      "videoNotSupported": "Your browser does not support video.",
+      "openDataButton": "Book an appointment"
     },
-    "hero": {
-      "navigation": {
-        "hero": "Home",
-        "ai-chat": "AI Chat",
-        "services": "Services",
-        "specialists": "Specialists",
-        "modules": "Modules",
-        "traction": "Our Journey",
-        "contacts": "Contacts"
+    "statistics": [
+      {
+        "value": "700+",
+        "description": "Consultations per month"
       },
-      "content": {
-        "heroHeading": "Next-generation telemedicine – health at one click!",
-        "heroDescription": "We provide remote medical consultations, AI tools for doctors, and convenient connection between patients and physicians.",
-        "videoNotSupported": "Your browser does not support video.",
-        "openDataButton": "Book an appointment"
+      {
+        "value": "100+",
+        "description": "Home doctor visits"
       },
-      "statistics": [
-        { "value": "700+", "description": "Consultations per month" },
-        { "value": "100+", "description": "Home doctor visits" },
-        { "value": "24/7", "description": "Access to medical consultations" },
-        { "value": "AI", "description": "AI analytics for doctors" }
-      ]
-    },
-
-    "services": {
+      {
+        "value": "24/7",
+        "description": "Access to medical consultations"
+      },
+      {
+        "value": "AI",
+        "description": "AI analytics for doctors"
+      }
+    ]
+  },
+  "services": {
     "servicesHeader": "ZhanCare.AI Main Services:",
     "servicesDescription": "Our services provide convenient access to medical care, improving interaction between patients and doctors.",
     "list": [
@@ -99,7 +121,11 @@
         "icon": "faVideo",
         "title": "Telemedicine",
         "description": "Remote medical consultations anytime.",
-        "details": ["Secure connection", "High-quality video", "Consultations with certified doctors"]
+        "details": [
+          "Secure connection",
+          "High-quality video",
+          "Consultations with certified doctors"
+        ]
       },
       {
         "icon": "faHouse",
@@ -115,184 +141,237 @@
         "icon": "faBell",
         "title": "Reminders and Notifications",
         "description": "Automated reminders for appointments and medications.",
-        "details": ["System notifications", "Calendar integration", "Personalized reminders"]
+        "details": [
+          "System notifications",
+          "Calendar integration",
+          "Personalized reminders"
+        ]
       },
       {
         "icon": "faUserMd",
         "title": "Doctor Support",
         "description": "Tools for doctors to improve work efficiency.",
-        "details": ["Treatment recommendations", "Patient analytics", "Automated reports"]
+        "details": [
+          "Treatment recommendations",
+          "Patient analytics",
+          "Automated reports"
+        ]
       },
       {
         "icon": "faHeartbeat",
         "title": "Health Monitoring",
         "description": "Real-time patient condition analysis.",
-        "details": ["Wearable device integration", "Automatic health metrics analysis", "Health recommendations"]
+        "details": [
+          "Wearable device integration",
+          "Automatic health metrics analysis",
+          "Health recommendations"
+        ]
       },
       {
         "icon": "faPills",
         "title": "Medication Recommendations",
         "description": "Personalized medication intake recommendations.",
-        "details": ["Drug compatibility analysis", "Dosage recommendations", "Treatment compliance monitoring"]
+        "details": [
+          "Drug compatibility analysis",
+          "Dosage recommendations",
+          "Treatment compliance monitoring"
+        ]
       },
       {
         "icon": "faClinicMedical",
         "title": "Telemedicine for Remote Areas",
         "description": "Access to medical services in hard-to-reach places.",
-        "details": ["Mobile network connections", "Remote examinations", "Specialist consultations"]
+        "details": [
+          "Mobile network connections",
+          "Remote examinations",
+          "Specialist consultations"
+        ]
       },
       {
         "icon": "faChartLine",
         "title": "Medical Data Analytics",
         "description": "Using big data to improve medical decisions.",
-        "details": ["Disease outbreak prediction", "Doctor workload optimization", "Automated trend analysis"]
+        "details": [
+          "Disease outbreak prediction",
+          "Doctor workload optimization",
+          "Automated trend analysis"
+        ]
       }
     ]
   },
-
-    "features": {
-      "title": "ZhanCare.AI Capabilities",
-      "description": "Our platform uses cutting-edge technologies to improve diagnostics, doctor-patient communication, and enhance medical service quality.",
-      "buttonText": "Learn more",
-      "featuresList": [
-        {
-          "title": "AI Diagnostics and Recommendations",
-          "description": "Using artificial intelligence to analyze medical data and provide doctors with accurate recommendations."
-        },
-        {
-          "title": "Video Consultations",
-          "description": "Secure video calls with doctors, providing access to medical care from anywhere in the world."
-        },
-        {
-          "title": "Electronic Medical Records",
-          "description": "Storing medical history, tests, and prescriptions in secure digital format with convenient access."
-        }
+  "features": {
+    "title": "ZhanCare.AI Capabilities",
+    "description": "Our platform uses cutting-edge technologies to improve diagnostics, doctor-patient communication, and enhance medical service quality.",
+    "buttonText": "Learn more",
+    "featuresList": [
+      {
+        "title": "AI Diagnostics and Recommendations",
+        "description": "Using artificial intelligence to analyze medical data and provide doctors with accurate recommendations."
+      },
+      {
+        "title": "Video Consultations",
+        "description": "Secure video calls with doctors, providing access to medical care from anywhere in the world."
+      },
+      {
+        "title": "Electronic Medical Records",
+        "description": "Storing medical history, tests, and prescriptions in secure digital format with convenient access."
+      }
+    ]
+  },
+  "productShowcase": {
+    "title": "Innovative interface for telemedicine and diagnostics",
+    "description": "ZhanCare.AI provides a convenient interface for doctors and patients, ensuring quick access to medical data, video consultations, and AI analytics tools.",
+    "contentData": [
+      {
+        "id": 1,
+        "title": "AI Diagnostics and Data Analysis",
+        "description": "Automated analysis of medical data with recommendations for doctors and disease prediction.",
+        "imageSrc": "hero1212"
+      },
+      {
+        "id": 2,
+        "title": "Patient Condition Monitoring",
+        "description": "Continuous collection and analysis of patient data for prompt response and personalized treatment.",
+        "imageSrc": "hero1213"
+      },
+      {
+        "id": 3,
+        "title": "Video Consultations with Doctors",
+        "description": "Secure video calls with certified specialists for remote medical consultations.",
+        "imageSrc": "hero1214"
+      },
+      {
+        "id": 4,
+        "title": "Electronic Medical Records",
+        "description": "Centralized storage of medical data with convenient access for doctors and patients.",
+        "imageSrc": "hero1215"
+      }
+    ]
+  },
+  "callToAction": {
+    "title": "Contact Us",
+    "description": "We're ready to answer your questions and provide additional information.",
+    "form": {
+      "nameLabel": "Name",
+      "emailLabel": "Email",
+      "messageLabel": "Message",
+      "submitButton": "Send message",
+      "contactButton": "Contact us"
+    },
+    "alertMessage": "Your message has been sent!"
+  },
+  "footer": {
+    "companyTagline": "Combining technology and care for better health.",
+    "learnMore": "Learn more",
+    "navigation": {
+      "title": "Navigation",
+      "links": [
+        "Home",
+        "About",
+        "AI Chat",
+        "Services",
+        "Features",
+        "Contacts"
       ]
     },
-
-    "productShowcase": {
-      "title": "Innovative interface for telemedicine and diagnostics",
-      "description": "ZhanCare.AI provides a convenient interface for doctors and patients, ensuring quick access to medical data, video consultations, and AI analytics tools.",
-      "contentData": [
-        {
-          "id": 1,
-          "title": "AI Diagnostics and Data Analysis",
-          "description": "Automated analysis of medical data with recommendations for doctors and disease prediction.",
-          "imageSrc": "hero1212"
-        },
-        {
-          "id": 2,
-          "title": "Patient Condition Monitoring",
-          "description": "Continuous collection and analysis of patient data for prompt response and personalized treatment.",
-          "imageSrc": "hero1213"
-        },
-        {
-          "id": 3,
-          "title": "Video Consultations with Doctors",
-          "description": "Secure video calls with certified specialists for remote medical consultations.",
-          "imageSrc": "hero1214"
-        },
-        {
-          "id": 4,
-          "title": "Electronic Medical Records",
-          "description": "Centralized storage of medical data with convenient access for doctors and patients.",
-          "imageSrc": "hero1215"
-        }
-      ]
+    "contact": {
+      "title": "Contact",
+      "address": "",
+      "email": "zhancare.group@yandex.kz",
+      "contactUs": "Contact us"
     },
-
-    "callToAction": {
-      "title": "Contact Us",
-      "description": "We're ready to answer your questions and provide additional information.",
-      "form": {
-        "nameLabel": "Name",
-        "emailLabel": "Email",
-        "messageLabel": "Message",
-        "submitButton": "Send message",
-        "contactButton": "Contact us"
-      },
-      "alertMessage": "Your message has been sent!"
+    "map": {
+      "title": "Map"
     },
-
-    "footer": {
-      "companyTagline": "Combining technology and care for better health.",
-      "learnMore": "Learn more",
-      "navigation": {
-        "title": "Navigation",
-        "links": ["Home", "About", "AI Chat", "Services", "Features", "Contacts"]
-      },
-      "contact": {
-        "title": "Contact",
-        "address": "",
-        "email": "zhancare.group@yandex.kz",
-        "contactUs": "Contact us"
-      },
-      "map": {
-        "title": "Map"
-      },
-      "social": {
-        "title": "Follow us"
-      },
-      "newsletter": {
-        "title": "Stay Updated",
-        "description": "Subscribe to our newsletter for health tips and updates",
-        "placeholder": "Enter your email",
-        "button": "Subscribe",
-        "successMessage": "Thank you for subscribing!",
-        "errorMessage": "Please enter a valid email"
-      },
-      "stats": {
-        "patients": "Active Patients",
-        "doctors": "Certified Doctors",
-        "consultations": "Consultations"
-      },
-      "legal": {
-        "title": "Legal",
-        "dataProcessing": "Data Processing Policy",
-        "offer": "Offer Agreement",
-        "terms": "Terms of Use"
-      },
-      "rights": "ZhanCare.AI. All rights reserved."
+    "social": {
+      "title": "Follow us"
     },
-
-    "chat": {
-      "title": "Chat with ZhanBot.AI",
-      "assistantInstruction": "You are a virtual medical assistant. Help users get health information, appointment reminders, and self-care advice.",
-      "placeholder": "Ask a question...",
-      "sendButton": "Send",
-      "sending": "Sending...",
-      "typing": " Thinking...",
-      "fetchError": "Error getting response from server.",
-      "genericError": "An error occurred. Please try again.",
-      "gameResponse": "Great idea! Let's play a medical quiz! 🎮"
+    "newsletter": {
+      "title": "Stay Updated",
+      "description": "Subscribe to our newsletter for health tips and updates",
+      "placeholder": "Enter your email",
+      "button": "Subscribe",
+      "successMessage": "Thank you for subscribing!",
+      "errorMessage": "Please enter a valid email"
     },
-
-    "heroMeetStyle": {
-      "heading": "Doctor consultation",
-      "headingHighlight": "in 5 minutes",
-      "subtitle": "Describe symptoms → AI selects a doctor → Payment → Video consultation",
-      "startButton": "Start consultation",
-      "startingButton": "Starting...",
-      "scheduleButton": "Schedule a meeting",
-      "features": [
-        { "title": "Fast", "description": "Consultation starts within 5 minutes after payment" },
-        { "title": "Smart matching", "description": "AI automatically selects the right doctor" },
-        { "title": "Secure", "description": "All data is protected and confidential" }
-      ],
-      "trust": ["Licensed doctors", "500+ consultations", "Rating 4.9/5"]
+    "stats": {
+      "patients": "Active Patients",
+      "doctors": "Certified Doctors",
+      "consultations": "Consultations"
     },
-
-    "impactSection": {
+    "legal": {
+      "title": "Legal",
+      "dataProcessing": "Data Processing Policy",
+      "offer": "Offer Agreement",
+      "terms": "Terms of Use"
+    },
+    "rights": "ZhanCare.AI. All rights reserved."
+  },
+  "chat": {
+    "title": "Chat with ZhanBot.AI",
+    "assistantInstruction": "You are a virtual medical assistant. Help users get health information, appointment reminders, and self-care advice.",
+    "placeholder": "Ask a question...",
+    "sendButton": "Send",
+    "sending": "Sending...",
+    "typing": " Thinking...",
+    "fetchError": "Error getting response from server.",
+    "genericError": "An error occurred. Please try again.",
+    "gameResponse": "Great idea! Let's play a medical quiz! 🎮"
+  },
+  "heroMeetStyle": {
+    "heading": "Doctor consultation",
+    "headingHighlight": "in 5 minutes",
+    "subtitle": "Describe symptoms → AI selects a doctor → Payment → Video consultation",
+    "startButton": "Start consultation",
+    "startingButton": "Starting...",
+    "scheduleButton": "Schedule a meeting",
+    "features": [
+      {
+        "title": "Fast",
+        "description": "Consultation starts within 5 minutes after payment"
+      },
+      {
+        "title": "Smart matching",
+        "description": "AI automatically selects the right doctor"
+      },
+      {
+        "title": "Secure",
+        "description": "All data is protected and confidential"
+      }
+    ],
+    "trust": [
+      "Licensed doctors",
+      "500+ consultations",
+      "Rating 4.9/5"
+    ]
+  },
+  "impactSection": {
     "title": "Why choose ZhanCare.AI?",
     "description": "We scale smart healthcare with AI.",
-    
     "statistics": [
-      { "value": 1500, "description": "Duty doctor consultation", "icon": "faVideo", "currency": "₸" },
-      { "value": 30, "description": "Certified doctors", "icon": "faUserMd" },
-      { "value": 2, "description": "Countries aware of ZhanCare.AI", "icon": "faClinicMedical" },
-      { "value": 95, "description": "Faster diagnosis with AI", "icon": "faChartLine", "percent": true }
+      {
+        "value": 1500,
+        "description": "Duty doctor consultation",
+        "icon": "faVideo",
+        "currency": "₸"
+      },
+      {
+        "value": 30,
+        "description": "Certified doctors",
+        "icon": "faUserMd"
+      },
+      {
+        "value": 2,
+        "description": "Countries aware of ZhanCare.AI",
+        "icon": "faClinicMedical"
+      },
+      {
+        "value": 95,
+        "description": "Faster diagnosis with AI",
+        "icon": "faChartLine",
+        "percent": true
+      }
     ],
-
     "features": {
       "title": "AI that's changing medicine",
       "description": "Intelligent, automated, and accessible healthcare.",
@@ -329,7 +408,6 @@
         }
       ]
     },
-
     "successStories": {
       "title": "Real Results",
       "description": "How ZhanCare.AI is transforming healthcare.",

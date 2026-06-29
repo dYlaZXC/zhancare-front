@@ -41,16 +41,16 @@ const LoginForm = ({ translations, onSubmit, onForgotPassword, loading }: LoginF
     const errors: Partial<LoginFormData> = {};
 
     if (!formData.email || !validateEmail(formData.email)) {
-      errors.email = "Введите корректный email адрес";
+      errors.email = translations.invalidEmail;
     }
 
     if (!formData.password || !validatePassword(formData.password)) {
-      errors.password = "Пароль должен содержать минимум 8 символов";
+      errors.password = translations.passwordTooShort;
     }
 
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [formData]);
+  }, [formData, translations]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -134,7 +134,7 @@ const LoginForm = ({ translations, onSubmit, onForgotPassword, loading }: LoginF
           {loading ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
-              <span>Загрузка...</span>
+              <span>{translations.loading}</span>
             </>
           ) : (
             <>
@@ -151,7 +151,7 @@ const LoginForm = ({ translations, onSubmit, onForgotPassword, loading }: LoginF
       {/* Security Badge */}
       <div className="flex items-center justify-center gap-2 mt-4 text-xs text-gray-500">
         <Shield className="w-4 h-4 text-green-600" />
-        <span>Защищенное соединение 256-bit SSL</span>
+        <span>{translations.secureConnection}</span>
       </div>
     </form>
   );

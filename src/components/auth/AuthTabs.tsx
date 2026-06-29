@@ -5,6 +5,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import en from "@/locales/en.json";
+import uz from "@/locales/uz.json";
 
 interface AuthTabsProps {
   activeTab: "login" | "register";
@@ -31,6 +32,11 @@ const AuthTabs: React.FC<AuthTabsProps> = ({ activeTab, onTabChange }) => {
         return {
           login: en.auth.login,
           register: en.auth.register
+        };
+      case "uz":
+        return {
+          login: uz.auth.login,
+          register: uz.auth.register
         };
       default:
         return {

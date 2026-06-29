@@ -259,6 +259,19 @@ const UI = {
     enterHint: "Enter - жіберу",
     shiftHint: "Shift+Enter - жол",
   },
+  uz: {
+    back: "Orqaga",
+    title: "AI Tibbiy Yordamchi",
+    subtitle: "Simptomlar diagnostikasi",
+    online: "Onlayn",
+    welcomeTitle: "JonBot.Ai-ga xush kelibsiz",
+    welcomeClinic: (name: string) => `${name}-ga xush kelibsiz`,
+    welcomeDesc: "Men sizning simptomlaringizning dastlabki diagnostikasini o'tkazaman va mos mutaxassisni tanlashga yordam beraman. Barcha ma'lumotlar maxfiy va himoyalangan.",
+    aiLabel: "AI Yordamchi",
+    placeholder: "Simptomlaringizni tasvirlang...",
+    enterHint: "Enter - yuborish",
+    shiftHint: "Shift+Enter - yangi qator",
+  },
 };
 
 export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }) {
@@ -282,6 +295,8 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
         return "Hello! I'm your medical AI assistant. Please tell me what's bothering you? Describe your symptoms in detail. You can also attach photos of symptoms (rash, redness, etc.).";
       case "kz":
         return "Сәлеметсіз бе! Мен сіздің медициналық AI көмекшісімін. Сізді не алаңдатып тұр? Симптомдарыңызды толық сипаттаңыз. Сондай-ақ симптомдардың фотосуреттерін тіркеуге болады (бөртпе, қызару және т.б.).";
+      case "uz":
+        return "Salom! Men sizning tibbiy AI yordamchingizman. Sizni nima bezovta qilmoqda? Simptomlaringizni batafsil tasvirlab bering. Shuningdek, simptomlar fotosuratlarini biriktirishingiz mumkin (toshma, qizarish va h.k.).";
       case "ru":
       default:
         return clinic?.welcomeMessage ||

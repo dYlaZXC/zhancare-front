@@ -14,8 +14,413 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUserInjured } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import BannerPicker, { useBanner } from "@/components/profile/BannerPicker";
 import PhoneInput from "@/components/ui/PhoneInput";
+
+const SELECT_TEXT = {
+  ru: { notSpecified: "Не указано", nothingFound: "Ничего не найдено" },
+  kz: { notSpecified: "Көрсетілмеген", nothingFound: "Ештеңе табылмады" },
+  en: { notSpecified: "Not specified", nothingFound: "Nothing found" },
+  uz: { notSpecified: "Ko'rsatilmagan", nothingFound: "Hech narsa topilmadi" },
+} as const;
+
+const READONLY_TEXT = {
+  ru: "Не изменяется",
+  kz: "Өзгертілмейді",
+  en: "Read-only",
+  uz: "O'zgartirilmaydi",
+} as const;
+
+const SAVE_BUTTON_TEXT = {
+  ru: { saved: "Сохранено!", save: "Сохранить" },
+  kz: { saved: "Сақталды!", save: "Сақтау" },
+  en: { saved: "Saved!", save: "Save" },
+  uz: { saved: "Saqlandi!", save: "Saqlash" },
+} as const;
+
+const PATIENT_PROFILE_TEXT = {
+  ru: {
+    loadProfileError: "Не удалось загрузить профиль",
+    personalDataUpdated: "Личные данные обновлены",
+    saveFailed: "Не удалось сохранить",
+    medicalDataUpdated: "Медицинские данные обновлены",
+    maxFileSize: "Максимум 5 МБ",
+    photoUpdated: "Фото обновлено",
+    photoUploadFailed: "Не удалось загрузить фото",
+    photoDeleted: "Фото удалено",
+    photoDeleteFailed: "Не удалось удалить",
+    profileLoadError: "Ошибка загрузки профиля",
+    yearWord: (n: number) => (n === 1 ? "год" : "лет"),
+    yearsInSystem: "в системе",
+    change: "Изменить",
+    viewPhoto: "Просмотреть фото",
+    replacePhoto: "Заменить фото",
+    uploadPhoto: "Загрузить фото",
+    deletePhoto: "Удалить фото",
+    patient: "Пациент",
+    online: "Онлайн",
+    personalData: "Личные данные",
+    personalDataSubtitle: "Персональная информация пациента",
+    protected: "Защищено",
+    firstName: "Имя",
+    lastName: "Фамилия",
+    phone: "Телефон",
+    birthDate: "Дата рождения",
+    gender: "Пол",
+    address: "Адрес",
+    addressPlaceholder: "Улица, дом, квартира",
+    city: "Город",
+    cityPlaceholder: "Алматы",
+    language: "Язык",
+    citizenship: "Гражданство",
+    maritalStatus: "Семейное положение",
+    profession: "Профессия",
+    professionPlaceholder: "Укажите вашу профессию",
+    searchGender: "Поиск пола...",
+    searchLanguage: "Поиск языка...",
+    searchCountry: "Поиск страны...",
+    search: "Поиск...",
+    medicalData: "Медицинские данные",
+    medicalFilled: "Заполнено",
+    of: "из",
+    fields: "полей",
+    bloodType: "Группа крови",
+    rhesusFactor: "Резус-фактор",
+    fluorographyStatus: "Статус флюорографии",
+    fluorographyDate: "Дата флюорографии",
+    immunizationStatus: "Статус иммунизации",
+    immunizationDate: "Дата последней иммунизации",
+    searchBloodType: "Поиск группы...",
+    searchRhesus: "Поиск...",
+    searchStatus: "Поиск статуса...",
+    genderOpts: [
+      { value: "male", label: "Мужской", hint: "♂" },
+      { value: "female", label: "Женский", hint: "♀" },
+      { value: "other", label: "Другой" },
+    ],
+    languageOpts: [
+      { value: "kz", label: "Казахский", hint: "🇰🇿" },
+      { value: "ru", label: "Русский", hint: "🇷🇺" },
+      { value: "en", label: "Английский", hint: "🇬🇧" },
+      { value: "other", label: "Другой" },
+    ],
+    citizenshipOpts: [
+      { value: "Казахстан", label: "Казахстан", hint: "🇰🇿" },
+      { value: "Россия", label: "Россия", hint: "🇷🇺" },
+      { value: "США", label: "США", hint: "🇺🇸" },
+      { value: "Германия", label: "Германия", hint: "🇩🇪" },
+      { value: "Другое", label: "Другое" },
+    ],
+    maritalOpts: [
+      { value: "single", label: "Не женат / не замужем" },
+      { value: "married", label: "Женат / замужем" },
+      { value: "divorced", label: "Разведён / разведена" },
+      { value: "widowed", label: "Вдовец / вдова" },
+    ],
+    rhesusOpts: [
+      { value: "positive", label: "Положительный", hint: "Rh+" },
+      { value: "negative", label: "Отрицательный", hint: "Rh−" },
+    ],
+    fluorOpts: [
+      { value: "normal", label: "Норма" },
+      { value: "abnormal", label: "Отклонения" },
+      { value: "pending", label: "Ожидает результата" },
+      { value: "expired", label: "Просрочена" },
+    ],
+    immunOpts: [
+      { value: "up_to_date", label: "Актуальная" },
+      { value: "partial", label: "Частичная" },
+      { value: "expired", label: "Просрочена" },
+      { value: "none", label: "Отсутствует" },
+    ],
+  },
+  kz: {
+    loadProfileError: "Профильді жүктеу мүмкін болмады",
+    personalDataUpdated: "Жеке деректер жаңартылды",
+    saveFailed: "Сақтау мүмкін болмады",
+    medicalDataUpdated: "Медициналық деректер жаңартылды",
+    maxFileSize: "Ең көбі 5 МБ",
+    photoUpdated: "Фото жаңартылды",
+    photoUploadFailed: "Фотоны жүктеу мүмкін болмады",
+    photoDeleted: "Фото жойылды",
+    photoDeleteFailed: "Жою мүмкін болмады",
+    profileLoadError: "Профильді жүктеу қатесі",
+    yearWord: (n: number) => (n === 1 ? "жыл" : "жыл"),
+    yearsInSystem: "жүйеде",
+    change: "Өзгерту",
+    viewPhoto: "Фотоны қарау",
+    replacePhoto: "Фотоны ауыстыру",
+    uploadPhoto: "Фото жүктеу",
+    deletePhoto: "Фотоны жою",
+    patient: "Пациент",
+    online: "Желіде",
+    personalData: "Жеке деректер",
+    personalDataSubtitle: "Пациенттің жеке ақпараты",
+    protected: "Қорғалған",
+    firstName: "Аты",
+    lastName: "Тегі",
+    phone: "Телефон",
+    birthDate: "Туған күні",
+    gender: "Жынысы",
+    address: "Мекенжай",
+    addressPlaceholder: "Көше, үй, пәтер",
+    city: "Қала",
+    cityPlaceholder: "Алматы",
+    language: "Тіл",
+    citizenship: "Азаматтығы",
+    maritalStatus: "Отбасы жағдайы",
+    profession: "Мамандығы",
+    professionPlaceholder: "Мамандығыңызды көрсетіңіз",
+    searchGender: "Жынысты іздеу...",
+    searchLanguage: "Тілді іздеу...",
+    searchCountry: "Елді іздеу...",
+    search: "Іздеу...",
+    medicalData: "Медициналық деректер",
+    medicalFilled: "Толтырылды",
+    of: "/",
+    fields: "өрістен",
+    bloodType: "Қан тобы",
+    rhesusFactor: "Резус-фактор",
+    fluorographyStatus: "Флюорография мәртебесі",
+    fluorographyDate: "Флюорография күні",
+    immunizationStatus: "Иммундау мәртебесі",
+    immunizationDate: "Соңғы иммундау күні",
+    searchBloodType: "Топты іздеу...",
+    searchRhesus: "Іздеу...",
+    searchStatus: "Мәртебені іздеу...",
+    genderOpts: [
+      { value: "male", label: "Ер", hint: "♂" },
+      { value: "female", label: "Әйел", hint: "♀" },
+      { value: "other", label: "Басқа" },
+    ],
+    languageOpts: [
+      { value: "kz", label: "Қазақша", hint: "🇰🇿" },
+      { value: "ru", label: "Орысша", hint: "🇷🇺" },
+      { value: "en", label: "Ағылшынша", hint: "🇬🇧" },
+      { value: "other", label: "Басқа" },
+    ],
+    citizenshipOpts: [
+      { value: "Казахстан", label: "Қазақстан", hint: "🇰🇿" },
+      { value: "Россия", label: "Ресей", hint: "🇷🇺" },
+      { value: "США", label: "АҚШ", hint: "🇺🇸" },
+      { value: "Германия", label: "Германия", hint: "🇩🇪" },
+      { value: "Другое", label: "Басқа" },
+    ],
+    maritalOpts: [
+      { value: "single", label: "Үйленбеген / тұрмыс құрмаған" },
+      { value: "married", label: "Үйленген / тұрмыста" },
+      { value: "divorced", label: "Ажырасқан" },
+      { value: "widowed", label: "Жесір" },
+    ],
+    rhesusOpts: [
+      { value: "positive", label: "Оң", hint: "Rh+" },
+      { value: "negative", label: "Теріс", hint: "Rh−" },
+    ],
+    fluorOpts: [
+      { value: "normal", label: "Норма" },
+      { value: "abnormal", label: "Ауытқулар" },
+      { value: "pending", label: "Нәтиже күтілуде" },
+      { value: "expired", label: "Мерзімі өткен" },
+    ],
+    immunOpts: [
+      { value: "up_to_date", label: "Өзекті" },
+      { value: "partial", label: "Жартылай" },
+      { value: "expired", label: "Мерзімі өткен" },
+      { value: "none", label: "Жоқ" },
+    ],
+  },
+  en: {
+    loadProfileError: "Failed to load profile",
+    personalDataUpdated: "Personal data updated",
+    saveFailed: "Failed to save",
+    medicalDataUpdated: "Medical data updated",
+    maxFileSize: "Maximum 5 MB",
+    photoUpdated: "Photo updated",
+    photoUploadFailed: "Failed to upload photo",
+    photoDeleted: "Photo deleted",
+    photoDeleteFailed: "Failed to delete",
+    profileLoadError: "Profile loading error",
+    yearWord: (n: number) => (n === 1 ? "year" : "years"),
+    yearsInSystem: "in the system",
+    change: "Change",
+    viewPhoto: "View photo",
+    replacePhoto: "Replace photo",
+    uploadPhoto: "Upload photo",
+    deletePhoto: "Delete photo",
+    patient: "Patient",
+    online: "Online",
+    personalData: "Personal data",
+    personalDataSubtitle: "Patient's personal information",
+    protected: "Protected",
+    firstName: "First name",
+    lastName: "Last name",
+    phone: "Phone",
+    birthDate: "Date of birth",
+    gender: "Gender",
+    address: "Address",
+    addressPlaceholder: "Street, house, apartment",
+    city: "City",
+    cityPlaceholder: "Almaty",
+    language: "Language",
+    citizenship: "Citizenship",
+    maritalStatus: "Marital status",
+    profession: "Profession",
+    professionPlaceholder: "Specify your profession",
+    searchGender: "Search gender...",
+    searchLanguage: "Search language...",
+    searchCountry: "Search country...",
+    search: "Search...",
+    medicalData: "Medical data",
+    medicalFilled: "Filled",
+    of: "of",
+    fields: "fields",
+    bloodType: "Blood type",
+    rhesusFactor: "Rhesus factor",
+    fluorographyStatus: "Fluorography status",
+    fluorographyDate: "Fluorography date",
+    immunizationStatus: "Immunization status",
+    immunizationDate: "Last immunization date",
+    searchBloodType: "Search type...",
+    searchRhesus: "Search...",
+    searchStatus: "Search status...",
+    genderOpts: [
+      { value: "male", label: "Male", hint: "♂" },
+      { value: "female", label: "Female", hint: "♀" },
+      { value: "other", label: "Other" },
+    ],
+    languageOpts: [
+      { value: "kz", label: "Kazakh", hint: "🇰🇿" },
+      { value: "ru", label: "Russian", hint: "🇷🇺" },
+      { value: "en", label: "English", hint: "🇬🇧" },
+      { value: "other", label: "Other" },
+    ],
+    citizenshipOpts: [
+      { value: "Казахстан", label: "Kazakhstan", hint: "🇰🇿" },
+      { value: "Россия", label: "Russia", hint: "🇷🇺" },
+      { value: "США", label: "USA", hint: "🇺🇸" },
+      { value: "Германия", label: "Germany", hint: "🇩🇪" },
+      { value: "Другое", label: "Other" },
+    ],
+    maritalOpts: [
+      { value: "single", label: "Single" },
+      { value: "married", label: "Married" },
+      { value: "divorced", label: "Divorced" },
+      { value: "widowed", label: "Widowed" },
+    ],
+    rhesusOpts: [
+      { value: "positive", label: "Positive", hint: "Rh+" },
+      { value: "negative", label: "Negative", hint: "Rh−" },
+    ],
+    fluorOpts: [
+      { value: "normal", label: "Normal" },
+      { value: "abnormal", label: "Abnormal" },
+      { value: "pending", label: "Pending result" },
+      { value: "expired", label: "Expired" },
+    ],
+    immunOpts: [
+      { value: "up_to_date", label: "Up to date" },
+      { value: "partial", label: "Partial" },
+      { value: "expired", label: "Expired" },
+      { value: "none", label: "None" },
+    ],
+  },
+  uz: {
+    loadProfileError: "Profilni yuklab bo'lmadi",
+    personalDataUpdated: "Shaxsiy ma'lumotlar yangilandi",
+    saveFailed: "Saqlab bo'lmadi",
+    medicalDataUpdated: "Tibbiy ma'lumotlar yangilandi",
+    maxFileSize: "Maksimum 5 MB",
+    photoUpdated: "Surat yangilandi",
+    photoUploadFailed: "Suratni yuklab bo'lmadi",
+    photoDeleted: "Surat o'chirildi",
+    photoDeleteFailed: "O'chirib bo'lmadi",
+    profileLoadError: "Profilni yuklashda xatolik",
+    yearWord: (n: number) => (n === 1 ? "yil" : "yil"),
+    yearsInSystem: "tizimda",
+    change: "O'zgartirish",
+    viewPhoto: "Suratni ko'rish",
+    replacePhoto: "Suratni almashtirish",
+    uploadPhoto: "Surat yuklash",
+    deletePhoto: "Suratni o'chirish",
+    patient: "Bemor",
+    online: "Onlayn",
+    personalData: "Shaxsiy ma'lumotlar",
+    personalDataSubtitle: "Bemorning shaxsiy ma'lumotlari",
+    protected: "Himoyalangan",
+    firstName: "Ism",
+    lastName: "Familiya",
+    phone: "Telefon",
+    birthDate: "Tug'ilgan sana",
+    gender: "Jinsi",
+    address: "Manzil",
+    addressPlaceholder: "Ko'cha, uy, kvartira",
+    city: "Shahar",
+    cityPlaceholder: "Almati",
+    language: "Til",
+    citizenship: "Fuqaroligi",
+    maritalStatus: "Oilaviy holati",
+    profession: "Kasbi",
+    professionPlaceholder: "Kasbingizni kiriting",
+    searchGender: "Jinsni qidirish...",
+    searchLanguage: "Tilni qidirish...",
+    searchCountry: "Davlatni qidirish...",
+    search: "Qidirish...",
+    medicalData: "Tibbiy ma'lumotlar",
+    medicalFilled: "To'ldirilgan",
+    of: "dan",
+    fields: "maydon",
+    bloodType: "Qon guruhi",
+    rhesusFactor: "Rezus-faktor",
+    fluorographyStatus: "Flyuorografiya holati",
+    fluorographyDate: "Flyuorografiya sanasi",
+    immunizationStatus: "Immunizatsiya holati",
+    immunizationDate: "So'nggi immunizatsiya sanasi",
+    searchBloodType: "Guruhni qidirish...",
+    searchRhesus: "Qidirish...",
+    searchStatus: "Holatni qidirish...",
+    genderOpts: [
+      { value: "male", label: "Erkak", hint: "♂" },
+      { value: "female", label: "Ayol", hint: "♀" },
+      { value: "other", label: "Boshqa" },
+    ],
+    languageOpts: [
+      { value: "kz", label: "Qozoq tili", hint: "🇰🇿" },
+      { value: "ru", label: "Rus tili", hint: "🇷🇺" },
+      { value: "en", label: "Ingliz tili", hint: "🇬🇧" },
+      { value: "other", label: "Boshqa" },
+    ],
+    citizenshipOpts: [
+      { value: "Казахстан", label: "Qozog'iston", hint: "🇰🇿" },
+      { value: "Россия", label: "Rossiya", hint: "🇷🇺" },
+      { value: "США", label: "AQSh", hint: "🇺🇸" },
+      { value: "Германия", label: "Germaniya", hint: "🇩🇪" },
+      { value: "Другое", label: "Boshqa" },
+    ],
+    maritalOpts: [
+      { value: "single", label: "Turmush qurmagan" },
+      { value: "married", label: "Turmush qurgan" },
+      { value: "divorced", label: "Ajrashgan" },
+      { value: "widowed", label: "Beva/bevoyaman" },
+    ],
+    rhesusOpts: [
+      { value: "positive", label: "Musbat", hint: "Rh+" },
+      { value: "negative", label: "Manfiy", hint: "Rh−" },
+    ],
+    fluorOpts: [
+      { value: "normal", label: "Normal" },
+      { value: "abnormal", label: "Og'ishlar" },
+      { value: "pending", label: "Natija kutilmoqda" },
+      { value: "expired", label: "Muddati o'tgan" },
+    ],
+    immunOpts: [
+      { value: "up_to_date", label: "Dolzarb" },
+      { value: "partial", label: "Qisman" },
+      { value: "expired", label: "Muddati o'tgan" },
+      { value: "none", label: "Yo'q" },
+    ],
+  },
+} as const;
 
 const BACKEND = process.env.NEXT_PUBLIC_API_URL?.replace("/api/v1", "") ?? "http://127.0.0.1:8000";
 const resolveAvatar = (url?: string | null) => {
@@ -42,11 +447,13 @@ interface PatientProfile {
 interface SelectOption { value: string; label: string; hint?: string }
 
 function SearchableSelect({
-  label, value, onChange, icon: Icon, options, placeholder = "Поиск...",
+  label, value, onChange, icon: Icon, options, placeholder,
 }: {
   label: string; value: string; onChange: (v: string) => void;
   icon: React.ElementType; options: SelectOption[]; placeholder?: string;
 }) {
+  const { language } = useLanguage();
+  const st = SELECT_TEXT[language as keyof typeof SELECT_TEXT] ?? SELECT_TEXT.ru;
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -104,7 +511,7 @@ function SearchableSelect({
       >
         <Icon className={`absolute left-3.5 w-4 h-4 transition-colors duration-200 ${open ? "text-blue-500" : "text-gray-400"}`} />
         <span className={selected ? "text-gray-800 font-medium" : "text-gray-300"}>
-          {selected ? selected.label : "Не указано"}
+          {selected ? selected.label : st.notSpecified}
         </span>
 
         {/* Clear / chevron */}
@@ -161,14 +568,14 @@ function SearchableSelect({
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-400 hover:bg-gray-50 transition-colors"
                 >
                   <X className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span className="italic">Не указано</span>
+                  <span className="italic">{st.notSpecified}</span>
                 </button>
               )}
 
               {filtered.length === 0 ? (
                 <div className="flex flex-col items-center py-6 gap-2">
                   <Search className="w-5 h-5 text-gray-300" />
-                  <span className="text-sm text-gray-400">Ничего не найдено</span>
+                  <span className="text-sm text-gray-400">{st.nothingFound}</span>
                 </div>
               ) : (
                 filtered.map((opt) => {
@@ -214,7 +621,10 @@ const InputField = ({
 }: {
   label: string; value: string; onChange?: (v: string) => void;
   icon: React.ElementType; placeholder?: string; type?: string; readOnly?: boolean;
-}) => (
+}) => {
+  const { language } = useLanguage();
+  const readonlyLabel = READONLY_TEXT[language as keyof typeof READONLY_TEXT] ?? READONLY_TEXT.ru;
+  return (
   <div className="flex flex-col gap-1.5">
     <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">{label}</label>
     <div className="relative group">
@@ -230,12 +640,13 @@ const InputField = ({
       />
       {readOnly && (
         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-300 font-semibold bg-gray-100 px-2 py-0.5 rounded-full">
-          Не изменяется
+          {readonlyLabel}
         </span>
       )}
     </div>
   </div>
-);
+  );
+};
 
 // ─── Card ─────────────────────────────────────────────────────
 const Card = ({ children, accentColor, delay = 0 }: { children: React.ReactNode; accentColor: string; delay?: number }) => (
@@ -254,6 +665,8 @@ const Card = ({ children, accentColor, delay = 0 }: { children: React.ReactNode;
 
 // ─── Save button ──────────────────────────────────────────────
 function SaveButton({ saving, saved, onClick, color }: { saving: boolean; saved: boolean; onClick: () => void; color: string }) {
+  const { language } = useLanguage();
+  const sb = SAVE_BUTTON_TEXT[language as keyof typeof SAVE_BUTTON_TEXT] ?? SAVE_BUTTON_TEXT.ru;
   return (
     <motion.button
       onClick={onClick} disabled={saving} whileTap={{ scale: 0.97 }}
@@ -262,7 +675,7 @@ function SaveButton({ saving, saved, onClick, color }: { saving: boolean; saved:
     >
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 -translate-x-full hover:translate-x-full transition-transform duration-700" />
       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <CheckCircle2 className="w-4 h-4 text-green-200" /> : <Save className="w-4 h-4" />}
-      {saved ? "Сохранено!" : "Сохранить"}
+      {saved ? sb.saved : sb.save}
     </motion.button>
   );
 }
@@ -270,6 +683,8 @@ function SaveButton({ saving, saved, onClick, color }: { saving: boolean; saved:
 // ─── Main component ───────────────────────────────────────────
 export default function PatientProfileDashboard() {
   const { updateUser } = useAuth();
+  const { language } = useLanguage();
+  const t = PATIENT_PROFILE_TEXT[language as keyof typeof PATIENT_PROFILE_TEXT] ?? PATIENT_PROFILE_TEXT.ru;
   const [profile, setProfile] = useState<PatientProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -329,7 +744,7 @@ export default function PatientProfileDashboard() {
         immunization_date: d.immunization_date || "",
       });
       setAvatarPreview(resolveAvatar(d.avatar));
-    } catch { toast.error("Не удалось загрузить профиль"); }
+    } catch { toast.error(t.loadProfileError); }
     finally { setLoading(false); }
   };
 
@@ -341,11 +756,11 @@ export default function PatientProfileDashboard() {
     setSavingPersonal(true);
     try {
       await api.patch("/user-profile/profile/", cleanPayload(personalForm));
-      toast.success("Личные данные обновлены");
+      toast.success(t.personalDataUpdated);
       setSavedPersonal(true); setTimeout(() => setSavedPersonal(false), 2500);
     } catch (e: any) {
       const detail = e?.response?.data;
-      toast.error(detail ? JSON.stringify(detail) : "Не удалось сохранить");
+      toast.error(detail ? JSON.stringify(detail) : t.saveFailed);
     }
     finally { setSavingPersonal(false); }
   };
@@ -354,11 +769,11 @@ export default function PatientProfileDashboard() {
     setSavingMedical(true);
     try {
       await api.patch("/user-profile/profile/", cleanPayload(medicalForm));
-      toast.success("Медицинские данные обновлены");
+      toast.success(t.medicalDataUpdated);
       setSavedMedical(true); setTimeout(() => setSavedMedical(false), 2500);
     } catch (e: any) {
       const detail = e?.response?.data;
-      toast.error(detail ? JSON.stringify(detail) : "Не удалось сохранить");
+      toast.error(detail ? JSON.stringify(detail) : t.saveFailed);
     }
     finally { setSavingMedical(false); }
   };
@@ -366,7 +781,7 @@ export default function PatientProfileDashboard() {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error("Максимум 5 МБ"); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error(t.maxFileSize); return; }
     setAvatarPreview(URL.createObjectURL(file));
     setUploading(true);
     try {
@@ -375,9 +790,9 @@ export default function PatientProfileDashboard() {
       const resolvedUrl = resolveAvatar(res.data.avatar);
       setAvatarPreview(resolvedUrl);
       updateUser({ avatar: res.data.avatar });
-      toast.success("Фото обновлено");
+      toast.success(t.photoUpdated);
     } catch {
-      toast.error("Не удалось загрузить фото");
+      toast.error(t.photoUploadFailed);
       setAvatarPreview(resolveAvatar(profile?.avatar));
     } finally { setUploading(false); if (fileRef.current) fileRef.current.value = ""; }
   };
@@ -388,16 +803,16 @@ export default function PatientProfileDashboard() {
       await api.delete("/user-profile/avatar/");
       setAvatarPreview(null);
       updateUser({ avatar: null });
-      toast.success("Фото удалено");
+      toast.success(t.photoDeleted);
     }
-    catch { toast.error("Не удалось удалить"); }
+    catch { toast.error(t.photoDeleteFailed); }
     finally { setDeleting(false); }
   };
 
   const { banner, saveBanner } = useBanner(profile?.id);
 
   if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>;
-  if (!profile) return <div className="flex items-center justify-center py-20"><p className="text-red-500 text-sm">Ошибка загрузки профиля</p></div>;
+  if (!profile) return <div className="flex items-center justify-center py-20"><p className="text-red-500 text-sm">{t.profileLoadError}</p></div>;
 
   const initials = `${personalForm.first_name?.[0] ?? ""}${personalForm.last_name?.[0] ?? ""}`.toUpperCase();
   const yearsInSystem = profile.date_joined
@@ -408,50 +823,17 @@ export default function PatientProfileDashboard() {
   const medPct = Math.round((medFields / medTotal) * 100);
 
   // ── Option sets ──────────────────────────────────────────────
-  const genderOpts: SelectOption[] = [
-    { value: "male", label: "Мужской", hint: "♂" },
-    { value: "female", label: "Женский", hint: "♀" },
-    { value: "other", label: "Другой" },
-  ];
-  const languageOpts: SelectOption[] = [
-    { value: "kz", label: "Казахский", hint: "🇰🇿" },
-    { value: "ru", label: "Русский", hint: "🇷🇺" },
-    { value: "en", label: "Английский", hint: "🇬🇧" },
-    { value: "other", label: "Другой" },
-  ];
-  const citizenshipOpts: SelectOption[] = [
-    { value: "Казахстан", label: "Казахстан", hint: "🇰🇿" },
-    { value: "Россия", label: "Россия", hint: "🇷🇺" },
-    { value: "США", label: "США", hint: "🇺🇸" },
-    { value: "Германия", label: "Германия", hint: "🇩🇪" },
-    { value: "Другое", label: "Другое" },
-  ];
-  const maritalOpts: SelectOption[] = [
-    { value: "single", label: "Не женат / не замужем" },
-    { value: "married", label: "Женат / замужем" },
-    { value: "divorced", label: "Разведён / разведена" },
-    { value: "widowed", label: "Вдовец / вдова" },
-  ];
+  const genderOpts: SelectOption[] = [...t.genderOpts];
+  const languageOpts: SelectOption[] = [...t.languageOpts];
+  const citizenshipOpts: SelectOption[] = [...t.citizenshipOpts];
+  const maritalOpts: SelectOption[] = [...t.maritalOpts];
   const bloodTypeOpts: SelectOption[] = ["A+", "A−", "B+", "B−", "AB+", "AB−", "O+", "O−"].map((b) => ({
     value: b.replace("−", "-"), label: b,
     hint: b.includes("+") ? "Rh+" : "Rh−",
   }));
-  const rhesusOpts: SelectOption[] = [
-    { value: "positive", label: "Положительный", hint: "Rh+" },
-    { value: "negative", label: "Отрицательный", hint: "Rh−" },
-  ];
-  const fluorOpts: SelectOption[] = [
-    { value: "normal", label: "Норма" },
-    { value: "abnormal", label: "Отклонения" },
-    { value: "pending", label: "Ожидает результата" },
-    { value: "expired", label: "Просрочена" },
-  ];
-  const immunOpts: SelectOption[] = [
-    { value: "up_to_date", label: "Актуальная" },
-    { value: "partial", label: "Частичная" },
-    { value: "expired", label: "Просрочена" },
-    { value: "none", label: "Отсутствует" },
-  ];
+  const rhesusOpts: SelectOption[] = [...t.rhesusOpts];
+  const fluorOpts: SelectOption[] = [...t.fluorOpts];
+  const immunOpts: SelectOption[] = [...t.immunOpts];
 
   return (
     <div className="w-full space-y-6">
@@ -490,7 +872,7 @@ export default function PatientProfileDashboard() {
             <button onClick={() => !uploading && !deleting && setAvatarMenuOpen(v => !v)} disabled={uploading || deleting}
               className="absolute inset-0 rounded-3xl bg-black/50 opacity-0 hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-1 cursor-pointer">
               <Camera className="w-6 h-6 text-white" />
-              <span className="text-white text-[10px] font-bold">Изменить</span>
+              <span className="text-white text-[10px] font-bold">{t.change}</span>
             </button>
             {avatarMenuOpen && (
               <div className="absolute top-0 left-full ml-3 z-50 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden min-w-[170px]">
@@ -498,18 +880,18 @@ export default function PatientProfileDashboard() {
                   <button onClick={() => { setAvatarViewOpen(true); setAvatarMenuOpen(false); }}
                     className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
                     <svg className="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                    Просмотреть фото
+                    {t.viewPhoto}
                   </button>
                 )}
                 <button onClick={() => { fileRef.current?.click(); setAvatarMenuOpen(false); }}
                   className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors ${avatarPreview ? "border-t border-gray-100" : ""}`}>
                   <Camera className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                  {avatarPreview ? "Заменить фото" : "Загрузить фото"}
+                  {avatarPreview ? t.replacePhoto : t.uploadPhoto}
                 </button>
                 {avatarPreview && (
                   <button onClick={() => { handleDeleteAvatar(); setAvatarMenuOpen(false); }}
                     className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors border-t border-gray-100">
-                    <Trash2 className="w-4 h-4 flex-shrink-0" /> Удалить фото
+                    <Trash2 className="w-4 h-4 flex-shrink-0" /> {t.deletePhoto}
                   </button>
                 )}
               </div>
@@ -525,17 +907,17 @@ export default function PatientProfileDashboard() {
             <div className="flex flex-wrap justify-center sm:justify-start gap-2">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-white/90 border border-white/20"
                     style={{ background: "rgba(55,114,255,0.3)" }}>
-                <FontAwesomeIcon icon={faUserInjured} className="text-xs" /> Пациент
+                <FontAwesomeIcon icon={faUserInjured} className="text-xs" /> {t.patient}
               </span>
               {yearsInSystem > 0 && (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold text-indigo-200 border border-indigo-400/30"
                       style={{ background: "rgba(96,72,245,0.2)" }}>
-                  <Clock className="w-3 h-3" /> {yearsInSystem} {yearsInSystem === 1 ? "год" : "лет"} в системе
+                  <Clock className="w-3 h-3" /> {yearsInSystem} {t.yearWord(yearsInSystem)} {t.yearsInSystem}
                 </span>
               )}
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold text-emerald-300 border border-emerald-400/30"
                     style={{ background: "rgba(16,185,129,0.15)" }}>
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Онлайн
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> {t.online}
               </span>
             </div>
           </div>
@@ -552,49 +934,49 @@ export default function PatientProfileDashboard() {
               <User className="w-4 h-4 text-emerald-600" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-gray-800">Личные данные</h2>
-              <p className="text-xs text-gray-400">Персональная информация пациента</p>
+              <h2 className="text-sm font-bold text-gray-800">{t.personalData}</h2>
+              <p className="text-xs text-gray-400">{t.personalDataSubtitle}</p>
             </div>
           </div>
           <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-100">
-            <Lock className="w-3 h-3" /> Защищено
+            <Lock className="w-3 h-3" /> {t.protected}
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <InputField label="Имя" value={personalForm.first_name} onChange={(v) => setPersonalForm((p) => ({ ...p, first_name: v }))} icon={User} />
-          <InputField label="Фамилия" value={personalForm.last_name} onChange={(v) => setPersonalForm((p) => ({ ...p, last_name: v }))} icon={User} />
+          <InputField label={t.firstName} value={personalForm.first_name} onChange={(v) => setPersonalForm((p) => ({ ...p, first_name: v }))} icon={User} />
+          <InputField label={t.lastName} value={personalForm.last_name} onChange={(v) => setPersonalForm((p) => ({ ...p, last_name: v }))} icon={User} />
           <InputField label="Email" value={profile.email} icon={Mail} readOnly />
           <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Телефон</label>
+            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">{t.phone}</label>
             <PhoneInput
               value={personalForm.phone ?? ""}
               onChange={(e164) => setPersonalForm((p) => ({ ...p, phone: e164 }))}
               defaultCountry="KZ"
             />
           </div>
-          <InputField label="Дата рождения" value={personalForm.birth_date} onChange={(v) => setPersonalForm((p) => ({ ...p, birth_date: v }))} icon={Calendar} type="date" />
+          <InputField label={t.birthDate} value={personalForm.birth_date} onChange={(v) => setPersonalForm((p) => ({ ...p, birth_date: v }))} icon={Calendar} type="date" />
 
           <SelectWrapper>
-            <SearchableSelect label="Пол" value={personalForm.gender} onChange={(v) => setPersonalForm((p) => ({ ...p, gender: v }))} icon={Users} options={genderOpts} placeholder="Поиск пола..." />
+            <SearchableSelect label={t.gender} value={personalForm.gender} onChange={(v) => setPersonalForm((p) => ({ ...p, gender: v }))} icon={Users} options={genderOpts} placeholder={t.searchGender} />
           </SelectWrapper>
 
-          <InputField label="Адрес" value={personalForm.address} onChange={(v) => setPersonalForm((p) => ({ ...p, address: v }))} icon={MapPin} placeholder="Улица, дом, квартира" />
-          <InputField label="Город" value={personalForm.city} onChange={(v) => setPersonalForm((p) => ({ ...p, city: v }))} icon={MapPin} placeholder="Алматы" />
+          <InputField label={t.address} value={personalForm.address} onChange={(v) => setPersonalForm((p) => ({ ...p, address: v }))} icon={MapPin} placeholder={t.addressPlaceholder} />
+          <InputField label={t.city} value={personalForm.city} onChange={(v) => setPersonalForm((p) => ({ ...p, city: v }))} icon={MapPin} placeholder={t.cityPlaceholder} />
 
           <SelectWrapper>
-            <SearchableSelect label="Язык" value={personalForm.language} onChange={(v) => setPersonalForm((p) => ({ ...p, language: v }))} icon={Languages} options={languageOpts} placeholder="Поиск языка..." />
-          </SelectWrapper>
-
-          <SelectWrapper>
-            <SearchableSelect label="Гражданство" value={personalForm.citizenship} onChange={(v) => setPersonalForm((p) => ({ ...p, citizenship: v }))} icon={Flag} options={citizenshipOpts} placeholder="Поиск страны..." />
+            <SearchableSelect label={t.language} value={personalForm.language} onChange={(v) => setPersonalForm((p) => ({ ...p, language: v }))} icon={Languages} options={languageOpts} placeholder={t.searchLanguage} />
           </SelectWrapper>
 
           <SelectWrapper>
-            <SearchableSelect label="Семейное положение" value={personalForm.marital_status} onChange={(v) => setPersonalForm((p) => ({ ...p, marital_status: v }))} icon={Heart} options={maritalOpts} placeholder="Поиск..." />
+            <SearchableSelect label={t.citizenship} value={personalForm.citizenship} onChange={(v) => setPersonalForm((p) => ({ ...p, citizenship: v }))} icon={Flag} options={citizenshipOpts} placeholder={t.searchCountry} />
           </SelectWrapper>
 
-          <InputField label="Профессия" value={personalForm.profession} onChange={(v) => setPersonalForm((p) => ({ ...p, profession: v }))} icon={Briefcase} placeholder="Укажите вашу профессию" />
+          <SelectWrapper>
+            <SearchableSelect label={t.maritalStatus} value={personalForm.marital_status} onChange={(v) => setPersonalForm((p) => ({ ...p, marital_status: v }))} icon={Heart} options={maritalOpts} placeholder={t.search} />
+          </SelectWrapper>
+
+          <InputField label={t.profession} value={personalForm.profession} onChange={(v) => setPersonalForm((p) => ({ ...p, profession: v }))} icon={Briefcase} placeholder={t.professionPlaceholder} />
         </div>
 
         <div className="mt-6 flex justify-end">
@@ -610,8 +992,8 @@ export default function PatientProfileDashboard() {
               <Droplet className="w-4 h-4 text-blue-600" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-gray-800">Медицинские данные</h2>
-              <p className="text-xs text-gray-400">Заполнено {medPct}% · {medFields} из {medTotal} полей</p>
+              <h2 className="text-sm font-bold text-gray-800">{t.medicalData}</h2>
+              <p className="text-xs text-gray-400">{t.medicalFilled} {medPct}% · {medFields} {t.of} {medTotal} {t.fields}</p>
             </div>
           </div>
           <div className="hidden sm:block w-24 h-1.5 rounded-full bg-gray-100 overflow-hidden">
@@ -621,24 +1003,24 @@ export default function PatientProfileDashboard() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <SelectWrapper>
-            <SearchableSelect label="Группа крови" value={medicalForm.blood_type} onChange={(v) => setMedicalForm((p) => ({ ...p, blood_type: v }))} icon={Droplet} options={bloodTypeOpts} placeholder="Поиск группы..." />
+            <SearchableSelect label={t.bloodType} value={medicalForm.blood_type} onChange={(v) => setMedicalForm((p) => ({ ...p, blood_type: v }))} icon={Droplet} options={bloodTypeOpts} placeholder={t.searchBloodType} />
           </SelectWrapper>
 
           <SelectWrapper>
-            <SearchableSelect label="Резус-фактор" value={medicalForm.rhesus_factor} onChange={(v) => setMedicalForm((p) => ({ ...p, rhesus_factor: v }))} icon={Droplet} options={rhesusOpts} placeholder="Поиск..." />
+            <SearchableSelect label={t.rhesusFactor} value={medicalForm.rhesus_factor} onChange={(v) => setMedicalForm((p) => ({ ...p, rhesus_factor: v }))} icon={Droplet} options={rhesusOpts} placeholder={t.searchRhesus} />
           </SelectWrapper>
 
           <SelectWrapper>
-            <SearchableSelect label="Статус флюорографии" value={medicalForm.fluorography_status} onChange={(v) => setMedicalForm((p) => ({ ...p, fluorography_status: v }))} icon={FileText} options={fluorOpts} placeholder="Поиск статуса..." />
+            <SearchableSelect label={t.fluorographyStatus} value={medicalForm.fluorography_status} onChange={(v) => setMedicalForm((p) => ({ ...p, fluorography_status: v }))} icon={FileText} options={fluorOpts} placeholder={t.searchStatus} />
           </SelectWrapper>
 
-          <InputField label="Дата флюорографии" value={medicalForm.fluorography_date} onChange={(v) => setMedicalForm((p) => ({ ...p, fluorography_date: v }))} icon={Calendar} type="date" />
+          <InputField label={t.fluorographyDate} value={medicalForm.fluorography_date} onChange={(v) => setMedicalForm((p) => ({ ...p, fluorography_date: v }))} icon={Calendar} type="date" />
 
           <SelectWrapper>
-            <SearchableSelect label="Статус иммунизации" value={medicalForm.immunization_status} onChange={(v) => setMedicalForm((p) => ({ ...p, immunization_status: v }))} icon={Shield} options={immunOpts} placeholder="Поиск статуса..." />
+            <SearchableSelect label={t.immunizationStatus} value={medicalForm.immunization_status} onChange={(v) => setMedicalForm((p) => ({ ...p, immunization_status: v }))} icon={Shield} options={immunOpts} placeholder={t.searchStatus} />
           </SelectWrapper>
 
-          <InputField label="Дата последней иммунизации" value={medicalForm.immunization_date} onChange={(v) => setMedicalForm((p) => ({ ...p, immunization_date: v }))} icon={Calendar} type="date" />
+          <InputField label={t.immunizationDate} value={medicalForm.immunization_date} onChange={(v) => setMedicalForm((p) => ({ ...p, immunization_date: v }))} icon={Calendar} type="date" />
         </div>
 
         <div className="mt-6 flex justify-end">

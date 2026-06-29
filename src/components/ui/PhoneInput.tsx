@@ -19,6 +19,46 @@ import {
   toFlagEmoji,
   Country,
 } from "@/data/countries";
+import { useLanguage } from "@/context/LanguageContext";
+
+const PHONE_INPUT_TEXT = {
+  ru: {
+    tooShort: "Номер слишком короткий",
+    invalid: "Некорректный номер телефона",
+    enterValid: "Введите корректный номер телефона",
+    searchCountry: "Поиск страны...",
+    notFound: "Страна не найдена",
+    featured: "Основные",
+    allCountries: "Все страны",
+  },
+  kz: {
+    tooShort: "Нөмір тым қысқа",
+    invalid: "Телефон нөмірі қате",
+    enterValid: "Дұрыс телефон нөмірін енгізіңіз",
+    searchCountry: "Елді іздеу...",
+    notFound: "Ел табылмады",
+    featured: "Негізгі",
+    allCountries: "Барлық елдер",
+  },
+  en: {
+    tooShort: "The number is too short",
+    invalid: "Invalid phone number",
+    enterValid: "Enter a valid phone number",
+    searchCountry: "Search country...",
+    notFound: "Country not found",
+    featured: "Featured",
+    allCountries: "All countries",
+  },
+  uz: {
+    tooShort: "Raqam juda qisqa",
+    invalid: "Telefon raqami noto'g'ri",
+    enterValid: "To'g'ri telefon raqamini kiriting",
+    searchCountry: "Davlatni qidirish...",
+    notFound: "Davlat topilmadi",
+    featured: "Asosiy",
+    allCountries: "Barcha davlatlar",
+  },
+} as const;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -86,6 +126,8 @@ export default function PhoneInput({
   required,
   onValidate,
 }: PhoneInputProps) {
+  const { language } = useLanguage();
+  const text = PHONE_INPUT_TEXT[language as keyof typeof PHONE_INPUT_TEXT] ?? PHONE_INPUT_TEXT.ru;
   const [country, setCountry] = useState<Country>(() =>
     initialCountry(value, defaultCountry)
   );
@@ -174,13 +216,13 @@ export default function PhoneInput({
     if (!digits) return null;
     const lengthResult = validatePhoneNumberLength(digits, country.iso2 as CountryCode);
     if (!blurred) return null;
-    if (lengthResult === "TOO_SHORT") return "Номер слишком короткий";
-    if (lengthResult) return "Некорректный номер телефона";
+    if (lengthResult === "TOO_SHORT") return text.tooShort;
+    if (lengthResult) return text.invalid;
     try {
       const code = getCountryCallingCode(country.iso2 as CountryCode);
       const parsed = parsePhoneNumberFromString(`+${code}${digits}`, country.iso2 as CountryCode);
-      if (!parsed || !parsed.isValid()) return "Введите корректный номер телефона";
-    } catch { return "Введите корректный номер телефона"; }
+      if (!parsed || !parsed.isValid()) return text.enterValid;
+    } catch { return text.enterValid; }
     return null;
   }, [digits, country.iso2, blurred]);
 
@@ -288,7 +330,7 @@ export default function PhoneInput({
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Поиск страны..."
+                placeholder={text.searchCountry}
                 className="flex-1 text-sm bg-transparent outline-none text-gray-700 placeholder:text-gray-400"
               />
               {search && (
@@ -307,7 +349,7 @@ export default function PhoneInput({
           <div className="max-h-64 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200">
             {!hasResults ? (
               <div className="py-8 text-center text-sm text-gray-400">
-                Страна не найдена
+                {text.notFound}
               </div>
             ) : (
               <>
@@ -315,7 +357,7 @@ export default function PhoneInput({
                   <>
                     {!search && (
                       <div className="px-3.5 pt-2.5 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
-                        Основные
+                        {text.featured}
                       </div>
                     )}
                     {filteredFeatured.map((c) => (
@@ -324,6 +366,7 @@ export default function PhoneInput({
                         country={c}
                         selected={country.iso2 === c.iso2}
                         onSelect={handleCountrySelect}
+                        language={language}
                       />
                     ))}
                     {filteredAll.length > 0 && (
@@ -333,7 +376,7 @@ export default function PhoneInput({
                 )}
                 {!search && filteredAll.length > 0 && (
                   <div className="px-3.5 pt-1 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
-                    Все страны
+                    {text.allCountries}
                   </div>
                 )}
                 {filteredAll.map((c) => (
@@ -342,6 +385,7 @@ export default function PhoneInput({
                     country={c}
                     selected={country.iso2 === c.iso2}
                     onSelect={handleCountrySelect}
+                    language={language}
                   />
                 ))}
               </>
@@ -432,11 +476,14 @@ function CountryRow({
   country,
   selected,
   onSelect,
+  language,
 }: {
   country: Country;
   selected: boolean;
   onSelect: (c: Country) => void;
+  language: string;
 }) {
+  const displayName = language === "ru" ? country.nameRu : country.name;
   return (
     <button
       type="button"
@@ -448,7 +495,7 @@ function CountryRow({
       <span className="text-base leading-none shrink-0">
         {toFlagEmoji(country.iso2)}
       </span>
-      <span className="flex-1 text-left truncate">{country.nameRu}</span>
+      <span className="flex-1 text-left truncate">{displayName}</span>
       <span className="text-xs text-gray-400 font-mono shrink-0">
         {country.dialCode}
       </span>

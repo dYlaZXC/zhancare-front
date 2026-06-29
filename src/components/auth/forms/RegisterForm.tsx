@@ -80,40 +80,40 @@ const RegisterForm = ({ translations, onSubmit, loading, language = "en" }: Regi
     const errors: Partial<RegisterFormData> = {};
 
     if (!formData.first_name.trim()) {
-      errors.first_name = "Имя обязательно";
+      errors.first_name = translations.firstNameRequired;
     }
 
     if (!formData.last_name.trim()) {
-      errors.last_name = "Фамилия обязательна";
+      errors.last_name = translations.lastNameRequired;
     }
 
     if (!formData.phone || formData.phone.replace(/\D/g, "").length < 10) {
-      errors.phone = "Введите номер телефона";
+      errors.phone = translations.phoneRequired;
     }
 
     if (!formData.password || !validatePassword(formData.password)) {
-      errors.password = "Пароль должен содержать минимум 8 символов";
+      errors.password = translations.passwordTooShort;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      errors.confirmPassword = "Пароли не совпадают";
+      errors.confirmPassword = translations.passwordsMismatch;
     }
 
     if (!formData.consentPersonalData) {
-      errors.consentPersonalData = "Обязательное согласие" as any;
+      errors.consentPersonalData = translations.consentRequired as any;
     }
 
     if (!formData.consentInformAgreement) {
-      errors.consentInformAgreement = "Обязательное согласие" as any;
+      errors.consentInformAgreement = translations.consentRequired as any;
     }
 
     if (!formData.consentOffer) {
-      errors.consentOffer = "Обязательное согласие" as any;
+      errors.consentOffer = translations.consentRequired as any;
     }
 
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [formData]);
+  }, [formData, translations]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -319,7 +319,7 @@ const RegisterForm = ({ translations, onSubmit, loading, language = "en" }: Regi
           {loading ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
-              <span>Загрузка...</span>
+              <span>{translations.loading}</span>
             </>
           ) : (
             <>
@@ -336,7 +336,7 @@ const RegisterForm = ({ translations, onSubmit, loading, language = "en" }: Regi
       {/* Security Badge */}
       <div className="flex items-center justify-center gap-2 mt-4 text-xs text-gray-500">
         <Shield className="w-4 h-4 text-green-600" />
-        <span>Защищенное соединение 256-bit SSL</span>
+        <span>{translations.secureConnection}</span>
       </div>
 
       {/* PDF Viewer Modal */}

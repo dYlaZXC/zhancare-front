@@ -9,12 +9,13 @@ import { isPhoneComplete } from "@/utils/phoneFormat";
 import { api } from "@/utils/api";
 
 interface PhoneLoginFormProps {
+  translations: any;
   onSuccess: (accessToken: string, refreshToken: string, user: any) => void;
   loading: boolean;
   setLoading: (v: boolean) => void;
 }
 
-export default function PhoneLoginForm({ onSuccess, loading, setLoading }: PhoneLoginFormProps) {
+export default function PhoneLoginForm({ translations, onSuccess, loading, setLoading }: PhoneLoginFormProps) {
   // phone is always stored as E.164 (+7XXXXXXXXXX) — PhoneAuthInput emits that
   const [phone, setPhone]       = useState("");
   const [password, setPassword] = useState("");
@@ -23,8 +24,8 @@ export default function PhoneLoginForm({ onSuccess, loading, setLoading }: Phone
 
   const validate = () => {
     const next: typeof errors = {};
-    if (!isPhoneComplete(phone)) next.phone = "Введите корректный номер телефона";
-    if (password.length < 8)    next.password = "Пароль должен содержать минимум 8 символов";
+    if (!isPhoneComplete(phone)) next.phone = translations.invalidPhone;
+    if (password.length < 8)    next.password = translations.passwordTooShort;
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -40,8 +41,8 @@ export default function PhoneLoginForm({ onSuccess, loading, setLoading }: Phone
       onSuccess(res.data.access_token, res.data.refresh_token, res.data.user ?? null);
     } catch (err: any) {
       const msg = err?.response?.status === 403
-        ? "Извините, ваш аккаунт был деактивирован. Обратитесь к администратору."
-        : err?.response?.data?.error ?? "Неправильный номер телефона или пароль.";
+        ? translations.accountDeactivated
+        : err?.response?.data?.error ?? translations.invalidPhoneOrPassword;
       setErrors({ phone: msg });
     } finally {
       setLoading(false);
@@ -64,7 +65,7 @@ export default function PhoneLoginForm({ onSuccess, loading, setLoading }: Phone
 
       <AuthInput
         name="password"
-        placeholder="Пароль"
+        placeholder={translations.password}
         icon={Lock}
         value={password}
         autoComplete="current-password"
@@ -88,9 +89,9 @@ export default function PhoneLoginForm({ onSuccess, loading, setLoading }: Phone
       >
         <span className="relative z-10 text-base sm:text-lg flex items-center gap-2.5">
           {loading ? (
-            <><Loader2 className="w-5 h-5 animate-spin" /><span>Загрузка...</span></>
+            <><Loader2 className="w-5 h-5 animate-spin" /><span>{translations.loading}</span></>
           ) : (
-            <><Shield className="w-5 h-5 group-hover:rotate-12 transition-transform" /><span>Войти</span></>
+            <><Shield className="w-5 h-5 group-hover:rotate-12 transition-transform" /><span>{translations.loginButton}</span></>
           )}
         </span>
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
@@ -98,7 +99,7 @@ export default function PhoneLoginForm({ onSuccess, loading, setLoading }: Phone
 
       <div className="flex items-center justify-center gap-2 mt-3 text-xs text-gray-500">
         <Shield className="w-4 h-4 text-green-600" />
-        <span>Защищенное соединение 256-bit SSL</span>
+        <span>{translations.secureConnection}</span>
       </div>
     </form>
   );

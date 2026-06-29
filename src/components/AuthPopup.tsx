@@ -409,7 +409,7 @@ const AuthPopup = () => {
                                 : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
                             }`}
                           >
-                            {m === "email" ? "Email" : "Телефон"}
+                            {m === "email" ? "Email" : translations.phone}
                           </button>
                         ))}
                       </div>
@@ -439,6 +439,7 @@ const AuthPopup = () => {
                             transition={{ duration: 0.2 }}
                           >
                             <PhoneLoginForm
+                              translations={translations}
                               onSuccess={handlePhoneLoginSuccess}
                               loading={loading}
                               setLoading={setLoading}

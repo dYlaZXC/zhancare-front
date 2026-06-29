@@ -2,6 +2,14 @@
 
 import React, { useState, useEffect } from "react";
 import { ImageIcon, Check, X } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
+
+const BANNER_TEXT = {
+  ru: { banner: "Баннер", choose: "Выберите баннер", subtitle: "Фон для вашего профиля", default: "По умолчанию" },
+  kz: { banner: "Баннер", choose: "Баннерді таңдаңыз", subtitle: "Профиліңіздің фоны", default: "Әдепкі бойынша" },
+  en: { banner: "Banner", choose: "Choose a banner", subtitle: "Background for your profile", default: "Default" },
+  uz: { banner: "Banner", choose: "Bannerni tanlang", subtitle: "Profilingiz uchun fon", default: "Standart" },
+} as const;
 
 const BANNERS = Array.from({ length: 7 }, (_, i) => `/profile-banners/banner${i + 1}.jpg`);
 const STORAGE_KEY = (userId: number) => `profile_banner_${userId}`;
@@ -33,6 +41,8 @@ export function useBanner(userId: number | undefined) {
 const BannerPicker: React.FC<BannerPickerProps> = ({ userId, onBannerChange }) => {
   const [open, setOpen] = useState(false);
   const { banner, saveBanner } = useBanner(userId);
+  const { language } = useLanguage();
+  const text = BANNER_TEXT[language as keyof typeof BANNER_TEXT] ?? BANNER_TEXT.ru;
 
   const select = (url: string) => {
     saveBanner(url);
@@ -54,7 +64,7 @@ const BannerPicker: React.FC<BannerPickerProps> = ({ userId, onBannerChange }) =
         style={{ background: "rgba(255,255,255,0.12)" }}
       >
         <ImageIcon className="w-3.5 h-3.5" />
-        Баннер
+        {text.banner}
       </button>
 
       {open && (
@@ -69,8 +79,8 @@ const BannerPicker: React.FC<BannerPickerProps> = ({ userId, onBannerChange }) =
           >
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="text-base font-bold text-gray-900">Выберите баннер</h3>
-                <p className="text-xs text-gray-400 mt-0.5">Фон для вашего профиля</p>
+                <h3 className="text-base font-bold text-gray-900">{text.choose}</h3>
+                <p className="text-xs text-gray-400 mt-0.5">{text.subtitle}</p>
               </div>
               <button onClick={() => setOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all">
                 <X className="w-4 h-4" />
@@ -84,7 +94,7 @@ const BannerPicker: React.FC<BannerPickerProps> = ({ userId, onBannerChange }) =
                 className={`relative aspect-video rounded-xl overflow-hidden border-2 transition-all ${!banner ? "border-blue-500 shadow-lg shadow-blue-200" : "border-gray-200 hover:border-gray-400"}`}
               >
                 <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-                  <span className="text-[10px] font-semibold text-gray-500">По умолчанию</span>
+                  <span className="text-[10px] font-semibold text-gray-500">{text.default}</span>
                 </div>
                 {!banner && (
                   <div className="absolute inset-0 flex items-center justify-center">

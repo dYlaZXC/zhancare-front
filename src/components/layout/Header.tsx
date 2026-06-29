@@ -2,17 +2,54 @@
 
 import Image from "next/image";
 import Logo from "@/assets/logosaas.png";
-import { useAuth, ROLE_DISPLAY_MAP, computeRole } from "@/context/AuthContext";
+import { useAuth, computeRole } from "@/context/AuthContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { 
-  faBars, 
-  faBell, 
-  faChevronLeft, 
+import {
+  faBars,
+  faBell,
+  faChevronLeft,
   faChevronRight,
   faExpand,
   faCompress
 } from "@fortawesome/free-solid-svg-icons";
 import { useState } from "react";
+import { useLanguage } from "@/context/LanguageContext";
+import LanguageSwitcher from "@/sections/Hero/LanguageSwitcher";
+
+const HEADER_TEXT = {
+  ru: {
+    openMenu: "Открыть меню навигации",
+    openMenuTitle: "Открыть меню",
+    expand: "Развернуть",
+    collapse: "Свернуть",
+    dashboard: "Личный кабинет",
+    roles: { admin: "Администратор", academy_admin: "Администратор академии", doctor: "Доктор", nurse: "Медсестра", teacher: "Преподаватель", patient: "Пациент", student: "Студент" },
+  },
+  kz: {
+    openMenu: "Навигация мәзірін ашу",
+    openMenuTitle: "Мәзірді ашу",
+    expand: "Жазу",
+    collapse: "Жию",
+    dashboard: "Жеке кабинет",
+    roles: { admin: "Әкімші", academy_admin: "Академия әкімшісі", doctor: "Дәрігер", nurse: "Медбике", teacher: "Оқытушы", patient: "Пациент", student: "Студент" },
+  },
+  en: {
+    openMenu: "Open navigation menu",
+    openMenuTitle: "Open menu",
+    expand: "Expand",
+    collapse: "Collapse",
+    dashboard: "Dashboard",
+    roles: { admin: "Administrator", academy_admin: "Academy Administrator", doctor: "Doctor", nurse: "Nurse", teacher: "Teacher", patient: "Patient", student: "Student" },
+  },
+  uz: {
+    openMenu: "Navigatsiya menyusini ochish",
+    openMenuTitle: "Menyuni ochish",
+    expand: "Yoyish",
+    collapse: "Yig'ish",
+    dashboard: "Shaxsiy kabinet",
+    roles: { admin: "Administrator", academy_admin: "Akademiya administratori", doctor: "Shifokor", nurse: "Hamshira", teacher: "O'qituvchi", patient: "Bemor", student: "Talaba" },
+  },
+} as const;
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -26,7 +63,9 @@ export const Header = ({
   onToggleSidebar 
 }: HeaderProps) => {
   const { user } = useAuth();
+  const { language, setLanguage } = useLanguage();
   const [isHovered, setIsHovered] = useState(false);
+  const t = HEADER_TEXT[language as keyof typeof HEADER_TEXT] ?? HEADER_TEXT.ru;
 
   return (
     <header className="flex justify-between items-center bg-white/95 backdrop-blur-lg p-4 shadow-lg sticky top-0 z-30 transition-all duration-300">
@@ -40,8 +79,8 @@ export const Header = ({
             background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)',
             border: '1px solid rgba(255, 255, 255, 0.2)'
           }}
-          aria-label="Открыть меню навигации"
-          title="Открыть меню"
+          aria-label={t.openMenu}
+          title={t.openMenuTitle}
         >
           <FontAwesomeIcon 
             icon={faBars} 
@@ -84,7 +123,7 @@ export const Header = ({
             <span className={`text-sm font-semibold transition-all duration-300 ${
               sidebarCollapsed ? 'text-blue-700' : 'text-gray-700'
             } group-hover:text-blue-800`}>
-              {sidebarCollapsed ? 'Развернуть' : 'Свернуть'}
+              {sidebarCollapsed ? t.expand : t.collapse}
             </span>
 
             {/* Animated Background */}
@@ -100,13 +139,16 @@ export const Header = ({
         <div className="hidden lg:flex items-center gap-3">
           <div className="w-px h-8 bg-gradient-to-b from-transparent via-gray-400 to-transparent"></div>
           <span className="text-lg font-bold text-gray-800">
-            Личный кабинет
+            {t.dashboard}
           </span>
         </div>
       </div>
 
       {/* Right - Notifications & User Info */}
       <div className="flex items-center gap-4">
+        {/* Language Switcher */}
+        <LanguageSwitcher currentLanguage={language} setLanguage={setLanguage} variant="light" />
+
         {/* Premium Notifications */}
         <button className="relative group p-3 rounded-xl transition-all duration-300 hover:scale-110 hover:shadow-lg border border-gray-200/50 backdrop-blur-sm"
                 style={{ background: 'linear-gradient(135deg, rgba(55, 114, 255, 0.05) 0%, rgba(41, 53, 143, 0.05) 100%)' }}>
@@ -144,7 +186,7 @@ export const Header = ({
                 {user.first_name} {user.last_name}
               </div>
               <div className="text-xs font-medium text-gray-600 leading-tight capitalize">
-                {ROLE_DISPLAY_MAP[computeRole(user.roles)] ?? "Пациент"}
+                {t.roles[computeRole(user.roles) as keyof typeof t.roles] ?? t.roles.patient}
               </div>
             </div>
           </div>
