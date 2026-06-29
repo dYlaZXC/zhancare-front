@@ -13,6 +13,7 @@ interface WaMessage {
   body: string;
   received_at: string;
   message_id: string;
+  status?: string;
 }
 
 interface Contact {
@@ -184,7 +185,11 @@ export default function WhatsAppInbox({ initialPhone }: { initialPhone?: string 
           setThread(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
         }
       }
-      toast.success("Отправлено");
+      if (data.reengagement_sent) {
+        toast.info("Пациент не писал >24ч — отправлен шаблон для возобновления переписки. Сообщение придёт, когда пациент ответит.");
+      } else {
+        toast.success("Отправлено");
+      }
     } catch (err: any) {
       toast.error(err.response?.data?.error ?? "Ошибка отправки");
       setReplyText(body);
@@ -418,6 +423,11 @@ export default function WhatsAppInbox({ initialPhone }: { initialPhone?: string 
                     }}
                   >
                     <p className="whitespace-pre-wrap break-words">{msg.body}</p>
+                    {msg.status === "queued" && (
+                      <p className="text-[10px] mt-1 text-right font-semibold text-yellow-100">
+                        ⏳ ждёт ответа пациента
+                      </p>
+                    )}
                     <p className={`text-[10px] mt-1 text-right ${msg.direction === "out" ? "text-green-100/70" : "text-gray-400"}`}>
                       {formatFullTime(msg.received_at)}
                     </p>
