@@ -41,6 +41,14 @@ export default function SuggestionChips({
           { text: "Ауырсыну", full: "Тыныс алғанда кеуде ауруы" },
           { text: "Дәрі", full: "Қандай дәрі ішу керек" },
         ];
+      case "uz":
+        return [
+          { text: "Harorat", full: "Harorat va qaltirash" },
+          { text: "Bosh og'rig'i", full: "Kuchli bosh og'rig'i" },
+          { text: "Shamollash", full: "Burun bitishi va tomoq og'rig'i" },
+          { text: "Og'riq", full: "Nafas olganda ko'krak og'rig'i" },
+          { text: "Dori", full: "Qaysi dorini ichish kerak" },
+        ];
       default:
         return [
           { text: "Fever", full: "Fever and chills" },

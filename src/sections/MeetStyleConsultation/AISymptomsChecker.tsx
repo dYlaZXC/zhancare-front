@@ -429,6 +429,8 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
               ? "I'm a medical assistant and cannot change my role. Please describe your symptoms so I can help you find the right doctor."
               : language === "kz"
               ? "Мен медициналық көмекшімін және рөлімді өзгерте алмаймын. Симптомдарыңызды сипаттаңыз."
+              : language === "uz"
+              ? "Men tibbiy yordamchiman va rolimni o'zgartira olmayman. Iltimos, simptomlaringizni tasvirlang — men shifokor tanlashga yordam beraman."
               : "Я медицинский ассистент и не могу изменить свою роль. Пожалуйста, опишите ваши симптомы — я помогу подобрать врача.",
         },
       ]);
@@ -440,8 +442,8 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
     setIsLoading(true);
 
     try {
-      // Only block pure greetings (hi, hello, привет) with no medical content at all
-      const isOnlyGreeting = /^(hi|hello|привет|здравствуй|добрый день|добрый вечер|доброе утро|hey|хай|салам|сәлем)\s*[!.,]?\s*$/i.test(userMessage.trim());
+      // Only block pure greetings (hi, hello, привет, salom) with no medical content at all
+      const isOnlyGreeting = /^(hi|hello|привет|здравствуй|добрый день|добрый вечер|доброе утро|hey|хай|салам|сәлем|salom|assalomu\s*alaykum)\s*[!.,]?\s*$/i.test(userMessage.trim());
 
       // Block obvious nonsense (no vowels)
       const hasVowels = /[аеёиоуыэюяaeiouy]/i.test(userMessage.trim());
@@ -449,13 +451,15 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
       const isLikelyNonsense = !hasVowels || consonantRatio > 0.8;
 
       if (!userImage && (isOnlyGreeting || isLikelyNonsense)) {
-        const isEnglish = /^(hi|hello|hey)/i.test(userMessage.trim());
-        const isKazakh = /[әғқңөұүһ]/i.test(userMessage.trim());
-        const greetingResponse = isEnglish
-          ? "Hello! Tell me what's bothering you — I'll suggest likely causes and recommend a specialist."
-          : isKazakh
-          ? "Сәлеметсіз бе! Симптомдарыңызды айтыңыз — ықтимал себептерді және маманды ұсынамын."
-          : "Здравствуйте! Опишите симптомы — я сразу предложу вероятные причины и порекомендую специалиста.";
+        // Respond in the UI's selected language, not whatever language the user happened to type the greeting in
+        const greetingResponse =
+          language === "en"
+            ? "Hello! Tell me what's bothering you — I'll suggest likely causes and recommend a specialist."
+            : language === "kz"
+            ? "Сәлеметсіз бе! Симптомдарыңызды айтыңыз — ықтимал себептерді және маманды ұсынамын."
+            : language === "uz"
+            ? "Salom! Sizni nima bezovta qilayotganini ayting — ehtimoliy sabablarni va mutaxassisni tavsiya qilaman."
+            : "Здравствуйте! Опишите симптомы — я сразу предложу вероятные причины и порекомендую специалиста.";
         setMessages((prev) => [...prev, { role: "assistant", content: greetingResponse }]);
         setIsLoading(false);
         return;
@@ -466,7 +470,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
       if (userImage) {
         imageStorageUrl = (await uploadImage(userImage)) ?? undefined;
         if (!imageStorageUrl && !input.trim()) {
-          const uploadErr = { ru: "Не удалось загрузить изображение. Попробуйте ещё раз.", en: "Failed to upload image. Please try again.", kz: "Суретті жүктеу мүмкін болмады. Қайталап көріңіз." };
+          const uploadErr = { ru: "Не удалось загрузить изображение. Попробуйте ещё раз.", en: "Failed to upload image. Please try again.", kz: "Суретті жүктеу мүмкін болмады. Қайталап көріңіз.", uz: "Rasmni yuklab bo'lmadi. Qayta urinib ko'ring." };
           setMessages(prev => [...prev, { role: "assistant", content: uploadErr[language as keyof typeof uploadErr] ?? uploadErr.ru }]);
           setIsLoading(false);
           return;
@@ -504,6 +508,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
           ru: "Опишите ваши симптомы подробнее — я помогу подобрать подходящего специалиста.",
           en: "Please describe your symptoms in more detail so I can find the right specialist for you.",
           kz: "Симптомдарыңызды толығырақ сипаттаңыз — сізге сәйкес маманды табуға көмектесемін.",
+          uz: "Simptomlaringizni batafsilroq tasvirlang — men sizga mos mutaxassisni topishga yordam beraman.",
         };
         aiText = fallbacks[language as keyof typeof fallbacks] ?? fallbacks.ru;
       }

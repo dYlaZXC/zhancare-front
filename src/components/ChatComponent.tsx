@@ -4,6 +4,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import en from "@/locales/en.json";
+import uz from "@/locales/uz.json";
 import { ChatHeader } from "./ChatHeader";
 import { ChatMessages } from "./ChatMessages";
 import { ChatInput } from "./ChatInput";
@@ -40,6 +41,8 @@ export const ChatComponent = ({ onClose }: { onClose: () => void }) => {
         return en.chat;
       case "kz":
         return kz.chat;
+      case "uz":
+        return uz.chat;
       default:
         return ru.chat; // Fallback to Russian
     }
@@ -54,6 +57,8 @@ export const ChatComponent = ({ onClose }: { onClose: () => void }) => {
         ? "Я медицинский ассистент. Пожалуйста, задайте медицинский вопрос."
         : language === "kz"
         ? "Мен медициналық көмекшімін. Медициналық сұрақ қойыңыз."
+        : language === "uz"
+        ? "Men tibbiy yordamchiman. Iltimos, tibbiy savol bering."
         : "I am a medical assistant. Please ask a medical question.";
       setMessages(prev => [...prev, { user: userInput, response: blocked, timestamp }]);
       setUserInput("");
@@ -66,8 +71,8 @@ export const ChatComponent = ({ onClose }: { onClose: () => void }) => {
     setError("");
 
     // Check if user wants to play the AI game
-    const gameKeywords = ["давай поиграем", "поиграем", "хочу играть", "можно поиграть", "let's play", "want to play", "can we play", "ойнайық", "ойын ойнау"];
-    const medicalKeywords = ["болит", "боль", "ушибла", "ушиб", "травма", "hurt", "pain", "injury", "bruise", "ауырады", "жарақат"];
+    const gameKeywords = ["давай поиграем", "поиграем", "хочу играть", "можно поиграть", "let's play", "want to play", "can we play", "ойнайық", "ойын ойнау", "o'ynaymiz", "o'ynashni xohlayman"];
+    const medicalKeywords = ["болит", "боль", "ушибла", "ушиб", "травма", "hurt", "pain", "injury", "bruise", "ауырады", "жарақат", "og'riq", "og'riydi", "jarohat"];
     
     const isGameRequest = gameKeywords.some(keyword => 
       userInput.toLowerCase().includes(keyword.toLowerCase())

@@ -35,6 +35,7 @@ export default function ChatInput({
       case "ru": return "Например: температура 38 и болит горло";
       case "en": return "E.g.: fever 38°C and sore throat";
       case "kz": return "Мысалы: температура 38 және жұтқыншақ ауруы";
+      case "uz": return "Masalan: harorat 38 va tomoq og'rig'i";
       default: return "E.g.: fever 38°C and sore throat";
     }
   };

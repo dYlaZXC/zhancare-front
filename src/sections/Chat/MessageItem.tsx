@@ -135,6 +135,7 @@ export default function MessageItem({
       case "ru": return "Записаться к врачу";
       case "en": return "Book Appointment";
       case "kz": return "Дәрігерге жазылу";
+      case "uz": return "Shifokorga yozilish";
       default: return "Book Appointment";
     }
   };

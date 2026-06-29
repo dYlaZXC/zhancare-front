@@ -36,6 +36,15 @@ export default function EmptyState({ language }: EmptyStateProps) {
         "Құпиялылық және деректерді қорғау",
       ],
     },
+    uz: {
+      welcome: "Xush kelibsiz",
+      subtitle: "Simptomlaringizni tasvirlang — 30 soniyada tavsiyalar olasiz",
+      features: [
+        "Klinik ma'lumotlarga asoslangan simptomlar tahlili",
+        "Mutaxassis bilan konsultatsiya tavsiyalari",
+        "Maxfiylik va ma'lumotlarni himoyalash",
+      ],
+    },
   };
 
   const c = content[language as keyof typeof content] || content.en;
