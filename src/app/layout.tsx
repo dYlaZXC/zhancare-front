@@ -165,14 +165,14 @@ export default async function RootLayout({
       </head>
       <body className={twMerge(dmSans.className, "antialiased bg-[#F8FAFF]")}>
         <AuthProvider>
-          <BrandProvider initialBrand={brandId}>
-            <LanguageProvider>
+          <LanguageProvider>
+            <BrandProvider initialBrand={brandId}>
               <OptimizedConsultationProvider>
                 <main>{children}</main>
                 <AuthPopup />
               </OptimizedConsultationProvider>
-            </LanguageProvider>
-          </BrandProvider>
+            </BrandProvider>
+          </LanguageProvider>
         </AuthProvider>
         <ToastContainer position="top-right" autoClose={3000} />
       </body>

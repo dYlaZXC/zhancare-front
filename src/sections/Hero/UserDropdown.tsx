@@ -12,7 +12,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/context/LanguageContext";
-import { ROLE_DISPLAY_MAP, computeRole } from "@/context/AuthContext";
+import { computeRole } from "@/context/AuthContext";
 
 type Props = {
   user: {
@@ -48,6 +48,9 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
           patient: "Пациент",
           nurse: "Медсестра",
           admin: "Администратор",
+          academyAdmin: "Администратор академии",
+          teacher: "Преподаватель",
+          student: "Студент",
           doctorProfileDesc: "Личная информация",
           personalInfoDesc: "Личная информация",
           nurseProfileDesc: "Личная информация",
@@ -70,6 +73,9 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
           patient: "Пациент",
           nurse: "Медбике",
           admin: "Әкімші",
+          academyAdmin: "Академия әкімшісі",
+          teacher: "Оқытушы",
+          student: "Студент",
           doctorProfileDesc: "Жеке ақпарат",
           personalInfoDesc: "Жеке ақпарат",
           nurseProfileDesc: "Жеке ақпарат",
@@ -92,6 +98,9 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
           patient: "Patient",
           nurse: "Nurse",
           admin: "Administrator",
+          academyAdmin: "Academy Administrator",
+          teacher: "Teacher",
+          student: "Student",
           doctorProfileDesc: "Personal information",
           personalInfoDesc: "Personal information",
           nurseProfileDesc: "Personal information",
@@ -101,6 +110,31 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
           nurseScheduleDesc: "My home visits",
           accountSettingsDesc: "Account settings",
           endSessionDesc: "End session"
+        };
+      case "uz":
+        return {
+          profile: "Shaxsiy kabinet",
+          dashboard: "Boshqaruv paneli",
+          appointments: "Yozilishlar",
+          settings: "Sozlamalar",
+          logout: "Chiqish",
+          online: "Onlayn",
+          doctor: "Shifokor",
+          patient: "Bemor",
+          nurse: "Hamshira",
+          admin: "Administrator",
+          academyAdmin: "Akademiya administratori",
+          teacher: "O'qituvchi",
+          student: "Talaba",
+          doctorProfileDesc: "Shaxsiy ma'lumotlar",
+          personalInfoDesc: "Shaxsiy ma'lumotlar",
+          nurseProfileDesc: "Shaxsiy ma'lumotlar",
+          statisticsDesc: "Statistika va tahlil",
+          doctorScheduleDesc: "Shifokorga yozilishlarim",
+          patientAppointmentsDesc: "Shifokorga yozilishlarim",
+          nurseScheduleDesc: "Uyga chaqiruvlarim",
+          accountSettingsDesc: "Hisob sozlamalari",
+          endSessionDesc: "Seansni yakunlash"
         };
       default:
         return {
@@ -114,6 +148,9 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
           patient: "Patient",
           nurse: "Nurse",
           admin: "Administrator",
+          academyAdmin: "Academy Administrator",
+          teacher: "Teacher",
+          student: "Student",
           doctorProfileDesc: "Personal information",
           personalInfoDesc: "Personal information",
           nurseProfileDesc: "Personal information",
@@ -128,6 +165,16 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
   };
 
   const t = getTranslations();
+
+  const roleLabels: Record<string, string> = {
+    admin: t.admin,
+    academy_admin: t.academyAdmin,
+    doctor: t.doctor,
+    nurse: t.nurse,
+    teacher: t.teacher,
+    patient: t.patient,
+    student: t.student,
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -276,7 +323,7 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
             {user.first_name}
           </span>
           <span className="text-[10px] sm:text-xs text-white/80 truncate">
-            {ROLE_DISPLAY_MAP[computeRole(user.roles ?? (user.role ? [user.role] : []))] ?? t.patient}
+            {roleLabels[computeRole(user.roles ?? (user.role ? [user.role] : []))] ?? t.patient}
           </span>
         </div>
 

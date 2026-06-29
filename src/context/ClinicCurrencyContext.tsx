@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { StaticImageData } from "next/image";
 import LogoKZ from "@/assets/logosaas.png";
-import LogoUZ from "@/assets/JanCareAi_uz_logo.png";
+import LogoUZ from "@/assets/logosaas_uz.png";
 
 interface ClinicCurrencyContextValue {
   clinicCurrency: string;

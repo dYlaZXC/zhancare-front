@@ -3,9 +3,10 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import type { StaticImageData } from "next/image";
 import LogoKZ from "@/assets/logosaas.png";
-import LogoUZ from "@/assets/JanCareAi_uz_logo.png";
+import LogoUZ from "@/assets/logosaas_uz.png";
 import { BRAND_STYLES } from "@/config/brandConfig";
 import type { BrandId, BrandStyle } from "@/config/brandConfig";
+import { useLanguage } from "@/context/LanguageContext";
 
 export type { BrandId };
 
@@ -76,10 +77,12 @@ export function BrandProvider({ children, initialBrand = "kz" }: BrandProviderPr
     }
   }, []);
 
+  const { language } = useLanguage();
   const brand = BRANDS[brandId];
+  const appLogo = language === "uz" ? LogoUZ : brand.logo;
 
   return (
-    <BrandContext.Provider value={{ brand, appLogo: brand.logo, clinicCurrency, setClinicCurrency }}>
+    <BrandContext.Provider value={{ brand, appLogo, clinicCurrency, setClinicCurrency }}>
       {children}
     </BrandContext.Provider>
   );

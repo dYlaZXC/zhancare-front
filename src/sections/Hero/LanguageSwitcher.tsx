@@ -28,13 +28,15 @@ const languages: Language[] = [
 function Flag({ lang, size = 14 }: { lang: Language; size?: number }) {
   const [error, setError] = useState(false);
   if (error) return <span style={{ fontSize: 11, lineHeight: 1 }}>{lang.flag}</span>;
+  const height = Math.round(size * 0.75);
   return (
     <Image
       src={lang.flagImage}
       alt={lang.label}
       width={size}
-      height={Math.round(size * 0.75)}
+      height={height}
       className="object-cover rounded-[2px] shrink-0"
+      style={{ width: size, height }}
       onError={() => setError(true)}
     />
   );

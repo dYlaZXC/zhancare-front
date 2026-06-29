@@ -13,14 +13,15 @@ import BookingModal from "./Chat/BookingModal";
 import { Message } from "./Chat/types";
 import { useChat } from "./Chat/hooks/useChat";
 import ZhanBotLogoKZ from "@/assets/ZhanBotAi.png";
-import JanBotLogoUZ from "@/assets/JanBotAi_uz.png";
+import JonBotLogoUZ from "@/assets/zhanbot_uz.png";
 import { useBrand } from "@/context/BrandContext";
 
 export const ChatSection = () => {
   useAuth();
   const { language } = useLanguage();
   const { brand } = useBrand();
-  const ZhanBotLogo = brand.id === "uz" ? JanBotLogoUZ : ZhanBotLogoKZ;
+  const isUzbek = brand.id === "uz" || language === "uz";
+  const ZhanBotLogo = isUzbek ? JonBotLogoUZ : ZhanBotLogoKZ;
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -99,12 +100,14 @@ export const ChatSection = () => {
     meetingId?: string
   ): string => {
     const date = new Date(scheduledTime);
+    const localeMap: Record<string, string> = { kz: "kk-KZ", en: "en-US", uz: "uz-UZ", ru: "ru-RU" };
+    const dateLocale = localeMap[lang] ?? "ru-RU";
     const formattedDate = date.toLocaleDateString(
-      lang === "kz" ? "kk-KZ" : lang === "en" ? "en-US" : "ru-RU",
+      dateLocale,
       { weekday: "long", year: "numeric", month: "long", day: "numeric" }
     );
     const formattedTime = date.toLocaleTimeString(
-      lang === "kz" ? "kk-KZ" : lang === "en" ? "en-US" : "ru-RU",
+      dateLocale,
       { hour: "2-digit", minute: "2-digit" }
     );
     const videoLine = meetingId
@@ -112,6 +115,8 @@ export const ChatSection = () => {
         ? `\n🔗 **Video link:** [Join consultation](/video-call/patient?meetingId=${meetingId})`
         : lang === "kz"
         ? `\n🔗 **Бейне сілтеме:** [Кеңеске кіру](/video-call/patient?meetingId=${meetingId})`
+        : lang === "uz"
+        ? `\n🔗 **Video havola:** [Konsultatsiyaga qo'shilish](/video-call/patient?meetingId=${meetingId})`
         : `\n🔗 **Ссылка на консультацию:** [Войти в кабинет](/video-call/patient?meetingId=${meetingId})`
       : "";
     switch (lang) {
@@ -119,6 +124,8 @@ export const ChatSection = () => {
         return `✅ **Appointment Confirmed!**\n\nYou have successfully booked an appointment with **${doctorName}** (${doctorType}).\n\n📅 **Date:** ${formattedDate}\n🕐 **Time:** ${formattedTime}\n💻 **Type:** Online video consultation${videoLine}\n\nYou will receive a reminder before your appointment. Make sure you have a stable internet connection and your camera/microphone ready.`;
       case "kz":
         return `✅ **Жазылу расталды!**\n\n**${doctorName}** (${doctorType}) дәрігеріне сәтті жазылдыңыз.\n\n📅 **Күні:** ${formattedDate}\n🕐 **Уақыты:** ${formattedTime}\n💻 **Түрі:** Онлайн бейне кеңес${videoLine}\n\nКеңес алдында еске салу аласыз. Тұрақты интернет байланысы мен камера/микрофон дайын екеніне көз жеткізіңіз.`;
+      case "uz":
+        return `✅ **Qabul tasdiqlandi!**\n\nSiz **${doctorName}** (${doctorType}) shifokoriga muvaffaqiyatli yozildingiz.\n\n📅 **Sana:** ${formattedDate}\n🕐 **Vaqt:** ${formattedTime}\n💻 **Turi:** Onlayn video konsultatsiya${videoLine}\n\nQabul boshlanishidan oldin eslatma olasiz. Internet aloqangiz barqaror va kamera/mikrofon tayyor ekanligiga ishonch hosil qiling.`;
       default:
         return `✅ **Запись подтверждена!**\n\nВы успешно записались к врачу **${doctorName}** (${doctorType}).\n\n📅 **Дата:** ${formattedDate}\n🕐 **Время:** ${formattedTime}\n💻 **Тип:** Онлайн видеоконсультация${videoLine}\n\nВы получите напоминание перед консультацией. Убедитесь, что у вас стабильное интернет-соединение и готовы камера/микрофон.`;
     }
@@ -129,6 +136,7 @@ export const ChatSection = () => {
       case "ru": return ["Анализ симптомов за 30 секунд", "Рекомендации по обращению к врачу", "Доступно 24/7"];
       case "en": return ["Symptom analysis in 30 seconds", "Doctor consultation advice", "Available 24/7"];
       case "kz": return ["30 секундта симптом талдауы", "Дәрігерге қаралу туралы кеңес", "24/7 қолжетімді"];
+      case "uz": return ["30 soniyada simptomlar tahlili", "Shifokorga murojaat bo'yicha tavsiya", "24/7 mavjud"];
       default: return ["Symptom analysis in 30 seconds", "Doctor consultation advice", "Available 24/7"];
     }
   };
@@ -138,6 +146,7 @@ export const ChatSection = () => {
       case "ru": return { privacy: "Данные защищены", clinical: "Клинические рекомендации" };
       case "en": return { privacy: "Data protected", clinical: "Clinical guidelines" };
       case "kz": return { privacy: "Деректер қорғалған", clinical: "Клиникалық нұсқаулар" };
+      case "uz": return { privacy: "Ma'lumotlar himoyalangan", clinical: "Klinik tavsiyalar" };
       default: return { privacy: "Data protected", clinical: "Clinical guidelines" };
     }
   };
@@ -183,7 +192,7 @@ export const ChatSection = () => {
           >
             <Image
               src={ZhanBotLogo}
-              alt={brand.id === "uz" ? "JanBot.Ai" : "ZhanBot.AI"}
+              alt={isUzbek ? "JonBot.Ai" : "ZhanBot.AI"}
               width={400}
               height={120}
               className="h-20 w-auto"

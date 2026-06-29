@@ -27,7 +27,7 @@ interface Milestone {
   icon: IconDefinition;
 }
 
-const data: Record<"ru" | "en" | "kz", { heading: string; sub: string; quote: string; quoteTranslation: string; milestones: Milestone[] }> = {
+const data: Record<"ru" | "en" | "kz" | "uz", { heading: string; sub: string; quote: string; quoteTranslation: string; milestones: Milestone[] }> = {
   ru: {
     heading: "Наш путь",
     sub: "От идеи — до продукта в 3 клиниках Казахстана",
@@ -263,6 +263,86 @@ const data: Record<"ru" | "en" | "kz", { heading: string; sub: string; quote: st
           "Қырғызстан, Өзбекстан",
           "Сақтандырушылармен тікелей келісімшарттар",
           "Корпоративтік клиенттерге арналған B2B-шешімдер",
+        ],
+        isFuture: true,
+      },
+    ],
+  },
+  uz: {
+    heading: "Bizning yo'limiz",
+    sub: "G'oyadan — Qozog'istondagi 3 klinikada ishlayotgan mahsulotgacha",
+    quote: "Per aspera ad astra",
+    quoteTranslation: "Tikonlar orqali — yulduzlarga",
+    milestones: [
+      {
+        date: "Iyun 2023",
+        icon: faLightbulb,
+        title: "Loyiha g'oyasi va boshlanishi; AI ishlab chiqish",
+      },
+      {
+        date: "Yanvar 2024",
+        icon: faRocket,
+        title: "Akmol, Jibek Joli, Koshi qishloqlarida pilot ishga tushirish",
+      },
+      {
+        date: "Aprel 2025",
+        icon: faTrophy,
+        title: "Qozog'istonning barcha universitetlari orasida Enactus 2025 milliy ko'rgazmasida 1-o'rin",
+        items: ["+500 ishtirokchi"],
+      },
+      {
+        date: "Sentyabr 2025",
+        icon: faGlobe,
+        title: "Enactus World Cup 2025 yarim finali (Bangkok)",
+        items: [
+          "ZhanCare jamoasining AI, innovatsiya va yoshlar tadbirkorligi bo'yicha Majilis parlament sessiyasida ishtiroki",
+        ],
+      },
+      {
+        date: "Oktyabr 2025",
+        icon: faMedal,
+        title: "AI-Sana g'olibi — «Sog'liqni saqlashda eng yaxshi AI-loyiha»",
+      },
+      {
+        date: "Hozir",
+        icon: faLocationDot,
+        title: "Mahsulot 3 klinikada ishlaydi: Ayala, BN, Dariger Plus",
+        items: [
+          "1 200+ foydalanuvchi",
+          "100+ bemor — chet elda yashovchi qozog'istonliklar",
+          "Astana va Stepnogorsk",
+        ],
+        isCurrent: true,
+      },
+      {
+        date: "Q2 2026",
+        icon: faMobileScreen,
+        title: "iOS va Android uchun mobil ilovani ishga tushirish",
+        items: [
+          "2 bosishda shifokorga yozilish",
+          "Push-bildirishnomalar va eslatmalar",
+          "Bemorning shaxsiy kabineti",
+        ],
+        isFuture: true,
+      },
+      {
+        date: "Q3 2026",
+        icon: faHospital,
+        title: "Qozog'istonning 5 shahridagi 20+ klinikaga kengaytirish",
+        items: [
+          "Almati, Astana, Shimkent, Aktobe, Atirau",
+          "5 000+ faol foydalanuvchi",
+        ],
+        isFuture: true,
+      },
+      {
+        date: "2027",
+        icon: faHandshake,
+        title: "MDH bozorlariga chiqish va sug'urta kompaniyalari bilan integratsiya",
+        items: [
+          "Qirg'iziston, O'zbekiston",
+          "Sug'urtachilar bilan to'g'ridan-to'g'ri shartnomalar",
+          "Korporativ mijozlar uchun B2B-yechimlar",
         ],
         isFuture: true,
       },

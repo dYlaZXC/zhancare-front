@@ -38,6 +38,11 @@ export const LogoTicker = () => {
           digitalMinistry: ["Ministry of Digital", "Development of Kazakhstan"],
           healthMinistry: ["Ministry of Health", "of Kazakhstan"]
         };
+      case "uz":
+        return {
+          digitalMinistry: ["Qozogʻiston Raqamli", "rivojlanish vazirligi"],
+          healthMinistry: ["Qozogʻiston Sogʻliqni", "saqlash vazirligi"]
+        };
       default:
         return {
           digitalMinistry: ["Ministry of Digital", "Development of Kazakhstan"],

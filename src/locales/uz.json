@@ -1,6 +1,6 @@
 {
     "auth": {
-      "welcome": "JanCare.Ai'ga xush kelibsiz!",
+      "welcome": "JonCare.Ai'ga xush kelibsiz!",
       "description": "Ro'yxatdan o'tgan bo'lsangiz tizimga kiring yoki bir necha bosish bilan hisob oching!",
       "login": "Kirish",
       "register": "Ro'yxatdan o'tish",
@@ -82,7 +82,7 @@
     },
 
     "services": {
-    "servicesHeader": "JanCare.Ai asosiy yo'nalishlari:",
+    "servicesHeader": "JonCare.Ai asosiy yo'nalishlari:",
     "servicesDescription": "Bizning xizmatlarimiz tibbiy yordamga qulay kirishni ta'minlaydi, bemorlar va shifokorlar o'rtasidagi munosabatlarni yaxshilaydi.",
     "list": [
       {
@@ -151,7 +151,7 @@
   },
 
     "features": {
-      "title": "JanCare.Ai imkoniyatlari",
+      "title": "JonCare.Ai imkoniyatlari",
       "description": "Bizning platformamiz tashxisni yaxshilash, shifokorlar va bemorlar o'rtasidagi aloqani mustahkamlash va tibbiy xizmatlar sifatini oshirish uchun ilg'or texnologiyalardan foydalanadi.",
       "buttonText": "Ko'proq bilish",
       "featuresList": [
@@ -172,7 +172,7 @@
 
     "productShowcase": {
       "title": "Telemeditsina va tashxis uchun innovatsion interfeys",
-      "description": "JanCare.Ai shifokorlar va bemorlar uchun qulay interfeys taqdim etadi, tibbiy ma'lumotlarga, video konsultatsiyalarga va AI tahlil vositalariga tezkor kirishni ta'minlaydi.",
+      "description": "JonCare.Ai shifokorlar va bemorlar uchun qulay interfeys taqdim etadi, tibbiy ma'lumotlarga, video konsultatsiyalarga va AI tahlil vositalariga tezkor kirishni ta'minlaydi.",
       "contentData": [
         {
           "id": 1,
@@ -252,11 +252,11 @@
         "offer": "Oferta shartnomasi",
         "terms": "Foydalanish shartlari"
       },
-      "rights": "JanCare.Ai. Barcha huquqlar himoyalangan."
+      "rights": "JonCare.Ai. Barcha huquqlar himoyalangan."
     },
 
     "chat": {
-      "title": "JanBot.Ai bilan muloqot qiling",
+      "title": "JonBot.Ai bilan muloqot qiling",
       "assistantInstruction": "Siz virtual tibbiy yordamchisiz. Foydalanuvchilarga sog'liq haqida ma'lumot olish, qabul eslatmalari va o'ziga g'amxo'rlik maslahatlari bilan yordam bering.",
       "placeholder": "Savol bering...",
       "sendButton": "Yuborish",
@@ -283,13 +283,13 @@
     },
 
     "impactSection": {
-    "title": "Nima uchun JanCare.Ai tanlashadi?",
+    "title": "Nima uchun JonCare.Ai tanlashadi?",
     "description": "Biz AI yordamida aqlli sog'liqni saqlashni kengaytiramiz.",
 
     "statistics": [
       { "value": 1500, "description": "Navbatchi shifokor konsultatsiyasi", "icon": "faVideo", "currency": "so'm" },
       { "value": 100, "description": "Sertifikatlangan shifokorlar", "icon": "faUserMd" },
-      { "value": 2, "description": "JanCare.Ai haqida biladigan mamlakatlar", "icon": "faClinicMedical" },
+      { "value": 2, "description": "JonCare.Ai haqida biladigan mamlakatlar", "icon": "faClinicMedical" },
       { "value": 95, "description": "AI bilan tezroq tashxis", "icon": "faChartLine", "percent": true }
     ],
 
@@ -332,7 +332,7 @@
 
     "successStories": {
       "title": "Haqiqiy natijalar",
-      "description": "JanCare.Ai sog'liqni saqlashni qanday o'zgartirmoqda.",
+      "description": "JonCare.Ai sog'liqni saqlashni qanday o'zgartirmoqda.",
       "stories": [
         {
           "icon": "faClock",
@@ -347,12 +347,12 @@
         {
           "icon": "faGlobe",
           "title": "Qozog'iston Respublikasi Vazirligi",
-          "description": "Hamkorlik aloqalarini mustahkamlash va birgalikdagi tashabbusllarni amalga oshirish maqsadida JanCare.Ai Qozog'iston Respublikasining asosiy Vazirliklari bilan hamkorlik qiladi."
+          "description": "Hamkorlik aloqalarini mustahkamlash va birgalikdagi tashabbusllarni amalga oshirish maqsadida JonCare.Ai Qozog'iston Respublikasining asosiy Vazirliklari bilan hamkorlik qiladi."
         },
         {
           "icon": "faGlobe",
           "title": "OMRON",
-          "description": "Xalqaro Omron Healthcare kompaniyasi bilan birgalikda JanCare shifokorlari jamoasi savdo markazida bepul ko'rik bo'yicha keng ko'lamli ijtimoiy aktsiya o'tkazdi. Ikki kun davomida stendimizga 2341 kishi murojaat qildi."
+          "description": "Xalqaro Omron Healthcare kompaniyasi bilan birgalikda JonCare shifokorlari jamoasi savdo markazida bepul ko'rik bo'yicha keng ko'lamli ijtimoiy aktsiya o'tkazdi. Ikki kun davomida stendimizga 2341 kishi murojaat qildi."
         }
       ]
     }

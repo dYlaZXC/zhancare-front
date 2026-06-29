@@ -15,6 +15,7 @@ import PdfViewerModal from "@/components/auth/PdfViewerModal";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import en from "@/locales/en.json";
+import uz from "@/locales/uz.json";
 
 export const Footer = () => {
   const { language } = useLanguage();
@@ -39,6 +40,8 @@ export const Footer = () => {
         return kz.footer;
       case "en":
         return en.footer;
+      case "uz":
+        return uz.footer;
       default:
         return en.footer;
     }
@@ -80,6 +83,11 @@ export const Footer = () => {
     "Contacts": "contacts",
     "Контакты": "contacts",
     "Байланыс": "contacts",
+    "Asosiy": "hero",
+    "Biz haqimizda": "hero",
+    "Xizmatlar": "services",
+    "Imkoniyatlar": "modules",
+    "Aloqa": "contacts",
   };
 
   // Handle scroll to section

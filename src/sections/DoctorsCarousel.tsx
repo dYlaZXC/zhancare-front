@@ -134,6 +134,31 @@ export const DoctorsCarousel = () => {
             doctorProfilePhoto: "Doctor's profile photo"
           }
         };
+      case "uz":
+        return {
+          title: "Bizning mutaxassislar",
+          categories: {
+            all: "Barchasi",
+            gp: "Umumiy amaliyot",
+            nursing: "Feldsher/Hamshira",
+            pediatrics: "Pediatriya",
+            ophthalmology: "Oftalmologiya",
+            dermatology: "Dermatologiya",
+            surgery: "Jarrohlik",
+            massage: "Massaj",
+            radiology: "Radiologiya"
+          },
+          experiencedDoctor: "Tajribali shifokor",
+          profileButton: "Profil",
+          experience: "tajriba",
+          yearsExp: "yil",
+          status: "Holati",
+          bookAppointment: "Qabulga yozilish",
+          altTexts: {
+            doctorPhoto: "Shifokor surati",
+            doctorProfilePhoto: "Shifokorning profil surati"
+          }
+        };
       default:
         return {
           title: "Our Specialists",
@@ -167,20 +192,20 @@ export const DoctorsCarousel = () => {
   // Doctor data with multilingual names and specialties
   const getDoctors = () => {
     const baseData = [
-      { nameRu: "Наурызбаева Баглан Назымбеккызы", nameKz: "Наурызбаева Бағлан Назымбекқызы", nameEn: "Nauryzbayeva Baglan Nazymbek kyzy", specialty: { ru: "Неонатолог, интегративная и превентивная педиатрия, реабилитолог высшей категории", kz: "Жоғары санатты неонатолог, интегративті және превентивті педиатрия, реабилитолог", en: "Neonatologist, Integrative & Preventive Pediatrics, Rehabilitation, Highest Category" }, experience: "26", image: doctorImg19, category: "pediatrics" },
-      { nameRu: "Приходько Татьяна Михайловна", nameKz: "Приходько Татьяна Михайловна", nameEn: "Prikhodko Tatyana Mikhailovna", specialty: { ru: "Реабилитолог высшей категории", kz: "Жоғары санатты реабилитолог", en: "Rehabilitation Specialist, Highest Category" }, experience: "26", image: doctorImg20, category: "gp" },
-      { nameRu: "Кажитаев Алмас Муралович", nameKz: "Кажитаев Алмас Муралович", nameEn: "Kazhitaev Almas Muralovich", specialty: { ru: "Заведующий отделения урологии и андрологии МОБ2", kz: "МОБ2 урология және андрология бөлімінің меңгерушісі", en: "Head of Urology and Andrology Department MOB2" }, experience: "30", image: doctorImg21, category: "surgery" },
-      { nameRu: "Жаканбетов Азат Кунанбаевич", nameKz: "Жақанбетов Азат Құнанбайұлы", nameEn: "Zhakanbetov Azat Kunanbayevich", specialty: { ru: "Отоларинголог (ЛОР), 1 категории", kz: "Отоларинголог (ЛОР), 1 санат", en: "Otolaryngologist (ENT), 1st category" }, experience: "10", image: doctorImg22, category: "gp" },
-      { nameRu: "Изтлеуова Нургуль Кубашевна", nameKz: "Изтлеуова Нұргүл Құбашқызы", nameEn: "Iztleuova Nurgul Kubashevna", specialty: { ru: "Инфекционист высшей категории", kz: "Жоғары санатты инфекционист", en: "Infectious Disease Specialist, Highest Category" }, experience: "37", image: doctorImg23, category: "gp" },
-      { nameRu: "Ниязбаев Талгат Толешевич", nameKz: "Ниязбаев Талғат Төлешұлы", nameEn: "Niyazbaev Talgat Toleshevich", specialty: { ru: "Уролог-Андролог высшей категории", kz: "Жоғары санатты уролог-андролог", en: "Urologist-Andrologist, Highest Category" }, experience: "25", image: doctorImg24, category: "surgery" },
-      { nameRu: "Смагулова Еркежан Есепбаевна", nameKz: "Смағұлова Еркежан Есепбайқызы", nameEn: "Smagulova Yerkezhan Yesepbayevna", specialty: { ru: "Кардиолог высшей категории", kz: "Жоғары санатты кардиолог", en: "Cardiologist, Highest Category" }, experience: "22", image: doctorImg25, category: "gp" },
-      { nameRu: "Рябчевская Тамара Георгиевна", nameKz: "Рябчевская Тамара Георгиевна", nameEn: "Ryabchevskaya Tamara Georgievna", specialty: { ru: "Педиатр высшей категории", kz: "Жоғары санатты педиатр", en: "Pediatrician, Highest Category" }, experience: "48", image: doctorImg26, category: "pediatrics" },
-      { nameRu: "Муканова Роза Шайдулловна", nameKz: "Мұқанова Роза Шайдуллақызы", nameEn: "Mukanova Roza Shaidullovna", specialty: { ru: "УЗИ, лучевая диагностика высшей категории", kz: "Жоғары санатты УДЗ, сәулелік диагностика", en: "Ultrasound, Radiology, Highest Category" }, experience: "23", image: doctorImg27, category: "radiology" },
-      { nameRu: "Султан Риза Алибековна", nameKz: "Сұлтан Риза Әлібекқызы", nameEn: "Sultan Riza Alibekovna", specialty: { ru: "Терапевт, педиатр, невропатолог высшей категории", kz: "Жоғары санатты терапевт, педиатр, невропатолог", en: "Therapist, Pediatrician, Neurologist, Highest Category" }, experience: "18", image: doctorImg28, category: "gp" },
-      { nameRu: "Чекменева Наталья Иосифовна", nameKz: "Чекменева Наталья Иосифовна", nameEn: "Chekmeneva Natalya Iosifovna", specialty: { ru: "Акушер-гинеколог", kz: "Акушер-гинеколог", en: "Obstetrician-Gynecologist" }, experience: "39", image: doctorImg29, category: "gp" },
-      { nameRu: "Сиразитдинов Рустам Раисович", nameKz: "Сиразитдинов Рұстам Раисұлы", nameEn: "Sirazitdinov Rustam Raisovich", specialty: { ru: "Хирург, травматолог, детский хирург высшей категории", kz: "Жоғары санатты хирург, травматолог, балалар хирургі", en: "Surgeon, Traumatologist, Pediatric Surgeon, Highest Category" }, experience: "25", image: doctorImg30, category: "surgery" },
-      { nameRu: "Джайнаров Нургиса Ершораевич", nameKz: "Джайнаров Нұрғиса Ершорайұлы", nameEn: "Dzhaynarov Nurgisa Yershorayevich", specialty: { ru: "Стоматолог высшей категории", kz: "Жоғары санатты стоматолог", en: "Dentist, Highest Category" }, experience: "10", image: doctorImg31, category: "gp" },
-      { nameRu: "Мусин Жанат Сартаевич", nameKz: "Мусин Жанат Сартайұлы", nameEn: "Musin Zhanat Sartayevich", specialty: { ru: "Хирург", kz: "Хирург", en: "Surgeon" }, experience: "36", image: doctorImg32, category: "surgery" },
+      { nameRu: "Наурызбаева Баглан Назымбеккызы", nameKz: "Наурызбаева Бағлан Назымбекқызы", nameEn: "Nauryzbayeva Baglan Nazymbek kyzy", specialty: { ru: "Неонатолог, интегративная и превентивная педиатрия, реабилитолог высшей категории", kz: "Жоғары санатты неонатолог, интегративті және превентивті педиатрия, реабилитолог", en: "Neonatologist, Integrative & Preventive Pediatrics, Rehabilitation, Highest Category", uz: "Neonatolog, integrativ va preventiv pediatriya, reabilitolog, oliy toifa" }, experience: "26", image: doctorImg19, category: "pediatrics" },
+      { nameRu: "Приходько Татьяна Михайловна", nameKz: "Приходько Татьяна Михайловна", nameEn: "Prikhodko Tatyana Mikhailovna", specialty: { ru: "Реабилитолог высшей категории", kz: "Жоғары санатты реабилитолог", en: "Rehabilitation Specialist, Highest Category", uz: "Reabilitolog, oliy toifa" }, experience: "26", image: doctorImg20, category: "gp" },
+      { nameRu: "Кажитаев Алмас Муралович", nameKz: "Кажитаев Алмас Муралович", nameEn: "Kazhitaev Almas Muralovich", specialty: { ru: "Заведующий отделения урологии и андрологии МОБ2", kz: "МОБ2 урология және андрология бөлімінің меңгерушісі", en: "Head of Urology and Andrology Department MOB2", uz: "MOB2 urologiya va andrologiya boʻlimi mudiri" }, experience: "30", image: doctorImg21, category: "surgery" },
+      { nameRu: "Жаканбетов Азат Кунанбаевич", nameKz: "Жақанбетов Азат Құнанбайұлы", nameEn: "Zhakanbetov Azat Kunanbayevich", specialty: { ru: "Отоларинголог (ЛОР), 1 категории", kz: "Отоларинголог (ЛОР), 1 санат", en: "Otolaryngologist (ENT), 1st category", uz: "Otolaringolog (LOR), 1-toifa" }, experience: "10", image: doctorImg22, category: "gp" },
+      { nameRu: "Изтлеуова Нургуль Кубашевна", nameKz: "Изтлеуова Нұргүл Құбашқызы", nameEn: "Iztleuova Nurgul Kubashevna", specialty: { ru: "Инфекционист высшей категории", kz: "Жоғары санатты инфекционист", en: "Infectious Disease Specialist, Highest Category", uz: "Yuqumli kasalliklar mutaxassisi, oliy toifa" }, experience: "37", image: doctorImg23, category: "gp" },
+      { nameRu: "Ниязбаев Талгат Толешевич", nameKz: "Ниязбаев Талғат Төлешұлы", nameEn: "Niyazbaev Talgat Toleshevich", specialty: { ru: "Уролог-Андролог высшей категории", kz: "Жоғары санатты уролог-андролог", en: "Urologist-Andrologist, Highest Category", uz: "Urolog-androlog, oliy toifa" }, experience: "25", image: doctorImg24, category: "surgery" },
+      { nameRu: "Смагулова Еркежан Есепбаевна", nameKz: "Смағұлова Еркежан Есепбайқызы", nameEn: "Smagulova Yerkezhan Yesepbayevna", specialty: { ru: "Кардиолог высшей категории", kz: "Жоғары санатты кардиолог", en: "Cardiologist, Highest Category", uz: "Kardiolog, oliy toifa" }, experience: "22", image: doctorImg25, category: "gp" },
+      { nameRu: "Рябчевская Тамара Георгиевна", nameKz: "Рябчевская Тамара Георгиевна", nameEn: "Ryabchevskaya Tamara Georgievna", specialty: { ru: "Педиатр высшей категории", kz: "Жоғары санатты педиатр", en: "Pediatrician, Highest Category", uz: "Pediatr, oliy toifa" }, experience: "48", image: doctorImg26, category: "pediatrics" },
+      { nameRu: "Муканова Роза Шайдулловна", nameKz: "Мұқанова Роза Шайдуллақызы", nameEn: "Mukanova Roza Shaidullovna", specialty: { ru: "УЗИ, лучевая диагностика высшей категории", kz: "Жоғары санатты УДЗ, сәулелік диагностика", en: "Ultrasound, Radiology, Highest Category", uz: "UTT, nurli diagnostika, oliy toifa" }, experience: "23", image: doctorImg27, category: "radiology" },
+      { nameRu: "Султан Риза Алибековна", nameKz: "Сұлтан Риза Әлібекқызы", nameEn: "Sultan Riza Alibekovna", specialty: { ru: "Терапевт, педиатр, невропатолог высшей категории", kz: "Жоғары санатты терапевт, педиатр, невропатолог", en: "Therapist, Pediatrician, Neurologist, Highest Category", uz: "Terapevt, pediatr, nevropatolog, oliy toifa" }, experience: "18", image: doctorImg28, category: "gp" },
+      { nameRu: "Чекменева Наталья Иосифовна", nameKz: "Чекменева Наталья Иосифовна", nameEn: "Chekmeneva Natalya Iosifovna", specialty: { ru: "Акушер-гинеколог", kz: "Акушер-гинеколог", en: "Obstetrician-Gynecologist", uz: "Akusher-ginekolog" }, experience: "39", image: doctorImg29, category: "gp" },
+      { nameRu: "Сиразитдинов Рустам Раисович", nameKz: "Сиразитдинов Рұстам Раисұлы", nameEn: "Sirazitdinov Rustam Raisovich", specialty: { ru: "Хирург, травматолог, детский хирург высшей категории", kz: "Жоғары санатты хирург, травматолог, балалар хирургі", en: "Surgeon, Traumatologist, Pediatric Surgeon, Highest Category", uz: "Jarroh, travmatolog, bolalar jarrohi, oliy toifa" }, experience: "25", image: doctorImg30, category: "surgery" },
+      { nameRu: "Джайнаров Нургиса Ершораевич", nameKz: "Джайнаров Нұрғиса Ершорайұлы", nameEn: "Dzhaynarov Nurgisa Yershorayevich", specialty: { ru: "Стоматолог высшей категории", kz: "Жоғары санатты стоматолог", en: "Dentist, Highest Category", uz: "Stomatolog, oliy toifa" }, experience: "10", image: doctorImg31, category: "gp" },
+      { nameRu: "Мусин Жанат Сартаевич", nameKz: "Мусин Жанат Сартайұлы", nameEn: "Musin Zhanat Sartayevich", specialty: { ru: "Хирург", kz: "Хирург", en: "Surgeon", uz: "Jarroh" }, experience: "36", image: doctorImg32, category: "surgery" },
     ];
 
     return baseData.map(doctor => ({

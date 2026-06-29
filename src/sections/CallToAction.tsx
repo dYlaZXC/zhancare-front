@@ -11,6 +11,7 @@ import { toast } from "react-toastify";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import en from "@/locales/en.json";
+import uz from "@/locales/uz.json";
 
 export const CallToAction = () => {
   const { language } = useLanguage();
@@ -31,6 +32,8 @@ export const CallToAction = () => {
         return kz.callToAction;
       case "en":
         return en.callToAction;
+      case "uz":
+        return uz.callToAction;
       default:
         return en.callToAction;
     }

@@ -24,6 +24,7 @@ import { useBrand } from "@/context/BrandContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import en from "@/locales/en.json";
+import uz from "@/locales/uz.json";
 
 const iconMapping = {
   faVideo, faStethoscope, faNotesMedical, faBell,
@@ -54,6 +55,8 @@ export const Services = () => {
         return kz.services;
       case "en":
         return en.services;
+      case "uz":
+        return uz.services;
       default:
         return en.services;
     }
@@ -82,6 +85,12 @@ export const Services = () => {
           whatIncluded: "What's included:",
           back: "← Back"
         };
+      case "uz":
+        return {
+          learnMore: "Batafsil",
+          whatIncluded: "Nimalar kiritilgan:",
+          back: "← Orqaga"
+        };
       default:
         return {
           learnMore: "Learn More",
@@ -101,57 +110,50 @@ export const Services = () => {
   }));
 
   // Static extra cards (second row)
+  const extraServicesTranslations = {
+    ru: {
+      academy: { title: "Академия", description: "Образовательная платформа для медицинских специалистов и пациентов", details: ["Онлайн-курсы для врачей", "Обучение пациентов здоровью", "Сертификаты и кредиты", "Вебинары от экспертов"] },
+      delivery: { title: "Доставка лекарств", description: "Быстрая и удобная доставка лекарств прямо на дом", details: ["Рецептурные и безрецептурные препараты", "Доставка в течение 2 часов", "Отслеживание заказа в реальном времени", "Безопасная бесконтактная доставка"] },
+      crm: { title: "CRM / МИС для клиник", description: "Единая система управления для медицинских учреждений", details: ["Ведение карт и ЭМК пациентов", "Запись на приём и расписание", "Выставление счетов и страхование", "Аналитика и отчётность"] },
+    },
+    kz: {
+      academy: { title: "Академия", description: "Медицина мамандары мен пациенттерге арналған білім беру платформасы", details: ["Дәрігерлерге арналған онлайн курстар", "Пациенттерге денсаулық білімі", "Сертификаттар мен кредиттер", "Сарапшы вебинарлары"] },
+      delivery: { title: "Дәрі-дәрмек жеткізу", description: "Дәрі-дәрмекті үйге жылдам және ыңғайлы жеткізу", details: ["Рецепттік және рецептсіз дәрілер", "2 сағат ішінде жеткізу", "Тапсырысты нақты уақытта қадағалау", "Қауіпсіз байланыссыз жеткізу"] },
+      crm: { title: "Клиникаларға арналған CRM/МИС", description: "Медициналық мекемелер үшін бірыңғай басқару жүйесі", details: ["Пациент жазбалары және ЭМЖ", "Қабылдауды жоспарлау", "Есеп-қисап және сақтандыру", "Аналитика және есептер"] },
+    },
+    en: {
+      academy: { title: "Academy", description: "Educational platform for medical professionals and patients", details: ["Online courses for doctors", "Patient health education", "Certificates & CME credits", "Expert-led webinars"] },
+      delivery: { title: "Medicine Delivery", description: "Fast and convenient medicine delivery to your door", details: ["Prescription & OTC medicines", "Delivery within 2 hours", "Track your order in real-time", "Safe contactless delivery"] },
+      crm: { title: "CRM / HIS for Clinics", description: "Unified management system for medical institutions", details: ["Patient records & EHR", "Appointment scheduling", "Billing & insurance management", "Analytics & reporting dashboard"] },
+    },
+    uz: {
+      academy: { title: "Akademiya", description: "Tibbiyot mutaxassislari va bemorlar uchun ta'lim platformasi", details: ["Shifokorlar uchun onlayn kurslar", "Bemorlarni sog'liq bo'yicha o'qitish", "Sertifikatlar va kreditlar", "Mutaxassislar bilan vebinarlar"] },
+      delivery: { title: "Dori-darmon yetkazib berish", description: "Dori-darmonlarni uyingizga tez va qulay yetkazib berish", details: ["Retsept va retseptsiz dorilar", "2 soat ichida yetkazib berish", "Buyurtmani real vaqtda kuzatish", "Xavfsiz, kontaktsiz yetkazib berish"] },
+      crm: { title: "Klinikalar uchun CRM/MIT", description: "Tibbiyot muassasalari uchun yagona boshqaruv tizimi", details: ["Bemor kartalari va EMK", "Qabulga yozilish va jadval", "Hisob-kitob va sug'urta boshqaruvi", "Tahlil va hisobotlar"] },
+    },
+  } as const;
+
+  const extraT = extraServicesTranslations[language] ?? extraServicesTranslations.en;
+
   const extraServices: Service[] = [
     {
       icon: "faGraduationCap",
-      title: language === "kz" ? "Академия" : language === "en" ? "Academy" : "Академия",
-      description:
-        language === "kz"
-          ? "Медицина мамандары мен пациенттерге арналған білім беру платформасы"
-          : language === "en"
-          ? "Educational platform for medical professionals and patients"
-          : "Образовательная платформа для медицинских специалистов и пациентов",
-      details:
-        language === "en"
-          ? ["Online courses for doctors", "Patient health education", "Certificates & CME credits", "Expert-led webinars"]
-          : language === "kz"
-          ? ["Дәрігерлерге арналған онлайн курстар", "Пациенттерге денсаулық білімі", "Сертификаттар мен кредиттер", "Сарапшы вебинарлары"]
-          : ["Онлайн-курсы для врачей", "Обучение пациентов здоровью", "Сертификаты и кредиты", "Вебинары от экспертов"],
+      title: extraT.academy.title,
+      description: extraT.academy.description,
+      details: [...extraT.academy.details],
       href: "https://academy.zhan.care/",
     },
     {
       icon: "faTruck",
-      title:
-        language === "kz" ? "Дәрі-дәрмек жеткізу" : language === "en" ? "Medicine Delivery" : "Доставка лекарств",
-      description:
-        language === "kz"
-          ? "Дәрі-дәрмекті үйге жылдам және ыңғайлы жеткізу"
-          : language === "en"
-          ? "Fast and convenient medicine delivery to your door"
-          : "Быстрая и удобная доставка лекарств прямо на дом",
-      details:
-        language === "en"
-          ? ["Prescription & OTC medicines", "Delivery within 2 hours", "Track your order in real-time", "Safe contactless delivery"]
-          : language === "kz"
-          ? ["Рецепттік және рецептсіз дәрілер", "2 сағат ішінде жеткізу", "Тапсырысты нақты уақытта қадағалау", "Қауіпсіз байланыссыз жеткізу"]
-          : ["Рецептурные и безрецептурные препараты", "Доставка в течение 2 часов", "Отслеживание заказа в реальном времени", "Безопасная бесконтактная доставка"],
+      title: extraT.delivery.title,
+      description: extraT.delivery.description,
+      details: [...extraT.delivery.details],
     },
     {
       icon: "faClinicMedical",
-      title:
-        language === "kz" ? "Клиникаларға арналған CRM/МИС" : language === "en" ? "CRM / HIS for Clinics" : "CRM / МИС для клиник",
-      description:
-        language === "kz"
-          ? "Медициналық мекемелер үшін бірыңғай басқару жүйесі"
-          : language === "en"
-          ? "Unified management system for medical institutions"
-          : "Единая система управления для медицинских учреждений",
-      details:
-        language === "en"
-          ? ["Patient records & EHR", "Appointment scheduling", "Billing & insurance management", "Analytics & reporting dashboard"]
-          : language === "kz"
-          ? ["Пациент жазбалары және ЭМЖ", "Қабылдауды жоспарлау", "Есеп-қисап және сақтандыру", "Аналитика және есептер"]
-          : ["Ведение карт и ЭМК пациентов", "Запись на приём и расписание", "Выставление счетов и страхование", "Аналитика и отчётность"],
+      title: extraT.crm.title,
+      description: extraT.crm.description,
+      details: [...extraT.crm.details],
     },
   ];
 

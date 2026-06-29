@@ -22,6 +22,7 @@ import { useBrand } from "@/context/BrandContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import en from "@/locales/en.json";
+import uz from "@/locales/uz.json";
 import enactusLogo from "@/assets/enactus-logo-white.png";
 import astanamuaLogo from "@/assets/astanamua.png";
 import akimatLogo from "@/assets/kazakhemblem.png";
@@ -60,6 +61,8 @@ export const ImpactSection = () => {
         return kz.impactSection;
       case "en":
         return en.impactSection;
+      case "uz":
+        return uz.impactSection;
       default:
         return en.impactSection;
     }

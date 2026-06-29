@@ -16,10 +16,11 @@ export default function ChatHeader({ language, onExpand, isExpanded }: ChatHeade
     ru: { subtitle: "ИИ медицинский ассистент", online: "Онлайн" },
     en: { subtitle: "AI Medical Assistant", online: "Online" },
     kz: { subtitle: "AI медициналық көмекшісі", online: "Онлайн" },
+    uz: { subtitle: "AI tibbiy yordamchi", online: "Onlayn" },
   };
 
   const c = content[language as keyof typeof content] || content.en;
-  const botName = brand.id === "uz" ? "JanBot.Ai" : "ZhanBot.AI";
+  const botName = brand.id === "uz" || language === "uz" ? "JonBot.Ai" : "ZhanBot.AI";
 
   return (
     <div className="flex items-center justify-between mb-6 pb-5 border-b border-white/[0.07]">

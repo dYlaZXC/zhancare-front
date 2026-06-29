@@ -9,6 +9,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import en from "@/locales/en.json";
+import uz from "@/locales/uz.json";
 import { ShieldCheck, Stethoscope, HeartPulse, Hospital, ArrowRight, Sparkles } from "lucide-react";
 import { useBrand } from "@/context/BrandContext";
 
@@ -28,6 +29,8 @@ const Features = () => {
         return kz.features;
       case "en":
         return en.features;
+      case "uz":
+        return uz.features;
       default:
         return en.features;
     }
@@ -55,6 +58,12 @@ const Features = () => {
           "Searching for symptom information...",
           "Search completed...",
           "Transmitting information to doctor..."
+        ];
+      case "uz":
+        return [
+          "Simptomlar bo'yicha ma'lumot izlanmoqda...",
+          "Qidiruv tugallandi...",
+          "Ma'lumot shifokorga uzatilmoqda..."
         ];
       default:
         return [

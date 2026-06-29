@@ -15,6 +15,7 @@ import { useBrand } from "@/context/BrandContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import en from "@/locales/en.json";
+import uz from "@/locales/uz.json";
 
 // Language-specific image mappings
 const languageImages = {
@@ -70,6 +71,8 @@ export const ProductShowcase = () => {
         return kz.productShowcase;
       case "en":
         return en.productShowcase;
+      case "uz":
+        return uz.productShowcase;
       default:
         return en.productShowcase;
     }

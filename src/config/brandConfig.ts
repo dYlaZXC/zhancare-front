@@ -26,7 +26,7 @@ export const BRAND_STYLES: Record<BrandId, BrandStyle> = {
   },
   uz: {
     id: "uz",
-    name: "JanCare.Ai",
+    name: "JonCare.Ai",
     tagline: "HAR JOYDA",
     primary: "#3772ff",
     secondary: "#29358f",
