@@ -860,8 +860,14 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
               <div className="w-px h-6 bg-white/15 hidden sm:block" />
 
               {clinic?.logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={clinic.logoUrl} alt={clinic.clinicName} className="h-6 sm:h-8 w-auto max-w-[96px] sm:max-w-[120px] rounded-lg object-contain" />
+                // Clinics upload logos with all kinds of backgrounds (opaque white,
+                // transparent, etc.) — a white chip keeps every logo legible and
+                // intentional-looking against this dark header instead of floating
+                // as a stray box.
+                <div className="flex items-center justify-center bg-white rounded-lg p-1 sm:p-1.5 h-6 sm:h-8 max-w-[96px] sm:max-w-[120px]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={clinic.logoUrl} alt={clinic.clinicName} className="h-full w-auto max-w-full object-contain" />
+                </div>
               ) : (
                 <Image src={appLogo} alt={brand.name + " logo"} height={32} className="h-6 sm:h-8 w-auto" />
               )}
