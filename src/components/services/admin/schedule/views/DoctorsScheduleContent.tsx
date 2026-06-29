@@ -63,11 +63,11 @@ export function DoctorsScheduleContent({
   const [deleteTarget, setDeleteTarget] = useState<ScheduleEvent | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = async (reason: string) => {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await api.delete(`/schedule/${deleteTarget.id}/`);
+      await api.delete(`/schedule/${deleteTarget.id}/`, { data: { reason } });
       toast.success("Запись удалена");
       setDeleteTarget(null);
       onEventAdded();

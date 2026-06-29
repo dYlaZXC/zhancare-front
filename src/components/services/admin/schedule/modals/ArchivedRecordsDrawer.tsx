@@ -15,6 +15,7 @@ import {
   User,
   Stethoscope,
   FlaskConical,
+  MessageSquareText,
 } from "lucide-react";
 import { api } from "@/utils/api";
 import { toast } from "react-toastify";
@@ -35,6 +36,7 @@ interface ArchivedEvent {
   duration: number;
   status: string;
   address?: string;
+  deletion_reason?: string;
 }
 
 interface ArchivedRecordsDrawerProps {
@@ -56,6 +58,135 @@ const STATUS_COLORS: Record<string, string> = {
   completed: "bg-emerald-100 text-emerald-700",
   cancelled: "bg-red-100 text-red-700",
 };
+
+function ArchivedRow({ event, isRestoring, onRestore }: { event: ArchivedEvent; isRestoring: boolean; onRestore: (event: ArchivedEvent) => void }) {
+  const isOnline = event.type === "consultation" && event.consultation_type !== "offline";
+  const iconBg = event.type === "consultation"
+    ? (isOnline ? "#ebf1ff" : "#f0fdf4")
+    : event.type === "diagnostics"
+    ? "#cffafe"
+    : "#f5f3ff";
+
+  return (
+    <div className="flex gap-3 items-start px-4 py-3.5">
+      {/* Type icon */}
+      <div
+        className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+        style={{ background: iconBg }}
+      >
+        {event.type === "consultation"
+          ? <Video className="w-4 h-4" style={{ color: isOnline ? "#3772ff" : "#059669" }} />
+          : event.type === "diagnostics"
+          ? <FlaskConical className="w-4 h-4 text-cyan-600" />
+          : <Home className="w-4 h-4 text-violet-500" />
+        }
+      </div>
+
+      {/* Info */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap mb-1">
+          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS[event.status] ?? "bg-gray-100 text-gray-500"}`}>
+            {STATUS_LABELS[event.status] ?? event.status}
+          </span>
+        </div>
+
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+          <span className="flex items-center gap-1">
+            <CalendarDays className="w-3 h-3" />
+            {event.date}
+          </span>
+          <span className="flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            {event.time} · {event.duration} мин
+          </span>
+        </div>
+
+        {event.doctor_name && (
+          <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
+            <Stethoscope className="w-3 h-3" />
+            {event.doctor_name}
+            {event.doctor_specialization && ` · ${event.doctor_specialization}`}
+          </div>
+        )}
+        {event.nurse_name && (
+          <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
+            <User className="w-3 h-3" />
+            {event.nurse_name}
+          </div>
+        )}
+        {event.service_name && (
+          <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
+            <FlaskConical className="w-3 h-3" />
+            {event.service_name}
+          </div>
+        )}
+        {event.address && (
+          <p className="mt-1 text-xs text-gray-400 truncate">{event.address}</p>
+        )}
+        {event.deletion_reason && (
+          <div className="flex items-start gap-1.5 mt-1.5 px-2.5 py-1.5 rounded-lg bg-red-50/60 text-xs text-red-600">
+            <MessageSquareText className="w-3 h-3 mt-0.5 flex-shrink-0" />
+            <span>{event.deletion_reason}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Restore button */}
+      <button
+        onClick={() => onRestore(event)}
+        disabled={isRestoring}
+        title="Восстановить запись"
+        className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all disabled:opacity-40"
+      >
+        {isRestoring
+          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          : <RotateCcw className="w-3.5 h-3.5" />
+        }
+        {isRestoring ? "..." : "Вернуть"}
+      </button>
+    </div>
+  );
+}
+
+function ArchivedPatientGroup({ events, restoringId, onRestore }: { events: ArchivedEvent[]; restoringId: string | null; onRestore: (event: ArchivedEvent) => void }) {
+  const first = events[0];
+  const initials = first.patient_name
+    .split(' ')
+    .filter(Boolean)
+    .map(p => p[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
+  return (
+    <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+      {/* Patient header — shown once for all their archived bookings */}
+      <div className="px-4 py-3 flex items-center gap-3 bg-blue-50/60 border-b border-gray-100">
+        <div
+          className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+          style={{ background: 'linear-gradient(135deg, #3772ff, #2c5bcc)' }}
+        >
+          {initials}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-gray-900 text-sm truncate">{first.patient_name}</p>
+          {first.patient_phone && (
+            <p className="text-xs text-gray-500 mt-0.5">{first.patient_phone}</p>
+          )}
+        </div>
+        <span className="text-xs font-bold text-gray-400 flex-shrink-0">
+          {events.length} {events.length === 1 ? 'запись' : 'записи'}
+        </span>
+      </div>
+
+      <div className="divide-y divide-gray-100">
+        {events.map(event => (
+          <ArchivedRow key={event.id} event={event} isRestoring={restoringId === event.id} onRestore={onRestore} />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function ArchivedRecordsDrawer({ isOpen, onClose, onRestored }: ArchivedRecordsDrawerProps) {
   const [events, setEvents] = useState<ArchivedEvent[]>([]);
@@ -103,6 +234,15 @@ export default function ArchivedRecordsDrawer({ isOpen, onClose, onRestored }: A
         e.date?.includes(q)
       )
     : events;
+
+  // Group by patient so the same person's bookings don't repeat their name/phone in every card
+  const groupsByPatient = new Map<string, ArchivedEvent[]>();
+  for (const e of filtered) {
+    const key = `${e.patient_name}|${e.patient_phone ?? ''}`;
+    if (!groupsByPatient.has(key)) groupsByPatient.set(key, []);
+    groupsByPatient.get(key)!.push(e);
+  }
+  const patientGroups = Array.from(groupsByPatient.values());
 
   return (
     <AnimatePresence>
@@ -185,95 +325,17 @@ export default function ArchivedRecordsDrawer({ isOpen, onClose, onRestored }: A
                 <div className="p-5 space-y-3">
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">
                     {filtered.length} {filtered.length === 1 ? "запись" : "записей"}
+                    {patientGroups.length > 1 && ` · ${patientGroups.length} пациента`}
                     {q && <span className="normal-case font-normal ml-1 text-blue-400">· «{search.trim()}»</span>}
                   </p>
-                  {filtered.map(event => {
-                    const isOnline = event.type === "consultation" && event.consultation_type !== "offline";
-                    const isRestoring = restoringId === event.id;
-                    const iconBg = event.type === "consultation"
-                      ? (isOnline ? "#ebf1ff" : "#f0fdf4")
-                      : event.type === "diagnostics"
-                      ? "#cffafe"
-                      : "#f5f3ff";
-
-                    return (
-                      <div
-                        key={event.id}
-                        className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex gap-4 items-start"
-                      >
-                        {/* Type icon */}
-                        <div
-                          className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                          style={{ background: iconBg }}
-                        >
-                          {event.type === "consultation"
-                            ? <Video className="w-4.5 h-4.5" style={{ color: isOnline ? "#3772ff" : "#059669" }} />
-                            : event.type === "diagnostics"
-                            ? <FlaskConical className="w-4.5 h-4.5 text-cyan-600" />
-                            : <Home className="w-4.5 h-4.5 text-violet-500" />
-                          }
-                        </div>
-
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap mb-1">
-                            <span className="text-sm font-bold text-gray-900 truncate">{event.patient_name}</span>
-                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS[event.status] ?? "bg-gray-100 text-gray-500"}`}>
-                              {STATUS_LABELS[event.status] ?? event.status}
-                            </span>
-                          </div>
-
-                          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
-                            <span className="flex items-center gap-1">
-                              <CalendarDays className="w-3 h-3" />
-                              {event.date}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              {event.time} · {event.duration} мин
-                            </span>
-                          </div>
-
-                          {event.doctor_name && (
-                            <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
-                              <Stethoscope className="w-3 h-3" />
-                              {event.doctor_name}
-                              {event.doctor_specialization && ` · ${event.doctor_specialization}`}
-                            </div>
-                          )}
-                          {event.nurse_name && (
-                            <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
-                              <User className="w-3 h-3" />
-                              {event.nurse_name}
-                            </div>
-                          )}
-                          {event.service_name && (
-                            <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
-                              <FlaskConical className="w-3 h-3" />
-                              {event.service_name}
-                            </div>
-                          )}
-                          {event.address && (
-                            <p className="mt-1 text-xs text-gray-400 truncate">{event.address}</p>
-                          )}
-                        </div>
-
-                        {/* Restore button */}
-                        <button
-                          onClick={() => handleRestore(event)}
-                          disabled={isRestoring}
-                          title="Восстановить запись"
-                          className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all disabled:opacity-40"
-                        >
-                          {isRestoring
-                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            : <RotateCcw className="w-3.5 h-3.5" />
-                          }
-                          {isRestoring ? "..." : "Вернуть"}
-                        </button>
-                      </div>
-                    );
-                  })}
+                  {patientGroups.map(group => (
+                    <ArchivedPatientGroup
+                      key={`${group[0].patient_name}|${group[0].patient_phone ?? ''}`}
+                      events={group}
+                      restoringId={restoringId}
+                      onRestore={handleRestore}
+                    />
+                  ))}
                 </div>
               )}
             </div>

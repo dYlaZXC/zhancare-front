@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, X, ChevronDown } from 'lucide-react';
+
+const DROPDOWN_MAX_HEIGHT = 280;
 
 interface SearchSelectProps {
   options: Array<{ id: number | string; label: string; subtitle?: string }>;
@@ -22,11 +25,48 @@ export default function SearchSelect({
 }: SearchSelectProps) {
   const [search, setSearch] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [panelPos, setPanelPos] = useState<{ top: number; left: number; width: number; placement: 'below' | 'above' } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Render the options panel in a portal so it can escape clipping/scroll
+  // containers (modals with overflow-y-auto cut off an absolutely-positioned
+  // panel anchored inside them) — position is computed from the trigger's
+  // actual screen position instead.
+  const updatePosition = useCallback(() => {
+    const trigger = containerRef.current;
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const placement: 'below' | 'above' = spaceBelow < DROPDOWN_MAX_HEIGHT + 60 && rect.top > spaceBelow ? 'above' : 'below';
+    setPanelPos({
+      top: placement === 'below' ? rect.bottom + 6 : rect.top - 6,
+      left: rect.left,
+      width: rect.width,
+      placement,
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    updatePosition();
+    const handleScroll = () => updatePosition();
+    const handleResize = () => updatePosition();
+    window.addEventListener('scroll', handleScroll, true);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [isOpen, updatePosition]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        containerRef.current && !containerRef.current.contains(target) &&
+        panelRef.current && !panelRef.current.contains(target)
+      ) {
         setIsOpen(false);
       }
     };
@@ -66,8 +106,17 @@ export default function SearchSelect({
         <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </div>
 
-      {isOpen && (
-        <div className="absolute z-20 w-full mt-1.5 bg-white rounded-2xl border-2 border-gray-200 shadow-xl overflow-hidden">
+      {isOpen && panelPos && typeof document !== "undefined" && createPortal(
+        <div
+          ref={panelRef}
+          className="fixed z-[9999] bg-white rounded-2xl border-2 border-gray-200 shadow-xl overflow-hidden"
+          style={{
+            top: panelPos.placement === 'below' ? panelPos.top : undefined,
+            bottom: panelPos.placement === 'above' ? window.innerHeight - panelPos.top : undefined,
+            left: panelPos.left,
+            width: panelPos.width,
+          }}
+        >
           <div className="p-2 border-b border-gray-100">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -116,7 +165,8 @@ export default function SearchSelect({
               })
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {required && (

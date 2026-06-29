@@ -49,10 +49,10 @@ export default function EventCard({ event, onChanged }: EventCardProps) {
     .slice(0, 2)
     .toUpperCase();
 
-  const handleDelete = async () => {
+  const handleDelete = async (reason: string) => {
     setDeleting(true);
     try {
-      await api.delete(`/schedule/${event.id}/`);
+      await api.delete(`/schedule/${event.id}/`, { data: { reason } });
       toast.success("Запись удалена");
       setConfirmDelete(false);
       onChanged?.();

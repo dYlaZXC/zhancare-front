@@ -198,10 +198,10 @@ function BookingRow({ event, onChanged }: { event: ScheduleEvent; onChanged?: ()
   const [deleting, setDeleting] = useState(false);
   const headerInfo = getHeaderInfo(event);
 
-  const handleDelete = async () => {
+  const handleDelete = async (reason: string) => {
     setDeleting(true);
     try {
-      await api.delete(`/schedule/${event.id}/`);
+      await api.delete(`/schedule/${event.id}/`, { data: { reason } });
       toast.success("Запись удалена");
       setConfirmDelete(false);
       onChanged?.();

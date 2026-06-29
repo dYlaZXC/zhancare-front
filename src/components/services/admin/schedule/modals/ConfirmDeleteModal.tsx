@@ -1,16 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trash2, AlertTriangle } from "lucide-react";
 
 interface ConfirmDeleteModalProps {
   patientName: string;
   loading?: boolean;
-  onConfirm: () => void;
+  onConfirm: (reason: string) => void;
   onCancel: () => void;
 }
 
 export default function ConfirmDeleteModal({ patientName, loading, onConfirm, onCancel }: ConfirmDeleteModalProps) {
+  const [reason, setReason] = useState("");
+  const trimmedReason = reason.trim();
+
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
@@ -40,6 +44,22 @@ export default function ConfirmDeleteModal({ patientName, loading, onConfirm, on
             </p>
           </div>
 
+          {/* Reason — required before archiving */}
+          <div className="px-6 pb-2">
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+              Причина переноса в архив <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              disabled={loading}
+              rows={2}
+              autoFocus
+              placeholder="Например: пациент отменил визит по телефону"
+              className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:outline-none focus:border-red-400 transition-colors resize-none disabled:opacity-50"
+            />
+          </div>
+
           {/* Actions */}
           <div className="flex gap-3 px-6 pb-6 pt-2">
             <button
@@ -50,9 +70,10 @@ export default function ConfirmDeleteModal({ patientName, loading, onConfirm, on
               Отмена
             </button>
             <button
-              onClick={onConfirm}
-              disabled={loading}
-              className="flex-1 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              onClick={() => onConfirm(trimmedReason)}
+              disabled={loading || !trimmedReason}
+              title={!trimmedReason ? "Укажите причину переноса в архив" : undefined}
+              className="flex-1 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               <Trash2 className="w-4 h-4" />
               {loading ? "Удаление..." : "Удалить"}
