@@ -20,6 +20,7 @@ interface Contact {
   number: string;
   lastMessage: string;
   lastAt: string;
+  hasQueued: boolean;
 }
 
 function formatTime(iso: string) {
@@ -38,9 +39,11 @@ function formatFullTime(iso: string) {
 
 function buildContacts(msgs: WaMessage[]): Contact[] {
   const map = new Map<string, WaMessage>();
+  const queuedNumbers = new Set<string>();
   msgs.forEach(m => {
     const number = m.direction === "in" ? m.from_number : m.to_number;
     if (!number) return;
+    if (m.status === "queued") queuedNumbers.add(number);
     const existing = map.get(number);
     if (!existing || new Date(m.received_at) > new Date(existing.received_at)) {
       map.set(number, m);
@@ -48,11 +51,15 @@ function buildContacts(msgs: WaMessage[]): Contact[] {
   });
   return [...map.values()]
     .sort((a, b) => new Date(b.received_at).getTime() - new Date(a.received_at).getTime())
-    .map(m => ({
-      number: m.direction === "in" ? m.from_number : m.to_number,
-      lastMessage: (m.direction === "out" ? "Вы: " : "") + m.body,
-      lastAt: m.received_at,
-    }));
+    .map(m => {
+      const number = m.direction === "in" ? m.from_number : m.to_number;
+      return {
+        number,
+        lastMessage: (m.direction === "out" ? "Вы: " : "") + m.body,
+        lastAt: m.received_at,
+        hasQueued: queuedNumbers.has(number),
+      };
+    });
 }
 
 const WaIcon = ({ className }: { className?: string }) => (
@@ -341,8 +348,9 @@ export default function WhatsAppInbox({ initialPhone }: { initialPhone?: string 
                       <span className="text-[10px] text-white/30">{formatTime(c.lastAt)}</span>
                     </div>
                   </div>
-                  <p className={`text-xs truncate mt-0.5 ${(unread.get(c.number) ?? 0) > 0 ? "text-white/70 font-medium" : "text-white/40"}`}>
-                    {c.lastMessage}
+                  <p className={`text-xs truncate mt-0.5 flex items-center gap-1 ${(unread.get(c.number) ?? 0) > 0 ? "text-white/70 font-medium" : "text-white/40"}`}>
+                    {c.hasQueued && <span className="text-yellow-400 flex-shrink-0" title="Ждёт ответа пациента">⏳</span>}
+                    <span className="truncate">{c.lastMessage}</span>
                   </p>
                 </div>
               </button>
