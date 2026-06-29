@@ -123,13 +123,21 @@ export default function EventCard({ event, onChanged }: EventCardProps) {
         )}
 
         {/* Status badge */}
-        <div className="pl-8">
+        <div className="pl-8 flex items-center gap-1.5">
           <span
             className="inline-block px-2 py-0.5 rounded-md text-[10px] md:text-xs font-semibold"
             style={{ backgroundColor: statusColor.bg, color: statusColor.text }}
           >
             {statusColor.label}
           </span>
+          {!!event.reschedule_count && (
+            <span
+              title={event.reschedule_reason ? `Последняя причина: «${event.reschedule_reason}»` : undefined}
+              className="inline-block px-2 py-0.5 rounded-md text-[10px] md:text-xs font-bold bg-amber-100 text-amber-700"
+            >
+              ⟲ {event.reschedule_count}
+            </span>
+          )}
         </div>
       </div>
     </motion.div>

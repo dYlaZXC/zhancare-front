@@ -40,6 +40,8 @@ export interface ScheduleEvent {
   // Location (appointments / diagnostics)
   address?: string;
   notes?: string;
+  reschedule_count?: number;
+  reschedule_reason?: string;
 }
 
 export type ViewMode = 'week' | 'month' | 'doctors';

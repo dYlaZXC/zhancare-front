@@ -231,6 +231,14 @@ function BookingRow({ event, onChanged }: { event: ScheduleEvent; onChanged?: ()
             {event.time} · {event.duration} мин
           </div>
         </div>
+        {!!event.reschedule_count && (
+          <span
+            title={event.reschedule_reason ? `Последняя причина: «${event.reschedule_reason}»` : undefined}
+            className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 flex-shrink-0"
+          >
+            ⟲ {event.reschedule_count}
+          </span>
+        )}
         <StatusBadge status={event.status} />
         <button
           type="button"
