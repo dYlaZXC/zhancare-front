@@ -66,7 +66,8 @@ export default function EventCard({ event, onChanged }: EventCardProps) {
   return (
     <>
     <motion.div
-      whileHover={{ y: -1, shadow: 'lg' }}
+      whileHover={{ y: -1, boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)' }}
+      initial={{ boxShadow: '0 0 0 0 rgb(0 0 0 / 0)' }}
       className="rounded-xl border cursor-pointer group overflow-hidden bg-white"
       style={{ borderColor: accentBorder }}
     >
