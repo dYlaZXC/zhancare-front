@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { api } from "@/utils/local";
 import { toast } from "react-toastify";
+import { useLanguage } from "@/context/LanguageContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faFlask,
@@ -33,14 +34,197 @@ import {
 
 // Document categories with FontAwesomeicons matching backend
 const DOCUMENT_CATEGORIES = [
-  { value: "lab_result", label: "Результат анализа", icon: faFlask, color: "#ef4444" },
-  { value: "imaging", label: "Снимок/Изображение", icon: faXRay, color: "#8b5cf6" },
-  { value: "prescription", label: "Рецепт", icon: faPrescriptionBottle, color: "#10b981" },
-  { value: "medical_report", label: "Медицинское заключение", icon: faFileAlt, color: "#3b82f6" },
-  { value: "insurance", label: "Страховой документ", icon: faShieldAlt, color: "#f59e0b" },
-  { value: "vaccination", label: "Прививочный сертификат", icon: faSyringe, color: "#ec4899" },
-  { value: "other", label: "Другое", icon: faPaperclip, color: "#6b7280" },
+  { value: "lab_result", icon: faFlask, color: "#ef4444" },
+  { value: "imaging", icon: faXRay, color: "#8b5cf6" },
+  { value: "prescription", icon: faPrescriptionBottle, color: "#10b981" },
+  { value: "medical_report", icon: faFileAlt, color: "#3b82f6" },
+  { value: "insurance", icon: faShieldAlt, color: "#f59e0b" },
+  { value: "vaccination", icon: faSyringe, color: "#ec4899" },
+  { value: "other", icon: faPaperclip, color: "#6b7280" },
 ];
+
+const DOCUMENTS_TEXT = {
+  ru: {
+    categories: {
+      lab_result: "Результат анализа", imaging: "Снимок/Изображение", prescription: "Рецепт",
+      medical_report: "Медицинское заключение", insurance: "Страховой документ",
+      vaccination: "Прививочный сертификат", other: "Другое",
+    },
+    fetchError: "Не удалось загрузить документы",
+    onlyImagesAndPdf: "Поддерживаются только изображения и PDF файлы",
+    fileTooLarge: "Размер файла не должен превышать 10MB",
+    fileReady: (name: string) => `Файл "${name}" готов к загрузке`,
+    selectFileFirst: "Пожалуйста, выберите файл",
+    uploadSuccess: "✅ Документ успешно загружен!",
+    uploadError: "Не удалось загрузить документ",
+    deleteSuccess: "🗑️ Документ удален",
+    deleteError: "Не удалось удалить документ",
+    downloadStarted: "📥 Загрузка началась",
+    downloadError: "Не удалось открыть документ",
+    title: "Медицинские документы",
+    subtitle: "Управление вашими медицинскими файлами",
+    hideForm: "Скрыть форму", hideShort: "Скрыть",
+    uploadDocument: "Загрузить документ", uploadShort: "Загрузить",
+    documentType: "Тип документа",
+    dropFile: "Отпустите файл", dragFile: "Перетащите файл сюда",
+    or: "или", chooseFile: "Выберите файл",
+    fileHint: "JPG, PNG, PDF (макс. 10 MB)",
+    descriptionLabel: "Описание (необязательно)",
+    descriptionPlaceholder: "Добавьте краткое описание документа...",
+    uploading: (p: number) => `Загрузка... ${p}%`,
+    searchPlaceholder: "Поиск по названию или описанию...",
+    all: "Все",
+    sortDate: "По дате", sortName: "По имени", sortType: "По типу",
+    found: "Найдено:", outOf: "из",
+    notFound: "Документы не найдены", noDocuments: "Нет документов",
+    tryOtherSearch: "Попробуйте изменить параметры поиска",
+    uploadFirst: "Загрузите свой первый документ выше",
+    resetFilters: "Сбросить фильтры",
+    delete: "Удалить", view: "Посмотреть", download: "Скачать",
+    fileSize: "Размер файла:", uploadDate: "Дата загрузки:",
+    deleteDocTitle: "Удалить документ?",
+    deleteDocConfirm: "Вы уверены, что хотите удалить этот документ? Это действие нельзя отменить.",
+    cancel: "Отмена",
+    searchInList: "Поиск...",
+    noOptionsFound: "Ничего не найдено",
+    locale: "ru-RU",
+  },
+  kz: {
+    categories: {
+      lab_result: "Талдау нәтижесі", imaging: "Снимок/Сурет", prescription: "Рецепт",
+      medical_report: "Медициналық қорытынды", insurance: "Сақтандыру құжаты",
+      vaccination: "Егу сертификаты", other: "Басқа",
+    },
+    fetchError: "Құжаттарды жүктеу мүмкін болмады",
+    onlyImagesAndPdf: "Тек суреттер және PDF файлдары қолдау табады",
+    fileTooLarge: "Файл өлшемі 10MB-тан аспауы керек",
+    fileReady: (name: string) => `"${name}" файлы жүктеуге дайын`,
+    selectFileFirst: "Файлды таңдаңыз",
+    uploadSuccess: "✅ Құжат сәтті жүктелді!",
+    uploadError: "Құжатты жүктеу мүмкін болмады",
+    deleteSuccess: "🗑️ Құжат жойылды",
+    deleteError: "Құжатты жою мүмкін болмады",
+    downloadStarted: "📥 Жүктеу басталды",
+    downloadError: "Құжатты ашу мүмкін болмады",
+    title: "Медициналық құжаттар",
+    subtitle: "Медициналық файлдарыңызды басқару",
+    hideForm: "Форманы жасыру", hideShort: "Жасыру",
+    uploadDocument: "Құжат жүктеу", uploadShort: "Жүктеу",
+    documentType: "Құжат түрі",
+    dropFile: "Файлды босатыңыз", dragFile: "Файлды осында сүйреңіз",
+    or: "немесе", chooseFile: "Файл таңдау",
+    fileHint: "JPG, PNG, PDF (макс. 10 MB)",
+    descriptionLabel: "Сипаттама (міндетті емес)",
+    descriptionPlaceholder: "Құжаттың қысқаша сипаттамасын қосыңыз...",
+    uploading: (p: number) => `Жүктелуде... ${p}%`,
+    searchPlaceholder: "Атауы немесе сипаттамасы бойынша іздеу...",
+    all: "Барлығы",
+    sortDate: "Күні бойынша", sortName: "Аты бойынша", sortType: "Түрі бойынша",
+    found: "Табылды:", outOf: "ішінен",
+    notFound: "Құжаттар табылмады", noDocuments: "Құжаттар жоқ",
+    tryOtherSearch: "Іздеу параметрлерін өзгертіп көріңіз",
+    uploadFirst: "Жоғарыда алғашқы құжатыңызды жүктеңіз",
+    resetFilters: "Сүзгілерді тазалау",
+    delete: "Жою", view: "Қарау", download: "Жүктеп алу",
+    fileSize: "Файл өлшемі:", uploadDate: "Жүктеу күні:",
+    deleteDocTitle: "Құжатты жою керек пе?",
+    deleteDocConfirm: "Бұл құжатты жоюға сенімдісіз бе? Бұл әрекетті болдырмау мүмкін емес.",
+    cancel: "Бас тарту",
+    searchInList: "Іздеу...",
+    noOptionsFound: "Ештеңе табылмады",
+    locale: "kk-KZ",
+  },
+  en: {
+    categories: {
+      lab_result: "Lab Result", imaging: "Imaging/Scan", prescription: "Prescription",
+      medical_report: "Medical Report", insurance: "Insurance Document",
+      vaccination: "Vaccination Certificate", other: "Other",
+    },
+    fetchError: "Failed to load documents",
+    onlyImagesAndPdf: "Only images and PDF files are supported",
+    fileTooLarge: "File size must not exceed 10MB",
+    fileReady: (name: string) => `File "${name}" is ready to upload`,
+    selectFileFirst: "Please select a file",
+    uploadSuccess: "✅ Document uploaded successfully!",
+    uploadError: "Failed to upload document",
+    deleteSuccess: "🗑️ Document deleted",
+    deleteError: "Failed to delete document",
+    downloadStarted: "📥 Download started",
+    downloadError: "Failed to open document",
+    title: "Medical Documents",
+    subtitle: "Manage your medical files",
+    hideForm: "Hide form", hideShort: "Hide",
+    uploadDocument: "Upload document", uploadShort: "Upload",
+    documentType: "Document type",
+    dropFile: "Drop the file", dragFile: "Drag a file here",
+    or: "or", chooseFile: "Choose file",
+    fileHint: "JPG, PNG, PDF (max 10 MB)",
+    descriptionLabel: "Description (optional)",
+    descriptionPlaceholder: "Add a short description of the document...",
+    uploading: (p: number) => `Uploading... ${p}%`,
+    searchPlaceholder: "Search by name or description...",
+    all: "All",
+    sortDate: "By date", sortName: "By name", sortType: "By type",
+    found: "Found:", outOf: "of",
+    notFound: "No documents found", noDocuments: "No documents",
+    tryOtherSearch: "Try changing your search parameters",
+    uploadFirst: "Upload your first document above",
+    resetFilters: "Reset filters",
+    delete: "Delete", view: "View", download: "Download",
+    fileSize: "File size:", uploadDate: "Upload date:",
+    deleteDocTitle: "Delete document?",
+    deleteDocConfirm: "Are you sure you want to delete this document? This action cannot be undone.",
+    cancel: "Cancel",
+    searchInList: "Search...",
+    noOptionsFound: "Nothing found",
+    locale: "en-US",
+  },
+  uz: {
+    categories: {
+      lab_result: "Tahlil natijasi", imaging: "Rasm/Surat", prescription: "Retsept",
+      medical_report: "Tibbiy xulosa", insurance: "Sug'urta hujjati",
+      vaccination: "Emlash sertifikati", other: "Boshqa",
+    },
+    fetchError: "Hujjatlarni yuklab bo'lmadi",
+    onlyImagesAndPdf: "Faqat rasm va PDF fayllar qo'llaniladi",
+    fileTooLarge: "Fayl hajmi 10MB dan oshmasligi kerak",
+    fileReady: (name: string) => `"${name}" fayli yuklashga tayyor`,
+    selectFileFirst: "Iltimos, faylni tanlang",
+    uploadSuccess: "✅ Hujjat muvaffaqiyatli yuklandi!",
+    uploadError: "Hujjatni yuklab bo'lmadi",
+    deleteSuccess: "🗑️ Hujjat o'chirildi",
+    deleteError: "Hujjatni o'chirib bo'lmadi",
+    downloadStarted: "📥 Yuklab olish boshlandi",
+    downloadError: "Hujjatni ochib bo'lmadi",
+    title: "Tibbiy hujjatlar",
+    subtitle: "Tibbiy fayllaringizni boshqarish",
+    hideForm: "Formani yashirish", hideShort: "Yashirish",
+    uploadDocument: "Hujjat yuklash", uploadShort: "Yuklash",
+    documentType: "Hujjat turi",
+    dropFile: "Faylni qo'yib yuboring", dragFile: "Faylni shu yerga torting",
+    or: "yoki", chooseFile: "Fayl tanlash",
+    fileHint: "JPG, PNG, PDF (maks. 10 MB)",
+    descriptionLabel: "Tavsif (ixtiyoriy)",
+    descriptionPlaceholder: "Hujjatning qisqacha tavsifini qo'shing...",
+    uploading: (p: number) => `Yuklanmoqda... ${p}%`,
+    searchPlaceholder: "Nomi yoki tavsifi bo'yicha qidirish...",
+    all: "Barchasi",
+    sortDate: "Sana bo'yicha", sortName: "Nomi bo'yicha", sortType: "Turi bo'yicha",
+    found: "Topildi:", outOf: "dan",
+    notFound: "Hujjatlar topilmadi", noDocuments: "Hujjatlar yo'q",
+    tryOtherSearch: "Qidiruv parametrlarini o'zgartirib ko'ring",
+    uploadFirst: "Yuqorida birinchi hujjatingizni yuklang",
+    resetFilters: "Filtrlarni tozalash",
+    delete: "O'chirish", view: "Ko'rish", download: "Yuklab olish",
+    fileSize: "Fayl hajmi:", uploadDate: "Yuklangan sana:",
+    deleteDocTitle: "Hujjatni o'chirasizmi?",
+    deleteDocConfirm: "Bu hujjatni o'chirishga ishonchingiz komilmi? Bu amalni bekor qilib bo'lmaydi.",
+    cancel: "Bekor qilish",
+    searchInList: "Qidirish...",
+    noOptionsFound: "Hech narsa topilmadi",
+    locale: "uz-UZ",
+  },
+};
 
 interface MedicalDocument {
   id: number;
@@ -52,7 +236,125 @@ interface MedicalDocument {
   description?: string;
 }
 
+interface DropdownOption {
+  value: string;
+  label: string;
+  icon?: any;
+  color?: string;
+}
+
+function SearchDropdown({
+  triggerIcon,
+  options,
+  value,
+  onChange,
+  searchable = false,
+  searchPlaceholder,
+  noOptionsLabel,
+}: {
+  triggerIcon: any;
+  options: DropdownOption[];
+  value: string;
+  onChange: (v: string) => void;
+  searchable?: boolean;
+  searchPlaceholder: string;
+  noOptionsLabel: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const selected = options.find((o) => o.value === value);
+
+  useEffect(() => {
+    const onClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setQuery("");
+      }
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  const filtered = searchable && query.trim()
+    ? options.filter((o) => o.label.toLowerCase().includes(query.trim().toLowerCase()))
+    : options;
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={`w-full pl-9 sm:pl-12 pr-2 sm:pr-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl border-2 transition-all duration-300 bg-white cursor-pointer text-xs sm:text-sm flex items-center gap-2 ${
+          open ? "border-blue-500 ring-2 ring-blue-100" : "border-gray-200 hover:border-blue-300"
+        }`}
+      >
+        <FontAwesomeIcon
+          icon={triggerIcon}
+          className="absolute left-3 sm:left-4 text-gray-400 text-sm sm:text-base pointer-events-none"
+        />
+        {selected?.icon && (
+          <FontAwesomeIcon icon={selected.icon} className="text-xs flex-shrink-0" style={{ color: selected.color }} />
+        )}
+        <span className="flex-1 text-left truncate text-gray-800">{selected?.label}</span>
+        <FontAwesomeIcon
+          icon={faChevronDown}
+          className={`text-gray-400 text-xs transition-transform duration-300 flex-shrink-0 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute z-30 mt-2 w-full min-w-[220px] bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+          {searchable && (
+            <div className="p-2 border-b border-gray-100">
+              <div className="relative">
+                <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
+                <input
+                  autoFocus
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={searchPlaceholder}
+                  className="w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-gray-200 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
+                />
+              </div>
+            </div>
+          )}
+          <div className="max-h-60 overflow-y-auto py-1">
+            {filtered.length === 0 ? (
+              <div className="px-4 py-3 text-sm text-gray-400 text-center">{noOptionsLabel}</div>
+            ) : (
+              filtered.map((o) => (
+                <button
+                  key={o.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(o.value);
+                    setOpen(false);
+                    setQuery("");
+                  }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-left transition-colors ${
+                    o.value === value ? "bg-blue-50 text-blue-600 font-semibold" : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  {o.icon && (
+                    <div className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: `${o.color}15` }}>
+                      <FontAwesomeIcon icon={o.icon} className="text-xs" style={{ color: o.color }} />
+                    </div>
+                  )}
+                  <span className="truncate">{o.label}</span>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PatientDocumentsPage() {
+  const { language } = useLanguage();
+  const t = DOCUMENTS_TEXT[language as keyof typeof DOCUMENTS_TEXT] ?? DOCUMENTS_TEXT.ru;
   const [documents, setDocuments] = useState<MedicalDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -105,7 +407,7 @@ export default function PatientDocumentsPage() {
     } catch (error: any) {
       console.error("Error fetching documents:", error);
       if (error.response?.status !== 401) {
-        toast.error("Не удалось загрузить документы");
+        toast.error(t.fetchError);
       }
     } finally {
       setLoading(false);
@@ -154,17 +456,17 @@ export default function PatientDocumentsPage() {
     ];
 
     if (!allowedTypes.includes(file.type)) {
-      toast.error("Поддерживаются только изображения и PDF файлы");
+      toast.error(t.onlyImagesAndPdf);
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      toast.error("Размер файла не должен превышать 10MB");
+      toast.error(t.fileTooLarge);
       return;
     }
 
     setSelectedFile(file);
-    toast.success(`Файл "${file.name}" готов к загрузке`);
+    toast.success(t.fileReady(file.name));
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -176,7 +478,7 @@ export default function PatientDocumentsPage() {
 
   const handleUpload = async () => {
     if (!selectedFile) {
-      toast.error("Пожалуйста, выберите файл");
+      toast.error(t.selectFileFirst);
       return;
     }
 
@@ -203,7 +505,7 @@ export default function PatientDocumentsPage() {
         },
       });
 
-      toast.success("✅ Документ успешно загружен!");
+      toast.success(t.uploadSuccess);
       setDocuments([response.data, ...documents]);
 
       // Reset form
@@ -215,7 +517,7 @@ export default function PatientDocumentsPage() {
     } catch (error: any) {
       console.error("Upload error:", error);
       toast.error(
-        error.response?.data?.detail || "Не удалось загрузить документ"
+        error.response?.data?.detail || t.uploadError
       );
     } finally {
       setUploading(false);
@@ -227,19 +529,19 @@ export default function PatientDocumentsPage() {
     try {
       await api.delete(`/medical-documents/${id}/`);
       setDocuments(documents.filter((doc) => doc.id !== id));
-      toast.success("🗑️ Документ удален");
+      toast.success(t.deleteSuccess);
       setDeleteConfirm(null);
     } catch (error) {
-      toast.error("Не удалось удалить документ");
+      toast.error(t.deleteError);
     }
   };
 
   const handleDownload = async (doc: MedicalDocument) => {
     try {
       window.open(doc.file_url, "_blank");
-      toast.success("📥 Загрузка началась");
+      toast.success(t.downloadStarted);
     } catch (error) {
-      toast.error("Не удалось открыть документ");
+      toast.error(t.downloadError);
     }
   };
 
@@ -251,7 +553,7 @@ export default function PatientDocumentsPage() {
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
-    return date.toLocaleDateString("ru-RU", {
+    return date.toLocaleDateString(t.locale, {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -259,14 +561,12 @@ export default function PatientDocumentsPage() {
   };
 
   const getCategoryInfo = (type: string) => {
-    return (
-      DOCUMENT_CATEGORIES.find((cat) => cat.value === type) || {
-        value: "other",
-        label: "Другое",
-        icon: faPaperclip,
-        color: "#6b7280",
-      }
-    );
+    const cat = DOCUMENT_CATEGORIES.find((cat) => cat.value === type) || {
+      value: "other",
+      icon: faPaperclip,
+      color: "#6b7280",
+    };
+    return { ...cat, label: t.categories[cat.value as keyof typeof t.categories] ?? t.categories.other };
   };
 
   // Filter and sort documents
@@ -326,8 +626,8 @@ export default function PatientDocumentsPage() {
               <FontAwesomeIcon icon={faCloudUploadAlt} className="text-white text-lg sm:text-xl" />
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">Медицинские документы</h1>
-              <p className="text-xs sm:text-sm text-gray-500 truncate">Управление вашими медицинскими файлами</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">{t.title}</h1>
+              <p className="text-xs sm:text-sm text-gray-500 truncate">{t.subtitle}</p>
             </div>
           </div>
           <button
@@ -335,8 +635,8 @@ export default function PatientDocumentsPage() {
             className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:scale-105 text-sm sm:text-base whitespace-nowrap"
           >
             <FontAwesomeIcon icon={showUploadForm ? faChevronUp : faPlus} />
-            <span className="hidden xs:inline">{showUploadForm ? "Скрыть форму" : "Загрузить документ"}</span>
-            <span className="xs:hidden">{showUploadForm ? "Скрыть" : "Загрузить"}</span>
+            <span className="hidden xs:inline">{showUploadForm ? t.hideForm : t.uploadDocument}</span>
+            <span className="xs:hidden">{showUploadForm ? t.hideShort : t.uploadShort}</span>
           </button>
         </div>
       </div>
@@ -349,7 +649,7 @@ export default function PatientDocumentsPage() {
           {/* Category Selection - Responsive */}
           <div className="mb-4">
             <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-2">
-              Тип документа
+              {t.documentType}
             </label>
             <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-1.5 sm:gap-2">
               {DOCUMENT_CATEGORIES.map((category) => (
@@ -381,7 +681,7 @@ export default function PatientDocumentsPage() {
                     <div className={`text-[10px] font-semibold text-center leading-tight ${
                       selectedCategory === category.value ? 'text-gray-800' : 'text-gray-600'
                     }`}>
-                      {category.label}
+                      {t.categories[category.value as keyof typeof t.categories]}
                     </div>
                   </div>
                 </button>
@@ -409,9 +709,9 @@ export default function PatientDocumentsPage() {
                 <FontAwesomeIcon icon={faUpload} className="text-lg sm:text-xl" />
               </div>
               <h3 className="text-sm sm:text-base font-bold text-gray-800 mb-1 sm:mb-2">
-                {isDragging ? "Отпустите файл" : "Перетащите файл сюда"}
+                {isDragging ? t.dropFile : t.dragFile}
               </h3>
-              <p className="text-gray-500 text-xs sm:text-sm mb-2 sm:mb-3">или</p>
+              <p className="text-gray-500 text-xs sm:text-sm mb-2 sm:mb-3">{t.or}</p>
               <label className="inline-block">
                 <input
                   ref={fileInputRef}
@@ -422,11 +722,11 @@ export default function PatientDocumentsPage() {
                 />
                 <span className="px-4 sm:px-5 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all duration-200 cursor-pointer inline-flex items-center gap-2 shadow-md hover:shadow-lg hover:scale-105 text-xs sm:text-sm">
                   <FontAwesomeIcon icon={faFileImage} />
-                  Выберите файл
+                  {t.chooseFile}
                 </span>
               </label>
               <p className="text-[10px] sm:text-xs text-gray-500 mt-2 sm:mt-3">
-                JPG, PNG, PDF (макс. 10 MB)
+                {t.fileHint}
               </p>
             </div>
 
@@ -444,12 +744,12 @@ export default function PatientDocumentsPage() {
           {/* Description */}
           <div className="mb-4">
             <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-2">
-              Описание (необязательно)
+              {t.descriptionLabel}
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Добавьте краткое описание документа..."
+              placeholder={t.descriptionPlaceholder}
               className="w-full px-3 sm:px-4 py-2 rounded-lg bg-white border-2 border-gray-200 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 resize-none text-xs sm:text-sm"
               rows={2}
             />
@@ -468,14 +768,14 @@ export default function PatientDocumentsPage() {
             {uploading ? (
               <>
                 <FontAwesomeIcon icon={faSpinner} className="animate-spin text-sm sm:text-base" />
-                <span className="hidden xs:inline">Загрузка... {uploadProgress}%</span>
+                <span className="hidden xs:inline">{t.uploading(uploadProgress)}</span>
                 <span className="xs:hidden">{uploadProgress}%</span>
               </>
             ) : (
               <>
                 <FontAwesomeIcon icon={faCloudUploadAlt} className="text-sm sm:text-base" />
-                <span className="hidden xs:inline">Загрузить документ</span>
-                <span className="xs:hidden">Загрузить</span>
+                <span className="hidden xs:inline">{t.uploadDocument}</span>
+                <span className="xs:hidden">{t.uploadShort}</span>
               </>
             )}
           </button>
@@ -494,7 +794,7 @@ export default function PatientDocumentsPage() {
       )}
 
       {/* Search and Filter Section */}
-      <div className="relative z-10 bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 border border-gray-100">
+      <div className="relative z-20 bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 border border-gray-100">
         <div className="flex flex-col gap-3 sm:gap-4">
           {/* Search - Full width on mobile */}
           <div className="relative w-full">
@@ -506,7 +806,7 @@ export default function PatientDocumentsPage() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Поиск по названию или описанию..."
+              placeholder={t.searchPlaceholder}
               className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all duration-300 text-sm sm:text-base"
             />
           </div>
@@ -514,40 +814,40 @@ export default function PatientDocumentsPage() {
           {/* Filter and Sort - Side by side on mobile */}
           <div className="grid grid-cols-2 gap-2 sm:gap-3 md:flex md:flex-row">
             {/* Filter by Category */}
-            <div className="relative w-full md:w-64">
-              <FontAwesomeIcon
-                icon={faFilter}
-                className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm sm:text-base pointer-events-none z-10"
-              />
-              <select
+            <div className="w-full md:w-64">
+              <SearchDropdown
+                triggerIcon={faFilter}
                 value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
-                className="w-full pl-9 sm:pl-12 pr-2 sm:pr-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all duration-300 appearance-none bg-white cursor-pointer text-xs sm:text-sm"
-              >
-                <option value="all">Все</option>
-                {DOCUMENT_CATEGORIES.map((cat) => (
-                  <option key={cat.value} value={cat.value}>
-                    {cat.label}
-                  </option>
-                ))}
-              </select>
+                onChange={setFilterCategory}
+                searchable
+                searchPlaceholder={t.searchInList}
+                noOptionsLabel={t.noOptionsFound}
+                options={[
+                  { value: "all", label: t.all },
+                  ...DOCUMENT_CATEGORIES.map((cat) => ({
+                    value: cat.value,
+                    label: t.categories[cat.value as keyof typeof t.categories],
+                    icon: cat.icon,
+                    color: cat.color,
+                  })),
+                ]}
+              />
             </div>
 
             {/* Sort */}
-            <div className="relative w-full md:w-48">
-              <FontAwesomeIcon
-                icon={faSortAmountDown}
-                className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm sm:text-base pointer-events-none z-10"
-              />
-              <select
+            <div className="w-full md:w-48">
+              <SearchDropdown
+                triggerIcon={faSortAmountDown}
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as "date" | "name" | "type")}
-                className="w-full pl-9 sm:pl-12 pr-2 sm:pr-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all duration-300 appearance-none bg-white cursor-pointer text-xs sm:text-sm"
-              >
-                <option value="date">По дате</option>
-                <option value="name">По имени</option>
-                <option value="type">По типу</option>
-              </select>
+                onChange={(v) => setSortBy(v as "date" | "name" | "type")}
+                searchPlaceholder={t.searchInList}
+                noOptionsLabel={t.noOptionsFound}
+                options={[
+                  { value: "date", label: t.sortDate },
+                  { value: "name", label: t.sortName },
+                  { value: "type", label: t.sortType },
+                ]}
+              />
             </div>
           </div>
         </div>
@@ -556,7 +856,7 @@ export default function PatientDocumentsPage() {
         <div className="mt-3 sm:mt-4 flex items-center gap-2 text-xs sm:text-sm text-gray-600">
           <FontAwesomeIcon icon={faFileAlt} className="text-sm sm:text-base" />
           <span>
-            Найдено: <strong className="text-blue-600">{filteredAndSortedDocuments.length}</strong> из {documents.length}
+            {t.found} <strong className="text-blue-600">{filteredAndSortedDocuments.length}</strong> {t.outOf} {documents.length}
           </span>
         </div>
       </div>
@@ -569,12 +869,12 @@ export default function PatientDocumentsPage() {
               <FontAwesomeIcon icon={faFileAlt} className="text-3xl sm:text-5xl text-gray-400" />
             </div>
             <h3 className="text-lg sm:text-2xl font-bold text-gray-800 mb-2">
-              {searchQuery || filterCategory !== "all" ? "Документы не найдены" : "Нет документов"}
+              {searchQuery || filterCategory !== "all" ? t.notFound : t.noDocuments}
             </h3>
             <p className="text-sm sm:text-base text-gray-500 mb-4 sm:mb-6">
               {searchQuery || filterCategory !== "all"
-                ? "Попробуйте изменить параметры поиска"
-                : "Загрузите свой первый документ выше"}
+                ? t.tryOtherSearch
+                : t.uploadFirst}
             </p>
             {(searchQuery || filterCategory !== "all") && (
               <button
@@ -585,7 +885,7 @@ export default function PatientDocumentsPage() {
                 className="px-4 sm:px-6 py-2.5 sm:py-3 bg-blue-600 text-white text-sm sm:text-base rounded-lg hover:bg-blue-700 transition-all duration-300 inline-flex items-center gap-2"
               >
                 <FontAwesomeIcon icon={faTimes} />
-                Сбросить фильтры
+                {t.resetFilters}
               </button>
             )}
           </div>
@@ -626,7 +926,7 @@ export default function PatientDocumentsPage() {
                     <button
                       onClick={() => setDeleteConfirm(doc.id)}
                       className="w-7 h-7 rounded-md flex items-center justify-center transition-all duration-200 hover:scale-110 hover:bg-red-50 shadow-sm backdrop-blur-sm bg-white/90 border border-gray-200"
-                      title="Удалить"
+                      title={t.delete}
                     >
                       <FontAwesomeIcon icon={faTrash} className="text-xs text-gray-500 hover:text-red-500 transition-colors" />
                     </button>
@@ -685,7 +985,7 @@ export default function PatientDocumentsPage() {
                     <div className="flex justify-between text-[10px] text-gray-500 font-medium pt-2 border-t border-gray-200">
                       <span className="flex items-center gap-1">
                         <FontAwesomeIcon icon={faCalendarAlt} className="text-gray-400" />
-                        <span className="truncate">{new Date(doc.uploaded_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}</span>
+                        <span className="truncate">{new Date(doc.uploaded_at).toLocaleDateString(t.locale, { day: 'numeric', month: 'short' })}</span>
                       </span>
                       <span>{formatFileSize(doc.file_size)}</span>
                     </div>
@@ -698,7 +998,7 @@ export default function PatientDocumentsPage() {
                         className="w-full py-2 rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-700 text-white text-xs font-semibold hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 flex items-center justify-center gap-1.5 shadow-sm hover:shadow-md"
                       >
                         <FontAwesomeIcon icon={faEye} className="text-xs" />
-                        Посмотреть
+                        {t.view}
                       </button>
 
                       {/* Download Button */}
@@ -707,7 +1007,7 @@ export default function PatientDocumentsPage() {
                         className="w-full py-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xs font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-200 flex items-center justify-center gap-1.5 shadow-sm hover:shadow-md"
                       >
                         <FontAwesomeIcon icon={faDownload} className="text-xs" />
-                        Скачать
+                        {t.download}
                       </button>
                     </div>
                   </div>
@@ -759,11 +1059,11 @@ export default function PatientDocumentsPage() {
 
               <div className="space-y-3 mb-6">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Размер файла:</span>
+                  <span className="text-gray-600">{t.fileSize}</span>
                   <span className="font-semibold text-gray-900">{formatFileSize(previewDoc.file_size)}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Дата загрузки:</span>
+                  <span className="text-gray-600">{t.uploadDate}</span>
                   <span className="font-semibold text-gray-900">{formatDate(previewDoc.uploaded_at)}</span>
                 </div>
               </div>
@@ -795,7 +1095,7 @@ export default function PatientDocumentsPage() {
                 className="flex-1 py-2.5 sm:py-3 rounded-lg bg-blue-600 text-white text-sm sm:text-base font-semibold hover:bg-blue-700 transition-all duration-300 flex items-center justify-center gap-2"
               >
                 <FontAwesomeIcon icon={faDownload} />
-                Скачать
+                {t.download}
               </button>
               <button
                 onClick={() => {
@@ -805,7 +1105,7 @@ export default function PatientDocumentsPage() {
                 className="flex-1 py-2.5 sm:py-3 rounded-lg bg-red-600 text-white text-sm sm:text-base font-semibold hover:bg-red-700 transition-all duration-300 flex items-center justify-center gap-2"
               >
                 <FontAwesomeIcon icon={faTrash} />
-                Удалить
+                {t.delete}
               </button>
             </div>
           </div>
@@ -828,13 +1128,13 @@ export default function PatientDocumentsPage() {
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
                   <FontAwesomeIcon icon={faTrash} className="text-lg sm:text-2xl text-white" />
                 </div>
-                <h2 className="text-lg sm:text-xl font-bold text-white">Удалить документ?</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-white">{t.deleteDocTitle}</h2>
               </div>
             </div>
 
             <div className="p-4 sm:p-6">
               <p className="text-sm sm:text-base text-gray-700 mb-4 sm:mb-6">
-                Вы уверены, что хотите удалить этот документ? Это действие нельзя отменить.
+                {t.deleteDocConfirm}
               </p>
 
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
@@ -842,14 +1142,14 @@ export default function PatientDocumentsPage() {
                   onClick={() => setDeleteConfirm(null)}
                   className="flex-1 py-2.5 sm:py-3 rounded-lg bg-gray-200 text-gray-700 text-sm sm:text-base font-semibold hover:bg-gray-300 transition-all duration-300"
                 >
-                  Отмена
+                  {t.cancel}
                 </button>
                 <button
                   onClick={() => handleDelete(deleteConfirm)}
                   className="flex-1 py-2.5 sm:py-3 rounded-lg bg-red-600 text-white text-sm sm:text-base font-semibold hover:bg-red-700 transition-all duration-300 flex items-center justify-center gap-2"
                 >
                   <FontAwesomeIcon icon={faTrash} />
-                  Удалить
+                  {t.delete}
                 </button>
               </div>
             </div>

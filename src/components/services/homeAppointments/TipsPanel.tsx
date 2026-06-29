@@ -3,46 +3,151 @@
 import React from "react";
 import { Lightbulb } from "lucide-react";
 import { motion } from "framer-motion";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface TipsPanelProps {
   step: 1 | 2 | 3;
   compact?: boolean;
 }
 
-const tipsByStep: Record<1 | 2 | 3, { title: string; tips: string[] }> = {
-  1: {
-    title: "Как правильно указать адрес и симптомы",
-    tips: [
-      "📍 Указывайте полный адрес: улица, дом, подъезд, этаж, квартира",
-      "🗺️ Используйте карту для точного определения местоположения",
-      "📋 Опишите основные симптомы: температура, кашель, боль и т.п.",
-      "💊 Укажите хронические заболевания и принимаемые лекарства",
-      "🚑 При экстренных случаях лучше вызвать скорую помощь 103",
-    ],
+const TIPS_BY_STEP = {
+  ru: {
+    usefulTips: "Полезные советы", followRecommendations: "💡 Следуйте этим рекомендациям для успешного вызова",
+    1: {
+      title: "Как правильно указать адрес и симптомы",
+      tips: [
+        "📍 Указывайте полный адрес: улица, дом, подъезд, этаж, квартира",
+        "🗺️ Используйте карту для точного определения местоположения",
+        "📋 Опишите основные симптомы: температура, кашель, боль и т.п.",
+        "💊 Укажите хронические заболевания и принимаемые лекарства",
+        "🚑 При экстренных случаях лучше вызвать скорую помощь 103",
+      ],
+    },
+    2: {
+      title: "Советы при выборе врача и времени",
+      tips: [
+        "👨‍⚕️ Все специалисты имеют необходимую квалификацию и опыт",
+        "⏰ Выбирайте время с запасом минимум 30 минут",
+        "🏠 Убедитесь, что вы будете дома в выбранное время",
+        "📞 Врач может позвонить за 10-15 минут до прибытия",
+        "💰 Стоимость визита уточняется после подтверждения",
+      ],
+    },
+    3: {
+      title: "Перед подтверждением вызова",
+      tips: [
+        "✅ Проверьте все данные: адрес, дату, время, симптомы",
+        "📲 После отправки вы получите SMS-подтверждение",
+        "🔔 Врач получит уведомление автоматически",
+        "💬 Будьте на связи по указанному телефону",
+        "🚪 Подготовьте документы: паспорт, медицинская карта (если есть)",
+      ],
+    },
   },
-  2: {
-    title: "Советы при выборе врача и времени",
-    tips: [
-      "👨‍⚕️ Все специалисты имеют необходимую квалификацию и опыт",
-      "⏰ Выбирайте время с запасом минимум 30 минут",
-      "🏠 Убедитесь, что вы будете дома в выбранное время",
-      "📞 Врач может позвонить за 10-15 минут до прибытия",
-      "💰 Стоимость визита уточняется после подтверждения",
-    ],
+  kz: {
+    usefulTips: "Пайдалы кеңестер", followRecommendations: "💡 Шақыруды сәтті өткізу үшін осы ұсыныстарды орындаңыз",
+    1: {
+      title: "Мекенжай мен симптомдарды қалай дұрыс көрсету керек",
+      tips: [
+        "📍 Толық мекенжайды көрсетіңіз: көше, үй, кіреберіс, қабат, пәтер",
+        "🗺️ Орналасқан жерді дәл анықтау үшін картаны пайдаланыңыз",
+        "📋 Негізгі симптомдарды сипаттаңыз: температура, жөтел, ауырсыну және т.б.",
+        "💊 Созылмалы аурулар мен қабылдайтын дәрі-дәрмектерді көрсетіңіз",
+        "🚑 Жедел жағдайларда 103 жедел жәрдемге хабарласқан дұрыс",
+      ],
+    },
+    2: {
+      title: "Дәрігер мен уақытты таңдау бойынша кеңестер",
+      tips: [
+        "👨‍⚕️ Барлық мамандар қажетті біліктілік пен тәжірибеге ие",
+        "⏰ Кемінде 30 минут қор қалдырып уақыт таңдаңыз",
+        "🏠 Таңдалған уақытта үйде болатыныңызға көз жеткізіңіз",
+        "📞 Дәрігер келуден 10-15 минут бұрын қоңырау шалуы мүмкін",
+        "💰 Визит құны растаудан кейін нақтыланады",
+      ],
+    },
+    3: {
+      title: "Шақыруды растамас бұрын",
+      tips: [
+        "✅ Барлық деректерді тексеріңіз: мекенжай, күні, уақыты, симптомдар",
+        "📲 Жібергеннен кейін сізге SMS-растау келеді",
+        "🔔 Дәрігер хабарламаны автоматты түрде алады",
+        "💬 Көрсетілген телефон арқылы байланыста болыңыз",
+        "🚪 Құжаттарды дайындаңыз: жеке куәлік, медициналық карта (болса)",
+      ],
+    },
   },
-  3: {
-    title: "Перед подтверждением вызова",
-    tips: [
-      "✅ Проверьте все данные: адрес, дату, время, симптомы",
-      "📲 После отправки вы получите SMS-подтверждение",
-      "🔔 Врач получит уведомление автоматически",
-      "💬 Будьте на связи по указанному телефону",
-      "🚪 Подготовьте документы: паспорт, медицинская карта (если есть)",
-    ],
+  en: {
+    usefulTips: "Useful tips", followRecommendations: "💡 Follow these recommendations for a successful call",
+    1: {
+      title: "How to correctly provide the address and symptoms",
+      tips: [
+        "📍 Provide the full address: street, house, entrance, floor, apartment",
+        "🗺️ Use the map to pinpoint your location",
+        "📋 Describe the main symptoms: fever, cough, pain, etc.",
+        "💊 Mention any chronic conditions and medications you're taking",
+        "🚑 For emergencies, it's better to call emergency services at 103",
+      ],
+    },
+    2: {
+      title: "Tips for choosing a doctor and time",
+      tips: [
+        "👨‍⚕️ All specialists have the necessary qualifications and experience",
+        "⏰ Choose a time with at least 30 minutes of buffer",
+        "🏠 Make sure you'll be home at the selected time",
+        "📞 The doctor may call 10-15 minutes before arrival",
+        "💰 The visit cost is confirmed after booking",
+      ],
+    },
+    3: {
+      title: "Before confirming the call",
+      tips: [
+        "✅ Check all the details: address, date, time, symptoms",
+        "📲 You'll receive an SMS confirmation after submitting",
+        "🔔 The doctor will be notified automatically",
+        "💬 Stay reachable at the provided phone number",
+        "🚪 Prepare documents: ID, medical card (if any)",
+      ],
+    },
+  },
+  uz: {
+    usefulTips: "Foydali maslahatlar", followRecommendations: "💡 Muvaffaqiyatli chaqiruv uchun shu tavsiyalarga amal qiling",
+    1: {
+      title: "Manzil va simptomlarni qanday to'g'ri ko'rsatish kerak",
+      tips: [
+        "📍 To'liq manzilni ko'rsating: ko'cha, uy, kirish, qavat, kvartira",
+        "🗺️ Joylashuvni aniq belgilash uchun xaritadan foydalaning",
+        "📋 Asosiy simptomlarni tasvirlang: harorat, yo'tal, og'riq va h.k.",
+        "💊 Surunkali kasalliklar va qabul qilinayotgan dorilarni ko'rsating",
+        "🚑 Shoshilinch holatlarda 103 tez yordamga murojaat qiling",
+      ],
+    },
+    2: {
+      title: "Shifokor va vaqtni tanlash bo'yicha maslahatlar",
+      tips: [
+        "👨‍⚕️ Barcha mutaxassislar zarur malaka va tajribaga ega",
+        "⏰ Kamida 30 daqiqa zahira bilan vaqtni tanlang",
+        "🏠 Tanlangan vaqtda uyda bo'lishingizga ishonch hosil qiling",
+        "📞 Shifokor kelishidan 10-15 daqiqa oldin qo'ng'iroq qilishi mumkin",
+        "💰 Tashrif narxi tasdiqlangandan keyin aniqlashtiriladi",
+      ],
+    },
+    3: {
+      title: "Chaqiruvni tasdiqlashdan oldin",
+      tips: [
+        "✅ Barcha ma'lumotlarni tekshiring: manzil, sana, vaqt, simptomlar",
+        "📲 Yuborgandan keyin SMS-tasdiqlash olasiz",
+        "🔔 Shifokor avtomatik xabardor qilinadi",
+        "💬 Ko'rsatilgan telefon orqali aloqada bo'ling",
+        "🚪 Hujjatlarni tayyorlang: pasport, tibbiy karta (mavjud bo'lsa)",
+      ],
+    },
   },
 };
 
 const TipsPanel: React.FC<TipsPanelProps> = ({ step, compact }) => {
+  const { language: uiLanguage } = useLanguage();
+  const tipsByStep = TIPS_BY_STEP[uiLanguage as keyof typeof TIPS_BY_STEP] ?? TIPS_BY_STEP.ru;
   const { title, tips } = tipsByStep[step];
 
   if (compact) {
@@ -87,7 +192,7 @@ const TipsPanel: React.FC<TipsPanelProps> = ({ step, compact }) => {
           </div>
           <div>
             <h3 className="text-amber-900 font-bold text-base leading-tight">{title}</h3>
-            <p className="text-amber-700 text-xs mt-1">Полезные советы</p>
+            <p className="text-amber-700 text-xs mt-1">{tipsByStep.usefulTips}</p>
           </div>
         </div>
 
@@ -110,7 +215,7 @@ const TipsPanel: React.FC<TipsPanelProps> = ({ step, compact }) => {
         {/* Footer Note */}
         <div className="pt-3 border-t border-amber-200">
           <p className="text-xs text-amber-700 text-center">
-            💡 Следуйте этим рекомендациям для успешного вызова
+            {tipsByStep.followRecommendations}
           </p>
         </div>
       </div>

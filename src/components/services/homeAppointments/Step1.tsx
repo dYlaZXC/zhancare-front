@@ -4,6 +4,82 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Navigation, Search, CheckCircle, X, Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
+import { useLanguage } from "@/context/LanguageContext";
+
+const STEP1_TEXT = {
+  ru: {
+    loadingMap: "Загрузка карты...",
+    receptionAddress: "Адрес приёма", startTypingAddress: "Начните вводить адрес (улица, дом)...",
+    startTypingHint: "Начните вводить адрес для получения подсказок",
+    locationReceived: "Местоположение получено", lookingOnMap: "Ищем вас на карте...", useMyLocation: "Использовать моё местоположение",
+    hideMap: "Скрыть карту", chooseOnMap: "Выбрать на карте",
+    addressClarification: "Уточнение адреса",
+    apartment: "Квартира", apartmentPlaceholder: "кв. 45",
+    entrance: "Подъезд", entrancePlaceholder: "1",
+    intercom: "Домофон", intercomPlaceholder: "1234#",
+    addressComment: "Комментарий к адресу", optional: "(необязательно)",
+    addressCommentPlaceholder: "Например: 2-й этаж, квартира справа от лифта...",
+    dateTimeOfVisit: "Дата и время заявки/визита",
+    nurseArrivesAt: "Медсестра прибудет в указанное время (±15 минут)",
+    symptoms: "Симптомы", symptomsPlaceholder: "Опишите ваши симптомы для медсестры",
+    symptomsHint: "Это поможет медсестре подготовиться к визиту",
+    loadingBtn: "Загрузка...", continueBtn: "Продолжить →",
+  },
+  kz: {
+    loadingMap: "Карта жүктелуде...",
+    receptionAddress: "Қабылдау мекенжайы", startTypingAddress: "Мекенжайды теруді бастаңыз (көше, үй)...",
+    startTypingHint: "Ұсыныстарды алу үшін мекенжайды теруді бастаңыз",
+    locationReceived: "Орналасқан жер алынды", lookingOnMap: "Сізді картадан іздеудеміз...", useMyLocation: "Менің орналасқан жерімді пайдалану",
+    hideMap: "Картаны жасыру", chooseOnMap: "Картадан таңдау",
+    addressClarification: "Мекенжайды нақтылау",
+    apartment: "Пәтер", apartmentPlaceholder: "пәт. 45",
+    entrance: "Кіреберіс", entrancePlaceholder: "1",
+    intercom: "Домофон", intercomPlaceholder: "1234#",
+    addressComment: "Мекенжайға түсініктеме", optional: "(міндетті емес)",
+    addressCommentPlaceholder: "Мысалы: 2-қабат, лифттен оң жақтағы пәтер...",
+    dateTimeOfVisit: "Өтінім/визит күні мен уақыты",
+    nurseArrivesAt: "Медбике көрсетілген уақытта келеді (±15 минут)",
+    symptoms: "Симптомдар", symptomsPlaceholder: "Медбикеге арналған симптомдарыңызды сипаттаңыз",
+    symptomsHint: "Бұл медбикеге визитке дайындалуға көмектеседі",
+    loadingBtn: "Жүктелуде...", continueBtn: "Жалғастыру →",
+  },
+  en: {
+    loadingMap: "Loading map...",
+    receptionAddress: "Visit address", startTypingAddress: "Start typing the address (street, house)...",
+    startTypingHint: "Start typing the address to get suggestions",
+    locationReceived: "Location received", lookingOnMap: "Looking for you on the map...", useMyLocation: "Use my location",
+    hideMap: "Hide map", chooseOnMap: "Choose on map",
+    addressClarification: "Address details",
+    apartment: "Apartment", apartmentPlaceholder: "apt. 45",
+    entrance: "Entrance", entrancePlaceholder: "1",
+    intercom: "Intercom", intercomPlaceholder: "1234#",
+    addressComment: "Address comment", optional: "(optional)",
+    addressCommentPlaceholder: "Example: 2nd floor, apartment to the right of the elevator...",
+    dateTimeOfVisit: "Request/visit date and time",
+    nurseArrivesAt: "The nurse will arrive at the specified time (±15 minutes)",
+    symptoms: "Symptoms", symptomsPlaceholder: "Describe your symptoms for the nurse",
+    symptomsHint: "This will help the nurse prepare for the visit",
+    loadingBtn: "Loading...", continueBtn: "Continue →",
+  },
+  uz: {
+    loadingMap: "Xarita yuklanmoqda...",
+    receptionAddress: "Qabul manzili", startTypingAddress: "Manzilni kiritishni boshlang (ko'cha, uy)...",
+    startTypingHint: "Tavsiyalarni olish uchun manzilni kiritishni boshlang",
+    locationReceived: "Joylashuv aniqlandi", lookingOnMap: "Sizni xaritada qidirmoqdamiz...", useMyLocation: "Mening joylashuvimdan foydalanish",
+    hideMap: "Xaritani yashirish", chooseOnMap: "Xaritadan tanlash",
+    addressClarification: "Manzilni aniqlashtirish",
+    apartment: "Kvartira", apartmentPlaceholder: "kv. 45",
+    entrance: "Kirish", entrancePlaceholder: "1",
+    intercom: "Domofon", intercomPlaceholder: "1234#",
+    addressComment: "Manzilga izoh", optional: "(ixtiyoriy)",
+    addressCommentPlaceholder: "Masalan: 2-qavat, lift o'ng tomonidagi kvartira...",
+    dateTimeOfVisit: "Ariza/tashrif sanasi va vaqti",
+    nurseArrivesAt: "Hamshira ko'rsatilgan vaqtda keladi (±15 daqiqa)",
+    symptoms: "Simptomlar", symptomsPlaceholder: "Hamshira uchun simptomlaringizni tasvirlang",
+    symptomsHint: "Bu hamshiraga tashrifga tayyorgarlik ko'rishga yordam beradi",
+    loadingBtn: "Yuklanmoqda...", continueBtn: "Davom etish →",
+  },
+};
 
 // Dynamically import YandexMap to avoid SSR issues
 const YandexMap = dynamic(() => import("@/components/maps/YandexMap"), {
@@ -78,6 +154,8 @@ const Step1: React.FC<Step1Props> = ({
   onNext,
   loading = false,
 }) => {
+  const { language: uiLanguage } = useLanguage();
+  const tt = STEP1_TEXT[uiLanguage as keyof typeof STEP1_TEXT] ?? STEP1_TEXT.ru;
   const [showMap, setShowMap] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationPermission, setLocationPermission] = useState<"prompt" | "granted" | "denied">("prompt");
@@ -313,7 +391,7 @@ const Step1: React.FC<Step1Props> = ({
       <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 shadow-sm hover:border-[#3772ff] transition-colors duration-200">
         <label className="block text-base font-semibold text-gray-800 mb-3 flex items-center gap-2">
           <MapPin className="w-5 h-5 text-[#3772ff]" />
-          Адрес приёма <span className="text-red-500">*</span>
+          {tt.receptionAddress} <span className="text-red-500">*</span>
         </label>
 
         {/* Address Input with Autocomplete */}
@@ -321,7 +399,7 @@ const Step1: React.FC<Step1Props> = ({
           <input
             ref={inputRef}
             type="text"
-            placeholder="Начните вводить адрес (улица, дом)..."
+            placeholder={tt.startTypingAddress}
             value={address}
             onChange={(e) => onChangeAddress(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -402,7 +480,7 @@ const Step1: React.FC<Step1Props> = ({
         </div>
 
         <p className="mt-2 text-xs text-gray-500">
-          Начните вводить адрес для получения подсказок
+          {tt.startTypingHint}
         </p>
 
         {/* Location Helper Buttons */}
@@ -423,17 +501,17 @@ const Step1: React.FC<Step1Props> = ({
               {locationPermission === "granted" ? (
                 <>
                   <CheckCircle className="w-4 h-4" />
-                  Местоположение получено
+                  {tt.locationReceived}
                 </>
               ) : locating ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Ищем вас на карте...
+                  {tt.lookingOnMap}
                 </>
               ) : (
                 <>
                   <Navigation className="w-4 h-4" />
-                  Использовать моё местоположение
+                  {tt.useMyLocation}
                 </>
               )}
             </button>
@@ -445,7 +523,7 @@ const Step1: React.FC<Step1Props> = ({
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200 transition-all duration-200"
           >
             <MapPin className="w-4 h-4" />
-            {showMap ? "Скрыть карту" : "Выбрать на карте"}
+            {showMap ? tt.hideMap : tt.chooseOnMap}
           </button>
         </div>
 
@@ -473,33 +551,33 @@ const Step1: React.FC<Step1Props> = ({
 
         {/* Sub-address details */}
         <div className="mt-4 pt-4 border-t border-gray-100">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Уточнение адреса</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">{tt.addressClarification}</p>
           <div className="grid grid-cols-3 gap-3 mb-3">
             <div>
-              <label className="text-xs font-medium text-gray-600 mb-1 block">Квартира</label>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">{tt.apartment}</label>
               <input
                 type="text"
-                placeholder="кв. 45"
+                placeholder={tt.apartmentPlaceholder}
                 value={apartment}
                 onChange={(e) => onChangeApartment(e.target.value)}
                 className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3772ff]/20 focus:border-[#3772ff] transition-all"
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 mb-1 block">Подъезд</label>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">{tt.entrance}</label>
               <input
                 type="text"
-                placeholder="1"
+                placeholder={tt.entrancePlaceholder}
                 value={entrance}
                 onChange={(e) => onChangeEntrance(e.target.value)}
                 className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3772ff]/20 focus:border-[#3772ff] transition-all"
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 mb-1 block">Домофон</label>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">{tt.intercom}</label>
               <input
                 type="text"
-                placeholder="1234#"
+                placeholder={tt.intercomPlaceholder}
                 value={intercom}
                 onChange={(e) => onChangeIntercom(e.target.value)}
                 className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3772ff]/20 focus:border-[#3772ff] transition-all"
@@ -508,11 +586,11 @@ const Step1: React.FC<Step1Props> = ({
           </div>
           <div>
             <label className="text-xs font-medium text-gray-600 mb-1 block">
-              Комментарий к адресу <span className="text-gray-400 font-normal">(необязательно)</span>
+              {tt.addressComment} <span className="text-gray-400 font-normal">{tt.optional}</span>
             </label>
             <input
               type="text"
-              placeholder="Например: 2-й этаж, квартира справа от лифта..."
+              placeholder={tt.addressCommentPlaceholder}
               value={addressComment}
               onChange={(e) => onChangeAddressComment(e.target.value)}
               className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3772ff]/20 focus:border-[#3772ff] transition-all"
@@ -527,7 +605,7 @@ const Step1: React.FC<Step1Props> = ({
           <svg className="w-5 h-5 text-[#3772ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          Дата и время заявки/визита<span className="text-red-500">*</span>
+          {tt.dateTimeOfVisit}<span className="text-red-500">*</span>
         </label>
         <input
           type="datetime-local"
@@ -538,24 +616,24 @@ const Step1: React.FC<Step1Props> = ({
           className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-4 focus:ring-[#3772ff]/20 focus:border-[#3772ff] transition-all duration-200"
         />
         <p className="mt-2 text-xs text-gray-500">
-          Медсестра прибудет в указанное время (±15 минут)
+          {tt.nurseArrivesAt}
         </p>
       </div>
 
       {/* Symptoms Section */}
       <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 shadow-sm hover:border-[#3772ff] transition-colors duration-200">
         <label className="block text-base font-semibold text-gray-800 mb-3">
-          Симптомы <span className="text-gray-400 text-sm font-normal">(необязательно)</span>
+          {tt.symptoms} <span className="text-gray-400 text-sm font-normal">{tt.optional}</span>
         </label>
         <textarea
-          placeholder="Опишите ваши симптомы для медсестры"
+          placeholder={tt.symptomsPlaceholder}
           rows={4}
           value={symptoms}
           onChange={(e) => onChangeSymptoms(e.target.value)}
           className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl shadow-sm resize-none focus:outline-none focus:ring-4 focus:ring-[#3772ff]/20 focus:border-[#3772ff] transition-all duration-200"
         />
         <p className="mt-2 text-xs text-gray-500">
-          Это поможет медсестре подготовиться к визиту
+          {tt.symptomsHint}
         </p>
       </div>
 
@@ -570,7 +648,7 @@ const Step1: React.FC<Step1Props> = ({
               : "bg-gradient-to-r from-[#3772ff] to-[#2956bf] hover:shadow-xl hover:shadow-[#3772ff]/30 hover:-translate-y-0.5 active:translate-y-0"
           }`}
         >
-          {loading ? "Загрузка..." : "Продолжить →"}
+          {loading ? tt.loadingBtn : tt.continueBtn}
         </button>
       </div>
     </motion.div>

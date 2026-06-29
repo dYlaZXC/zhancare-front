@@ -5,6 +5,54 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Phone, Clock, CheckCircle, User, RefreshCw, Navigation, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { api } from "@/utils/api";
+import { useLanguage } from "@/context/LanguageContext";
+
+const STATUS_TEXT = {
+  ru: {
+    pending: { label: "Ожидает медсестру", sub: "Заявка отправлена, ждём принятия" },
+    viewed: { label: "Медсёстры рассматривают", sub: "Кто-то уже смотрит вашу заявку" },
+    accepted: { label: "Заявка принята!", sub: "Медсестра направляется к вам" },
+    in_progress: { label: "Медсестра в пути", sub: "Скоро прибудет по вашему адресу" },
+    completed: { label: "Визит завершён", sub: "Спасибо, что воспользовались сервисом" },
+    cancelled: { label: "Заявка отменена", sub: "Вы можете создать новую заявку" },
+    stepCreated: "Создана", stepViewed: "Просмотр", stepAccepted: "Принята", stepInProgress: "В пути", stepDone: "Готово",
+    nurseComing: "Медсестра едет к вам", nurseRole: "Медицинская сестра",
+    createNew: "Создать новый →", updatesEvery5s: "Обновляется каждые 5 сек",
+  },
+  kz: {
+    pending: { label: "Медбикені күтуде", sub: "Өтінім жіберілді, қабылдауды күтеміз" },
+    viewed: { label: "Медбикелер қарастырып жатыр", sub: "Біреу өтінішіңізді қарап жатыр" },
+    accepted: { label: "Өтінім қабылданды!", sub: "Медбике сізге қарай бағыт алды" },
+    in_progress: { label: "Медбике жолда", sub: "Жақында мекенжайыңызға келеді" },
+    completed: { label: "Қабылдау аяқталды", sub: "Қызметті пайдаланғаныңызға рахмет" },
+    cancelled: { label: "Өтінім бас тартылды", sub: "Жаңа өтінім жасай аласыз" },
+    stepCreated: "Жасалды", stepViewed: "Қаралды", stepAccepted: "Қабылданды", stepInProgress: "Жолда", stepDone: "Дайын",
+    nurseComing: "Медбике сізге қарай келе жатыр", nurseRole: "Медбике",
+    createNew: "Жаңасын жасау →", updatesEvery5s: "Әр 5 секундта жаңартылады",
+  },
+  en: {
+    pending: { label: "Waiting for a nurse", sub: "Request sent, awaiting acceptance" },
+    viewed: { label: "Nurses are reviewing", sub: "Someone is already looking at your request" },
+    accepted: { label: "Request accepted!", sub: "The nurse is heading your way" },
+    in_progress: { label: "Nurse on the way", sub: "Will arrive at your address soon" },
+    completed: { label: "Visit completed", sub: "Thank you for using the service" },
+    cancelled: { label: "Request cancelled", sub: "You can create a new request" },
+    stepCreated: "Created", stepViewed: "Reviewed", stepAccepted: "Accepted", stepInProgress: "On the way", stepDone: "Done",
+    nurseComing: "The nurse is on the way to you", nurseRole: "Nurse",
+    createNew: "Create new →", updatesEvery5s: "Updates every 5 sec",
+  },
+  uz: {
+    pending: { label: "Hamshirani kutmoqda", sub: "Ariza yuborildi, qabul qilinishini kutamiz" },
+    viewed: { label: "Hamshiralar ko'rib chiqmoqda", sub: "Kimdir arizangizni ko'rib chiqmoqda" },
+    accepted: { label: "Ariza qabul qilindi!", sub: "Hamshira sizga tomon yo'l olmoqda" },
+    in_progress: { label: "Hamshira yo'lda", sub: "Tez orada manzilingizga yetib keladi" },
+    completed: { label: "Tashrif yakunlandi", sub: "Xizmatdan foydalanganingiz uchun rahmat" },
+    cancelled: { label: "Ariza bekor qilindi", sub: "Yangi ariza yaratishingiz mumkin" },
+    stepCreated: "Yaratildi", stepViewed: "Ko'rib chiqildi", stepAccepted: "Qabul qilindi", stepInProgress: "Yo'lda", stepDone: "Tayyor",
+    nurseComing: "Hamshira sizga tomon kelmoqda", nurseRole: "Tibbiy hamshira",
+    createNew: "Yangisini yaratish →", updatesEvery5s: "Har 5 soniyada yangilanadi",
+  },
+};
 
 const YandexMap = dynamic(() => import("@/components/maps/YandexMap"), {
   ssr: false,
@@ -36,18 +84,11 @@ interface AppointmentData {
 
 type StatusKey = "pending" | "viewed" | "accepted" | "in_progress" | "completed" | "cancelled";
 
-const STATUS_CONFIG: Record<StatusKey, {
-  label: string;
-  sub: string;
-  color: "amber" | "blue" | "emerald" | "red";
-  pulse: boolean;
-}> = {
-  pending:     { label: "Ожидает медсестру",            sub: "Заявка отправлена, ждём принятия",   color: "amber",   pulse: true  },
-  viewed:      { label: "Медсёстры рассматривают",      sub: "Кто-то уже смотрит вашу заявку",     color: "blue",    pulse: true  },
-  accepted:    { label: "Заявка принята!",              sub: "Медсестра направляется к вам",        color: "emerald", pulse: false },
-  in_progress: { label: "Медсестра в пути",             sub: "Скоро прибудет по вашему адресу",    color: "blue",    pulse: true  },
-  completed:   { label: "Визит завершён",               sub: "Спасибо, что воспользовались сервисом", color: "emerald", pulse: false },
-  cancelled:   { label: "Заявка отменена",              sub: "Вы можете создать новую заявку",     color: "red",     pulse: false },
+const STATUS_COLOR: Record<StatusKey, "amber" | "blue" | "emerald" | "red"> = {
+  pending: "amber", viewed: "blue", accepted: "emerald", in_progress: "blue", completed: "emerald", cancelled: "red",
+};
+const STATUS_PULSE: Record<StatusKey, boolean> = {
+  pending: true, viewed: true, accepted: false, in_progress: true, completed: false, cancelled: false,
 };
 
 const COLORS = {
@@ -57,14 +98,7 @@ const COLORS = {
   red:     { bg: "bg-red-500",     ring: "ring-red-200",     text: "text-red-600",     dot: "bg-red-400",     ping: "bg-red-300",     card: "bg-red-50 border-red-200 text-red-900"          },
 };
 
-const STEPS: { key: StatusKey; short: string }[] = [
-  { key: "pending",     short: "Создана"     },
-  { key: "viewed",      short: "Просмотр"    },
-  { key: "accepted",    short: "Принята"     },
-  { key: "in_progress", short: "В пути"      },
-  { key: "completed",   short: "Готово"      },
-];
-const STEP_KEYS = STEPS.map(s => s.key);
+const STEP_KEYS_ORDER: StatusKey[] = ["pending", "viewed", "accepted", "in_progress", "completed"];
 
 function StatusIcon({ status, className }: { status: StatusKey; className?: string }) {
   const cls = className || "w-4 h-4";
@@ -89,6 +123,15 @@ const AppointmentStatus: React.FC<AppointmentStatusProps> = ({
   longitude,
   onNewAppointment,
 }) => {
+  const { language: uiLanguage } = useLanguage();
+  const tt = STATUS_TEXT[uiLanguage as keyof typeof STATUS_TEXT] ?? STATUS_TEXT.ru;
+  const STEPS: { key: StatusKey; short: string }[] = [
+    { key: "pending", short: tt.stepCreated },
+    { key: "viewed", short: tt.stepViewed },
+    { key: "accepted", short: tt.stepAccepted },
+    { key: "in_progress", short: tt.stepInProgress },
+    { key: "completed", short: tt.stepDone },
+  ];
   const [data, setData] = useState<AppointmentData | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -112,9 +155,14 @@ const AppointmentStatus: React.FC<AppointmentStatusProps> = ({
   }, [data?.status]);
 
   const status = (data?.normalized_status || data?.status || "pending") as StatusKey;
-  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.pending;
+  const cfg = {
+    label: tt[status]?.label ?? tt.pending.label,
+    sub: tt[status]?.sub ?? tt.pending.sub,
+    color: STATUS_COLOR[status] ?? STATUS_COLOR.pending,
+    pulse: STATUS_PULSE[status] ?? STATUS_PULSE.pending,
+  };
   const colors = COLORS[cfg.color];
-  const currentIdx = STEP_KEYS.indexOf(status);
+  const currentIdx = STEP_KEYS_ORDER.indexOf(status);
 
   const mapCenter: [number, number] =
     latitude && longitude ? [latitude, longitude] : [43.238293, 76.889709];
@@ -185,7 +233,7 @@ const AppointmentStatus: React.FC<AppointmentStatusProps> = ({
               <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-lg px-4 py-3">
                 <p className="text-xs font-semibold text-gray-500 mb-2 flex items-center gap-1.5">
                   <Navigation className="w-3.5 h-3.5 text-blue-500" />
-                  Медсестра едет к вам
+                  {tt.nurseComing}
                 </p>
                 <div className="flex items-center gap-3">
                   {data.eta_distance && (
@@ -226,7 +274,7 @@ const AppointmentStatus: React.FC<AppointmentStatusProps> = ({
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-gray-900 text-sm">{data.nurse_name}</p>
-                  <p className="text-xs text-emerald-600 font-medium">Медицинская сестра</p>
+                  <p className="text-xs text-emerald-600 font-medium">{tt.nurseRole}</p>
                   {data.nurse_phone && (
                     <a href={`tel:${data.nurse_phone}`}
                       className="inline-flex items-center gap-1 mt-1 text-xs font-semibold text-[#3772ff] hover:underline">
@@ -284,12 +332,12 @@ const AppointmentStatus: React.FC<AppointmentStatusProps> = ({
             {(status === "completed" || status === "cancelled") ? (
               <button onClick={onNewAppointment}
                 className="text-xs font-semibold text-[#3772ff] hover:underline">
-                Создать новый →
+                {tt.createNew}
               </button>
             ) : (
               <span className="text-xs text-gray-400 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
-                Обновляется каждые 5 сек
+                {tt.updatesEvery5s}
               </span>
             )}
           </div>

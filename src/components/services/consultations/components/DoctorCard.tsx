@@ -19,6 +19,42 @@ import type { Doctor, TimeSlot, Language } from "../types/doctor";
 import { getSpecializationName } from "../utils/doctorUtils";
 import { formatTime } from "../utils/timeslotUtils";
 import { getCurrencySymbol } from "@/utils/currency";
+import { useLanguage } from "@/context/LanguageContext";
+
+const CARD_TEXT = {
+  ru: {
+    available: "Доступен", busy: "Занят", onBreak: "На перерыве", offline: "Не работает",
+    aiRecommends: "AI рекомендует", nameNotSet: "Имя не указано", years: "лет",
+    video: "Видео", audio: "Аудио", per: "за", min: "мин",
+    independentDoctor: "Независимый врач", online: "Онлайн",
+    free: "свободно", busySlots: "занято", nearestSlot: "Ближайший слот", clickToGo: "Нажмите, чтобы перейти",
+    noFreeSlots: "Нет свободных слотов", locale: "ru-RU",
+  },
+  kz: {
+    available: "Қолжетімді", busy: "Бос емес", onBreak: "Үзілісте", offline: "Жұмыс істемейді",
+    aiRecommends: "AI ұсынады", nameNotSet: "Аты көрсетілмеген", years: "жыл",
+    video: "Бейне", audio: "Аудио", per: "", min: "мин",
+    independentDoctor: "Тәуелсіз дәрігер", online: "Онлайн",
+    free: "бос", busySlots: "бос емес", nearestSlot: "Жақын слот", clickToGo: "Өту үшін басыңыз",
+    noFreeSlots: "Бос слот жоқ", locale: "kk-KZ",
+  },
+  en: {
+    available: "Available", busy: "Busy", onBreak: "On break", offline: "Not working",
+    aiRecommends: "AI recommends", nameNotSet: "Name not set", years: "yrs",
+    video: "Video", audio: "Audio", per: "for", min: "min",
+    independentDoctor: "Independent doctor", online: "Online",
+    free: "free", busySlots: "booked", nearestSlot: "Nearest slot", clickToGo: "Click to go",
+    noFreeSlots: "No free slots", locale: "en-US",
+  },
+  uz: {
+    available: "Mavjud", busy: "Band", onBreak: "Tanaffusda", offline: "Ishlamaydi",
+    aiRecommends: "AI tavsiya etadi", nameNotSet: "Ism kiritilmagan", years: "yosh",
+    video: "Video", audio: "Audio", per: "", min: "daq",
+    independentDoctor: "Mustaqil shifokor", online: "Onlayn",
+    free: "bo'sh", busySlots: "band", nearestSlot: "Eng yaqin vaqt", clickToGo: "O'tish uchun bosing",
+    noFreeSlots: "Bo'sh vaqt yo'q", locale: "uz-UZ",
+  },
+};
 
 interface DoctorCardProps {
   doctor: Doctor;
@@ -52,6 +88,8 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
   onTimeslotSelect,
   onDateSelect,
 }) => {
+  const { language: uiLanguage } = useLanguage();
+  const ct = CARD_TEXT[uiLanguage as keyof typeof CARD_TEXT] ?? CARD_TEXT.ru;
   const [g1, g2] = GRADIENTS[doctor.id % GRADIENTS.length];
 
   const statusDotColor =
@@ -61,10 +99,10 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
     'bg-gray-400';
 
   const availabilityLabel =
-    doctor.availability_status === 'available' ? 'Доступен' :
-    doctor.availability_status === 'busy' ? 'Занят' :
-    doctor.availability_status === 'break' ? 'На перерыве' :
-    'Не работает';
+    doctor.availability_status === 'available' ? ct.available :
+    doctor.availability_status === 'busy' ? ct.busy :
+    doctor.availability_status === 'break' ? ct.onBreak :
+    ct.offline;
 
   const availabilityClass =
     doctor.availability_status === 'available' ? 'bg-green-100 text-green-700' :
@@ -77,8 +115,8 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
   const earliestLabel = (() => {
     if (!earliestSlot) return null;
     const d = new Date(earliestSlot.start_time);
-    const time = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-    const date = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+    const time = d.toLocaleTimeString(ct.locale, { hour: '2-digit', minute: '2-digit' });
+    const date = d.toLocaleDateString(ct.locale, { day: 'numeric', month: 'long' });
     return `${date}, ${time}`;
   })();
 
@@ -134,7 +172,7 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
         <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold text-white shadow-lg"
           style={{ background: 'linear-gradient(135deg, #3772ff, #6366f1)' }}>
           <Bot size={11} />
-          AI рекомендует
+          {ct.aiRecommends}
         </div>
       ) : doctor.rating ? (
         <div className="absolute top-3 right-3 z-10 flex flex-col items-center justify-center bg-white border border-amber-200 rounded-xl px-2 py-1.5 shadow-sm gap-0.5">
@@ -188,7 +226,7 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
           {/* Name + spec + badges */}
           <div className="flex-1 min-w-0 pt-0.5">
             {/* leave room for the absolute badge (top-3 right-3 ≈ 80px wide) */}
-            <p className="text-sm font-bold text-gray-900 leading-tight truncate pr-[72px]">{doctor.name || 'Имя не указано'}</p>
+            <p className="text-sm font-bold text-gray-900 leading-tight truncate pr-[72px]">{doctor.name || ct.nameNotSet}</p>
             <div className="flex items-center gap-1 mt-0.5 min-w-0">
               <Stethoscope size={9} className="text-blue-500 flex-shrink-0" />
               <p className="text-xs text-blue-600 font-medium truncate">{getSpecializationName(doctor, language)}</p>
@@ -198,7 +236,7 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
                 {availabilityLabel}
               </span>
               {doctor.years_of_experience ? (
-                <span className="text-[10px] text-gray-400">{doctor.years_of_experience} лет</span>
+                <span className="text-[10px] text-gray-400">{doctor.years_of_experience} {ct.years}</span>
               ) : null}
             </div>
             {earliestLabel && (
@@ -221,27 +259,27 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
             <div className="flex items-center justify-between mt-3 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-medium">
-                  <Video size={8} />Видео
+                  <Video size={8} />{ct.video}
                 </span>
                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 text-[10px] font-medium">
-                  <Phone size={8} />Аудио
+                  <Phone size={8} />{ct.audio}
                 </span>
               </div>
               <div className="flex flex-col items-end flex-shrink-0">
                 <span className="text-sm font-black text-emerald-600 leading-none">
-                  {price.toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} {getCurrencySymbol(clinicCurrency)}
+                  {price.toLocaleString(ct.locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} {getCurrencySymbol(clinicCurrency)}
                 </span>
-                <span className="text-[10px] text-emerald-700 font-medium leading-none mt-0.5">за {duration} мин · ≈{perMin} {getCurrencySymbol(clinicCurrency)}/мин</span>
+                <span className="text-[10px] text-emerald-700 font-medium leading-none mt-0.5">{ct.per} {duration} {ct.min} · ≈{perMin} {getCurrencySymbol(clinicCurrency)}/{ct.min}</span>
               </div>
             </div>
           );
         })() : (
           <div className="flex items-center gap-1.5 mt-3 flex-wrap">
             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-green-50 text-green-700 text-[10px] font-medium">
-              <Video size={8} />Видео
+              <Video size={8} />{ct.video}
             </span>
             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-violet-50 text-violet-700 text-[10px] font-medium">
-              <Phone size={8} />Аудио
+              <Phone size={8} />{ct.audio}
             </span>
           </div>
         )}
@@ -264,11 +302,11 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
           ) : (
             <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border border-gray-100 rounded-lg flex-1">
               <Building2 size={10} className="text-gray-400 flex-shrink-0" />
-              <span className="text-[10px] text-gray-400">Независимый врач</span>
+              <span className="text-[10px] text-gray-400">{ct.independentDoctor}</span>
             </div>
           )}
           <div className="flex-shrink-0 flex items-center gap-1 text-[10px] text-gray-400">
-            <MapPin size={9} /><span>Онлайн</span>
+            <MapPin size={9} /><span>{ct.online}</span>
           </div>
         </div>
       </div>
@@ -283,12 +321,12 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
             <div className="flex items-center gap-2">
               <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                {freeCount} свободно
+                {freeCount} {ct.free}
               </span>
               {slotsForDate.length - freeCount > 0 && (
                 <span className="flex items-center gap-1 text-[10px] font-bold text-gray-400">
                   <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
-                  {slotsForDate.length - freeCount} занято
+                  {slotsForDate.length - freeCount} {ct.busySlots}
                 </span>
               )}
             </div>
@@ -350,15 +388,15 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
           >
             <div className="flex items-center gap-1">
               <Zap size={10} className="fill-current flex-shrink-0" />
-              <span className="text-[10px] font-bold">Ближайший слот</span>
+              <span className="text-[10px] font-bold">{ct.nearestSlot}</span>
             </div>
             <span className="text-[11px] font-black">{earliestLabel}</span>
-            <span className="text-[9px] opacity-60">Нажмите, чтобы перейти</span>
+            <span className="text-[9px] opacity-60">{ct.clickToGo}</span>
           </button>
         ) : (
           <div className="flex flex-col items-center justify-center py-4 gap-1">
             <Calendar className="w-4 h-4 text-gray-300" />
-            <p className="text-[10px] text-gray-400">Нет свободных слотов</p>
+            <p className="text-[10px] text-gray-400">{ct.noFreeSlots}</p>
           </div>
         )}
       </div>

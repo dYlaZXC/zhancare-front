@@ -29,6 +29,146 @@ import {
   Activity,
   Loader2
 } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
+
+const STEP3_TEXT = {
+  ru: {
+    checkSymptoms: "Анализ симптомов", checkConnection: "Проверка соединения", checkCamera: "Тестирование камеры",
+    checkMic: "Проверка микрофона", checkSecurity: "Настройка безопасности", checkDoctor: "Готовность врача",
+    rescanning: "Пересканирование...",
+    issuesFound: "Обнаружены проблемы", checkDoneWarnings: "Проверка завершена с предупреждениями", aiCheckDone: "ИИ проверка завершена",
+    fix: "Исправить", details: "Детали",
+    connStable: "стабильна", connFair: "средняя", connPoor: "слабая",
+    connLabel: "Связь:", cameraLabel: "Камера:", micLabel: "Микрофон:",
+    cameraReady: "готова", cameraBlocked: "заблокирована", micReady: "готов", micBlocked: "заблокирован",
+    actionRequired: "Требуется действие:", allowCameraMic: "Разрешите доступ к камере и микрофону для видеоконсультации",
+    aiChecking: "ИИ выполняет проверку...",
+    checkOf: "Проверка", of2: "из", donePercent: "завершено",
+    descriptionSymptoms: "Описание симптомов", symptomsTransferred: "Ваши жалобы переданы врачу",
+    chooseSpecialist: "Выбор специалиста", doctorMatched: "Врач подобран по вашим симптомам",
+    videoConsultation: "Видеоконсультация", readyToStart: "Готово к началу консультации",
+    equipmentCheck: "Проверка оборудования",
+    camera: "Камера", microphone: "Микрофон", internet: "Интернет",
+    allowed: "Разрешена", micAllowed: "Разрешен", noAccess: "Нет доступа",
+    excellent: "Отлично", good: "Хорошо", weak: "Слабо",
+    accessRequired: "Требуется доступ", allowInBrowserSettings: "Разрешите доступ к камере и микрофону в настройках браузера для видеоконсультации",
+    checkAgain: "Проверить снова",
+    allReady: "Всё готово", checkDataAndAssign: "Проверьте данные и назначьте консультацию",
+    connShort: "Связь", cameraShort: "Камера", micShort: "Микро",
+    years: "лет",
+    appointment: "Запись", confirmed: "Подтверждено",
+    symptoms: "Симптомы",
+    preparing: "Подготовка...", connecting: "Подключение...", waitingTime: (t: string) => `Ожидание (${t})`,
+    assignConsultation: "Назначить консультацию",
+    waitingDoctor: (t: string) => `Ожидаем врача · ${t}`, willConnectSoon: "скоро подключится",
+    cancel2: "Отменить",
+    assignQuestion: "Назначить консультацию?", withDoctorAt: (name: string) => `С доктором ${name} в выбранное время`,
+    cancel: "Отмена", confirm: "Подтвердить",
+    locale: "ru-RU",
+  },
+  kz: {
+    checkSymptoms: "Симптомдарды талдау", checkConnection: "Байланысты тексеру", checkCamera: "Камераны тестілеу",
+    checkMic: "Микрофонды тексеру", checkSecurity: "Қауіпсіздікті баптау", checkDoctor: "Дәрігердің дайындығы",
+    rescanning: "Қайта сканерлеу...",
+    issuesFound: "Мәселелер табылды", checkDoneWarnings: "Тексеру ескертулермен аяқталды", aiCheckDone: "AI тексеруі аяқталды",
+    fix: "Түзету", details: "Толығырақ",
+    connStable: "тұрақты", connFair: "орташа", connPoor: "әлсіз",
+    connLabel: "Байланыс:", cameraLabel: "Камера:", micLabel: "Микрофон:",
+    cameraReady: "дайын", cameraBlocked: "бөгелген", micReady: "дайын", micBlocked: "бөгелген",
+    actionRequired: "Әрекет қажет:", allowCameraMic: "Бейне кеңес үшін камера мен микрофонға қатынасты рұқсат етіңіз",
+    aiChecking: "AI тексеру жүргізіп жатыр...",
+    checkOf: "Тексеру", of2: "ішінен", donePercent: "аяқталды",
+    descriptionSymptoms: "Симптомдар сипаттамасы", symptomsTransferred: "Шағымдарыңыз дәрігерге жіберілді",
+    chooseSpecialist: "Маманды таңдау", doctorMatched: "Дәрігер симптомдарыңызға сай таңдалды",
+    videoConsultation: "Бейне кеңес", readyToStart: "Кеңесті бастауға дайын",
+    equipmentCheck: "Жабдықты тексеру",
+    camera: "Камера", microphone: "Микрофон", internet: "Интернет",
+    allowed: "Рұқсат етілген", micAllowed: "Рұқсат етілген", noAccess: "Қатынас жоқ",
+    excellent: "Тамаша", good: "Жақсы", weak: "Әлсіз",
+    accessRequired: "Қатынас қажет", allowInBrowserSettings: "Бейне кеңес үшін браузер баптауларында камера мен микрофонға қатынасты рұқсат етіңіз",
+    checkAgain: "Қайта тексеру",
+    allReady: "Бәрі дайын", checkDataAndAssign: "Деректерді тексеріп, кеңесті тағайындаңыз",
+    connShort: "Байланыс", cameraShort: "Камера", micShort: "Микро",
+    years: "жыл",
+    appointment: "Жазылу", confirmed: "Расталды",
+    symptoms: "Симптомдар",
+    preparing: "Дайындық...", connecting: "Қосылу...", waitingTime: (t: string) => `Күту (${t})`,
+    assignConsultation: "Кеңесті тағайындау",
+    waitingDoctor: (t: string) => `Дәрігерді күтеміз · ${t}`, willConnectSoon: "жақында қосылады",
+    cancel2: "Бас тарту",
+    assignQuestion: "Кеңес тағайындау керек пе?", withDoctorAt: (name: string) => `${name} дәрігермен таңдалған уақытта`,
+    cancel: "Бас тарту", confirm: "Растау",
+    locale: "kk-KZ",
+  },
+  en: {
+    checkSymptoms: "Symptom analysis", checkConnection: "Connection check", checkCamera: "Camera testing",
+    checkMic: "Microphone check", checkSecurity: "Security setup", checkDoctor: "Doctor readiness",
+    rescanning: "Rescanning...",
+    issuesFound: "Issues found", checkDoneWarnings: "Check completed with warnings", aiCheckDone: "AI check complete",
+    fix: "Fix", details: "Details",
+    connStable: "stable", connFair: "fair", connPoor: "weak",
+    connLabel: "Connection:", cameraLabel: "Camera:", micLabel: "Microphone:",
+    cameraReady: "ready", cameraBlocked: "blocked", micReady: "ready", micBlocked: "blocked",
+    actionRequired: "Action required:", allowCameraMic: "Allow camera and microphone access for the video consultation",
+    aiChecking: "AI is running a check...",
+    checkOf: "Check", of2: "of", donePercent: "complete",
+    descriptionSymptoms: "Symptom description", symptomsTransferred: "Your complaints have been sent to the doctor",
+    chooseSpecialist: "Choosing a specialist", doctorMatched: "A doctor has been matched to your symptoms",
+    videoConsultation: "Video consultation", readyToStart: "Ready to start the consultation",
+    equipmentCheck: "Equipment check",
+    camera: "Camera", microphone: "Microphone", internet: "Internet",
+    allowed: "Allowed", micAllowed: "Allowed", noAccess: "No access",
+    excellent: "Excellent", good: "Good", weak: "Weak",
+    accessRequired: "Access required", allowInBrowserSettings: "Allow camera and microphone access in your browser settings for the video consultation",
+    checkAgain: "Check again",
+    allReady: "All set", checkDataAndAssign: "Review the details and schedule the consultation",
+    connShort: "Connection", cameraShort: "Camera", micShort: "Mic",
+    years: "yrs",
+    appointment: "Appointment", confirmed: "Confirmed",
+    symptoms: "Symptoms",
+    preparing: "Preparing...", connecting: "Connecting...", waitingTime: (t: string) => `Waiting (${t})`,
+    assignConsultation: "Schedule consultation",
+    waitingDoctor: (t: string) => `Waiting for the doctor · ${t}`, willConnectSoon: "will join soon",
+    cancel2: "Cancel",
+    assignQuestion: "Schedule the consultation?", withDoctorAt: (name: string) => `With Dr. ${name} at the selected time`,
+    cancel: "Cancel", confirm: "Confirm",
+    locale: "en-US",
+  },
+  uz: {
+    checkSymptoms: "Simptomlarni tahlil qilish", checkConnection: "Aloqani tekshirish", checkCamera: "Kamerani sinash",
+    checkMic: "Mikrofonni tekshirish", checkSecurity: "Xavfsizlikni sozlash", checkDoctor: "Shifokorning tayyorligi",
+    rescanning: "Qayta tekshirilmoqda...",
+    issuesFound: "Muammolar topildi", checkDoneWarnings: "Tekshirish ogohlantirishlar bilan yakunlandi", aiCheckDone: "AI tekshiruvi yakunlandi",
+    fix: "Tuzatish", details: "Tafsilotlar",
+    connStable: "barqaror", connFair: "o'rtacha", connPoor: "zaif",
+    connLabel: "Aloqa:", cameraLabel: "Kamera:", micLabel: "Mikrofon:",
+    cameraReady: "tayyor", cameraBlocked: "bloklangan", micReady: "tayyor", micBlocked: "bloklangan",
+    actionRequired: "Harakat talab qilinadi:", allowCameraMic: "Video konsultatsiya uchun kamera va mikrofonga ruxsat bering",
+    aiChecking: "AI tekshirish o'tkazmoqda...",
+    checkOf: "Tekshiruv", of2: "dan", donePercent: "yakunlandi",
+    descriptionSymptoms: "Simptomlar tavsifi", symptomsTransferred: "Shikoyatlaringiz shifokorga yuborildi",
+    chooseSpecialist: "Mutaxassisni tanlash", doctorMatched: "Simptomlaringizga mos shifokor tanlandi",
+    videoConsultation: "Video konsultatsiya", readyToStart: "Konsultatsiyani boshlashga tayyor",
+    equipmentCheck: "Uskunani tekshirish",
+    camera: "Kamera", microphone: "Mikrofon", internet: "Internet",
+    allowed: "Ruxsat berilgan", micAllowed: "Ruxsat berilgan", noAccess: "Kirish yo'q",
+    excellent: "A'lo", good: "Yaxshi", weak: "Zaif",
+    accessRequired: "Kirish talab qilinadi", allowInBrowserSettings: "Video konsultatsiya uchun brauzer sozlamalarida kamera va mikrofonga ruxsat bering",
+    checkAgain: "Qayta tekshirish",
+    allReady: "Hammasi tayyor", checkDataAndAssign: "Ma'lumotlarni tekshirib, konsultatsiyani belgilang",
+    connShort: "Aloqa", cameraShort: "Kamera", micShort: "Mikro",
+    years: "yosh",
+    appointment: "Yozilish", confirmed: "Tasdiqlandi",
+    symptoms: "Simptomlar",
+    preparing: "Tayyorlanmoqda...", connecting: "Ulanmoqda...", waitingTime: (t: string) => `Kutilmoqda (${t})`,
+    assignConsultation: "Konsultatsiyani belgilash",
+    waitingDoctor: (t: string) => `Shifokorni kutamiz · ${t}`, willConnectSoon: "tez orada ulanadi",
+    cancel2: "Bekor qilish",
+    assignQuestion: "Konsultatsiya belgilansinmi?", withDoctorAt: (name: string) => `${name} shifokor bilan tanlangan vaqtda`,
+    cancel: "Bekor qilish", confirm: "Tasdiqlash",
+    locale: "uz-UZ",
+  },
+};
 
 // AI Live Checker Component
 const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micPermission, connectionQuality }: { 
@@ -38,19 +178,21 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
   micPermission: 'granted' | 'denied' | 'checking';
   connectionQuality: 'good' | 'fair' | 'poor';
 }) => {
+  const { language: uiLanguage } = useLanguage();
+  const tt = STEP3_TEXT[uiLanguage as keyof typeof STEP3_TEXT] ?? STEP3_TEXT.ru;
   const [currentCheck, setCurrentCheck] = useState(0);
   const [isCompleted, setIsCompleted] = useState(false);
   const [checkResults, setCheckResults] = useState<{[key: string]: 'success' | 'error' | 'warning'}>({});
   const [isRechecking, setIsRechecking] = useState(false);
-  
+
   const checks = useMemo(() => [
-    { id: 'symptoms', label: "Анализ симптомов", icon: Brain, duration: 1200 },
-    { id: 'connection', label: "Проверка соединения", icon: Wifi, duration: 800 },
-    { id: 'camera', label: "Тестирование камеры", icon: Camera, duration: 1000 },
-    { id: 'microphone', label: "Проверка микрофона", icon: Volume2, duration: 600 },
-    { id: 'security', label: "Настройка безопасности", icon: Shield, duration: 900 },
-    { id: 'doctor', label: "Готовность врача", icon: Activity, duration: 1500 }
-  ], []);
+    { id: 'symptoms', label: tt.checkSymptoms, icon: Brain, duration: 1200 },
+    { id: 'connection', label: tt.checkConnection, icon: Wifi, duration: 800 },
+    { id: 'camera', label: tt.checkCamera, icon: Camera, duration: 1000 },
+    { id: 'microphone', label: tt.checkMic, icon: Volume2, duration: 600 },
+    { id: 'security', label: tt.checkSecurity, icon: Shield, duration: 900 },
+    { id: 'doctor', label: tt.checkDoctor, icon: Activity, duration: 1500 }
+  ], [tt]);
 
   // Monitor permission changes and recheck if needed
   useEffect(() => {
@@ -124,7 +266,7 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
             >
               <div className="flex items-center gap-2 sm:gap-3">
                 <Loader2 className="animate-spin text-blue-600 w-4 h-4 sm:w-5 sm:h-5" />
-                <span className="text-blue-700 font-medium text-sm sm:text-base md:text-lg">Пересканирование...</span>
+                <span className="text-blue-700 font-medium text-sm sm:text-base md:text-lg">{tt.rescanning}</span>
               </div>
             </motion.div>
           ) : (
@@ -156,11 +298,11 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
                     ? 'text-yellow-700' 
                     : 'text-green-700'
                 }`}>
-                  {hasErrors 
-                    ? 'Обнаружены проблемы' 
-                    : hasWarnings 
-                    ? 'Проверка завершена с предупреждениями' 
-                    : 'ИИ проверка завершена'
+                  {hasErrors
+                    ? tt.issuesFound
+                    : hasWarnings
+                    ? tt.checkDoneWarnings
+                    : tt.aiCheckDone
                   }
                 </span>
                 {!hasErrors && !hasWarnings && (
@@ -174,7 +316,7 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
                 className="text-blue-600 hover:text-blue-700 text-xs md:text-sm font-medium flex items-center gap-1"
               >
                 <Settings size={14} />
-                {hasErrors || hasWarnings ? 'Исправить' : 'Детали'}
+                {hasErrors || hasWarnings ? tt.fix : tt.details}
               </button>
             </motion.div>
           )}
@@ -198,7 +340,7 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
                   transition={{ duration: 0.3 }}
                 />
                 <span className="text-gray-600 text-xs">
-                  Связь: {connectionQuality === 'good' ? 'стабильна' : connectionQuality === 'fair' ? 'средняя' : 'слабая'}
+                  {tt.connLabel} {connectionQuality === 'good' ? tt.connStable : connectionQuality === 'fair' ? tt.connFair : tt.connPoor}
                 </span>
               </div>
               <div className="flex items-center gap-1">
@@ -210,7 +352,7 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
                   transition={{ duration: 0.3 }}
                 />
                 <span className="text-gray-600 text-xs">
-                  Камера: {cameraPermission === 'granted' ? 'готова' : 'заблокирована'}
+                  {tt.cameraLabel} {cameraPermission === 'granted' ? tt.cameraReady : tt.cameraBlocked}
                 </span>
               </div>
               <div className="flex items-center gap-1">
@@ -222,7 +364,7 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
                   transition={{ duration: 0.3 }}
                 />
                 <span className="text-gray-600 text-xs">
-                  Микрофон: {micPermission === 'granted' ? 'готов' : 'заблокирован'}
+                  {tt.micLabel} {micPermission === 'granted' ? tt.micReady : tt.micBlocked}
                 </span>
               </div>
             </motion.div>
@@ -235,7 +377,7 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
             animate={{ opacity: 1, height: 'auto' }}
             className="p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700"
           >
-            <strong>Требуется действие:</strong> Разрешите доступ к камере и микрофону для видеоконсультации
+            <strong>{tt.actionRequired}</strong> {tt.allowCameraMic}
           </motion.div>
         )}
       </motion.div>
@@ -251,7 +393,7 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
       <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
         <div className="flex items-center gap-2 mb-2">
           <Bot className="text-blue-600" size={16} />
-          <span className="text-blue-700 font-medium text-sm md:text-base">ИИ выполняет проверку...</span>
+          <span className="text-blue-700 font-medium text-sm md:text-base">{tt.aiChecking}</span>
         </div>
         
         <div className="space-y-2">
@@ -313,10 +455,10 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
         
         <div className="mt-3 flex items-center justify-between">
           <div className="text-xs text-gray-600">
-            Проверка {currentCheck + 1} из {checks.length}
+            {tt.checkOf} {currentCheck + 1} {tt.of2} {checks.length}
           </div>
           <div className="text-xs text-blue-600 font-medium">
-            {Math.round(((currentCheck) / checks.length) * 100)}% завершено
+            {Math.round(((currentCheck) / checks.length) * 100)}% {tt.donePercent}
           </div>
         </div>
       </div>
@@ -405,6 +547,8 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
   scheduledConsultation,
   pendingConsultationData,
 }) => {
+  const { language: uiLanguage } = useLanguage();
+  const tt = STEP3_TEXT[uiLanguage as keyof typeof STEP3_TEXT] ?? STEP3_TEXT.ru;
   const [waitingTime, setWaitingTime] = useState(0);
   const [cameraPermission, setCameraPermission] = useState<'granted' | 'denied' | 'checking'>('checking');
   const [micPermission, setMicPermission] = useState<'granted' | 'denied' | 'checking'>('checking');
@@ -498,7 +642,7 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-lg md:text-xl font-bold text-gray-900">Проверка оборудования</h3>
+              <h3 className="text-lg md:text-xl font-bold text-gray-900">{tt.equipmentCheck}</h3>
               <button 
                 onClick={() => setShowTechCheck(false)}
                 className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
@@ -511,40 +655,40 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-3">
                   {cameraPermission === 'granted' ? <Camera className="text-green-500" /> : <CameraOff className="text-red-500" />}
-                  <span className="font-medium text-sm md:text-base">Камера</span>
+                  <span className="font-medium text-sm md:text-base">{tt.camera}</span>
                 </div>
                 <span className={`text-xs md:text-sm px-2 py-1 rounded-full ${
                   cameraPermission === 'granted' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                 }`}>
-                  {cameraPermission === 'granted' ? 'Разрешена' : 'Нет доступа'}
+                  {cameraPermission === 'granted' ? tt.allowed : tt.noAccess}
                 </span>
               </div>
 
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-3">
                   {micPermission === 'granted' ? <Volume2 className="text-green-500" /> : <VolumeX className="text-red-500" />}
-                  <span className="font-medium text-sm md:text-base">Микрофон</span>
+                  <span className="font-medium text-sm md:text-base">{tt.microphone}</span>
                 </div>
                 <span className={`text-xs md:text-sm px-2 py-1 rounded-full ${
                   micPermission === 'granted' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                 }`}>
-                  {micPermission === 'granted' ? 'Разрешен' : 'Нет доступа'}
+                  {micPermission === 'granted' ? tt.micAllowed : tt.noAccess}
                 </span>
               </div>
 
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-3">
                   {getConnectionIcon()}
-                  <span className="font-medium text-sm md:text-base">Интернет</span>
+                  <span className="font-medium text-sm md:text-base">{tt.internet}</span>
                 </div>
                 <span className={`text-xs md:text-sm px-2 py-1 rounded-full ${
-                  connectionQuality === 'good' 
-                    ? 'bg-green-100 text-green-700' 
-                    : connectionQuality === 'fair' 
-                    ? 'bg-yellow-100 text-yellow-700' 
+                  connectionQuality === 'good'
+                    ? 'bg-green-100 text-green-700'
+                    : connectionQuality === 'fair'
+                    ? 'bg-yellow-100 text-yellow-700'
                     : 'bg-red-100 text-red-700'
                 }`}>
-                  {connectionQuality === 'good' ? 'Отлично' : connectionQuality === 'fair' ? 'Хорошо' : 'Слабо'}
+                  {connectionQuality === 'good' ? tt.excellent : connectionQuality === 'fair' ? tt.good : tt.weak}
                 </span>
               </div>
             </div>
@@ -554,9 +698,9 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
                 <div className="flex items-start gap-2">
                   <AlertCircle className="text-yellow-600 flex-shrink-0 mt-0.5" size={16} />
                   <div className="text-sm">
-                    <p className="font-medium text-yellow-800 mb-1 text-sm md:text-base">Требуется доступ</p>
+                    <p className="font-medium text-yellow-800 mb-1 text-sm md:text-base">{tt.accessRequired}</p>
                     <p className="text-yellow-700 text-xs md:text-sm">
-                      Разрешите доступ к камере и микрофону в настройках браузера для видеоконсультации
+                      {tt.allowInBrowserSettings}
                     </p>
                   </div>
                 </div>
@@ -567,7 +711,7 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
               onClick={checkMediaPermissions}
               className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm md:text-base"
             >
-              Проверить снова
+              {tt.checkAgain}
             </button>
           </motion.div>
         </motion.div>
@@ -594,14 +738,14 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
           <CheckCircle2 className="w-5 h-5 text-white" />
         </div>
         <div className="relative flex-1 min-w-0">
-          <p className="font-bold text-white text-base leading-tight">Всё готово</p>
-          <p className="text-white/65 text-xs mt-0.5 truncate">Проверьте данные и назначьте консультацию</p>
+          <p className="font-bold text-white text-base leading-tight">{tt.allReady}</p>
+          <p className="text-white/65 text-xs mt-0.5 truncate">{tt.checkDataAndAssign}</p>
         </div>
         <div className="relative flex-shrink-0 flex items-center gap-1.5">
           {[
-            { ok: connectionQuality === 'good', warn: connectionQuality === 'fair', label: 'Связь' },
-            { ok: cameraPermission === 'granted', warn: false, label: 'Камера' },
-            { ok: micPermission === 'granted', warn: false, label: 'Микро' },
+            { ok: connectionQuality === 'good', warn: connectionQuality === 'fair', label: tt.connShort },
+            { ok: cameraPermission === 'granted', warn: false, label: tt.cameraShort },
+            { ok: micPermission === 'granted', warn: false, label: tt.micShort },
           ].map(({ ok, warn, label }) => (
             <div key={label} title={label} className={`w-2 h-2 rounded-full ${ok ? 'bg-emerald-400' : warn ? 'bg-amber-400' : 'bg-red-400'}`} />
           ))}
@@ -631,7 +775,7 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
                     <Star className="w-3 h-3 fill-amber-400 text-amber-400" />{doctor.rating}
                   </span>
                 )}
-                {doctor.experience && <span>{doctor.experience} лет</span>}
+                {doctor.experience && <span>{doctor.experience} {tt.years}</span>}
               </div>
             )}
           </div>
@@ -644,18 +788,18 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
               <Calendar className="w-4 h-4 text-emerald-600" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-gray-400 font-medium">Запись</p>
+              <p className="text-xs text-gray-400 font-medium">{tt.appointment}</p>
               <p className="text-sm font-semibold text-gray-900 leading-tight">
-                {new Date(scheduledConsultation.scheduled_time).toLocaleDateString('ru-RU', {
+                {new Date(scheduledConsultation.scheduled_time).toLocaleDateString(tt.locale, {
                   weekday: 'short', day: 'numeric', month: 'short'
                 })}{' · '}
-                {new Date(scheduledConsultation.scheduled_time).toLocaleTimeString('ru-RU', {
+                {new Date(scheduledConsultation.scheduled_time).toLocaleTimeString(tt.locale, {
                   hour: '2-digit', minute: '2-digit'
                 })}
               </p>
             </div>
             <span className="flex-shrink-0 text-[10px] font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
-              Подтверждено
+              {tt.confirmed}
             </span>
           </div>
         )}
@@ -667,7 +811,7 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
               <FileText className="w-4 h-4 text-gray-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-gray-400 font-medium mb-0.5">Симптомы</p>
+              <p className="text-xs text-gray-400 font-medium mb-0.5">{tt.symptoms}</p>
               <p className="text-sm text-gray-700 line-clamp-2 leading-relaxed">{symptoms}</p>
             </div>
           </div>
@@ -697,13 +841,13 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
         >
           <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
           {loading ? (
-            <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /><span>Подготовка...</span></>
+            <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /><span>{tt.preparing}</span></>
           ) : connecting ? (
-            <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /><span>Подключение...</span></>
+            <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /><span>{tt.connecting}</span></>
           ) : waiting ? (
-            <><Clock className="w-4 h-4" /><span>Ожидание ({formatWaitingTime(waitingTime)})</span></>
+            <><Clock className="w-4 h-4" /><span>{tt.waitingTime(formatWaitingTime(waitingTime))}</span></>
           ) : (
-            <><Video className="w-4 h-4" /><span>Назначить консультацию</span></>
+            <><Video className="w-4 h-4" /><span>{tt.assignConsultation}</span></>
           )}
         </motion.button>
       </div>
@@ -724,11 +868,11 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
               ))}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-amber-900">Ожидаем врача · {formatWaitingTime(waitingTime)}</p>
-              <p className="text-xs text-amber-600 truncate">{doctor?.name} скоро подключится</p>
+              <p className="text-sm font-semibold text-amber-900">{tt.waitingDoctor(formatWaitingTime(waitingTime))}</p>
+              <p className="text-xs text-amber-600 truncate">{doctor?.name} {tt.willConnectSoon}</p>
             </div>
             <button onClick={onCancel} className="text-red-500 hover:text-red-600 text-xs font-medium flex-shrink-0 transition-colors">
-              Отменить
+              {tt.cancel2}
             </button>
           </motion.div>
         )}
@@ -749,17 +893,17 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
               className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
-              <p className="font-bold text-gray-900 text-base mb-1">Назначить консультацию?</p>
-              <p className="text-gray-500 text-sm mb-5">С доктором {doctor?.name} в выбранное время</p>
+              <p className="font-bold text-gray-900 text-base mb-1">{tt.assignQuestion}</p>
+              <p className="text-gray-500 text-sm mb-5">{tt.withDoctorAt(doctor?.name || '')}</p>
               <div className="flex gap-2.5">
                 <button onClick={() => setShowConfirmDialog(false)}
                   className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold text-sm transition-colors">
-                  Отмена
+                  {tt.cancel}
                 </button>
                 <button onClick={() => { setShowConfirmDialog(false); onCall(); }}
                   className="flex-1 py-2.5 text-white rounded-xl font-semibold text-sm shadow-sm"
                   style={{ background: 'linear-gradient(135deg, #3772ff, #1d4ed8)' }}>
-                  Подтвердить
+                  {tt.confirm}
                 </button>
               </div>
             </motion.div>

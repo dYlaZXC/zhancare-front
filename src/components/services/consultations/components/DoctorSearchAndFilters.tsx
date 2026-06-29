@@ -4,6 +4,14 @@ import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, X, ChevronDown, Check, Stethoscope, Building2 } from "lucide-react";
 import type { Language } from "../types/doctor";
+import { useLanguage } from "@/context/LanguageContext";
+
+const FILTERS_TEXT = {
+  ru: { searchDoctor: "Поиск врача...", allSpecialties: "Все специальности", findSpecialty: "Найти специальность...", allClinics: "Все клиники", findClinic: "Найти клинику...", nothingFound: "Ничего не найдено" },
+  kz: { searchDoctor: "Дәрігерді іздеу...", allSpecialties: "Барлық мамандықтар", findSpecialty: "Мамандықты табу...", allClinics: "Барлық клиникалар", findClinic: "Клиниканы табу...", nothingFound: "Ештеңе табылмады" },
+  en: { searchDoctor: "Search for a doctor...", allSpecialties: "All specialties", findSpecialty: "Find a specialty...", allClinics: "All clinics", findClinic: "Find a clinic...", nothingFound: "Nothing found" },
+  uz: { searchDoctor: "Shifokorni qidirish...", allSpecialties: "Barcha mutaxassisliklar", findSpecialty: "Mutaxassislikni topish...", allClinics: "Barcha klinikalar", findClinic: "Klinikani topish...", nothingFound: "Hech narsa topilmadi" },
+};
 
 interface DoctorSearchAndFiltersProps {
   searchTerm: string;
@@ -25,6 +33,7 @@ interface SearchDropdownProps {
   allLabel: string;
   icon: React.ReactNode;
   placeholder: string;
+  nothingFoundLabel: string;
 }
 
 const SearchDropdown: React.FC<SearchDropdownProps> = ({
@@ -34,6 +43,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({
   allLabel,
   icon,
   placeholder,
+  nothingFoundLabel,
 }) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -135,7 +145,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({
             {/* Options list */}
             <div className="max-h-48 overflow-y-auto">
               {filtered.length === 0 ? (
-                <div className="px-3 py-4 text-xs text-gray-400 text-center">Ничего не найдено</div>
+                <div className="px-3 py-4 text-xs text-gray-400 text-center">{nothingFoundLabel}</div>
               ) : (
                 filtered.map((opt) => (
                   <button
@@ -173,6 +183,8 @@ const DoctorSearchAndFilters: React.FC<DoctorSearchAndFiltersProps> = ({
   doctorTypes,
   clinics,
 }) => {
+  const { language: uiLanguage } = useLanguage();
+  const ft = FILTERS_TEXT[uiLanguage as keyof typeof FILTERS_TEXT] ?? FILTERS_TEXT.ru;
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -189,7 +201,7 @@ const DoctorSearchAndFilters: React.FC<DoctorSearchAndFiltersProps> = ({
         />
         <input
           type="text"
-          placeholder="Поиск врача..."
+          placeholder={ft.searchDoctor}
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
           className="w-full pl-10 pr-9 py-2.5 rounded-xl border border-gray-200 bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-500/10 focus:outline-none transition-all text-sm placeholder-gray-400 shadow-sm"
@@ -210,17 +222,19 @@ const DoctorSearchAndFilters: React.FC<DoctorSearchAndFiltersProps> = ({
           value={filterByType}
           onChange={onFilterChange}
           options={doctorTypes}
-          allLabel="Все специальности"
+          allLabel={ft.allSpecialties}
           icon={<Stethoscope size={14} />}
-          placeholder="Найти специальность..."
+          placeholder={ft.findSpecialty}
+          nothingFoundLabel={ft.nothingFound}
         />
         <SearchDropdown
           value={filterByClinic}
           onChange={onClinicFilterChange}
           options={clinics}
-          allLabel="Все клиники"
+          allLabel={ft.allClinics}
           icon={<Building2 size={14} />}
-          placeholder="Найти клинику..."
+          placeholder={ft.findClinic}
+          nothingFoundLabel={ft.nothingFound}
         />
       </div>
     </motion.div>

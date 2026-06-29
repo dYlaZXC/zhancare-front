@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import { api } from "@/utils/api";
 import { useAuth } from "@/context/AuthContext";
 import { websocketService, type DoctorAvailabilityChangeData } from "@/services/websocketService";
+import { useLanguage } from "@/context/LanguageContext";
 
 import Step1 from "./consultations/VideoConsultationStep1";
 import Step2 from "./consultations/VideoConsultationStep2";
@@ -34,11 +35,24 @@ interface VideoConsultationProps {
   skipAI?: boolean;
 }
 
+const HEADER_TEXT = {
+  ru: { back: "Назад", offlineTitle: "Оффлайн приём", diagnosticsTitle: "Диагностика", homeTitle: "Вызов на дом", servicesTitle: "Мои услуги", onlineTitle: "Онлайн консультация", confirmTitle: "Подтверждение", step: "Шаг",
+    symptomsExample: "Головная боль, температура 38.5, слабость, першение в горле" },
+  kz: { back: "Артқа", offlineTitle: "Офлайн қабылдау", diagnosticsTitle: "Диагностика", homeTitle: "Үйге шақыру", servicesTitle: "Менің қызметтерім", onlineTitle: "Онлайн кеңес", confirmTitle: "Растау", step: "Қадам",
+    symptomsExample: "Бас ауруы, температура 38.5, әлсіздік, тамақ ашуы" },
+  en: { back: "Back", offlineTitle: "In-person visit", diagnosticsTitle: "Diagnostics", homeTitle: "Home visit", servicesTitle: "My Services", onlineTitle: "Online consultation", confirmTitle: "Confirmation", step: "Step",
+    symptomsExample: "Headache, temperature 38.5, weakness, sore throat" },
+  uz: { back: "Orqaga", offlineTitle: "Shifokor qabuli", diagnosticsTitle: "Diagnostika", homeTitle: "Uyga chaqirish", servicesTitle: "Mening xizmatlarim", onlineTitle: "Onlayn konsultatsiya", confirmTitle: "Tasdiqlash", step: "Qadam",
+    symptomsExample: "Bosh og'rig'i, harorat 38.5, holsizlik, tomoq achishishi" },
+};
+
 const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false }) => {
   // Generate unique ID for this component instance to track duplicates
   const componentInstanceId = useRef(Math.random().toString(36).substring(7));
   console.log(`🆔 VideoConsultation instance rendering: ${componentInstanceId.current}`);
   const { token } = useAuth();
+  const { language } = useLanguage();
+  const ht = HEADER_TEXT[language as keyof typeof HEADER_TEXT] ?? HEADER_TEXT.ru;
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -562,9 +576,10 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
         // Return to Step 1
         setStep(1);
       }
-    } catch (error) {
-      console.error("❌ Error scheduling consultation:", error);
-      toast.error("⚠️ Не удалось запланировать консультацию.");
+    } catch (error: any) {
+      console.error("❌ Error scheduling consultation:", error?.response?.data || error);
+      const backendMsg = error?.response?.data?.error;
+      toast.error(backendMsg ? `⚠️ ${backendMsg}` : "⚠️ Не удалось запланировать консультацию.");
     } finally {
       setLoadingCall(false);
     }
@@ -634,19 +649,19 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                     </svg>
-                    Назад
+                    {ht.back}
                   </button>
                 )}
                 <h2 className="text-xl md:text-2xl lg:text-3xl font-extrabold text-[#001E80]">
-                  {activeFlow === 'offline' ? 'Оффлайн приём'
-                    : activeFlow === 'diagnostics' ? `Диагностика`
-                    : activeFlow === 'home' ? 'Вызов на дом'
-                    : step === 1 ? 'Мои услуги'
-                    : step === 2 ? 'Онлайн консультация'
-                    : 'Подтверждение'}
+                  {activeFlow === 'offline' ? ht.offlineTitle
+                    : activeFlow === 'diagnostics' ? ht.diagnosticsTitle
+                    : activeFlow === 'home' ? ht.homeTitle
+                    : step === 1 ? ht.servicesTitle
+                    : step === 2 ? ht.onlineTitle
+                    : ht.confirmTitle}
                 </h2>
                 {activeFlow === 'diagnostics' && (
-                  <span className="text-xs font-semibold text-gray-400 ml-auto flex-shrink-0">Шаг {diagStep} / 3</span>
+                  <span className="text-xs font-semibold text-gray-400 ml-auto flex-shrink-0">{ht.step} {diagStep} / 3</span>
                 )}
               </div>
 
@@ -758,8 +773,11 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
 
                     if (consultationId === 0 && consultationData) {
                       // Step 2: Timeslot confirmed, not yet created
+                      // IMPORTANT: prefer scheduled_time (UTC ISO, e.g. "...Z") over scheduled_at
+                      // (naive local wall-clock string) — the backend expects an unambiguous,
+                      // timezone-aware timestamp for book-dynamic-slot.
                       setPendingConsultationData({
-                        scheduled_time: consultationData.scheduled_at || consultationData.scheduled_time,
+                        scheduled_time: consultationData.scheduled_time || consultationData.scheduled_at,
                         doctor_id: consultationData.doctor_id,
                         ai_recommendation_id: consultationData.ai_recommendation_id
                       });
@@ -820,7 +838,7 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
             <div className="sticky top-6">
               <TipsPanel
                 step={step}
-                onInsertExample={() => setSymptoms("Головная боль, температура 38.5, слабость, першение в горле")}
+                onInsertExample={() => setSymptoms(ht.symptomsExample)}
                 recommendedDoctor={recommendedDoctor}
                 aiErrorData={aiErrorData}
                 fallbackUsed={fallbackUsed}

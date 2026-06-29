@@ -66,7 +66,7 @@ const formatTime = (timeString: string): string => {
 };
 
 const formatDate = (timeString: string, language: string): string => {
-  const locale = language === "kz" ? "kk-KZ" : language === "en" ? "en-US" : "ru-RU";
+  const locale = language === "kz" ? "kk-KZ" : language === "en" ? "en-US" : language === "uz" ? "uz-UZ" : "ru-RU";
   return new Date(timeString).toLocaleDateString(locale, {
     weekday: "long",
     year: "numeric",
@@ -144,6 +144,16 @@ const translations = {
     emailContinue: "Продолжить",
     consultationEmail: "Email для связи",
     consultationPhone: "Телефон",
+    selectDate: "Выберите дату",
+    availableTime: "Доступное время",
+    loginRequired: "Войдите в аккаунт",
+    loginRequiredDesc: "Для записи к врачу необходимо войти или зарегистрироваться",
+    registerButton: "Зарегистрироваться",
+    loginHint: "Вход по Email или номеру телефона",
+    confirmTitle: "Подтвердите запись",
+    selectOtherTime: "Выбрать другое время",
+    bookingErrorGeneric: "Ошибка при записи. Попробуйте снова.",
+    at: "в",
   },
   en: {
     title: "Book Appointment",
@@ -187,6 +197,16 @@ const translations = {
     emailContinue: "Continue",
     consultationEmail: "Email",
     consultationPhone: "Phone",
+    selectDate: "Select date",
+    availableTime: "Available time",
+    loginRequired: "Sign in to your account",
+    loginRequiredDesc: "Please sign in or register to book an appointment",
+    registerButton: "Register",
+    loginHint: "Sign in with Email or phone number",
+    confirmTitle: "Confirm booking",
+    selectOtherTime: "Choose another time",
+    bookingErrorGeneric: "Booking error. Please try again.",
+    at: "at",
   },
   kz: {
     title: "Дәрігерге жазылу",
@@ -230,6 +250,69 @@ const translations = {
     emailContinue: "Жалғастыру",
     consultationEmail: "Email",
     consultationPhone: "Телефон",
+    selectDate: "Күнді таңдаңыз",
+    availableTime: "Қолжетімді уақыт",
+    loginRequired: "Аккаунтқа кіріңіз",
+    loginRequiredDesc: "Дәрігерге жазылу үшін кіру немесе тіркелу қажет",
+    registerButton: "Тіркелу",
+    loginHint: "Email немесе телефон нөмірі арқылы кіру",
+    confirmTitle: "Жазылуды растаңыз",
+    selectOtherTime: "Басқа уақытты таңдау",
+    bookingErrorGeneric: "Жазылу кезінде қате орын алды. Қайталап көріңіз.",
+    at: "",
+  },
+  uz: {
+    title: "Shifokorga yozilish",
+    selectDoctor: "Shifokorni tanlang",
+    selectTime: "Vaqtni tanlang",
+    yourInfo: "Sizning ma'lumotlaringiz",
+    confirmation: "Tasdiqlash",
+    back: "Orqaga",
+    next: "Keyingi",
+    confirm: "Yozilishni tasdiqlash",
+    close: "Yopish",
+    loading: "Yuklanmoqda...",
+    noSlots: "Bu sanada bo'sh vaqt yo'q",
+    selectOtherDate: "Boshqa sanani tanlang",
+    available: "Mavjud",
+    busy: "Band",
+    experience: "yillik tajriba",
+    online: "Onlayn konsultatsiya",
+    offline: "Klinikada shaxsan qabul",
+    bookingSuccess: "Konsultatsiya muvaffaqiyatli belgilandi!",
+    scheduledFor: "Belgilangan vaqt",
+    doctor: "Shifokor",
+    noDoctors: "Mavjud shifokorlar yo'q",
+    tryLater: "Keyinroq urinib ko'ring",
+    guestName: "Ismingiz",
+    guestPhone: "Telefon raqami",
+    guestEmail: "Email *",
+    guestNamePlaceholder: "Ismingizni kiriting",
+    guestPhonePlaceholder: "+7 (___) ___-__-__",
+    guestEmailPlaceholder: "example@mail.com",
+    continueAsGuest: "Mehmon sifatida davom etish",
+    orLogin: "yoki hisobingizga kiring",
+    loginToBook: "Kirish",
+    requiredField: "Majburiy maydon",
+    invalidPhone: "Telefon formati noto'g'ri",
+    invalidEmail: "Email formati noto'g'ri",
+    patient: "Bemor",
+    emailStep: "Sizning emailingiz",
+    emailLabel: "Konsultatsiya havolasi uchun email *",
+    emailHint: "Onlayn konsultatsiyaga qo'shilish havolasini shu manzilga yuboramiz.",
+    emailContinue: "Davom etish",
+    consultationEmail: "Email",
+    consultationPhone: "Telefon",
+    selectDate: "Sanani tanlang",
+    availableTime: "Mavjud vaqt",
+    loginRequired: "Hisobingizga kiring",
+    loginRequiredDesc: "Shifokorga yozilish uchun kirish yoki ro'yxatdan o'tish kerak",
+    registerButton: "Ro'yxatdan o'tish",
+    loginHint: "Email yoki telefon raqami orqali kirish",
+    confirmTitle: "Yozilishni tasdiqlang",
+    selectOtherTime: "Boshqa vaqtni tanlash",
+    bookingErrorGeneric: "Yozilishda xatolik. Qayta urinib ko'ring.",
+    at: "",
   },
 };
 
@@ -547,7 +630,7 @@ export default function BookingModal({
       console.error("Error booking consultation:", error);
       const errorMessage = error?.response?.data?.error ||
         error?.response?.data?.message ||
-        "Ошибка при записи. Попробуйте снова.";
+        t.bookingErrorGeneric;
 
       // Slot was taken — refresh and send user back to pick another time
       const isSlotTaken = error?.response?.status === 409 ||
@@ -780,7 +863,7 @@ export default function BookingModal({
                     {/* Date Selector */}
                     <div>
                       <p className="text-sm font-medium text-gray-700 mb-2">
-                        Выберите дату
+                        {t.selectDate}
                       </p>
                       <div className="flex gap-2 overflow-x-auto pb-2">
                         {calendarDates.slice(0, 7).map((dateItem) => (
@@ -809,7 +892,7 @@ export default function BookingModal({
                     {/* Timeslots */}
                     <div>
                       <p className="text-sm font-medium text-gray-700 mb-2">
-                        Доступное время
+                        {t.availableTime}
                       </p>
                       {availableTimeslots.length === 0 ? (
                         <div className="text-center py-8 text-gray-500">
@@ -851,7 +934,7 @@ export default function BookingModal({
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <Clock size={14} className="text-blue-600" />
                         <span>
-                          {formatDate(selectedTimeslot.start_time, language)} в{" "}
+                          {formatDate(selectedTimeslot.start_time, language)}{t.at ? ` ${t.at}` : ""}{" "}
                           {formatTime(selectedTimeslot.start_time)}
                         </span>
                       </div>
@@ -862,15 +945,15 @@ export default function BookingModal({
                       <div className="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center mb-4">
                         <UserCircle className="w-8 h-8 text-blue-600" />
                       </div>
-                      <h3 className="text-lg font-bold text-gray-900 mb-1">Войдите в аккаунт</h3>
-                      <p className="text-sm text-gray-500 mb-6">Для записи к врачу необходимо войти или зарегистрироваться</p>
+                      <h3 className="text-lg font-bold text-gray-900 mb-1">{t.loginRequired}</h3>
+                      <p className="text-sm text-gray-500 mb-6">{t.loginRequiredDesc}</p>
 
                       <button
                         onClick={() => handleLoginClick("login")}
                         className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-base hover:shadow-lg transition-all flex items-center justify-center gap-2 mb-3"
                       >
                         <LogIn size={18} />
-                        Войти
+                        {t.loginToBook}
                       </button>
 
                       <button
@@ -878,10 +961,10 @@ export default function BookingModal({
                         className="w-full py-3 border-2 border-blue-600 text-blue-600 rounded-xl font-bold text-base hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
                       >
                         <UserPlus size={18} />
-                        Зарегистрироваться
+                        {t.registerButton}
                       </button>
 
-                      <p className="text-xs text-gray-400 mt-4">Вход по Email или номеру телефона</p>
+                      <p className="text-xs text-gray-400 mt-4">{t.loginHint}</p>
                     </div>
                   </div>
                 )}
@@ -954,7 +1037,7 @@ export default function BookingModal({
                           <CheckCircle2 className="w-8 h-8 text-green-600" />
                         </div>
                         <h3 className="text-xl font-bold text-gray-900">
-                          Подтвердите запись
+                          {t.confirmTitle}
                         </h3>
                       </div>
 
@@ -1062,7 +1145,7 @@ export default function BookingModal({
                             }}
                             className="self-start text-xs font-bold text-red-600 underline underline-offset-2 hover:text-red-800 transition-colors"
                           >
-                            ← Выбрать другое время
+                            ← {t.selectOtherTime}
                           </button>
                         </div>
                       )}

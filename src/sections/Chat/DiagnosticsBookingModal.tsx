@@ -103,7 +103,7 @@ export default function DiagnosticsBookingModal({
 }: DiagnosticsBookingModalProps) {
   const { token, user, openAuth } = useAuth();
   const isLoggedIn = !!token && !!user;
-  const lang = language as "en" | "ru" | "kz";
+  const lang = language as "en" | "ru" | "kz" | "uz";
 
   const [step, setStep] = useState<Step>("timeslots");
   const [selectedDate, setSelectedDate] = useState<string>(localDateStr(new Date()));
@@ -126,27 +126,28 @@ export default function DiagnosticsBookingModal({
   }, [isOpen, user?.email]);
 
   const t = {
-    title: { en: "Book diagnostics", ru: "Запись на диагностику", kz: "Диагностикаға жазылу" },
-    selectTime: { en: "Select time", ru: "Выберите время", kz: "Уақытты таңдаңыз" },
-    chooseDate: { en: "Choose date", ru: "Выберите дату", kz: "Күнді таңдаңыз" },
-    availableTime: { en: "Available time", ru: "Доступное время", kz: "Қолжетімді уақыт" },
-    noSlots: { en: "No available slots for this date", ru: "Нет доступных слотов на эту дату", kz: "Бұл күнге бос слот жоқ" },
-    loginTitle: { en: "Sign in to your account", ru: "Войдите в аккаунт", kz: "Аккаунтқа кіріңіз" },
-    loginSubtitle: { en: "You need to sign in or register to book diagnostics", ru: "Для записи на диагностику необходимо войти или зарегистрироваться", kz: "Диагностикаға жазылу үшін кіру немесе тіркелу қажет" },
-    login: { en: "Sign in", ru: "Войти", kz: "Кіру" },
-    register: { en: "Register", ru: "Зарегистрироваться", kz: "Тіркелу" },
-    emailLabel: { en: "Email for confirmation *", ru: "Email для подтверждения *", kz: "Растау үшін email *" },
-    emailContinue: { en: "Continue", ru: "Продолжить", kz: "Жалғастыру" },
-    requiredField: { en: "Required field", ru: "Обязательное поле", kz: "Міндетті өріс" },
-    invalidEmail: { en: "Invalid email format", ru: "Неверный формат email", kz: "Email форматы қате" },
-    confirmTitle: { en: "Confirm booking", ru: "Подтвердите запись", kz: "Жазылуды растаңыз" },
-    service: { en: "Service", ru: "Услуга", kz: "Қызмет" },
-    date: { en: "Date", ru: "Дата", kz: "Күні" },
-    time: { en: "Time", ru: "Время", kz: "Уақыты" },
-    price: { en: "Price", ru: "Стоимость", kz: "Бағасы" },
-    confirm: { en: "Confirm booking", ru: "Подтвердить запись", kz: "Жазылуды растау" },
-    loading: { en: "Loading...", ru: "Загрузка...", kz: "Жүктелуде..." },
-    backToTimes: { en: "← Choose another time", ru: "← Выбрать другое время", kz: "← Басқа уақыт таңдау" },
+    title: { en: "Book diagnostics", ru: "Запись на диагностику", kz: "Диагностикаға жазылу", uz: "Diagnostikaga yozilish" },
+    selectTime: { en: "Select time", ru: "Выберите время", kz: "Уақытты таңдаңыз", uz: "Vaqtni tanlang" },
+    chooseDate: { en: "Choose date", ru: "Выберите дату", kz: "Күнді таңдаңыз", uz: "Sanani tanlang" },
+    availableTime: { en: "Available time", ru: "Доступное время", kz: "Қолжетімді уақыт", uz: "Mavjud vaqt" },
+    noSlots: { en: "No available slots for this date", ru: "Нет доступных слотов на эту дату", kz: "Бұл күнге бос слот жоқ", uz: "Bu sanada bo'sh vaqt yo'q" },
+    loginTitle: { en: "Sign in to your account", ru: "Войдите в аккаунт", kz: "Аккаунтқа кіріңіз", uz: "Hisobingizga kiring" },
+    loginSubtitle: { en: "You need to sign in or register to book diagnostics", ru: "Для записи на диагностику необходимо войти или зарегистрироваться", kz: "Диагностикаға жазылу үшін кіру немесе тіркелу қажет", uz: "Diagnostikaga yozilish uchun kirish yoki ro'yxatdan o'tish kerak" },
+    login: { en: "Sign in", ru: "Войти", kz: "Кіру", uz: "Kirish" },
+    register: { en: "Register", ru: "Зарегистрироваться", kz: "Тіркелу", uz: "Ro'yxatdan o'tish" },
+    emailLabel: { en: "Email for confirmation *", ru: "Email для подтверждения *", kz: "Растау үшін email *", uz: "Tasdiqlash uchun email *" },
+    emailContinue: { en: "Continue", ru: "Продолжить", kz: "Жалғастыру", uz: "Davom etish" },
+    requiredField: { en: "Required field", ru: "Обязательное поле", kz: "Міндетті өріс", uz: "Majburiy maydon" },
+    invalidEmail: { en: "Invalid email format", ru: "Неверный формат email", kz: "Email форматы қате", uz: "Email formati noto'g'ri" },
+    confirmTitle: { en: "Confirm booking", ru: "Подтвердите запись", kz: "Жазылуды растаңыз", uz: "Yozilishni tasdiqlang" },
+    service: { en: "Service", ru: "Услуга", kz: "Қызмет", uz: "Xizmat" },
+    date: { en: "Date", ru: "Дата", kz: "Күні", uz: "Sana" },
+    time: { en: "Time", ru: "Время", kz: "Уақыты", uz: "Vaqt" },
+    price: { en: "Price", ru: "Стоимость", kz: "Бағасы", uz: "Narxi" },
+    confirm: { en: "Confirm booking", ru: "Подтвердить запись", kz: "Жазылуды растау", uz: "Yozilishni tasdiqlash" },
+    loading: { en: "Loading...", ru: "Загрузка...", kz: "Жүктелуде...", uz: "Yuklanmoqda..." },
+    backToTimes: { en: "← Choose another time", ru: "← Выбрать другое время", kz: "← Басқа уақыт таңдау", uz: "← Boshqa vaqtni tanlash" },
+    bookingErrorGeneric: { en: "Could not create the booking. Please try again later.", ru: "Не удалось создать запись. Попробуйте позже.", kz: "Жазылуды жасау мүмкін болмады. Кейінірек көріңіз.", uz: "Yozilishni yaratib bo'lmadi. Keyinroq urinib ko'ring." },
   };
 
   const handleTimeSelect = (time: string) => {
@@ -212,7 +213,7 @@ export default function DiagnosticsBookingModal({
       });
       onClose();
     } catch (error: any) {
-      const msg = error?.response?.data?.error || "Не удалось создать запись. Попробуйте позже.";
+      const msg = error?.response?.data?.error || t.bookingErrorGeneric[lang];
       setBookingError(msg);
     } finally {
       setBookingLoading(false);

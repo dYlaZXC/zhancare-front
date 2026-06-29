@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Home, ChevronRight, User, Video, Calendar, FileText, Plane, FolderOpen, Activity } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface BreadcrumbItem {
   key: string;
@@ -16,12 +17,37 @@ interface BreadcrumbProps {
   customItems?: BreadcrumbItem[];
 }
 
+const BREADCRUMB_TEXT = {
+  ru: {
+    nav: "Навигация по разделам", home: "Главная", homeAria: "Главная страница", goTo: "Перейти к:",
+    profile: "Профиль", video: "Консультация", appointments: "Вызов врача на дом",
+    history: "Медицинская история", chat: "Мед Туризм", documents: "Документы", activity: "Активность",
+  },
+  kz: {
+    nav: "Бөлімдер бойынша навигация", home: "Басты бет", homeAria: "Басты бет", goTo: "Өту:",
+    profile: "Профиль", video: "Кеңес", appointments: "Дәрігерді үйге шақыру",
+    history: "Медициналық тарих", chat: "Медициналық туризм", documents: "Құжаттар", activity: "Белсенділік",
+  },
+  en: {
+    nav: "Section navigation", home: "Home", homeAria: "Home page", goTo: "Go to:",
+    profile: "Profile", video: "Consultation", appointments: "Doctor home visit",
+    history: "Medical history", chat: "Medical Tourism", documents: "Documents", activity: "Activity",
+  },
+  uz: {
+    nav: "Bo'limlar bo'yicha navigatsiya", home: "Bosh sahifa", homeAria: "Bosh sahifa", goTo: "O'tish:",
+    profile: "Profil", video: "Konsultatsiya", appointments: "Shifokorni uyga chaqirish",
+    history: "Tibbiy tarix", chat: "Tibbiy turizm", documents: "Hujjatlar", activity: "Faollik",
+  },
+};
+
 export const Breadcrumb = ({
   showHome = true,
   customItems
 }: BreadcrumbProps) => {
   const pathname = usePathname();
   const router = useRouter();
+  const { language } = useLanguage();
+  const t = BREADCRUMB_TEXT[language as keyof typeof BREADCRUMB_TEXT] ?? BREADCRUMB_TEXT.ru;
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   // Mouse tracking for interactive effects
@@ -36,43 +62,43 @@ export const Breadcrumb = ({
   const defaultItems: Record<string, BreadcrumbItem> = {
     profile: {
       key: "profile",
-      title: "Профиль",
+      title: t.profile,
       icon: <User className="w-4 h-4" />,
       href: "/patient/profile",
     },
     video: {
       key: "video",
-      title: "Консультация",
+      title: t.video,
       icon: <Video className="w-4 h-4" />,
       href: "/patient/video",
     },
     appointments: {
       key: "appointments",
-      title: "Вызов врача на дом",
+      title: t.appointments,
       icon: <Calendar className="w-4 h-4" />,
       href: "/patient/appointments",
     },
     history: {
       key: "history",
-      title: "Медицинская история",
+      title: t.history,
       icon: <FileText className="w-4 h-4" />,
       href: "/patient/history",
     },
     chat: {
       key: "chat",
-      title: "Мед Туризм",
+      title: t.chat,
       icon: <Plane className="w-4 h-4" />,
       href: "/patient/chat",
     },
     documents: {
       key: "documents",
-      title: "Документы",
+      title: t.documents,
       icon: <FolderOpen className="w-4 h-4" />,
       href: "/patient/documents",
     },
     activity: {
       key: "activity",
-      title: "Активность",
+      title: t.activity,
       icon: <Activity className="w-4 h-4" />,
       href: "/patient/activity",
     },
@@ -98,7 +124,7 @@ export const Breadcrumb = ({
     <nav
       className="flex items-center px-6 py-2 relative overflow-hidden border-b border-white/10 shadow-xl"
       role="navigation"
-      aria-label="Навигация по разделам"
+      aria-label={t.nav}
       style={{
         background: `
           radial-gradient(circle at ${mousePos.x}px ${mousePos.y}px, rgba(55, 114, 255, 0.2) 0%, transparent 50%),
@@ -119,13 +145,13 @@ export const Breadcrumb = ({
             <button
               onClick={handleHomeClick}
               className="group flex items-center gap-2 px-3 py-2 text-white/90 hover:text-white transition-all duration-300 rounded-xl hover:bg-white/10 hover:shadow-lg hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-400/50 backdrop-blur-sm border border-white/0 hover:border-white/20"
-              aria-label="Главная страница"
-              title="Главная"
+              aria-label={t.homeAria}
+              title={t.home}
             >
               <div className="w-5 h-5 flex items-center justify-center">
                 <Home className="w-4 h-4 transition-transform duration-300 group-hover:scale-110" />
               </div>
-              <span className="hidden sm:inline text-sm font-semibold tracking-wide">Главная</span>
+              <span className="hidden sm:inline text-sm font-semibold tracking-wide">{t.home}</span>
             </button>
 
             <div className="flex items-center justify-center text-white/40">
@@ -164,7 +190,7 @@ export const Breadcrumb = ({
                 key={item.key}
                 onClick={() => handleItemClick(item)}
                 className="group flex items-center gap-2 px-3 py-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-300 hover:shadow-md hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-400/50 backdrop-blur-sm border border-white/0 hover:border-white/20"
-                title={`Перейти к: ${item.title}`}
+                title={`${t.goTo} ${item.title}`}
               >
                 <div className="flex items-center justify-center w-4 h-4">
                   {item.icon}

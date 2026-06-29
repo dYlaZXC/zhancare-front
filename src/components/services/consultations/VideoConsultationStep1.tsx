@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   Sparkles,
   Info,
@@ -32,6 +33,33 @@ interface Step1Props {
   loading?: boolean;
 }
 
+const SERVICE_BUTTONS_TEXT = {
+  ru: {
+    online: { label: "Онлайн", sub: "видео-консультация", action: "Начать" },
+    offline: { label: "Оффлайн", sub: "приём у врача", action: "Записаться" },
+    home: { label: "Вызов на дом", sub: "медсестра к вам", action: "Вызвать" },
+    diagnostics: { label: "Диагностика", sub: "анализы и обследование", action: "Записаться" },
+  },
+  kz: {
+    online: { label: "Онлайн", sub: "бейне кеңес", action: "Бастау" },
+    offline: { label: "Оффлайн", sub: "дәрігерге баю", action: "Жазылу" },
+    home: { label: "Үйге шақыру", sub: "медбике сізге", action: "Шақыру" },
+    diagnostics: { label: "Диагностика", sub: "талдау және тексеру", action: "Жазылу" },
+  },
+  en: {
+    online: { label: "Online", sub: "video consultation", action: "Start" },
+    offline: { label: "Offline", sub: "in-person visit", action: "Book" },
+    home: { label: "Home visit", sub: "nurse to your home", action: "Call" },
+    diagnostics: { label: "Diagnostics", sub: "tests & exams", action: "Book" },
+  },
+  uz: {
+    online: { label: "Onlayn", sub: "video konsultatsiya", action: "Boshlash" },
+    offline: { label: "Oflayn", sub: "shifokor qabuli", action: "Yozilish" },
+    home: { label: "Uyga chaqirish", sub: "hamshira uyingizga", action: "Chaqirish" },
+    diagnostics: { label: "Diagnostika", sub: "tahlil va tekshiruv", action: "Yozilish" },
+  },
+};
+
 const VideoConsultationStep1: React.FC<Step1Props> = ({
   symptoms,
   onChange,
@@ -41,6 +69,8 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
   onHome,
   loading = false,
 }) => {
+  const { language } = useLanguage();
+  const st = SERVICE_BUTTONS_TEXT[language as keyof typeof SERVICE_BUTTONS_TEXT] ?? SERVICE_BUTTONS_TEXT.ru;
   const [isRecording, setIsRecording] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const [charCount, setCharCount] = useState(symptoms.length);
@@ -147,34 +177,34 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
 
   const serviceButtons = [
     {
-      label: 'Онлайн',
-      sub: 'видео-консультация',
+      label: st.online.label,
+      sub: st.online.sub,
       icon: <Video size={20} />,
-      action: 'Начать',
+      action: st.online.action,
       onClick: onNext,
       bg: '#1d4ed8',
     },
     {
-      label: 'Оффлайн',
-      sub: 'приём у врача',
+      label: st.offline.label,
+      sub: st.offline.sub,
       icon: <Home size={20} />,
-      action: 'Записаться',
+      action: st.offline.action,
       onClick: onOffline,
       bg: '#0f766e',
     },
     {
-      label: 'Вызов на дом',
-      sub: 'медсестра к вам',
+      label: st.home.label,
+      sub: st.home.sub,
       icon: <MapPin size={20} />,
-      action: 'Вызвать',
+      action: st.home.action,
       onClick: onHome,
       bg: '#b45309',
     },
     {
-      label: 'Диагностика',
-      sub: 'анализы и обследование',
+      label: st.diagnostics.label,
+      sub: st.diagnostics.sub,
       icon: <Stethoscope size={20} />,
-      action: 'Записаться',
+      action: st.diagnostics.action,
       onClick: onDiagnostics,
       bg: '#7c3aed',
     },

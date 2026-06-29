@@ -542,11 +542,12 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
         const fullSymptoms = allUserMessages.join(". ");
         setAccumulatedSymptoms(fullSymptoms);
 
-        const lang = language as "en" | "ru" | "kz";
+        const lang = language as "en" | "ru" | "kz" | "uz";
         const selectorLabels = {
           en: "How would you like to consult?",
           ru: "Как вы хотите получить консультацию?",
           kz: "Қалай кеңес алғыңыз келеді?",
+          uz: "Konsultatsiyani qanday olishni xohlaysiz?",
         };
         setMessages(prev => [...prev, {
           role: "consultation-type-selector",
@@ -558,7 +559,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
     } catch (error) {
       console.error("AI error:", error);
       setStreamingText("");
-      const errMsg = { ru: "Произошла ошибка. Попробуйте ещё раз.", en: "An error occurred. Please try again.", kz: "Қате орын алды. Қайталап көріңіз." };
+      const errMsg = { ru: "Произошла ошибка. Попробуйте ещё раз.", en: "An error occurred. Please try again.", kz: "Қате орын алды. Қайталап көріңіз.", uz: "Xatolik yuz berdi. Qayta urinib ko'ring." };
       setMessages(prev => [...prev, { role: "assistant", content: errMsg[language as keyof typeof errMsg] ?? errMsg.ru }]);
       setIsLoading(false);
     }
@@ -625,7 +626,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
     gis2Url?: string;
   }) => {
     const date = new Date(bookingDetails.scheduledTime);
-    const locale = language === "kz" ? "kk-KZ" : language === "en" ? "en-US" : "ru-RU";
+    const locale = language === "kz" ? "kk-KZ" : language === "en" ? "en-US" : language === "uz" ? "uz-UZ" : "ru-RU";
     const formattedDate = date.toLocaleDateString(locale, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
     const formattedTime = date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
 
@@ -663,7 +664,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
     durationMinutes: number;
   }) => {
     const date = new Date(details.scheduledTime);
-    const locale = language === "kz" ? "kk-KZ" : language === "en" ? "en-US" : "ru-RU";
+    const locale = language === "kz" ? "kk-KZ" : language === "en" ? "en-US" : language === "uz" ? "uz-UZ" : "ru-RU";
     const formattedDate = date.toLocaleDateString(locale, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
     const formattedTime = date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
 
@@ -694,6 +695,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
           en: "Here are other available doctors you can consult with:",
           ru: "Вот другие доступные врачи, с которыми вы можете проконсультироваться:",
           kz: "Міне, сіз кеңес ала алатын басқа қолжетімді дәрігерлер:",
+          uz: "Mana siz murojaat qilishingiz mumkin bo'lgan boshqa shifokorlar:",
         };
         setMessages((prev) => [
           ...prev,
@@ -708,6 +710,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
           en: "Sorry, no available doctors at the moment. Please try again later.",
           ru: "Извините, в данный момент нет доступных врачей. Пожалуйста, попробуйте позже.",
           kz: "Кешіріңіз, қазіргі уақытта қолжетімді дәрігерлер жоқ. Кейінірек қайталап көріңіз.",
+          uz: "Kechirasiz, hozircha mavjud shifokorlar yo'q. Iltimos, keyinroq urinib ko'ring.",
         };
         setMessages((prev) => [
           ...prev,
@@ -715,9 +718,15 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
         ]);
       }
     } catch {
+      const loadErrLabels: Record<string, string> = {
+        en: "An error occurred while loading the doctors list. Please try again later.",
+        ru: "Произошла ошибка при загрузке списка врачей. Пожалуйста, попробуйте позже.",
+        kz: "Дәрігерлер тізімін жүктеу кезінде қате орын алды. Кейінірек қайталап көріңіз.",
+        uz: "Shifokorlar ro'yxatini yuklashda xatolik yuz berdi. Keyinroq urinib ko'ring.",
+      };
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Произошла ошибка при загрузке списка врачей. Пожалуйста, попробуйте позже." },
+        { role: "assistant", content: loadErrLabels[language] ?? loadErrLabels.ru },
       ]);
     } finally {
       setIsLoading(false);
@@ -725,7 +734,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
   };
 
   const handleConsultationTypeSelect = async (type: ConsultationFlow) => {
-    const lang = language as "en" | "ru" | "kz";
+    const lang = language as "en" | "ru" | "kz" | "uz";
 
     // Mark the selector as selected so buttons become inactive
     setMessages(prev => prev.map(m =>
@@ -735,9 +744,9 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
     ));
 
     const typeLabels = {
-      online:      { en: "Online video consultation", ru: "Онлайн видео-консультация", kz: "Онлайн бейне кеңес" },
-      offline:     { en: "In-person visit",           ru: "Оффлайн приём у врача",     kz: "Офлайн дәрігерге баю" },
-      diagnostics: { en: "Diagnostics",               ru: "Диагностика",               kz: "Диагностика" },
+      online:      { en: "Online video consultation", ru: "Онлайн видео-консультация", kz: "Онлайн бейне кеңес", uz: "Onlayn video konsultatsiya" },
+      offline:     { en: "In-person visit",           ru: "Оффлайн приём у врача",     kz: "Офлайн дәрігерге баю", uz: "Shifokor qabuliga shaxsan borish" },
+      diagnostics: { en: "Diagnostics",               ru: "Диагностика",               kz: "Диагностика", uz: "Diagnostika" },
     };
     const choiceLabel = typeLabels[type][lang] ?? typeLabels[type].ru;
 
@@ -754,7 +763,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
         });
 
         if (!result.injectionBlocked && result.success && result.recommendedDoctor) {
-          const cardLabels = { en: "I found the best doctor for your symptoms:", ru: "Я подобрал подходящего врача по вашим симптомам:", kz: "Симптомдарыңызға сәйкес дәрігерді таптым:" };
+          const cardLabels = { en: "I found the best doctor for your symptoms:", ru: "Я подобрал подходящего врача по вашим симптомам:", kz: "Симптомдарыңызға сәйкес дәрігерді таптым:", uz: "Simptomlaringizga mos shifokorni topdim:" };
           setMessages(prev => [...prev, {
             role: "doctor-card",
             content: cardLabels[lang] ?? cardLabels.ru,
@@ -764,8 +773,8 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
         } else {
           // Fallback to random doctors
           const doctors = await aiService.getRandomDoctors(clinic?.clinicSlug);
-          const listLabels = { en: "Available doctors for online consultation:", ru: "Доступные врачи для онлайн-консультации:", kz: "Онлайн кеңеске қолжетімді дәрігерлер:" };
-          const emptyLabels = { en: "Sorry, no doctors are available at the moment. Please try again later.", ru: "Извините, в данный момент нет доступных врачей. Пожалуйста, попробуйте позже.", kz: "Кешіріңіз, қазіргі уақытта қолжетімді дәрігерлер жоқ. Кейінірек қайталап көріңіз." };
+          const listLabels = { en: "Available doctors for online consultation:", ru: "Доступные врачи для онлайн-консультации:", kz: "Онлайн кеңеске қолжетімді дәрігерлер:", uz: "Onlayn konsultatsiya uchun mavjud shifokorlar:" };
+          const emptyLabels = { en: "Sorry, no doctors are available at the moment. Please try again later.", ru: "Извините, в данный момент нет доступных врачей. Пожалуйста, попробуйте позже.", kz: "Кешіріңіз, қазіргі уақытта қолжетімді дәрігерлер жоқ. Кейінірек қайталап көріңіз.", uz: "Kechirasiz, hozircha mavjud shifokorlar yo'q. Iltimos, keyinroq urinib ko'ring." };
           if (doctors.length > 0) {
             setMessages(prev => [...prev, { role: "doctors-list", content: listLabels[lang] ?? listLabels.ru, doctors }]);
           } else {
@@ -773,9 +782,9 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
           }
         }
       } else if (type === "offline") {
-        const listLabel = { en: "Nearest doctors for in-person visit:", ru: "Ближайшие врачи для приёма:", kz: "Жақын маңдағы дәрігерлер:" }[lang] ?? "Ближайшие врачи для приёма:";
-        const geoUnavailLabel = { en: "Available doctors for in-person visit:", ru: "Доступные врачи для приёма:", kz: "Қабылдауға қолжетімді дәрігерлер:" }[lang] ?? "Доступные врачи для приёма:";
-        const emptyLabel = { en: "No available doctors at the moment.", ru: "В данный момент нет доступных врачей.", kz: "Қазіргі уақытта дәрігерлер жоқ." }[lang] ?? "В данный момент нет доступных врачей.";
+        const listLabel = { en: "Nearest doctors for in-person visit:", ru: "Ближайшие врачи для приёма:", kz: "Жақын маңдағы дәрігерлер:", uz: "Qabul uchun eng yaqin shifokorlar:" }[lang] ?? "Ближайшие врачи для приёма:";
+        const geoUnavailLabel = { en: "Available doctors for in-person visit:", ru: "Доступные врачи для приёма:", kz: "Қабылдауға қолжетімді дәрігерлер:", uz: "Qabul uchun mavjud shifokorlar:" }[lang] ?? "Доступные врачи для приёма:";
+        const emptyLabel = { en: "No available doctors at the moment.", ru: "В данный момент нет доступных врачей.", kz: "Қазіргі уақытта дәрігерлер жоқ.", uz: "Hozircha mavjud shifokorlar yo'q." }[lang] ?? "В данный момент нет доступных врачей.";
 
         const fetchOfflineDoctors = async (lat?: number, lng?: number) => {
           const label = (lat !== undefined) ? listLabel : geoUnavailLabel;
@@ -791,7 +800,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
         };
 
         if (typeof window !== "undefined" && navigator.geolocation) {
-          const geoPromptLabel = { en: "Requesting your location to find the nearest clinic...", ru: "Запрашиваем геолокацию для поиска ближайшей клиники...", kz: "Жақын клиниканы табу үшін геолокация сұралуда..." }[lang] ?? "Запрашиваем геолокацию...";
+          const geoPromptLabel = { en: "Requesting your location to find the nearest clinic...", ru: "Запрашиваем геолокацию для поиска ближайшей клиники...", kz: "Жақын клиниканы табу үшін геолокация сұралуда...", uz: "Eng yaqin klinikani topish uchun joylashuvingiz so'ralmoqda..." }[lang] ?? "Запрашиваем геолокацию...";
           setMessages(prev => [...prev, { role: "geolocation-prompt", content: geoPromptLabel }]);
           navigator.geolocation.getCurrentPosition(
             async (pos) => {
@@ -809,8 +818,8 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
         }
       } else {
         // diagnostics — show clinic's diagnostic services, not doctors
-        const label = { en: "Available diagnostic services:", ru: "Доступные услуги диагностики:", kz: "Қолжетімді диагностикалық қызметтер:" }[lang] ?? "Доступные услуги диагностики:";
-        const emptyLabel = { en: "No diagnostic services available at the moment.", ru: "В данный момент диагностические услуги недоступны.", kz: "Қазіргі уақытта диагностикалық қызметтер жоқ." }[lang] ?? "В данный момент диагностические услуги недоступны.";
+        const label = { en: "Available diagnostic services:", ru: "Доступные услуги диагностики:", kz: "Қолжетімді диагностикалық қызметтер:", uz: "Mavjud diagnostika xizmatlari:" }[lang] ?? "Доступные услуги диагностики:";
+        const emptyLabel = { en: "No diagnostic services available at the moment.", ru: "В данный момент диагностические услуги недоступны.", kz: "Қазіргі уақытта диагностикалық қызметтер жоқ.", uz: "Hozircha diagnostika xizmatlari mavjud emas." }[lang] ?? "В данный момент диагностические услуги недоступны.";
         const services = await aiService.getDiagnosticsServices(clinic?.clinicId);
         if (services.length > 0) {
           setMessages(prev => [...prev, { role: "diagnostics-list", content: label, diagnosticsServices: services }]);
@@ -819,7 +828,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
         }
       }
     } catch {
-      const errLabels = { en: "Error loading doctors. Please try again.", ru: "Ошибка загрузки врачей. Попробуйте ещё раз.", kz: "Дәрігерлерді жүктеу қатесі. Қайталап көріңіз." };
+      const errLabels = { en: "Error loading doctors. Please try again.", ru: "Ошибка загрузки врачей. Попробуйте ещё раз.", kz: "Дәрігерлерді жүктеу қатесі. Қайталап көріңіз.", uz: "Shifokorlarni yuklashda xatolik. Qayta urinib ko'ring." };
       setMessages(prev => [...prev, { role: "assistant", content: errLabels[lang] ?? errLabels.ru }]);
     } finally {
       setIsLoading(false);
@@ -1007,7 +1016,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                     <div>
                       <div className="px-2 py-1 rounded-lg mb-2 inline-block" style={{ background: "#ccfbf1" }}>
                         <span className="text-xs font-semibold" style={{ color: "#0f766e" }}>
-                          {language === "en" ? "Geolocation" : language === "kz" ? "Геолокация" : "Геолокация"}
+                          {language === "en" ? "Geolocation" : language === "kz" ? "Геолокация" : language === "uz" ? "Geolokatsiya" : "Геолокация"}
                         </span>
                       </div>
                       <div
@@ -1048,7 +1057,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                           <span className="text-base flex-shrink-0 mt-px">🔍</span>
                           <div>
                             <span className="text-xs font-semibold block mb-0.5" style={{ color: "#92400e" }}>
-                              {language === "en" ? "Preliminary" : language === "kz" ? "Болжамды диагноз" : "Примерный диагноз"}
+                              {language === "en" ? "Preliminary" : language === "kz" ? "Болжамды диагноз" : language === "uz" ? "Taxminiy tashxis" : "Примерный диагноз"}
                             </span>
                             <span className="text-sm font-medium" style={{ color: "#78350f" }}>
                               {message.preliminaryDiagnosis}
@@ -1071,14 +1080,14 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                   </div>
                 ) : message.role === "booking-confirmation" && message.bookingConfirmation?.consultationType === "diagnostics" ? (() => {
                   const bc = message.bookingConfirmation;
-                  const l = language as "en" | "ru" | "kz";
+                  const l = language as "en" | "ru" | "kz" | "uz";
                   const labels = {
-                    title: { en: "Booking confirmed!", ru: "Запись подтверждена!", kz: "Жазылу расталды!" },
-                    service: { en: "Diagnostic service", ru: "Услуга диагностики", kz: "Диагностикалық қызмет" },
-                    date: { en: "Date", ru: "Дата", kz: "Күні" },
-                    time: { en: "Time", ru: "Время", kz: "Уақыты" },
-                    price: { en: "Price", ru: "Стоимость", kz: "Бағасы" },
-                    remind: { en: "You will receive a reminder before your appointment.", ru: "Вы получите напоминание перед визитом.", kz: "Қабылдау алдында еске салу аласыз." },
+                    title: { en: "Booking confirmed!", ru: "Запись подтверждена!", kz: "Жазылу расталды!", uz: "Yozilish tasdiqlandi!" },
+                    service: { en: "Diagnostic service", ru: "Услуга диагностики", kz: "Диагностикалық қызмет", uz: "Diagnostika xizmati" },
+                    date: { en: "Date", ru: "Дата", kz: "Күні", uz: "Sana" },
+                    time: { en: "Time", ru: "Время", kz: "Уақыты", uz: "Vaqt" },
+                    price: { en: "Price", ru: "Стоимость", kz: "Бағасы", uz: "Narxi" },
+                    remind: { en: "You will receive a reminder before your appointment.", ru: "Вы получите напоминание перед визитом.", kz: "Қабылдау алдында еске салу аласыз.", uz: "Qabuldan oldin sizga eslatma yuboriladi." },
                   };
                   return (
                     <div className="max-w-[90%] sm:max-w-[85%] flex gap-2 sm:gap-3">
@@ -1149,20 +1158,20 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                   const bc = message.bookingConfirmation;
                   const isOfflineBooking = bc.consultationType === 'offline';
                   const labels = {
-                    title:        { en: "Appointment Confirmed!", ru: "Запись подтверждена!", kz: "Жазылу расталды!" },
-                    booked:       { en: "You have successfully booked an appointment with", ru: "Вы успешно записались к врачу", kz: "Дәрігерге сәтті жазылдыңыз:" },
-                    date:         { en: "Date", ru: "Дата", kz: "Күні" },
-                    time:         { en: "Time", ru: "Время", kz: "Уақыты" },
-                    typeOnline:   { en: "Online video consultation", ru: "Онлайн видеоконсультация", kz: "Онлайн бейне кеңес" },
-                    typeOffline:  { en: "In-person visit", ru: "Оффлайн приём у врача", kz: "Офлайн дәрігерге баю" },
-                    clinic:       { en: "Clinic", ru: "Клиника", kz: "Клиника" },
-                    address:      { en: "Address", ru: "Адрес", kz: "Мекенжай" },
-                    room:         { en: "Room", ru: "Кабинет", kz: "Кабинет" },
-                    map:          { en: "Open on map", ru: "Открыть на карте", kz: "Картада ашу" },
-                    remind:       { en: "You will receive a reminder before your appointment.", ru: "Вы получите напоминание перед приёмом.", kz: "Қабылдау алдында еске салу аласыз." },
-                    remindOnline: { en: "You will receive a reminder before your consultation.", ru: "Вы получите напоминание перед консультацией.", kz: "Кеңес алдында еске салу аласыз." },
+                    title:        { en: "Appointment Confirmed!", ru: "Запись подтверждена!", kz: "Жазылу расталды!", uz: "Yozilish tasdiqlandi!" },
+                    booked:       { en: "You have successfully booked an appointment with", ru: "Вы успешно записались к врачу", kz: "Дәрігерге сәтті жазылдыңыз:", uz: "Shifokorga muvaffaqiyatli yozildingiz:" },
+                    date:         { en: "Date", ru: "Дата", kz: "Күні", uz: "Sana" },
+                    time:         { en: "Time", ru: "Время", kz: "Уақыты", uz: "Vaqt" },
+                    typeOnline:   { en: "Online video consultation", ru: "Онлайн видеоконсультация", kz: "Онлайн бейне кеңес", uz: "Onlayn video konsultatsiya" },
+                    typeOffline:  { en: "In-person visit", ru: "Оффлайн приём у врача", kz: "Офлайн дәрігерге баю", uz: "Shifokor qabuliga shaxsan borish" },
+                    clinic:       { en: "Clinic", ru: "Клиника", kz: "Клиника", uz: "Klinika" },
+                    address:      { en: "Address", ru: "Адрес", kz: "Мекенжай", uz: "Manzil" },
+                    room:         { en: "Room", ru: "Кабинет", kz: "Кабинет", uz: "Xona" },
+                    map:          { en: "Open on map", ru: "Открыть на карте", kz: "Картада ашу", uz: "Xaritada ochish" },
+                    remind:       { en: "You will receive a reminder before your appointment.", ru: "Вы получите напоминание перед приёмом.", kz: "Қабылдау алдында еске салу аласыз.", uz: "Qabuldan oldin sizga eslatma yuboriladi." },
+                    remindOnline: { en: "You will receive a reminder before your consultation.", ru: "Вы получите напоминание перед консультацией.", kz: "Кеңес алдында еске салу аласыз.", uz: "Konsultatsiyadan oldin sizga eslatma yuboriladi." },
                   };
-                  const l = language as "en" | "ru" | "kz";
+                  const l = language as "en" | "ru" | "kz" | "uz";
                   return (
                     <div className="max-w-[90%] sm:max-w-[85%] flex gap-2 sm:gap-3">
                       <div
@@ -1304,7 +1313,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                                   style={{ background: accentGrad, color: onAccent }}
                                 >
                                   <FontAwesomeIcon icon={faVideo} className="text-xs" />
-                                  {l === "en" ? "Join Video Consultation" : l === "kz" ? "Бейне кеңеске кіру" : "Перейти к видеоконсультации"}
+                                  {l === "en" ? "Join Video Consultation" : l === "kz" ? "Бейне кеңеске кіру" : l === "uz" ? "Video konsultatsiyaga kirish" : "Перейти к видеоконсультации"}
                                 </button>
                               )}
                               <button
@@ -1313,7 +1322,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                                 style={{ background: accentLight, color: accentDark, border: `1px solid ${hexToRgba(accentColor, 0.3)}` }}
                               >
                                 <FontAwesomeIcon icon={faArrowRight} className="text-xs" />
-                                {l === "en" ? "My Appointments" : l === "kz" ? "Менің кабинетім" : "Мои записи"}
+                                {l === "en" ? "My Appointments" : l === "kz" ? "Менің кабинетім" : l === "uz" ? "Mening yozilishlarim" : "Мои записи"}
                               </button>
                               {bc.consultationId && (
                                 <a
@@ -1331,7 +1340,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                                   <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current flex-shrink-0" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
                                   </svg>
-                                  {l === "en" ? "Ask via WhatsApp" : l === "kz" ? "WhatsApp арқылы сұрау" : "Спросить в WhatsApp"}
+                                  {l === "en" ? "Ask via WhatsApp" : l === "kz" ? "WhatsApp арқылы сұрау" : l === "uz" ? "WhatsApp orqali so'rash" : "Спросить в WhatsApp"}
                                 </a>
                               )}
                             </div>
@@ -1341,39 +1350,28 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                     </div>
                   );
                 })() : message.role === "doctor-card" && message.doctor ? (() => {
-                  // Detect language for doctor card labels
-                  const detectLang = () => {
-                    const lastAssistant = messages.filter(m => m.role === "assistant").pop();
-                    const text = lastAssistant?.content || "";
-                    const hasEnglish = /[a-zA-Z]/.test(text);
-                    const hasCyrillic = /[а-яА-ЯёЁ]/.test(text);
-                    const hasKazakh = /[әғқңөұүһіӘҒҚҢӨҰҮҺІ]/.test(text);
-                    if (hasEnglish && !hasCyrillic) return "en";
-                    if (hasKazakh) return "kz";
-                    return "ru";
-                  };
-                  const lang = detectLang();
-
+                  // Use the UI's selected language for doctor card labels
+                  const lang = language as "en" | "ru" | "kz" | "uz";
 
                   const labels = {
-                    doctorRecommendation: { en: "Doctor Recommendation", ru: "Рекомендация врача", kz: "Дәрігер ұсынысы" },
-                    bookAppointment: { en: "Book Appointment", ru: "Записаться на прием", kz: "Жазылу" },
-                    showOtherDoctors: { en: "Show Other Doctors", ru: "Показать других врачей", kz: "Басқа дәрігерлерді көрсету" },
-                    urgentConsultation: { en: "Urgent Consultation", ru: "Срочная консультация", kz: "Шұғыл кеңес" },
-                    experience: { en: "years experience", ru: "лет опыта", kz: "жыл тәжірибе" },
-                    clinic: { en: "Clinic", ru: "Клиника", kz: "Клиника" }
+                    doctorRecommendation: { en: "Doctor Recommendation", ru: "Рекомендация врача", kz: "Дәрігер ұсынысы", uz: "Shifokor tavsiyasi" },
+                    bookAppointment: { en: "Book Appointment", ru: "Записаться на прием", kz: "Жазылу", uz: "Qabulga yozilish" },
+                    showOtherDoctors: { en: "Show Other Doctors", ru: "Показать других врачей", kz: "Басқа дәрігерлерді көрсету", uz: "Boshqa shifokorlarni ko'rsatish" },
+                    urgentConsultation: { en: "Urgent Consultation", ru: "Срочная консультация", kz: "Шұғыл кеңес", uz: "Shoshilinch konsultatsiya" },
+                    experience: { en: "years experience", ru: "лет опыта", kz: "жыл тәжірибе", uz: "yillik tajriba" },
+                    clinic: { en: "Clinic", ru: "Клиника", kz: "Клиника", uz: "Klinika" }
                   };
 
-                  // Get specialization in current language
+                  // Get specialization in current language (fall back to doctor_type when the field has no translation for this language)
                   const doctorSpecialization = message.doctor.specialization
-                    ? message.doctor.specialization[lang as keyof typeof message.doctor.specialization]
+                    ? (message.doctor.specialization[lang as keyof typeof message.doctor.specialization] || message.doctor.doctor_type || "Doctor")
                     : message.doctor.doctor_type || "Doctor";
 
                   const otherDoctorLabels = {
-                    bestMatch: { en: "Best Match", ru: "Лучший выбор", kz: "Ең жақсы таңдау" },
-                    alsoAvailable: { en: "Also available:", ru: "Также доступны:", kz: "Сонымен қатар қолжетімді:" },
-                    viewAll: { en: "View all doctors →", ru: "Показать всех врачей →", kz: "Барлық дәрігерлерді көрсету →" },
-                    book: { en: "Book", ru: "Записаться", kz: "Жазылу" },
+                    bestMatch: { en: "Best Match", ru: "Лучший выбор", kz: "Ең жақсы таңдау", uz: "Eng mos" },
+                    alsoAvailable: { en: "Also available:", ru: "Также доступны:", kz: "Сонымен қатар қолжетімді:", uz: "Shuningdek mavjud:" },
+                    viewAll: { en: "View all doctors →", ru: "Показать всех врачей →", kz: "Барлық дәрігерлерді көрсету →", uz: "Barcha shifokorlarni ko'rsatish →" },
+                    book: { en: "Book", ru: "Записаться", kz: "Жазылу", uz: "Yozilish" },
                   };
 
                   return (
@@ -1478,7 +1476,8 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                                   ru: "Ближайший слот:",
                                   en: "Nearest slot:",
                                   kz: "Жақын слот:",
-                                }[lang as "ru" | "en" | "kz"] ?? "Ближайший слот:"}
+                                  uz: "Eng yaqin vaqt:",
+                                }[lang as "ru" | "en" | "kz" | "uz"] ?? "Ближайший слот:"}
                               </span>
                               <span className="text-white font-bold">{message.doctor.nearest_slot?.label}</span>
                             </div>
@@ -1513,7 +1512,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                           <div className={`grid gap-2 ${message.otherDoctors.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
                             {message.otherDoctors.map((doc, idx) => {
                               const docSpec = doc.specialization
-                                ? doc.specialization[lang as keyof typeof doc.specialization]
+                                ? (doc.specialization[lang as keyof typeof doc.specialization] || doc.doctor_type || "Doctor")
                                 : doc.doctor_type || "Doctor";
                               return (
                                 <div
@@ -1596,26 +1595,17 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                   </div>
                   );
                 })() : message.role === "doctors-list" && message.doctors ? (() => {
-                  // Detect language for doctors list
-                  const detectLang = () => {
-                    const text = message.content || "";
-                    const hasEnglish = /[a-zA-Z]/.test(text);
-                    const hasCyrillic = /[а-яА-ЯёЁ]/.test(text);
-                    const hasKazakh = /[әғқңөұүһіӘҒҚҢӨҰҮҺІ]/.test(text);
-                    if (hasEnglish && !hasCyrillic) return "en";
-                    if (hasKazakh) return "kz";
-                    return "ru";
-                  };
-                  const lang = detectLang();
+                  // Use the UI's selected language for doctors-list labels
+                  const lang = language as "en" | "ru" | "kz" | "uz";
 
                   const isOffline = message.consultationType === "offline";
                   const labels = {
-                    book: { en: "Book", ru: "Записаться", kz: "Жазылу" },
-                    experience: { en: "years exp", ru: "лет опыта", kz: "жыл тәжірибе" },
-                    clinic: { en: "Clinic", ru: "Клиника", kz: "Клиника" },
-                    cabinet: { en: "Cabinet", ru: "Кабинет", kz: "Кабинет" },
-                    map: { en: "Open in 2GIS", ru: "Открыть в 2ГИС", kz: "2ГИС-та ашу" },
-                    km: { en: "km away", ru: "км от вас", kz: "км қашықтықта" },
+                    book: { en: "Book", ru: "Записаться", kz: "Жазылу", uz: "Yozilish" },
+                    experience: { en: "years exp", ru: "лет опыта", kz: "жыл тәжірибе", uz: "yillik tajriba" },
+                    clinic: { en: "Clinic", ru: "Клиника", kz: "Клиника", uz: "Klinika" },
+                    cabinet: { en: "Cabinet", ru: "Кабинет", kz: "Кабинет", uz: "Xona" },
+                    map: { en: "Open in 2GIS", ru: "Открыть в 2ГИС", kz: "2ГИС-та ашу", uz: "2GIS'da ochish" },
+                    km: { en: "km away", ru: "км от вас", kz: "км қашықтықта", uz: "km uzoqlikda" },
                   };
 
                   return (
@@ -1634,7 +1624,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                         {message.doctors.map((doctor, idx) => {
                           // Get specialization in current language
                           const doctorSpecialization = doctor.specialization
-                            ? doctor.specialization[lang as keyof typeof doctor.specialization]
+                            ? (doctor.specialization[lang as keyof typeof doctor.specialization] || doctor.doctor_type || "Doctor")
                             : doctor.doctor_type || "Doctor";
 
                           return (
@@ -1795,23 +1785,13 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                   </div>
                   );
                 })() : message.role === "time-slots" && message.timeSlots ? (() => {
-                  // Detect language for time slots
-                  const detectLang = () => {
-                    const lastAssistant = messages.filter(m => m.role === "assistant").pop();
-                    const text = lastAssistant?.content || "";
-                    const hasEnglish = /[a-zA-Z]/.test(text);
-                    const hasCyrillic = /[а-яА-ЯёЁ]/.test(text);
-                    const hasKazakh = /[әғқңөұүһіӘҒҚҢӨҰҮҺІ]/.test(text);
-                    if (hasEnglish && !hasCyrillic) return "en";
-                    if (hasKazakh) return "kz";
-                    return "ru";
-                  };
-                  const lang = detectLang();
+                  // Use the UI's selected language for time-slot labels
+                  const lang = language as "en" | "ru" | "kz" | "uz";
 
                   const labels = {
-                    selectTime: { en: "Select time", ru: "Выберите время", kz: "Уақытты таңдаңыз" },
-                    bookSlot: { en: "Book", ru: "Забронировать", kz: "Брондау" },
-                    noSlots: { en: "No available time slots", ru: "Нет доступного времени", kz: "Қолжетімді уақыт жоқ" }
+                    selectTime: { en: "Select time", ru: "Выберите время", kz: "Уақытты таңдаңыз", uz: "Vaqtni tanlang" },
+                    bookSlot: { en: "Book", ru: "Забронировать", kz: "Брондау", uz: "Band qilish" },
+                    noSlots: { en: "No available time slots", ru: "Нет доступного времени", kz: "Қолжетімді уақыт жоқ", uz: "Mavjud vaqt yo'q" }
                   };
 
                   const handleTimeSlotClick = (slot: TimeSlot) => {
@@ -1827,7 +1807,8 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                     const months = {
                       en: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
                       ru: ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"],
-                      kz: ["қаң", "ақп", "нау", "сәу", "мам", "мау", "шіл", "там", "қыр", "қаз", "қар", "жел"]
+                      kz: ["қаң", "ақп", "нау", "сәу", "мам", "мау", "шіл", "там", "қыр", "қаз", "қар", "жел"],
+                      uz: ["yan", "fev", "mar", "apr", "may", "iyun", "iyul", "avg", "sen", "okt", "noy", "dek"]
                     };
                     const monthNames = months[lang as keyof typeof months] || months.ru;
                     return `${date.getDate()} ${monthNames[date.getMonth()]}`;
@@ -1949,7 +1930,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                             onClick={() => handleBookDiagnosticsService(svc)}
                             className="mt-3 w-full py-2 rounded-xl bg-white text-blue-700 text-xs font-bold hover:bg-blue-50 transition-colors"
                           >
-                            {{ en: "Book", ru: "Записаться", kz: "Жазылу" }[language as "en" | "ru" | "kz"] ?? "Записаться"}
+                            {{ en: "Book", ru: "Записаться", kz: "Жазылу", uz: "Yozilish" }[language as "en" | "ru" | "kz" | "uz"] ?? "Записаться"}
                           </button>
                         </div>
                       ))}
@@ -1958,12 +1939,12 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                 })() : message.role === "consultation-type-selector" ? (() => {
                   const isSelected = !!message.selectedConsultationType;
                   const typeConfig = [
-                    { type: 'online'      as ConsultationFlow, label: { en: "Online",      ru: "Онлайн",      kz: "Онлайн"      }, sub: { en: "video consultation", ru: "видео-консультация", kz: "бейне кеңес" }, icon: faVideo,        bg: "#1d4ed8" },
-                    { type: 'offline'     as ConsultationFlow, label: { en: "Offline",     ru: "Оффлайн",     kz: "Оффлайн"     }, sub: { en: "in-person visit",   ru: "приём у врача",     kz: "дәрігерге баю" }, icon: faHouse,        bg: "#0f766e" },
-                    { type: 'diagnostics' as ConsultationFlow, label: { en: "Diagnostics", ru: "Диагностика", kz: "Диагностика" }, sub: { en: "tests & exams",     ru: "анализы и обследование", kz: "талдау және тексеру" }, icon: faStethoscope, bg: "#7c3aed" },
+                    { type: 'online'      as ConsultationFlow, label: { en: "Online",      ru: "Онлайн",      kz: "Онлайн",      uz: "Onlayn" },      sub: { en: "video consultation", ru: "видео-консультация", kz: "бейне кеңес", uz: "video konsultatsiya" }, icon: faVideo,        bg: "#1d4ed8" },
+                    { type: 'offline'     as ConsultationFlow, label: { en: "Offline",     ru: "Оффлайн",     kz: "Оффлайн",     uz: "Oflayn" },      sub: { en: "in-person visit",   ru: "приём у врача",     kz: "дәрігерге баю", uz: "shifokor qabuli" }, icon: faHouse,        bg: "#0f766e" },
+                    { type: 'diagnostics' as ConsultationFlow, label: { en: "Diagnostics", ru: "Диагностика", kz: "Диагностика", uz: "Diagnostika" }, sub: { en: "tests & exams",     ru: "анализы и обследование", kz: "талдау және тексеру", uz: "tahlil va tekshiruv" }, icon: faStethoscope, bg: "#7c3aed" },
                   ];
-                  const lang = language as "en" | "ru" | "kz";
-                  const actionLabel = { en: { online: "Start", offline: "Book", diagnostics: "Book" }, ru: { online: "Начать", offline: "Записаться", diagnostics: "Записаться" }, kz: { online: "Бастау", offline: "Жазылу", diagnostics: "Жазылу" } };
+                  const lang = language as "en" | "ru" | "kz" | "uz";
+                  const actionLabel = { en: { online: "Start", offline: "Book", diagnostics: "Book" }, ru: { online: "Начать", offline: "Записаться", diagnostics: "Записаться" }, kz: { online: "Бастау", offline: "Жазылу", diagnostics: "Жазылу" }, uz: { online: "Boshlash", offline: "Yozilish", diagnostics: "Yozilish" } };
                   return (
                     <div className="max-w-[92%] sm:max-w-[88%] flex gap-2 sm:gap-3">
                       <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 mt-1" style={{ background: "linear-gradient(135deg, #3772ff 0%, #2956bf 100%)" }}>
@@ -2066,7 +2047,7 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
                     <div className="flex items-center gap-2 sm:gap-3">
                       <FontAwesomeIcon icon={faSpinner} className="animate-spin text-sm sm:text-base" style={{ color: accentColor }} />
                       <span className="text-sm sm:text-base" style={{ color: "#283353" }}>
-                        {{ ru: "Анализирую симптомы...", en: "Analysing symptoms...", kz: "Симптомдарды талдаймын..." }[language as "ru" | "en" | "kz"] ?? "Анализирую симптомы..."}
+                        {{ ru: "Анализирую симптомы...", en: "Analysing symptoms...", kz: "Симптомдарды талдаймын...", uz: "Simptomlarni tahlil qilmoqdaman..." }[language as "ru" | "en" | "kz" | "uz"] ?? "Анализирую симптомы..."}
                       </span>
                     </div>
                   )}

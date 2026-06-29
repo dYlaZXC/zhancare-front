@@ -5,8 +5,44 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, CheckCircle2, Calendar, MapPin, Phone, Building2, Navigation, DoorOpen } from "lucide-react";
 import { api } from "@/utils/api";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import Step2 from "./VideoConsultationStep2";
 import type { Doctor, RecommendedDoctor } from "./types/doctor";
+
+const OFFLINE_TEXT = {
+  ru: {
+    bookingError: "Ошибка при записи. Попробуйте снова.",
+    appointmentBooked: "Приём записан!", awaitConfirmation: "Ожидайте подтверждения от клиники",
+    offline: "Оффлайн", dateTime: "Дата и время", clinic: "Клиника", address: "Адрес",
+    route2gis: "Маршрут на 2ГИС", doctorCabinet: "Кабинет врача", cabinetNo: "№",
+    clinicPhone: "Телефон клиники", format: "Формат", inPersonVisit: "Очный приём в клинике",
+    toHome: "На главную", done: "Готово", locale: "ru-RU",
+  },
+  kz: {
+    bookingError: "Жазылу кезінде қате орын алды. Қайталап көріңіз.",
+    appointmentBooked: "Қабылдауға жазылдыңыз!", awaitConfirmation: "Клиникадан растауды күтіңіз",
+    offline: "Оффлайн", dateTime: "Күні мен уақыты", clinic: "Клиника", address: "Мекенжай",
+    route2gis: "2ГИС-те маршрут", doctorCabinet: "Дәрігер кабинеті", cabinetNo: "№",
+    clinicPhone: "Клиника телефоны", format: "Формат", inPersonVisit: "Клиникада жеке қабылдау",
+    toHome: "Басты бетке", done: "Дайын", locale: "kk-KZ",
+  },
+  en: {
+    bookingError: "Error booking the appointment. Please try again.",
+    appointmentBooked: "Appointment booked!", awaitConfirmation: "Awaiting confirmation from the clinic",
+    offline: "Offline", dateTime: "Date and time", clinic: "Clinic", address: "Address",
+    route2gis: "Route on 2GIS", doctorCabinet: "Doctor's office", cabinetNo: "No.",
+    clinicPhone: "Clinic phone", format: "Format", inPersonVisit: "In-person visit at the clinic",
+    toHome: "Back to home", done: "Done", locale: "en-US",
+  },
+  uz: {
+    bookingError: "Yozilishda xatolik yuz berdi. Qayta urinib ko'ring.",
+    appointmentBooked: "Qabulga yozildingiz!", awaitConfirmation: "Klinikadan tasdiqni kuting",
+    offline: "Oflayn", dateTime: "Sana va vaqt", clinic: "Klinika", address: "Manzil",
+    route2gis: "2GIS'da marshrut", doctorCabinet: "Shifokor kabineti", cabinetNo: "№",
+    clinicPhone: "Klinika telefoni", format: "Format", inPersonVisit: "Klinikada yuzma-yuz qabul",
+    toHome: "Bosh sahifaga", done: "Tayyor", locale: "uz-UZ",
+  },
+};
 
 interface OfflineBookingFlowProps {
   doctors: Doctor[];
@@ -36,6 +72,8 @@ const OfflineBookingFlow: React.FC<OfflineBookingFlowProps> = ({
   onRequestAIRecommendation, loadingAI, recommendedDoctor, aiRecommendationId,
 }) => {
   const { token } = useAuth();
+  const { language: uiLanguage } = useLanguage();
+  const tt = OFFLINE_TEXT[uiLanguage as keyof typeof OFFLINE_TEXT] ?? OFFLINE_TEXT.ru;
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedDoctorId, setSelectedDoctorId] = useState<number | null>(null);
   const [bookedInfo, setBookedInfo] = useState<BookedInfo | null>(null);
@@ -58,7 +96,7 @@ const OfflineBookingFlow: React.FC<OfflineBookingFlowProps> = ({
         { headers: { Authorization: `Token ${token}` } }
       );
     } catch (err: any) {
-      const msg = err?.response?.data?.error || 'Ошибка при записи. Попробуйте снова.';
+      const msg = err?.response?.data?.error || tt.bookingError;
       setBookingError(msg);
       return;
     }
@@ -149,8 +187,8 @@ const OfflineBookingFlow: React.FC<OfflineBookingFlowProps> = ({
             >
               <CheckCircle2 className="w-7 h-7 text-white" />
             </motion.div>
-            <h2 className="font-bold text-white text-lg">Приём записан!</h2>
-            <p className="text-white/70 text-sm mt-1">Ожидайте подтверждения от клиники</p>
+            <h2 className="font-bold text-white text-lg">{tt.appointmentBooked}</h2>
+            <p className="text-white/70 text-sm mt-1">{tt.awaitConfirmation}</p>
           </div>
 
           {bookedInfo && (
@@ -168,7 +206,7 @@ const OfflineBookingFlow: React.FC<OfflineBookingFlowProps> = ({
                   <p className="text-xs text-emerald-600 truncate">{bookedInfo.doctor.doctor_type}</p>
                 </div>
                 <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full flex-shrink-0">
-                  Оффлайн
+                  {tt.offline}
                 </span>
               </div>
 
@@ -179,11 +217,11 @@ const OfflineBookingFlow: React.FC<OfflineBookingFlowProps> = ({
                     <Calendar className="w-4 h-4 text-blue-600" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 font-medium">Дата и время</p>
+                    <p className="text-xs text-gray-400 font-medium">{tt.dateTime}</p>
                     <p className="text-sm font-semibold text-gray-900">
-                      {new Date(bookedInfo.time).toLocaleDateString('ru-RU', {
+                      {new Date(bookedInfo.time).toLocaleDateString(tt.locale, {
                         weekday: 'short', day: 'numeric', month: 'short'
-                      })} · {new Date(bookedInfo.time).toLocaleTimeString('ru-RU', {
+                      })} · {new Date(bookedInfo.time).toLocaleTimeString(tt.locale, {
                         hour: '2-digit', minute: '2-digit'
                       })}
                     </p>
@@ -198,7 +236,7 @@ const OfflineBookingFlow: React.FC<OfflineBookingFlowProps> = ({
                     <Building2 className="w-4 h-4 text-emerald-600" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-gray-400 font-medium">Клиника</p>
+                    <p className="text-xs text-gray-400 font-medium">{tt.clinic}</p>
                     <p className="text-sm font-semibold text-gray-900 truncate">{bookedInfo.clinicName}</p>
                   </div>
                 </div>
@@ -218,7 +256,7 @@ const OfflineBookingFlow: React.FC<OfflineBookingFlowProps> = ({
                         <MapPin className="w-4 h-4 text-emerald-600" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs text-gray-400 font-medium mb-0.5">Адрес</p>
+                        <p className="text-xs text-gray-400 font-medium mb-0.5">{tt.address}</p>
                         <p className="text-sm font-semibold text-gray-900 leading-snug">{bookedInfo.clinicAddress}</p>
                         {bookedInfo.clinicAddressComment && (
                           <p className="text-xs text-gray-500 mt-0.5">{bookedInfo.clinicAddressComment}</p>
@@ -234,7 +272,7 @@ const OfflineBookingFlow: React.FC<OfflineBookingFlowProps> = ({
                         className="flex items-center gap-2 w-full px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 text-white text-sm font-semibold shadow-sm hover:from-emerald-400 hover:to-green-500 transition-all"
                       >
                         <Navigation className="w-4 h-4 flex-shrink-0" />
-                        Маршрут на 2ГИС
+                        {tt.route2gis}
                       </a>
                     </div>
                   </div>
@@ -248,8 +286,8 @@ const OfflineBookingFlow: React.FC<OfflineBookingFlowProps> = ({
                     <DoorOpen className="w-4 h-4 text-blue-600" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 font-medium">Кабинет врача</p>
-                    <p className="text-sm font-semibold text-gray-900">№ {bookedInfo.roomNumber}</p>
+                    <p className="text-xs text-gray-400 font-medium">{tt.doctorCabinet}</p>
+                    <p className="text-sm font-semibold text-gray-900">{tt.cabinetNo} {bookedInfo.roomNumber}</p>
                   </div>
                 </div>
               )}
@@ -261,7 +299,7 @@ const OfflineBookingFlow: React.FC<OfflineBookingFlowProps> = ({
                     <Phone className="w-4 h-4 text-gray-500" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 font-medium">Телефон клиники</p>
+                    <p className="text-xs text-gray-400 font-medium">{tt.clinicPhone}</p>
                     <a href={`tel:${bookedInfo.clinicPhone}`} className="text-sm font-semibold text-blue-600 hover:underline">
                       {bookedInfo.clinicPhone}
                     </a>
@@ -276,8 +314,8 @@ const OfflineBookingFlow: React.FC<OfflineBookingFlowProps> = ({
                     <MapPin className="w-4 h-4 text-gray-400" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 font-medium">Формат</p>
-                    <p className="text-sm font-semibold text-gray-900">Очный приём в клинике</p>
+                    <p className="text-xs text-gray-400 font-medium">{tt.format}</p>
+                    <p className="text-sm font-semibold text-gray-900">{tt.inPersonVisit}</p>
                   </div>
                 </div>
               )}
@@ -290,14 +328,14 @@ const OfflineBookingFlow: React.FC<OfflineBookingFlowProps> = ({
               className="flex items-center gap-1.5 px-4 py-3 rounded-xl font-semibold bg-white border border-gray-200 text-gray-600 text-sm transition-all shadow-sm hover:border-gray-300"
             >
               <ArrowLeft className="w-4 h-4" />
-              На главную
+              {tt.toHome}
             </button>
             <button
               onClick={onComplete}
               className="flex-1 py-3 rounded-xl font-bold text-sm text-white shadow-md transition-all"
               style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}
             >
-              Готово
+              {tt.done}
             </button>
           </div>
         </motion.div>

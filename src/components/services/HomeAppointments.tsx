@@ -6,6 +6,38 @@ import { toast } from "react-toastify";
 import { MapPin, AlertCircle, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/utils/api";
+import { useLanguage } from "@/context/LanguageContext";
+
+const HOME_TEXT = {
+  ru: {
+    apt: "кв.", entrance: "подъезд", intercom: "домофон",
+    paymentAccepted: "✅ Оплата принята, заявка создана!", callFailed: "❌ Не удалось создать вызов.", serverError: "Ошибка сервера.",
+    callData: "Данные вызова", payment: "Оплата", back: "Назад", step: "Шаг",
+    callNurseHome: "Вызов медсестры на дом", fillDataBelow: "Заполните данные ниже, чтобы оформить вызов",
+    trackingCall: "Отслеживание вызова", request: "Заявка",
+  },
+  kz: {
+    apt: "пәт.", entrance: "кіреберіс", intercom: "домофон",
+    paymentAccepted: "✅ Төлем қабылданды, өтінім жасалды!", callFailed: "❌ Шақыруды жасау мүмкін болмады.", serverError: "Сервер қатесі.",
+    callData: "Шақыру деректері", payment: "Төлем", back: "Артқа", step: "Қадам",
+    callNurseHome: "Медбикені үйге шақыру", fillDataBelow: "Шақыруды рәсімдеу үшін төмендегі деректерді толтырыңыз",
+    trackingCall: "Шақыруды бақылау", request: "Өтінім",
+  },
+  en: {
+    apt: "apt.", entrance: "entrance", intercom: "intercom",
+    paymentAccepted: "✅ Payment accepted, request created!", callFailed: "❌ Could not create the call.", serverError: "Server error.",
+    callData: "Call details", payment: "Payment", back: "Back", step: "Step",
+    callNurseHome: "Call a nurse home", fillDataBelow: "Fill in the details below to request a visit",
+    trackingCall: "Tracking the call", request: "Request",
+  },
+  uz: {
+    apt: "kv.", entrance: "kirish", intercom: "domofon",
+    paymentAccepted: "✅ To'lov qabul qilindi, ariza yaratildi!", callFailed: "❌ Chaqiruvni yaratib bo'lmadi.", serverError: "Server xatosi.",
+    callData: "Chaqiruv ma'lumotlari", payment: "To'lov", back: "Orqaga", step: "Qadam",
+    callNurseHome: "Hamshirani uyga chaqirish", fillDataBelow: "Chaqiruvni rasmiylashtirish uchun quyidagi ma'lumotlarni to'ldiring",
+    trackingCall: "Chaqiruvni kuzatish", request: "Ariza",
+  },
+};
 
 import Step1 from "./homeAppointments/Step1";
 import PaymentStep from "./homeAppointments/PaymentStep";
@@ -18,6 +50,8 @@ interface HomeAppointmentsProps {
 
 const HomeAppointments: React.FC<HomeAppointmentsProps> = ({ onBack }) => {
   const { user } = useAuth();
+  const { language: uiLanguage } = useLanguage();
+  const tt = HOME_TEXT[uiLanguage as keyof typeof HOME_TEXT] ?? HOME_TEXT.ru;
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [step, setStep] = useState<1 | 2>(1);
@@ -43,9 +77,9 @@ const HomeAppointments: React.FC<HomeAppointmentsProps> = ({ onBack }) => {
     setLoading(true);
     try {
       const subParts: string[] = [];
-      if (apartment.trim()) subParts.push(`кв. ${apartment.trim()}`);
-      if (entrance.trim()) subParts.push(`подъезд ${entrance.trim()}`);
-      if (intercom.trim()) subParts.push(`домофон ${intercom.trim()}`);
+      if (apartment.trim()) subParts.push(`${tt.apt} ${apartment.trim()}`);
+      if (entrance.trim()) subParts.push(`${tt.entrance} ${entrance.trim()}`);
+      if (intercom.trim()) subParts.push(`${tt.intercom} ${intercom.trim()}`);
       const fullAddress = subParts.length
         ? `${address.trim()}, ${subParts.join(", ")}`
         : address.trim();
@@ -63,16 +97,16 @@ const HomeAppointments: React.FC<HomeAppointmentsProps> = ({ onBack }) => {
 
       const res = await api.post("/appointments/", payload);
       if (res.status === 201 || res.status === 200) {
-        toast.success("✅ Оплата принята, заявка создана!");
+        toast.success(tt.paymentAccepted);
         setAppointmentId(res.data.id);
       } else {
-        toast.error("❌ Не удалось создать вызов.");
+        toast.error(tt.callFailed);
       }
     } catch (err: any) {
       const msg =
         err?.response?.data?.error ||
         err?.response?.data?.detail ||
-        "Ошибка сервера.";
+        tt.serverError;
       setError(msg);
       toast.error(msg);
     }
@@ -151,17 +185,17 @@ const HomeAppointments: React.FC<HomeAppointmentsProps> = ({ onBack }) => {
           {/* Toolbar */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
             <span className="text-sm font-bold text-gray-800 flex-1">
-              {step === 1 ? "Данные вызова" : "Оплата"}
+              {step === 1 ? tt.callData : tt.payment}
             </span>
             {step === 2 && (
               <button
                 onClick={() => setStep(1)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-500 bg-gray-50 border border-gray-200 hover:bg-gray-100 transition-all"
               >
-                <ArrowLeft className="w-3.5 h-3.5" /> Назад
+                <ArrowLeft className="w-3.5 h-3.5" /> {tt.back}
               </button>
             )}
-            <span className="text-xs text-gray-400 flex-shrink-0">Шаг {step} / 2</span>
+            <span className="text-xs text-gray-400 flex-shrink-0">{tt.step} {step} / 2</span>
           </div>
 
           {error && (
@@ -204,18 +238,18 @@ const HomeAppointments: React.FC<HomeAppointmentsProps> = ({ onBack }) => {
                   </div>
                   <div>
                     <h1 className="text-xl md:text-2xl lg:text-3xl font-extrabold text-[#001E80]">
-                      Вызов медсестры на дом
+                      {tt.callNurseHome}
                     </h1>
                     <p className="text-sm md:text-base text-gray-600 mt-1">
-                      Заполните данные ниже, чтобы оформить вызов
+                      {tt.fillDataBelow}
                     </p>
                   </div>
                 </div>
                 <div className="relative pt-2">
                   <div className="flex justify-between items-center mb-2 px-1">
                     {[
-                      { n: 1, label: "Данные вызова" },
-                      { n: 2, label: "Оплата" },
+                      { n: 1, label: tt.callData },
+                      { n: 2, label: tt.payment },
                     ].map(({ n, label }) => (
                       <div
                         key={n}
@@ -259,10 +293,10 @@ const HomeAppointments: React.FC<HomeAppointmentsProps> = ({ onBack }) => {
                 </div>
                 <div>
                   <h1 className="text-xl md:text-2xl font-extrabold text-[#001E80]">
-                    Отслеживание вызова
+                    {tt.trackingCall}
                   </h1>
                   <p className="text-sm text-gray-500 mt-0.5">
-                    Заявка #{String(appointmentId).padStart(6, "0")}
+                    {tt.request} #{String(appointmentId).padStart(6, "0")}
                   </p>
                 </div>
               </motion.div>

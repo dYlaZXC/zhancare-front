@@ -10,6 +10,66 @@ import DoctorCard from "./components/DoctorCard";
 import type { Doctor, TimeSlot, RecommendedDoctor, AIErrorData, Language } from "./types/doctor";
 import { useDoctorFiltering } from "./hooks/useDoctorFiltering";
 import { getSpecializationName } from "./utils/doctorUtils";
+import { useLanguage } from "@/context/LanguageContext";
+
+const STEP2_TEXT = {
+  ru: {
+    chooseDoctor: "Выбор врача", doctors: "врачей", book: "Записаться",
+    aiAnalyzing: "ИИ анализирует симптомы...", aiAnalyzingSub: "Подбираем наиболее подходящего специалиста",
+    aiPicked: "ИИ подобрал специалиста", whileWaiting: "Пока ждёте: подготовьте список лекарств и время появления симптомов",
+    rewrite: "Написать заново",
+    aiPickTitle: "Подобрать врача с помощью ИИ", aiPickSub: "Опишите симптомы — ИИ найдёт подходящего специалиста",
+    aiPlaceholder: "Например: головная боль, температура 38°C...", askAi: "Спросить ИИ",
+    today: "Сегодня",
+    loadingDoctors: "Загружаем врачей...", noDoctorsAvailable: "Нет доступных врачей", noDoctorsFound: "Врачи не найдены",
+    confirmBooking: "Подтвердите запись", consultationCost: "Стоимость консультации", clinic: "Клиника",
+    format: "Формат", onlineVideo: "Онлайн · Видео", cancel: "Отмена", booking: "Записываем...",
+    confirmBookingBtn: "Подтвердить запись", confirmError: "Ошибка при подтверждении времени. Попробуйте снова.",
+    locale: "ru-RU", days: ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'],
+  },
+  kz: {
+    chooseDoctor: "Дәрігерді таңдау", doctors: "дәрігер", book: "Жазылу",
+    aiAnalyzing: "AI симптомдарды талдап жатыр...", aiAnalyzingSub: "Ең сәйкес маманды таңдап жатырмыз",
+    aiPicked: "AI маманды таңдады", whileWaiting: "Күтіп жатқанда: дәрі-дәрмек тізімін және симптомдар басталған уақытты дайындаңыз",
+    rewrite: "Қайта жазу",
+    aiPickTitle: "AI көмегімен дәрігерді таңдау", aiPickSub: "Симптомдарды сипаттаңыз — AI сәйкес маманды табады",
+    aiPlaceholder: "Мысалы: бас ауруы, температура 38°C...", askAi: "AI-ден сұрау",
+    today: "Бүгін",
+    loadingDoctors: "Дәрігерлерді жүктеп жатырмыз...", noDoctorsAvailable: "Қолжетімді дәрігерлер жоқ", noDoctorsFound: "Дәрігерлер табылмады",
+    confirmBooking: "Жазылуды растаңыз", consultationCost: "Кеңес құны", clinic: "Клиника",
+    format: "Формат", onlineVideo: "Онлайн · Бейне", cancel: "Бас тарту", booking: "Жазылып жатырмыз...",
+    confirmBookingBtn: "Жазылуды растау", confirmError: "Уақытты растау кезінде қате орын алды. Қайталап көріңіз.",
+    locale: "kk-KZ", days: ['Жк','Дс','Сс','Ср','Бс','Жм','Сб'],
+  },
+  en: {
+    chooseDoctor: "Choose a doctor", doctors: "doctors", book: "Book",
+    aiAnalyzing: "AI is analyzing your symptoms...", aiAnalyzingSub: "Finding the most suitable specialist",
+    aiPicked: "AI picked a specialist", whileWaiting: "While you wait: prepare a list of medications and when symptoms started",
+    rewrite: "Rewrite",
+    aiPickTitle: "Find a doctor with AI", aiPickSub: "Describe your symptoms — AI will find a suitable specialist",
+    aiPlaceholder: "Example: headache, temperature 38°C...", askAi: "Ask AI",
+    today: "Today",
+    loadingDoctors: "Loading doctors...", noDoctorsAvailable: "No doctors available", noDoctorsFound: "No doctors found",
+    confirmBooking: "Confirm booking", consultationCost: "Consultation cost", clinic: "Clinic",
+    format: "Format", onlineVideo: "Online · Video", cancel: "Cancel", booking: "Booking...",
+    confirmBookingBtn: "Confirm booking", confirmError: "Error confirming the time. Please try again.",
+    locale: "en-US", days: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
+  },
+  uz: {
+    chooseDoctor: "Shifokorni tanlash", doctors: "shifokor", book: "Yozilish",
+    aiAnalyzing: "AI simptomlarni tahlil qilmoqda...", aiAnalyzingSub: "Eng mos mutaxassisni tanlamoqdamiz",
+    aiPicked: "AI mutaxassisni tanladi", whileWaiting: "Kutayotganingizda: dorilar ro'yxati va simptomlar boshlangan vaqtni tayyorlang",
+    rewrite: "Qayta yozish",
+    aiPickTitle: "AI yordamida shifokorni tanlash", aiPickSub: "Simptomlarni tasvirlang — AI mos mutaxassisni topadi",
+    aiPlaceholder: "Masalan: bosh og'rig'i, harorat 38°C...", askAi: "AI'dan so'rash",
+    today: "Bugun",
+    loadingDoctors: "Shifokorlar yuklanmoqda...", noDoctorsAvailable: "Mavjud shifokorlar yo'q", noDoctorsFound: "Shifokorlar topilmadi",
+    confirmBooking: "Yozilishni tasdiqlang", consultationCost: "Konsultatsiya narxi", clinic: "Klinika",
+    format: "Format", onlineVideo: "Onlayn · Video", cancel: "Bekor qilish", booking: "Yozilmoqda...",
+    confirmBookingBtn: "Yozilishni tasdiqlash", confirmError: "Vaqtni tasdiqlashda xatolik yuz berdi. Qayta urinib ko'ring.",
+    locale: "uz-UZ", days: ['Ya','Du','Se','Ch','Pa','Ju','Sh'],
+  },
+};
 
 interface Step2Props {
   doctors: Doctor[];
@@ -51,6 +111,8 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
   onClearSymptoms,
   consultationType = 'online',
 }) => {
+  const { language: uiLanguage } = useLanguage();
+  const tt = STEP2_TEXT[uiLanguage as keyof typeof STEP2_TEXT] ?? STEP2_TEXT.ru;
   const [clinicCurrency, setClinicCurrency] = useState<string>('KZT');
   const [searchTerm, setSearchTerm] = useState("");
   const [filterByType, setFilterByType] = useState<string>("all");
@@ -203,7 +265,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
       onConsultationBooked?.(0, consultationData);
     } catch (error) {
       console.error('Error confirming timeslot:', error);
-      alert('Ошибка при подтверждении времени. Попробуйте снова.');
+      alert(tt.confirmError);
     } finally {
       setBookingLoading(false);
     }
@@ -215,7 +277,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
     setSelectedDoctorForBooking(null);
   };
 
-  const DAY_NAMES = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+  const DAY_NAMES = tt.days;
 
   const getMondayOfWeek = (dateStr: string) => {
     const d = new Date(dateStr + 'T00:00:00');
@@ -266,17 +328,17 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
 
         {/* Top bar: title · status · CTA */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
-          <span className="text-sm font-bold text-gray-800 flex-1">Выбор врача</span>
+          <span className="text-sm font-bold text-gray-800 flex-1">{tt.chooseDoctor}</span>
 
           <div className={`w-2 h-2 rounded-full flex-shrink-0 ${websocketConnected ? 'bg-emerald-400' : 'bg-orange-400'} animate-pulse`} />
-          <span className="text-xs text-gray-400 flex-shrink-0">{filteredDoctors.length} врачей</span>
+          <span className="text-xs text-gray-400 flex-shrink-0">{filteredDoctors.length} {tt.doctors}</span>
 
           {(() => {
             const doc = selectedDoctorId ? doctors.find(d => d.id === selectedDoctorId) : null;
             const earliestSlot = doc ? (doctorTimeslots[doc.id] || []).find(sl => !sl.is_booked && (sl.available_spots ?? 1) > 0) : null;
             if (!doc) return (
               <button disabled className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-sm font-semibold text-gray-400 bg-gray-100 cursor-not-allowed flex-shrink-0">
-                Записаться <ArrowRight size={14} />
+                {tt.book} <ArrowRight size={14} />
               </button>
             );
             return (
@@ -288,7 +350,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
                 className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-sm font-semibold text-white flex-shrink-0 shadow-md disabled:opacity-50"
                 style={{ background: 'linear-gradient(135deg, #12263a 0%, #1e263e 25%, #29358f 75%, #3772ff 100%)' }}
               >
-                {doc.name.split(' ')[0]} · Записаться <ArrowRight size={13} />
+                {doc.name.split(' ')[0]} · {tt.book} <ArrowRight size={13} />
               </motion.button>
             );
           })()}
@@ -306,8 +368,8 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
                 <Sparkles size={15} className="text-blue-600 flex-shrink-0" />
               </motion.div>
               <div>
-                <p className="text-sm font-semibold text-blue-900">ИИ анализирует симптомы...</p>
-                <p className="text-xs text-blue-600">Подбираем наиболее подходящего специалиста</p>
+                <p className="text-sm font-semibold text-blue-900">{tt.aiAnalyzing}</p>
+                <p className="text-xs text-blue-600">{tt.aiAnalyzingSub}</p>
               </div>
             </motion.div>
           ) : recommendedDoctor ? (
@@ -327,7 +389,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
                   <p className="text-sm font-bold text-emerald-900 leading-tight">
                     {recommendedDoctor.name}
                   </p>
-                  <p className="text-xs text-emerald-600 mt-0.5">ИИ подобрал специалиста</p>
+                  <p className="text-xs text-emerald-600 mt-0.5">{tt.aiPicked}</p>
 
                   {recommendedDoctor.reason && (
                     <p className="text-xs text-emerald-800 leading-relaxed mt-2">{recommendedDoctor.reason}</p>
@@ -335,7 +397,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
 
                   <div className="flex items-center gap-1.5 mt-2 text-[11px] text-emerald-600">
                     <Clock size={10} className="flex-shrink-0" />
-                    <span>Пока ждёте: подготовьте список лекарств и время появления симптомов</span>
+                    <span>{tt.whileWaiting}</span>
                   </div>
                 </div>
 
@@ -347,7 +409,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-white flex-shrink-0 self-start"
                     style={{ background: 'linear-gradient(135deg, #29358f, #3772ff)' }}
                   >
-                    <RefreshCw size={11} /> Написать заново
+                    <RefreshCw size={11} /> {tt.rewrite}
                   </motion.button>
                 )}
               </div>
@@ -369,8 +431,8 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
                   <Sparkles size={14} className="text-white" />
                 </motion.div>
                 <div>
-                  <p className="text-sm font-bold text-indigo-900 leading-tight">Подобрать врача с помощью ИИ</p>
-                  <p className="text-xs text-indigo-500">Опишите симптомы — ИИ найдёт подходящего специалиста</p>
+                  <p className="text-sm font-bold text-indigo-900 leading-tight">{tt.aiPickTitle}</p>
+                  <p className="text-xs text-indigo-500">{tt.aiPickSub}</p>
                 </div>
               </div>
 
@@ -381,7 +443,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
                   value={localAISymptoms}
                   onChange={(e) => setLocalAISymptoms(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && localAISymptoms.trim() && onRequestAIRecommendation(localAISymptoms)}
-                  placeholder="Например: головная боль, температура 38°C..."
+                  placeholder={tt.aiPlaceholder}
                   className="flex-1 pl-3.5 py-4 text-sm bg-transparent border-none outline-none placeholder-indigo-300 text-gray-700 min-w-0"
                 />
                 <motion.button
@@ -393,7 +455,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
                   style={{ background: 'linear-gradient(135deg, #29358f, #3772ff)' }}
                 >
                   <Wand2 size={13} />
-                  Спросить ИИ
+                  {tt.askAi}
                 </motion.button>
               </div>
             </motion.div>
@@ -425,7 +487,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
               className="px-3 py-1.5 text-xs font-semibold rounded-lg text-white flex-shrink-0"
               style={{ background: 'linear-gradient(135deg, #12263a, #3772ff)' }}
             >
-              Сегодня
+              {tt.today}
             </motion.button>
 
             <button
@@ -478,12 +540,12 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
           {loading ? (
             <div className="flex items-center justify-center py-14 text-gray-400">
               <div className="w-7 h-7 border-2 border-blue-400/30 border-t-blue-500 rounded-full animate-spin mr-3" />
-              <span className="text-sm">Загружаем врачей...</span>
+              <span className="text-sm">{tt.loadingDoctors}</span>
             </div>
           ) : filteredDoctors.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-14 text-center">
               <User size={32} className="text-gray-300 mb-3" />
-              <p className="text-gray-500 text-sm">{doctorsError || (doctors.length === 0 ? 'Нет доступных врачей' : 'Врачи не найдены')}</p>
+              <p className="text-gray-500 text-sm">{doctorsError || (doctors.length === 0 ? tt.noDoctorsAvailable : tt.noDoctorsFound)}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -512,10 +574,10 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
         const GRADS = [['#3772ff','#2c5bcc'],['#8b5cf6','#7c3aed'],['#f43f5e','#e11d48'],['#f59e0b','#d97706'],['#10b981','#059669'],['#06b6d4','#0891b2']];
         const [g1, g2] = GRADS[doc.id % GRADS.length];
         const slotDate = new Date(selectedTimeslot.start_time);
-        const dateStr = slotDate.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-        const timeStr = slotDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        const dateStr = slotDate.toLocaleDateString(tt.locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        const timeStr = slotDate.toLocaleTimeString(tt.locale, { hour: '2-digit', minute: '2-digit' });
         const endTime = selectedTimeslot.end_time
-          ? new Date(selectedTimeslot.end_time).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+          ? new Date(selectedTimeslot.end_time).toLocaleTimeString(tt.locale, { hour: '2-digit', minute: '2-digit' })
           : null;
         return (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
@@ -544,7 +606,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
                   </div>
                 </div>
 
-                <h3 className="text-lg font-bold text-gray-900">Подтвердите запись</h3>
+                <h3 className="text-lg font-bold text-gray-900">{tt.confirmBooking}</h3>
 
                 <div className="rounded-xl border border-gray-100 bg-gray-50 divide-y divide-gray-100">
                   <div className="flex items-center gap-3 px-4 py-3">
@@ -559,23 +621,23 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
 
                   {doc.online_consultation_price && (
                     <div className="flex items-center justify-between px-4 py-3">
-                      <span className="text-sm text-gray-500">Стоимость консультации</span>
+                      <span className="text-sm text-gray-500">{tt.consultationCost}</span>
                       <span className="text-sm font-black text-emerald-600">
-                        {Number(doc.online_consultation_price).toLocaleString('ru-RU', { minimumFractionDigits: 0 })} {getCurrencySymbol(clinicCurrency)}
+                        {Number(doc.online_consultation_price).toLocaleString(tt.locale, { minimumFractionDigits: 0 })} {getCurrencySymbol(clinicCurrency)}
                       </span>
                     </div>
                   )}
 
                   {doc.clinic && (
                     <div className="flex items-center justify-between px-4 py-3">
-                      <span className="text-sm text-gray-500">Клиника</span>
+                      <span className="text-sm text-gray-500">{tt.clinic}</span>
                       <span className="text-sm font-semibold text-gray-700">{doc.clinic.name}</span>
                     </div>
                   )}
 
                   <div className="flex items-center justify-between px-4 py-3">
-                    <span className="text-sm text-gray-500">Формат</span>
-                    <span className="text-sm font-semibold text-violet-600">Онлайн · Видео</span>
+                    <span className="text-sm text-gray-500">{tt.format}</span>
+                    <span className="text-sm font-semibold text-violet-600">{tt.onlineVideo}</span>
                   </div>
                 </div>
 
@@ -585,7 +647,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
                     disabled={bookingLoading}
                     className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
                   >
-                    Отмена
+                    {tt.cancel}
                   </button>
                   <button
                     onClick={confirmTimeslotBooking}
@@ -596,10 +658,10 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
                     {bookingLoading ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Записываем...
+                        {tt.booking}
                       </>
                     ) : (
-                      'Подтвердить запись'
+                      tt.confirmBookingBtn
                     )}
                   </button>
                 </div>

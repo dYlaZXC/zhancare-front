@@ -150,7 +150,7 @@ export const Header = ({
         <LanguageSwitcher currentLanguage={language} setLanguage={setLanguage} variant="light" />
 
         {/* Premium Notifications */}
-        <button className="relative group p-3 rounded-xl transition-all duration-300 hover:scale-110 hover:shadow-lg border border-gray-200/50 backdrop-blur-sm"
+        <button className="relative group h-11 w-11 flex items-center justify-center rounded-xl transition-all duration-300 hover:scale-110 hover:shadow-lg border border-gray-200/50 backdrop-blur-sm"
                 style={{ background: 'linear-gradient(135deg, rgba(55, 114, 255, 0.05) 0%, rgba(41, 53, 143, 0.05) 100%)' }}>
           <FontAwesomeIcon 
             icon={faBell} 
@@ -170,7 +170,7 @@ export const Header = ({
 
         {/* User Quick Info */}
         {user && (
-          <div className="hidden md:flex items-center gap-3 px-3 py-2 rounded-xl border border-gray-200/50 backdrop-blur-sm"
+          <div className="hidden md:flex items-center gap-3 h-11 px-3 rounded-xl border border-gray-200/50 backdrop-blur-sm"
                style={{ background: 'linear-gradient(135deg, rgba(55, 114, 255, 0.03) 0%, rgba(41, 53, 143, 0.03) 100%)' }}>
             {/* Mini Avatar */}
             <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center text-sm font-bold text-white shadow-md flex-shrink-0"

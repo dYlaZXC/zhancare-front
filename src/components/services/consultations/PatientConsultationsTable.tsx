@@ -34,6 +34,134 @@ import AppointmentStatus from "../homeAppointments/AppointmentStatus";
 import { useConsultationManager } from "./useConsultationManager";
 import type { Consultation } from "@/types/consultation";
 import { buildWhatsAppLink, consultationWhatsAppMessage } from "@/lib/whatsapp";
+import { useLanguage } from "@/context/LanguageContext";
+
+const TABLE_TEXT = {
+  ru: {
+    searchPlaceholder: "Поиск...", noOptionsFound: "Ничего не найдено",
+    myRecords: "Мои записи", of: "из",
+    statTotal: "Всего", statCompleted: "Завершено", statUpcoming: "Предстоит", statOngoing: "В процессе",
+    searchDoctorSymptoms: "Врач, симптомы...",
+    allStatuses: "Все статусы", allTypes: "Все типы",
+    statusPending: "Ожидание", statusOngoing: "В процессе", statusCompleted: "Завершена",
+    statusCancelled: "Отменена", statusMissed: "Пропущена", statusPlanned: "Запланирована", statusUnknown: "Неизвестно",
+    homeStatusWaitingNurse: "Ожидает медсестру", homeStatusViewed: "Просматривают", homeStatusAccepted: "Принята ✓",
+    homeStatusInProgress: "Медсестра в пути", homeStatusCompleted: "Визит завершён", homeStatusCancelled: "Отменена", homeStatusDefault: "Ожидает",
+    typeVideo: "Видео", typeChat: "Чат", typePhone: "Телефон", typeOffline: "Оффлайн", typeHome: "На дому",
+    reset: "Сбросить",
+    noConsultations: "Нет консультаций", noResults: "Нет результатов",
+    consultationsWillAppear: "Ваши консультации будут отображаться здесь",
+    tryOtherFilters: "Попробуйте изменить критерии фильтрации",
+    colDateTime: "ДАТА / ВРЕМЯ", colDoctor: "ВРАЧ", colSpecialization: "СПЕЦИАЛИЗАЦИЯ", colType: "ТИП", colStatus: "СТАТУС", colActions: "ДЕЙСТВИЯ",
+    colDate: "ДАТА",
+    doctorLabel: "Врач", doctorNotAssigned: "Врач не назначен",
+    generalPractice: "Общая практика", cardiology: "Кардиология", psychiatry: "Психиатрия", pediatric: "Педиатрия",
+    track: "Отследить", details: "Детали",
+    join: "Войти", waiting: "Ожидание", overdue: "просрочено", late: (m: number) => `опоздание ${m}м`, now: "сейчас",
+    hoursMin: (h: number, m: number) => `${h}ч ${m}м`, min: (m: number) => `${m}м`,
+    writeWhatsApp: "Написать в WhatsApp",
+    connect: "Подключиться", through: (t: string) => `Через ${t}`,
+    dateField: "Дата", typeField: "Тип",
+    of2: "из",
+    detailsTitle: "Детали записи",
+    statusField: "Статус", clinic: "Клиника", complaints: "Жалобы / симптомы",
+    close: "Закрыть",
+    locale: "ru-RU",
+  },
+  kz: {
+    searchPlaceholder: "Іздеу...", noOptionsFound: "Ештеңе табылмады",
+    myRecords: "Менің жазбаларым", of: "ішінен",
+    statTotal: "Барлығы", statCompleted: "Аяқталды", statUpcoming: "Алда", statOngoing: "Барысында",
+    searchDoctorSymptoms: "Дәрігер, симптомдар...",
+    allStatuses: "Барлық статустар", allTypes: "Барлық түрлер",
+    statusPending: "Күтілуде", statusOngoing: "Барысында", statusCompleted: "Аяқталды",
+    statusCancelled: "Болдырылмады", statusMissed: "Өтіп кетті", statusPlanned: "Жоспарланды", statusUnknown: "Белгісіз",
+    homeStatusWaitingNurse: "Медбикені күтуде", homeStatusViewed: "Қарап жатыр", homeStatusAccepted: "Қабылданды ✓",
+    homeStatusInProgress: "Медбике жолда", homeStatusCompleted: "Қабылдау аяқталды", homeStatusCancelled: "Болдырылмады", homeStatusDefault: "Күтуде",
+    typeVideo: "Бейне", typeChat: "Чат", typePhone: "Телефон", typeOffline: "Оффлайн", typeHome: "Үйде",
+    reset: "Тазалау",
+    noConsultations: "Кеңестер жоқ", noResults: "Нәтиже жоқ",
+    consultationsWillAppear: "Кеңестеріңіз осында көрсетіледі",
+    tryOtherFilters: "Сүзгі параметрлерін өзгертіп көріңіз",
+    colDateTime: "КҮНІ / УАҚЫТЫ", colDoctor: "ДӘРІГЕР", colSpecialization: "МАМАНДЫҒЫ", colType: "ТҮРІ", colStatus: "СТАТУС", colActions: "ӘРЕКЕТТЕР",
+    colDate: "КҮНІ",
+    doctorLabel: "Дәрігер", doctorNotAssigned: "Дәрігер тағайындалмады",
+    generalPractice: "Жалпы тәжірибе", cardiology: "Кардиология", psychiatry: "Психиатрия", pediatric: "Педиатрия",
+    track: "Бақылау", details: "Толығырақ",
+    join: "Кіру", waiting: "Күтуде", overdue: "мерзімі өтті", late: (m: number) => `${m}м кешігу`, now: "қазір",
+    hoursMin: (h: number, m: number) => `${h}с ${m}м`, min: (m: number) => `${m}м`,
+    writeWhatsApp: "WhatsApp-қа жазу",
+    connect: "Қосылу", through: (t: string) => `${t} кейін`,
+    dateField: "Күні", typeField: "Түрі",
+    of2: "ішінен",
+    detailsTitle: "Жазба мәліметтері",
+    statusField: "Статус", clinic: "Клиника", complaints: "Шағымдар / симптомдар",
+    close: "Жабу",
+    locale: "kk-KZ",
+  },
+  en: {
+    searchPlaceholder: "Search...", noOptionsFound: "Nothing found",
+    myRecords: "My appointments", of: "of",
+    statTotal: "Total", statCompleted: "Completed", statUpcoming: "Upcoming", statOngoing: "Ongoing",
+    searchDoctorSymptoms: "Doctor, symptoms...",
+    allStatuses: "All statuses", allTypes: "All types",
+    statusPending: "Pending", statusOngoing: "Ongoing", statusCompleted: "Completed",
+    statusCancelled: "Cancelled", statusMissed: "Missed", statusPlanned: "Scheduled", statusUnknown: "Unknown",
+    homeStatusWaitingNurse: "Waiting for nurse", homeStatusViewed: "Being viewed", homeStatusAccepted: "Accepted ✓",
+    homeStatusInProgress: "Nurse on the way", homeStatusCompleted: "Visit completed", homeStatusCancelled: "Cancelled", homeStatusDefault: "Waiting",
+    typeVideo: "Video", typeChat: "Chat", typePhone: "Phone", typeOffline: "Offline", typeHome: "Home visit",
+    reset: "Reset",
+    noConsultations: "No consultations", noResults: "No results",
+    consultationsWillAppear: "Your consultations will appear here",
+    tryOtherFilters: "Try changing the filter criteria",
+    colDateTime: "DATE / TIME", colDoctor: "DOCTOR", colSpecialization: "SPECIALTY", colType: "TYPE", colStatus: "STATUS", colActions: "ACTIONS",
+    colDate: "DATE",
+    doctorLabel: "Doctor", doctorNotAssigned: "Doctor not assigned",
+    generalPractice: "General practice", cardiology: "Cardiology", psychiatry: "Psychiatry", pediatric: "Pediatrics",
+    track: "Track", details: "Details",
+    join: "Join", waiting: "Waiting", overdue: "overdue", late: (m: number) => `${m}m late`, now: "now",
+    hoursMin: (h: number, m: number) => `${h}h ${m}m`, min: (m: number) => `${m}m`,
+    writeWhatsApp: "Message on WhatsApp",
+    connect: "Connect", through: (t: string) => `In ${t}`,
+    dateField: "Date", typeField: "Type",
+    of2: "of",
+    detailsTitle: "Appointment details",
+    statusField: "Status", clinic: "Clinic", complaints: "Complaints / symptoms",
+    close: "Close",
+    locale: "en-US",
+  },
+  uz: {
+    searchPlaceholder: "Qidirish...", noOptionsFound: "Hech narsa topilmadi",
+    myRecords: "Mening yozilishlarim", of: "dan",
+    statTotal: "Jami", statCompleted: "Yakunlangan", statUpcoming: "Kutilmoqda", statOngoing: "Jarayonda",
+    searchDoctorSymptoms: "Shifokor, simptomlar...",
+    allStatuses: "Barcha statuslar", allTypes: "Barcha turlar",
+    statusPending: "Kutilmoqda", statusOngoing: "Jarayonda", statusCompleted: "Yakunlangan",
+    statusCancelled: "Bekor qilingan", statusMissed: "O'tkazib yuborilgan", statusPlanned: "Rejalashtirilgan", statusUnknown: "Noma'lum",
+    homeStatusWaitingNurse: "Hamshirani kutmoqda", homeStatusViewed: "Ko'rib chiqilmoqda", homeStatusAccepted: "Qabul qilindi ✓",
+    homeStatusInProgress: "Hamshira yo'lda", homeStatusCompleted: "Tashrif yakunlandi", homeStatusCancelled: "Bekor qilingan", homeStatusDefault: "Kutilmoqda",
+    typeVideo: "Video", typeChat: "Chat", typePhone: "Telefon", typeOffline: "Oflayn", typeHome: "Uyga tashrif",
+    reset: "Tozalash",
+    noConsultations: "Konsultatsiyalar yo'q", noResults: "Natija topilmadi",
+    consultationsWillAppear: "Konsultatsiyalaringiz shu yerda ko'rinadi",
+    tryOtherFilters: "Filtr parametrlarini o'zgartirib ko'ring",
+    colDateTime: "SANA / VAQT", colDoctor: "SHIFOKOR", colSpecialization: "MUTAXASSISLIK", colType: "TURI", colStatus: "STATUS", colActions: "AMALLAR",
+    colDate: "SANA",
+    doctorLabel: "Shifokor", doctorNotAssigned: "Shifokor tayinlanmagan",
+    generalPractice: "Umumiy amaliyot", cardiology: "Kardiologiya", psychiatry: "Psixiatriya", pediatric: "Pediatriya",
+    track: "Kuzatish", details: "Tafsilotlar",
+    join: "Kirish", waiting: "Kutilmoqda", overdue: "muddati o'tgan", late: (m: number) => `${m}m kechikish`, now: "hozir",
+    hoursMin: (h: number, m: number) => `${h}s ${m}m`, min: (m: number) => `${m}m`,
+    writeWhatsApp: "WhatsApp orqali yozish",
+    connect: "Ulanish", through: (t: string) => `${t} dan keyin`,
+    dateField: "Sana", typeField: "Turi",
+    of2: "dan",
+    detailsTitle: "Yozilish tafsilotlari",
+    statusField: "Status", clinic: "Klinika", complaints: "Shikoyatlar / simptomlar",
+    close: "Yopish",
+    locale: "uz-UZ",
+  },
+};
 
 interface PatientConsultationsTableProps {
   consultations?: Consultation[];
@@ -45,11 +173,13 @@ type FilterType = "all" | "video" | "chat" | "phone" | "offline" | "home";
 
 interface SelectOption { value: string; label: string; icon?: React.ReactNode; color?: string; }
 
-function CustomSelect({ value, onChange, options, placeholder }: {
+function CustomSelect({ value, onChange, options, placeholder, searchPlaceholder = "Search...", noOptionsLabel = "Nothing found" }: {
   value: string;
   onChange: (v: string) => void;
   options: SelectOption[];
   placeholder?: string;
+  searchPlaceholder?: string;
+  noOptionsLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -107,7 +237,7 @@ function CustomSelect({ value, onChange, options, placeholder }: {
                 type="text"
                 value={query}
                 onChange={e => setQuery(e.target.value)}
-                placeholder="Поиск..."
+                placeholder={searchPlaceholder}
                 className="w-full pl-8 pr-3 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
               />
               {query && (
@@ -121,7 +251,7 @@ function CustomSelect({ value, onChange, options, placeholder }: {
           {/* Options */}
           <div className="max-h-52 overflow-y-auto">
             {filtered.length === 0 ? (
-              <div className="px-4 py-3 text-sm text-gray-400 text-center">Ничего не найдено</div>
+              <div className="px-4 py-3 text-sm text-gray-400 text-center">{noOptionsLabel}</div>
             ) : filtered.map((opt) => (
               <button
                 key={opt.value}
@@ -149,6 +279,8 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
   consultations: propConsultations,
   showFilters = true,
 }) => {
+  const { language } = useLanguage();
+  const tt = TABLE_TEXT[language as keyof typeof TABLE_TEXT] ?? TABLE_TEXT.ru;
   const { consultations: hookConsultations, fetchConsultations } = useConsultationManager();
   const consultations = useMemo(() =>
     propConsultations || hookConsultations || [],
@@ -186,12 +318,12 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
     if (timeDiffMinutes > 0) {
       const hours = Math.floor(timeDiffMinutes / 60);
       const minutes = timeDiffMinutes % 60;
-      timeUntil = hours > 0 ? `${hours}ч ${minutes}м` : `${minutes}м`;
+      timeUntil = hours > 0 ? tt.hoursMin(hours, minutes) : tt.min(minutes);
     } else if (timeDiffMinutes < 0) {
       const minutesLate = Math.abs(timeDiffMinutes);
-      timeUntil = minutesLate < 60 ? `опоздание ${minutesLate}м` : 'просрочено';
+      timeUntil = minutesLate < 60 ? tt.late(minutesLate) : tt.overdue;
     } else {
-      timeUntil = 'сейчас';
+      timeUntil = tt.now;
     }
     return { canJoin, timeUntil, isReady };
   };
@@ -237,69 +369,69 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
         // backend raw statuses
         case "scheduled":
         case "pending":
-          return { label: "Ожидает медсестру", icon: <Clock className="w-3.5 h-3.5" />, cls: "bg-amber-50 text-amber-600 border-amber-200" };
+          return { label: tt.homeStatusWaitingNurse, icon: <Clock className="w-3.5 h-3.5" />, cls: "bg-amber-50 text-amber-600 border-amber-200" };
         case "viewed":
-          return { label: "Просматривают", icon: <Eye className="w-3.5 h-3.5" />, cls: "bg-blue-50 text-blue-600 border-blue-200" };
+          return { label: tt.homeStatusViewed, icon: <Eye className="w-3.5 h-3.5" />, cls: "bg-blue-50 text-blue-600 border-blue-200" };
         case "assigned":
         case "accepted":
-          return { label: "Принята ✓", icon: <CheckCircle2 className="w-3.5 h-3.5" />, cls: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+          return { label: tt.homeStatusAccepted, icon: <CheckCircle2 className="w-3.5 h-3.5" />, cls: "bg-emerald-50 text-emerald-700 border-emerald-200" };
         case "in_progress":
-          return { label: "Медсестра в пути", icon: <Navigation className="w-3.5 h-3.5" />, cls: "bg-blue-50 text-blue-700 border-blue-200" };
+          return { label: tt.homeStatusInProgress, icon: <Navigation className="w-3.5 h-3.5" />, cls: "bg-blue-50 text-blue-700 border-blue-200" };
         case "completed":
-          return { label: "Визит завершён", icon: <CheckCircle2 className="w-3.5 h-3.5" />, cls: "bg-emerald-50 text-emerald-600 border-emerald-200" };
+          return { label: tt.homeStatusCompleted, icon: <CheckCircle2 className="w-3.5 h-3.5" />, cls: "bg-emerald-50 text-emerald-600 border-emerald-200" };
         case "cancelled":
-          return { label: "Отменена", icon: <XCircle className="w-3.5 h-3.5" />, cls: "bg-red-50 text-red-600 border-red-200" };
+          return { label: tt.homeStatusCancelled, icon: <XCircle className="w-3.5 h-3.5" />, cls: "bg-red-50 text-red-600 border-red-200" };
         default:
-          return { label: "Ожидает", icon: <Clock className="w-3.5 h-3.5" />, cls: "bg-amber-50 text-amber-600 border-amber-200" };
+          return { label: tt.homeStatusDefault, icon: <Clock className="w-3.5 h-3.5" />, cls: "bg-amber-50 text-amber-600 border-amber-200" };
       }
     }
     switch (status) {
       case "completed":
-        return { label: "Завершена", icon: <CheckCircle2 className="w-3.5 h-3.5" />, cls: "bg-emerald-50 text-emerald-600 border-emerald-200" };
+        return { label: tt.statusCompleted, icon: <CheckCircle2 className="w-3.5 h-3.5" />, cls: "bg-emerald-50 text-emerald-600 border-emerald-200" };
       case "pending":
-        return { label: "Ожидание", icon: <Clock className="w-3.5 h-3.5" />, cls: "bg-blue-50 text-blue-600 border-blue-200" };
+        return { label: tt.statusPending, icon: <Clock className="w-3.5 h-3.5" />, cls: "bg-blue-50 text-blue-600 border-blue-200" };
       case "ongoing":
-        return { label: "В процессе", icon: <Activity className="w-3.5 h-3.5" />, cls: "bg-amber-50 text-amber-600 border-amber-200" };
+        return { label: tt.statusOngoing, icon: <Activity className="w-3.5 h-3.5" />, cls: "bg-amber-50 text-amber-600 border-amber-200" };
       case "cancelled":
-        return { label: "Отменена", icon: <XCircle className="w-3.5 h-3.5" />, cls: "bg-red-50 text-red-600 border-red-200" };
+        return { label: tt.statusCancelled, icon: <XCircle className="w-3.5 h-3.5" />, cls: "bg-red-50 text-red-600 border-red-200" };
       case "missed":
-        return { label: "Пропущена", icon: <XCircle className="w-3.5 h-3.5" />, cls: "bg-orange-50 text-orange-600 border-orange-200" };
+        return { label: tt.statusMissed, icon: <XCircle className="w-3.5 h-3.5" />, cls: "bg-orange-50 text-orange-600 border-orange-200" };
       case "planned":
       case "scheduled":
-        return { label: "Запланирована", icon: <Calendar className="w-3.5 h-3.5" />, cls: "bg-violet-50 text-violet-600 border-violet-200" };
+        return { label: tt.statusPlanned, icon: <Calendar className="w-3.5 h-3.5" />, cls: "bg-violet-50 text-violet-600 border-violet-200" };
       default:
-        return { label: "Неизвестно", icon: <Clock className="w-3.5 h-3.5" />, cls: "bg-gray-50 text-gray-500 border-gray-200" };
+        return { label: tt.statusUnknown, icon: <Clock className="w-3.5 h-3.5" />, cls: "bg-gray-50 text-gray-500 border-gray-200" };
     }
   };
 
   const getTypeConfig = (type: string) => {
     switch (type) {
-      case "video":   return { label: "Видео",    icon: <Video className="w-3.5 h-3.5" />,      cls: "bg-cyan-50 text-cyan-600 border-cyan-200" };
-      case "chat":    return { label: "Чат",      icon: <MessageSquare className="w-3.5 h-3.5" />, cls: "bg-indigo-50 text-indigo-600 border-indigo-200" };
-      case "phone":   return { label: "Телефон",  icon: <Phone className="w-3.5 h-3.5" />,      cls: "bg-teal-50 text-teal-600 border-teal-200" };
-      case "offline": return { label: "Оффлайн",  icon: <MapPin className="w-3.5 h-3.5" />,     cls: "bg-emerald-50 text-emerald-600 border-emerald-200" };
-      case "home":    return { label: "На дому",  icon: <Home className="w-3.5 h-3.5" />,       cls: "bg-orange-50 text-orange-600 border-orange-200" };
-      default:        return { label: "Видео",    icon: <Video className="w-3.5 h-3.5" />,      cls: "bg-cyan-50 text-cyan-600 border-cyan-200" };
+      case "video":   return { label: tt.typeVideo,    icon: <Video className="w-3.5 h-3.5" />,      cls: "bg-cyan-50 text-cyan-600 border-cyan-200" };
+      case "chat":    return { label: tt.typeChat,      icon: <MessageSquare className="w-3.5 h-3.5" />, cls: "bg-indigo-50 text-indigo-600 border-indigo-200" };
+      case "phone":   return { label: tt.typePhone,  icon: <Phone className="w-3.5 h-3.5" />,      cls: "bg-teal-50 text-teal-600 border-teal-200" };
+      case "offline": return { label: tt.typeOffline,  icon: <MapPin className="w-3.5 h-3.5" />,     cls: "bg-emerald-50 text-emerald-600 border-emerald-200" };
+      case "home":    return { label: tt.typeHome,  icon: <Home className="w-3.5 h-3.5" />,       cls: "bg-orange-50 text-orange-600 border-orange-200" };
+      default:        return { label: tt.typeVideo,    icon: <Video className="w-3.5 h-3.5" />,      cls: "bg-cyan-50 text-cyan-600 border-cyan-200" };
     }
   };
 
   const formatDate = (dateString: string) => {
-    try { return new Date(dateString).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }); }
+    try { return new Date(dateString).toLocaleDateString(tt.locale, { day: '2-digit', month: '2-digit', year: 'numeric' }); }
     catch { return dateString; }
   };
 
   const formatTime = (dateString: string) => {
-    try { return new Date(dateString).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }); }
+    try { return new Date(dateString).toLocaleTimeString(tt.locale, { hour: '2-digit', minute: '2-digit' }); }
     catch { return dateString; }
   };
 
   const getSpecialization = (consultation: Consultation) => {
     if (consultation.doctor_type) return consultation.doctor_type;
     switch (consultation.consultation_type) {
-      case 'general': return 'Общая практика';
-      case 'cardiology': return 'Кардиология';
-      case 'psychiatry': return 'Психиатрия';
-      case 'pediatric': return 'Педиатрия';
+      case 'general': return tt.generalPractice;
+      case 'cardiology': return tt.cardiology;
+      case 'psychiatry': return tt.psychiatry;
+      case 'pediatric': return tt.pediatric;
       default: return '—';
     }
   };
@@ -342,7 +474,7 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
             }`}
           >
             <Navigation className="w-3.5 h-3.5" />
-            {isActive ? "Отследить" : "Детали"}
+            {isActive ? tt.track : tt.details}
           </button>
         </div>
       );
@@ -372,13 +504,13 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
             className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-blue-500/20 transition-all duration-200 hover:shadow-blue-500/40"
           >
             <PhoneCall className="w-3.5 h-3.5" />
-            <span>Войти</span>
+            <span>{tt.join}</span>
           </button>
         )}
         {isWaiting && (
           <div className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 border border-blue-200 rounded-xl">
             <Clock className="w-3.5 h-3.5 text-blue-500" />
-            <span className="text-xs text-blue-600 font-medium">Ожидание</span>
+            <span className="text-xs text-blue-600 font-medium">{tt.waiting}</span>
           </div>
         )}
         {isScheduled && consultation.scheduled_at && (
@@ -392,12 +524,12 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
               }`}
             >
               <Video className="w-3.5 h-3.5" />
-              <span>{joinInfo.isReady ? 'Войти' : joinInfo.timeUntil}</span>
+              <span>{joinInfo.isReady ? tt.join : joinInfo.timeUntil}</span>
             </button>
           ) : (
             <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-100 border border-gray-200 rounded-xl">
               <Clock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-              <span className="text-[11px] text-gray-500 font-medium whitespace-nowrap">{joinInfo.timeUntil || 'просрочено'}</span>
+              <span className="text-[11px] text-gray-500 font-medium whitespace-nowrap">{joinInfo.timeUntil || tt.overdue}</span>
             </div>
           )
         )}
@@ -412,7 +544,7 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
           }))}
           target="_blank"
           rel="noopener noreferrer"
-          title="Написать в WhatsApp"
+          title={tt.writeWhatsApp}
           className="p-2 text-gray-400 hover:text-green-600 bg-gray-50 hover:bg-green-50 border border-gray-200 hover:border-green-300 rounded-xl transition-all duration-200 flex items-center"
         >
           <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg">
@@ -446,18 +578,18 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
               <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-white" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-gray-900 leading-tight">Мои записи</h3>
-              <p className="text-xs text-gray-400">{filteredConsultations.length} из {consultations.length}</p>
+              <h3 className="text-sm font-bold text-gray-900 leading-tight">{tt.myRecords}</h3>
+              <p className="text-xs text-gray-400">{filteredConsultations.length} {tt.of} {consultations.length}</p>
             </div>
           </div>
 
           {/* Stat chips */}
           <div className="flex flex-wrap gap-1.5">
             {[
-              { label: "Всего", value: stats.total, bg: "bg-blue-50", border: "border-blue-100", text: "text-blue-600" },
-              { label: "Завершено", value: stats.completed, bg: "bg-emerald-50", border: "border-emerald-100", text: "text-emerald-600" },
-              { label: "Предстоит", value: stats.upcoming, bg: "bg-violet-50", border: "border-violet-100", text: "text-violet-600" },
-              { label: "В процессе", value: stats.ongoing, bg: "bg-amber-50", border: "border-amber-100", text: "text-amber-600" },
+              { label: tt.statTotal, value: stats.total, bg: "bg-blue-50", border: "border-blue-100", text: "text-blue-600" },
+              { label: tt.statCompleted, value: stats.completed, bg: "bg-emerald-50", border: "border-emerald-100", text: "text-emerald-600" },
+              { label: tt.statUpcoming, value: stats.upcoming, bg: "bg-violet-50", border: "border-violet-100", text: "text-violet-600" },
+              { label: tt.statOngoing, value: stats.ongoing, bg: "bg-amber-50", border: "border-amber-100", text: "text-amber-600" },
             ].map((s, i) => (
               <span key={i} className={`inline-flex items-center gap-1 ${s.bg} border ${s.border} rounded-lg px-2 py-0.5 text-xs font-semibold ${s.text}`}>
                 {s.value} <span className="font-normal text-gray-400">{s.label}</span>
@@ -476,7 +608,7 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Врач, симптомы..."
+                placeholder={tt.searchDoctorSymptoms}
                 className="w-full pl-8 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
               />
               {searchTerm && (
@@ -493,14 +625,16 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
               <CustomSelect
                 value={statusFilter}
                 onChange={(v) => setStatusFilter(v as FilterStatus)}
+                searchPlaceholder={tt.searchPlaceholder}
+                noOptionsLabel={tt.noOptionsFound}
                 options={[
-                  { value: "all", label: "Все статусы" },
-                  { value: "pending",   label: "Ожидание",      icon: <Clock className="w-3.5 h-3.5" />,       color: "text-blue-500" },
-                  { value: "ongoing",   label: "В процессе",    icon: <Activity className="w-3.5 h-3.5" />,    color: "text-amber-500" },
-                  { value: "completed", label: "Завершена",     icon: <CheckCircle2 className="w-3.5 h-3.5" />,color: "text-emerald-500" },
-                  { value: "cancelled", label: "Отменена",      icon: <XCircle className="w-3.5 h-3.5" />,     color: "text-red-500" },
-                  { value: "missed",    label: "Пропущена",     icon: <XCircle className="w-3.5 h-3.5" />,     color: "text-orange-500" },
-                  { value: "planned",   label: "Запланирована", icon: <Calendar className="w-3.5 h-3.5" />,    color: "text-violet-500" },
+                  { value: "all", label: tt.allStatuses },
+                  { value: "pending",   label: tt.statusPending,      icon: <Clock className="w-3.5 h-3.5" />,       color: "text-blue-500" },
+                  { value: "ongoing",   label: tt.statusOngoing,    icon: <Activity className="w-3.5 h-3.5" />,    color: "text-amber-500" },
+                  { value: "completed", label: tt.statusCompleted,     icon: <CheckCircle2 className="w-3.5 h-3.5" />,color: "text-emerald-500" },
+                  { value: "cancelled", label: tt.statusCancelled,      icon: <XCircle className="w-3.5 h-3.5" />,     color: "text-red-500" },
+                  { value: "missed",    label: tt.statusMissed,     icon: <XCircle className="w-3.5 h-3.5" />,     color: "text-orange-500" },
+                  { value: "planned",   label: tt.statusPlanned, icon: <Calendar className="w-3.5 h-3.5" />,    color: "text-violet-500" },
                 ]}
               />
             </div>
@@ -512,13 +646,15 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
               <CustomSelect
                 value={typeFilter}
                 onChange={(v) => setTypeFilter(v as FilterType)}
+                searchPlaceholder={tt.searchPlaceholder}
+                noOptionsLabel={tt.noOptionsFound}
                 options={[
-                  { value: "all",     label: "Все типы" },
-                  { value: "video",   label: "Видео",   icon: <Video className="w-3.5 h-3.5" />,         color: "text-cyan-500" },
-                  { value: "offline", label: "Оффлайн", icon: <MapPin className="w-3.5 h-3.5" />,        color: "text-emerald-500" },
-                  { value: "home",    label: "На дому", icon: <Home className="w-3.5 h-3.5" />,          color: "text-orange-500" },
-                  { value: "chat",    label: "Чат",     icon: <MessageSquare className="w-3.5 h-3.5" />, color: "text-indigo-500" },
-                  { value: "phone",   label: "Телефон", icon: <Phone className="w-3.5 h-3.5" />,         color: "text-teal-500" },
+                  { value: "all",     label: tt.allTypes },
+                  { value: "video",   label: tt.typeVideo,   icon: <Video className="w-3.5 h-3.5" />,         color: "text-cyan-500" },
+                  { value: "offline", label: tt.typeOffline, icon: <MapPin className="w-3.5 h-3.5" />,        color: "text-emerald-500" },
+                  { value: "home",    label: tt.typeHome, icon: <Home className="w-3.5 h-3.5" />,          color: "text-orange-500" },
+                  { value: "chat",    label: tt.typeChat,     icon: <MessageSquare className="w-3.5 h-3.5" />, color: "text-indigo-500" },
+                  { value: "phone",   label: tt.typePhone, icon: <Phone className="w-3.5 h-3.5" />,         color: "text-teal-500" },
                 ]}
               />
             </div>
@@ -531,7 +667,7 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
                 onClick={() => { setSearchTerm(""); setStatusFilter("all"); setTypeFilter("all"); }}
                 className="px-2.5 py-2 rounded-xl text-xs font-medium text-blue-600 hover:bg-blue-50 border border-blue-100 transition-all"
               >
-                Сбросить
+                {tt.reset}
               </button>
             )}
             <button
@@ -552,12 +688,12 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
               <Stethoscope className="w-8 h-8 text-blue-500" />
             </div>
             <h3 className="text-lg font-bold text-gray-900 mb-2">
-              {consultations.length === 0 ? "Нет консультаций" : "Нет результатов"}
+              {consultations.length === 0 ? tt.noConsultations : tt.noResults}
             </h3>
             <p className="text-sm text-gray-500 max-w-xs mx-auto">
               {consultations.length === 0
-                ? "Ваши консультации будут отображаться здесь"
-                : "Попробуйте изменить критерии фильтрации"}
+                ? tt.consultationsWillAppear
+                : tt.tryOtherFilters}
             </p>
           </div>
         </div>
@@ -567,7 +703,7 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
       {filteredConsultations.length > 0 && (
         <div className="hidden xl:grid grid-cols-[1.4fr_1.8fr_1.2fr_1fr_1.2fr_1.2fr] overflow-hidden">
           {/* Header cells — row 1 of the grid */}
-          {["ДАТА / ВРЕМЯ", "ВРАЧ", "СПЕЦИАЛИЗАЦИЯ", "ТИП", "СТАТУС", "ДЕЙСТВИЯ"].map((h, i) => (
+          {[tt.colDateTime, tt.colDoctor, tt.colSpecialization, tt.colType, tt.colStatus, tt.colActions].map((h, i) => (
             <div
               key={h}
               className={`py-3.5 px-5 text-[10px] font-semibold text-gray-400 tracking-widest uppercase bg-gray-50 border-b border-gray-200 ${i > 0 ? "border-l border-gray-200" : ""}`}
@@ -608,9 +744,9 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
                   </div>
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-gray-900 leading-tight truncate">
-                      {`${consultation.doctor_first_name || ''} ${consultation.doctor_last_name || ''}`.trim() || "Врач не назначен"}
+                      {`${consultation.doctor_first_name || ''} ${consultation.doctor_last_name || ''}`.trim() || tt.doctorNotAssigned}
                     </div>
-                    <div className="text-xs text-blue-500 font-medium mt-0.5">Врач</div>
+                    <div className="text-xs text-blue-500 font-medium mt-0.5">{tt.doctorLabel}</div>
                   </div>
                 </div>
 
@@ -646,7 +782,7 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
       {/* ── Tablet View — single grid for perfect alignment ── */}
       {filteredConsultations.length > 0 && (
         <div className="hidden md:grid xl:hidden grid-cols-[1.6fr_1.2fr_1.1fr_1.2fr] overflow-hidden border-t border-gray-100">
-          {["ВРАЧ", "ДАТА", "СТАТУС", "ДЕЙСТВИЯ"].map((h, i) => (
+          {[tt.colDoctor, tt.colDate, tt.colStatus, tt.colActions].map((h, i) => (
             <div key={h} className={`py-3.5 px-5 text-[10px] font-semibold text-gray-400 tracking-widest uppercase bg-gray-50 border-b border-gray-200 ${i > 0 ? "border-l border-gray-200" : ""}`}>{h}</div>
           ))}
           {visibleConsultations.map((consultation, idx) => {
@@ -662,7 +798,7 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
                     <span className="text-white font-bold text-xs">{getInitial(consultation)}</span>
                   </div>
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-gray-900 truncate">{`${consultation.doctor_first_name || ''} ${consultation.doctor_last_name || ''}`.trim() || "—"}</div>
+                    <div className="text-sm font-semibold text-gray-900 truncate">{`${consultation.doctor_first_name || ''} ${consultation.doctor_last_name || ''}`.trim() || tt.doctorNotAssigned}</div>
                     <div className="text-xs text-gray-400 truncate">{getSpecialization(consultation)}</div>
                   </div>
                 </div>
@@ -704,7 +840,7 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
                     </div>
                     <div className="min-w-0">
                       <div className="text-sm font-bold text-gray-900 truncate">
-                        {`${consultation.doctor_first_name || ''} ${consultation.doctor_last_name || ''}`.trim() || "Врач не назначен"}
+                        {`${consultation.doctor_first_name || ''} ${consultation.doctor_last_name || ''}`.trim() || tt.doctorNotAssigned}
                       </div>
                       <div className="text-xs text-blue-500 font-medium">{getSpecialization(consultation)}</div>
                     </div>
@@ -719,7 +855,7 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
                   <div className="bg-gray-50 border border-gray-100 rounded-xl p-3">
                     <div className="flex items-center gap-1.5 mb-1">
                       <Calendar className="w-3 h-3 text-gray-400" />
-                      <span className="text-[10px] text-gray-400 uppercase tracking-wider">Дата</span>
+                      <span className="text-[10px] text-gray-400 uppercase tracking-wider">{tt.dateField}</span>
                     </div>
                     <div className="text-sm font-semibold text-gray-900">{dateStr ? formatDate(dateStr) : "—"}</div>
                     <div className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
@@ -730,7 +866,7 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
                   <div className="bg-gray-50 border border-gray-100 rounded-xl p-3">
                     <div className="flex items-center gap-1.5 mb-1">
                       <Video className="w-3 h-3 text-gray-400" />
-                      <span className="text-[10px] text-gray-400 uppercase tracking-wider">Тип</span>
+                      <span className="text-[10px] text-gray-400 uppercase tracking-wider">{tt.typeField}</span>
                     </div>
                     <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold border ${type.cls}`}>
                       {type.icon}
@@ -754,7 +890,7 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
                           }`}
                         >
                           <Video className="w-4 h-4" />
-                          {joinInfo.isReady || isOngoing ? 'Подключиться' : `Через ${joinInfo.timeUntil}`}
+                          {joinInfo.isReady || isOngoing ? tt.connect : tt.through(joinInfo.timeUntil)}
                         </button>
                       )}
                       {!isOngoing && (!isScheduled || !joinInfo.canJoin) && (
@@ -762,7 +898,7 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
                           onClick={() => setDetailsConsultation(consultation)}
                           className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-600 text-sm font-medium rounded-xl transition-colors">
                           <Eye className="w-4 h-4" />
-                          Детали
+                          {tt.details}
                         </button>
                       )}
                       <button className="p-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-400 rounded-xl transition-colors">
@@ -781,7 +917,7 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
       {totalPages > 1 && (
         <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3.5">
           <span className="text-xs text-gray-400">
-            {startIndex + 1}–{Math.min(startIndex + itemsPerPage, filteredConsultations.length)} из {filteredConsultations.length}
+            {startIndex + 1}–{Math.min(startIndex + itemsPerPage, filteredConsultations.length)} {tt.of2} {filteredConsultations.length}
           </span>
           <div className="flex items-center gap-1.5">
             <button
@@ -843,7 +979,7 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
               {/* Header */}
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">Детали записи</h3>
+                  <h3 className="text-lg font-bold text-gray-900">{tt.detailsTitle}</h3>
                   <p className="text-xs text-gray-400 mt-0.5">#{c.id}</p>
                 </div>
                 <button onClick={() => setDetailsConsultation(null)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
@@ -865,25 +1001,25 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
               {/* Info grid */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 bg-gray-50 rounded-xl">
-                  <p className="text-xs text-gray-400 mb-1 flex items-center gap-1"><Calendar className="w-3 h-3" /> Дата</p>
+                  <p className="text-xs text-gray-400 mb-1 flex items-center gap-1"><Calendar className="w-3 h-3" /> {tt.dateField}</p>
                   <p className="text-sm font-semibold text-gray-900">{dateStr ? formatDate(dateStr) : "—"}</p>
                   <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><Clock className="w-3 h-3" />{dateStr ? formatTime(dateStr) : "—"}</p>
                 </div>
                 <div className="p-3 bg-gray-50 rounded-xl">
-                  <p className="text-xs text-gray-400 mb-1">Тип</p>
+                  <p className="text-xs text-gray-400 mb-1">{tt.typeField}</p>
                   <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold border ${type.cls}`}>
                     {type.icon}{type.label}
                   </span>
                 </div>
                 <div className="p-3 bg-gray-50 rounded-xl">
-                  <p className="text-xs text-gray-400 mb-1">Статус</p>
+                  <p className="text-xs text-gray-400 mb-1">{tt.statusField}</p>
                   <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold border ${status.cls}`}>
                     {status.icon}{status.label}
                   </span>
                 </div>
                 {c.clinic_name && (
                   <div className="p-3 bg-gray-50 rounded-xl">
-                    <p className="text-xs text-gray-400 mb-1 flex items-center gap-1"><MapPin className="w-3 h-3" /> Клиника</p>
+                    <p className="text-xs text-gray-400 mb-1 flex items-center gap-1"><MapPin className="w-3 h-3" /> {tt.clinic}</p>
                     <p className="text-sm font-semibold text-gray-900 leading-tight">{c.clinic_name}</p>
                     {c.clinic_address && <p className="text-xs text-gray-400 mt-0.5">{c.clinic_address}</p>}
                   </div>
@@ -893,7 +1029,7 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
               {/* Symptoms */}
               {c.symptoms && (
                 <div className="p-3 bg-gray-50 rounded-xl">
-                  <p className="text-xs text-gray-400 mb-1">Жалобы / симптомы</p>
+                  <p className="text-xs text-gray-400 mb-1">{tt.complaints}</p>
                   <p className="text-sm text-gray-700 leading-relaxed">{c.symptoms}</p>
                 </div>
               )}
@@ -902,7 +1038,7 @@ const PatientConsultationsTable: React.FC<PatientConsultationsTableProps> = ({
                 onClick={() => setDetailsConsultation(null)}
                 className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-xl transition-colors"
               >
-                Закрыть
+                {tt.close}
               </button>
             </div>
           </div>

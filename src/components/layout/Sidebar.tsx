@@ -2,8 +2,8 @@
 import { createPortal } from "react-dom";
 
 import Image from "next/image";
-import Logo from "@/assets/logosaas.png";
 import LogoIcon from "../../../public/logo_icon.png";
+import { useBrand } from "@/context/BrandContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faUser,
@@ -18,7 +18,8 @@ import {
   faChevronDown,
   faChevronRight,
 } from "@fortawesome/free-solid-svg-icons";
-import { useAuth, computeRole, ROLE_DISPLAY_MAP } from "@/context/AuthContext";
+import { useAuth, computeRole } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { usePathname } from "next/navigation";
 import { toast } from "react-toastify";
 import Link from "next/link";
@@ -33,12 +34,32 @@ const resolveAvatar = (url?: string | null) => {
 type SubMenuItem = { id: string; icon: any; title: string; color: string; href: string };
 type MenuItem = { id: string; icon: any; title: string; color: string; href?: string; children?: SubMenuItem[] };
 
-const menuItems: MenuItem[] = [
-  { id: "profile",    icon: faUser,        title: "Профиль",    color: "#3772ff", href: "/patient/profile"    },
-  { id: "documents",  icon: faFileMedical, title: "Документы",  color: "#12263a", href: "/patient/documents"  },
-  { id: "video",      icon: faVideo,       title: "Услуги",     color: "#3267e6", href: "/patient/video"      },
-  { id: "activity",   icon: faHistory,     title: "Активность", color: "#29358f", href: "/patient/activity"   },
-];
+const SIDEBAR_TEXT = {
+  ru: {
+    profile: "Профиль", documents: "Документы", video: "Услуги", activity: "Активность",
+    closeMenu: "Закрыть меню навигации", logout: "Выйти", logoutAria: "Выйти из системы",
+    loggedOutToast: "Вы успешно вышли!",
+    roles: { admin: "Администратор", academy_admin: "Администратор академии", doctor: "Доктор", nurse: "Медсестра", teacher: "Преподаватель", patient: "Пациент", student: "Студент" },
+  },
+  kz: {
+    profile: "Профиль", documents: "Құжаттар", video: "Қызметтер", activity: "Белсенділік",
+    closeMenu: "Навигация мәзірін жабу", logout: "Шығу", logoutAria: "Жүйеден шығу",
+    loggedOutToast: "Сіз сәтті шықтыңыз!",
+    roles: { admin: "Әкімші", academy_admin: "Академия әкімшісі", doctor: "Дәрігер", nurse: "Медбике", teacher: "Оқытушы", patient: "Пациент", student: "Студент" },
+  },
+  en: {
+    profile: "Profile", documents: "Documents", video: "Services", activity: "Activity",
+    closeMenu: "Close navigation menu", logout: "Log out", logoutAria: "Log out of the system",
+    loggedOutToast: "You have successfully logged out!",
+    roles: { admin: "Administrator", academy_admin: "Academy Administrator", doctor: "Doctor", nurse: "Nurse", teacher: "Teacher", patient: "Patient", student: "Student" },
+  },
+  uz: {
+    profile: "Profil", documents: "Hujjatlar", video: "Xizmatlar", activity: "Faollik",
+    closeMenu: "Navigatsiya menyusini yopish", logout: "Chiqish", logoutAria: "Tizimdan chiqish",
+    loggedOutToast: "Tizimdan muvaffaqiyatli chiqdingiz!",
+    roles: { admin: "Administrator", academy_admin: "Akademiya administratori", doctor: "Shifokor", nurse: "Hamshira", teacher: "O'qituvchi", patient: "Bemor", student: "Talaba" },
+  },
+};
 
 export const Sidebar = ({
   isOpen,
@@ -50,6 +71,15 @@ export const Sidebar = ({
   isCollapsed?: boolean;
 }) => {
   const { user, logoutUser } = useAuth();
+  const { appLogo } = useBrand();
+  const { language } = useLanguage();
+  const t = SIDEBAR_TEXT[language as keyof typeof SIDEBAR_TEXT] ?? SIDEBAR_TEXT.ru;
+  const menuItems: MenuItem[] = [
+    { id: "profile",   icon: faUser,        title: t.profile,   color: "#3772ff", href: "/patient/profile"   },
+    { id: "documents", icon: faFileMedical, title: t.documents, color: "#12263a", href: "/patient/documents" },
+    { id: "video",     icon: faVideo,       title: t.video,     color: "#3267e6", href: "/patient/video"     },
+    { id: "activity",  icon: faHistory,     title: t.activity,  color: "#29358f", href: "/patient/activity"  },
+  ];
   const userRole = computeRole(user?.roles);
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -104,7 +134,7 @@ export const Sidebar = ({
   };
 
   const handleLogout = () => {
-    toast.success("Вы успешно вышли!", { position: "top-right", autoClose: 1000 });
+    toast.success(t.loggedOutToast, { position: "top-right", autoClose: 1000 });
     setTimeout(() => {
       logoutUser();
       window.location.href = "/";
@@ -195,7 +225,7 @@ export const Sidebar = ({
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 sm:hidden transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] cursor-pointer motion-reduce:transition-none"
           onClick={() => { setSidebarOpen(false); onClose(); }}
           onKeyDown={(e) => { if (e.key === 'Escape') { setSidebarOpen(false); onClose(); } }}
-          aria-label="Закрыть меню навигации"
+          aria-label={t.closeMenu}
           role="button"
           tabIndex={0}
         />
@@ -220,13 +250,13 @@ export const Sidebar = ({
 
         <div className="flex justify-between items-center px-3 py-4 xs:px-4 xs:py-5 sm:px-6 sm:py-6 xl:hidden relative z-10 border-b border-white/10">
           <Link href="/" onClick={() => setSidebarOpen(false)} className="block outline-none focus:outline-none">
-            <Image src={Logo} alt="Logo" width={220} height={55} priority className="w-full max-w-[160px] h-auto hover:opacity-90 transition-opacity duration-300 drop-shadow-lg" />
+            <Image src={appLogo} alt="Logo" width={220} height={55} priority className="w-full max-w-[160px] h-auto hover:opacity-90 transition-opacity duration-300 drop-shadow-lg" />
           </Link>
           <div className="relative group">
             <button
               onClick={() => { setSidebarOpen(false); onClose(); }}
               className="relative min-w-[48px] min-h-[48px] p-3 xs:p-3.5 sm:p-4 rounded-xl xs:rounded-2xl backdrop-blur-md transition-all duration-300 hover:rotate-90 hover:scale-110 active:scale-95 border-0 outline-none overflow-hidden flex items-center justify-center focus:outline-none"
-              aria-label="Закрыть меню навигации"
+              aria-label={t.closeMenu}
               style={{ background: 'linear-gradient(135deg, rgba(239,68,68,0.1) 0%, rgba(220,38,38,0.15) 50%, rgba(185,28,28,0.1) 100%)', border: '1px solid rgba(255,255,255,0.2)' }}
               onMouseEnter={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(239,68,68,0.2) 0%, rgba(220,38,38,0.25) 50%, rgba(185,28,28,0.2) 100%)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.4)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(239,68,68,0.1) 0%, rgba(220,38,38,0.15) 50%, rgba(185,28,28,0.1) 100%)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}
@@ -266,7 +296,7 @@ export const Sidebar = ({
             <div className="inline-flex items-center gap-1.5 xs:gap-2 px-2 py-1 xs:px-3 xs:py-1.5 rounded-lg xs:rounded-xl shadow-lg border backdrop-blur-sm mb-2 xs:mb-3 text-xs font-bold uppercase tracking-wide"
                  style={{ background: getRoleGradient(userRole).bg, borderColor: getRoleGradient(userRole).border }}>
               <FontAwesomeIcon icon={getRoleIcon(userRole)} className="text-xs" />
-              <span>{ROLE_DISPLAY_MAP[userRole] ?? "Пациент"}</span>
+              <span>{t.roles[userRole as keyof typeof t.roles] ?? t.roles.patient}</span>
             </div>
             <h2 className="text-base xs:text-lg font-bold mb-1 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent leading-tight">{user.first_name} {user.last_name}</h2>
             <p className="text-xs text-gray-300 break-words opacity-80 leading-relaxed px-2 xs:px-0">{user.email}</p>
@@ -352,14 +382,14 @@ export const Sidebar = ({
           <button
             onClick={handleLogout}
             className={`w-full group relative overflow-hidden min-h-[48px] ${isCollapsed ? 'px-3 py-3' : 'px-3 py-3 xs:px-4 xs:py-4 sm:px-5 sm:py-4'} rounded-xl xs:rounded-2xl text-white font-semibold flex items-center ${isCollapsed ? 'justify-center' : 'justify-center gap-2 xs:gap-3 sm:gap-3'} transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] shadow-2xl hover:scale-105 hover:-translate-y-1 active:scale-95 border-0 outline-none focus:outline-none will-change-transform`}
-            aria-label="Выйти из системы"
+            aria-label={t.logoutAria}
             style={{ background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%)', border: '1px solid rgba(220,38,38,0.3)' }}
             onMouseEnter={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%)'; }}
-            title={isCollapsed ? "Выйти" : undefined}
+            title={isCollapsed ? t.logout : undefined}
           >
             <FontAwesomeIcon icon={faSignOutAlt} className="text-base xs:text-lg group-hover:rotate-12 transition-transform duration-300" aria-hidden="true" />
-            {!isCollapsed && <span className="text-sm xs:text-base">Выйти</span>}
+            {!isCollapsed && <span className="text-sm xs:text-base">{t.logout}</span>}
             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" style={{ background: 'linear-gradient(135deg, rgba(220,38,38,0.2) 0%, rgba(185,28,28,0.2) 100%)' }}></div>
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
           </button>
@@ -391,7 +421,7 @@ export const Sidebar = ({
               {isCollapsed ? (
                 <Image src={LogoIcon} alt="ZhanCare" width={40} height={40} priority className="w-10 h-10 object-contain drop-shadow-md mx-auto" />
               ) : (
-                <Image src={Logo} alt="Logo" width={280} height={55} priority className="w-full h-auto hover:opacity-90 transition-opacity duration-300 drop-shadow-lg" />
+                <Image src={appLogo} alt="Logo" width={280} height={55} priority className="w-full h-auto hover:opacity-90 transition-opacity duration-300 drop-shadow-lg" />
               )}
             </Link>
           </div>
@@ -426,7 +456,7 @@ export const Sidebar = ({
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-xl shadow-lg border backdrop-blur-sm mb-2 text-xs font-bold uppercase tracking-wide"
                      style={{ background: getRoleGradient(userRole).bg, borderColor: getRoleGradient(userRole).border }}>
                   <FontAwesomeIcon icon={getRoleIcon(userRole)} className="text-xs" />
-                  <span>{ROLE_DISPLAY_MAP[userRole] ?? "Пациент"}</span>
+                  <span>{t.roles[userRole as keyof typeof t.roles] ?? t.roles.patient}</span>
                 </div>
                 <h2 className="text-base font-bold mb-0.5 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent leading-tight">{user.first_name} {user.last_name}</h2>
                 <p className="text-xs text-gray-300 break-words opacity-80 leading-relaxed">{user.email}</p>
@@ -573,14 +603,14 @@ export const Sidebar = ({
           <button
             onClick={handleLogout}
             className={`w-full group relative overflow-hidden min-h-[48px] ${isCollapsed ? 'px-3 py-3 justify-center' : 'px-5 py-4 justify-center gap-3'} rounded-2xl text-white font-semibold flex items-center transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] shadow-2xl hover:scale-105 hover:-translate-y-1 active:scale-95 border-0 outline-none focus:outline-none will-change-transform`}
-            aria-label="Выйти из системы"
+            aria-label={t.logoutAria}
             style={{ background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%)', border: '1px solid rgba(220,38,38,0.3)' }}
             onMouseEnter={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%)'; }}
-            title={isCollapsed ? "Выйти" : undefined}
+            title={isCollapsed ? t.logout : undefined}
           >
             <FontAwesomeIcon icon={faSignOutAlt} className="text-lg group-hover:rotate-12 transition-transform duration-300" aria-hidden="true" />
-            {!isCollapsed && <span className="text-base">Выйти</span>}
+            {!isCollapsed && <span className="text-base">{t.logout}</span>}
             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" style={{ background: 'linear-gradient(135deg, rgba(220,38,38,0.2) 0%, rgba(185,28,28,0.2) 100%)' }}></div>
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
           </button>

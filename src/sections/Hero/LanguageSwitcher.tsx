@@ -76,7 +76,7 @@ export default function LanguageSwitcher({ currentLanguage, setLanguage, variant
       {/* Trigger button */}
       <button
         onClick={() => setOpen(prev => !prev)}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl backdrop-blur-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/20 ${
+        className={`flex items-center gap-1.5 h-11 px-3 rounded-xl backdrop-blur-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/20 ${
           isLight
             ? "bg-[#ebf1ff] border border-[#d0dcf7] hover:bg-[#dce8ff]"
             : "bg-white/[0.08] border border-white/15 hover:bg-white/[0.14]"
