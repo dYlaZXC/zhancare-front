@@ -603,6 +603,9 @@ export default function AISymptomsChecker({ clinic }: { clinic?: ClinicContext }
           : null,
         availability_status: "available",
         language: doctorRec.language ?? null,
+        online_consultation_price: doctorRec.online_consultation_price != null
+          ? String(doctorRec.online_consultation_price)
+          : null,
       };
       setPreselectedDoctor(mapped);
     } else {

@@ -10,6 +10,7 @@ import {
 import { api as axiosInstance } from "@/utils/axiosInstance";
 import { getCurrencySymbol } from "@/utils/currency";
 import { useLanguage } from "@/context/LanguageContext";
+import { useConsultationPayment } from "@/components/payment/useConsultationPayment";
 
 const CATEGORY_TEXT = {
   ru: {
@@ -154,6 +155,7 @@ type Step = 1 | 2 | 3;
 const DiagnosticsFlow: React.FC<DiagnosticsFlowProps> = ({ onBack, onComplete, onStepChange }) => {
   const { language: uiLanguage } = useLanguage();
   const tt = DIAGNOSTICS_TEXT[uiLanguage as keyof typeof DIAGNOSTICS_TEXT] ?? DIAGNOSTICS_TEXT.ru;
+  const { pay: payForConsultation } = useConsultationPayment();
   const ctext = CATEGORY_TEXT[uiLanguage as keyof typeof CATEGORY_TEXT] ?? CATEGORY_TEXT.ru;
   const CATEGORIES = CATEGORY_META.map(m => ({
     ...m,
@@ -239,15 +241,27 @@ const DiagnosticsFlow: React.FC<DiagnosticsFlowProps> = ({ onBack, onComplete, o
     setBookingError(null);
     try {
       const scheduledTime = `${selectedDate}T${selectedTime}:00`;
-      const res = await axiosInstance.post('/diagnostics/appointments/', {
-        service_id: selectedService.id,
-        scheduled_time: scheduledTime,
+      const amount = selectedService.price ? Math.round(Number(selectedService.price)) : 3000;
+
+      await payForConsultation({
+        paymentType: "diagnostics",
+        amount,
+        description: selectedService.name,
+        bookingData: {
+          service_id: selectedService.id,
+          scheduled_time: scheduledTime,
+        },
       });
-      setBookedAppointment(res.data.appointment ?? res.data);
+
+      // Populate bookedAppointment from local state for the success screen
+      setBookedAppointment({
+        clinic_name: selectedService.clinic_name,
+      });
       goToStep(3);
     } catch (err: any) {
-      const msg = err?.response?.data?.error || tt.bookingError;
-      setBookingError(msg);
+      if (err?.message !== "Payment cancelled") {
+        setBookingError(err?.message || tt.bookingError);
+      }
     } finally {
       setBooking(false);
     }

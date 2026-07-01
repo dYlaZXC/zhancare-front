@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
 import { api } from "@/utils/api";
@@ -9,6 +9,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import Step1 from "./consultations/VideoConsultationStep1";
 import Step2 from "./consultations/VideoConsultationStep2";
 import Step3 from "./consultations/VideoConsultationStep3";
+import { useConsultationPayment } from "@/components/payment/useConsultationPayment";
 import TipsPanel from "./consultations/TipsPanel";
 import OfflineBookingFlow from "./consultations/OfflineBookingFlow";
 import DiagnosticsFlow from "./consultations/DiagnosticsFlow";
@@ -52,6 +53,7 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
   console.log(`🆔 VideoConsultation instance rendering: ${componentInstanceId.current}`);
   const { token } = useAuth();
   const { language } = useLanguage();
+  const { pay: payForConsultation, loading: paymentLoading } = useConsultationPayment();
   const ht = HEADER_TEXT[language as keyof typeof HEADER_TEXT] ?? HEADER_TEXT.ru;
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -540,50 +542,55 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
   };
 
   const handleScheduleConsultation = async () => {
-    if (!pendingConsultationData || !token) {
+    if (!pendingConsultationData) {
       toast.error("⚠️ Данные для планирования консультации отсутствуют.");
       return;
     }
 
-    setLoadingCall(true);
+    const doctor = doctors.find(d => d.id === pendingConsultationData.doctor_id);
+    const priceRaw = doctor?.online_consultation_price;
+    const amount = priceRaw ? Math.round(Number(priceRaw)) : 5000;
+    const doctorName = doctor ? doctor.name.split(" ")[0] : "врачом";
+    const description = `Онлайн консультация с ${doctorName}`;
 
+    setLoadingCall(true);
     try {
-      // console.log("🔄 Scheduling consultation...");
-      const createRes = await api.post(
-        "/consultations/book-dynamic-slot/",
-        {
+      await payForConsultation({
+        paymentType: "online",
+        amount,
+        description,
+        bookingData: {
           doctor_id: pendingConsultationData.doctor_id,
           scheduled_time: pendingConsultationData.scheduled_time,
-          ai_recommendation_id: pendingConsultationData.ai_recommendation_id
+          consultation_type: "online",
+          ai_recommendation_id: pendingConsultationData.ai_recommendation_id ?? null,
         },
-        { headers: { Authorization: `Token ${token}` } }
-      );
+      });
 
-      if (createRes.data?.consultation) {
-        // console.log("✅ Consultation scheduled successfully:", createRes.data.consultation.id);
-
-        // Show success message
-        toast.success("✅ Консультация успешно запланирована! Вы можете подключиться к ней в назначенное время.");
-
-        // Reset state
-        setScheduledConsultation(null);
-        setPendingConsultationData(null);
-        setSelectedDoctorId(null);
-        setRecommendedDoctor(undefined);
-        setSymptoms("");
-        setAiRecommendationId(undefined);
-
-        // Return to Step 1
-        setStep(1);
+      toast.success("✅ Оплата прошла! Консультация запланирована. Можете подключиться в назначенное время.");
+      setScheduledConsultation(null);
+      setPendingConsultationData(null);
+      setSelectedDoctorId(null);
+      setRecommendedDoctor(undefined);
+      setSymptoms("");
+      setAiRecommendationId(undefined);
+      setStep(1);
+    } catch (err: any) {
+      if (err?.message !== "Payment cancelled") {
+        toast.error(err?.message ?? "⚠️ Не удалось завершить оплату. Попробуйте снова.");
       }
-    } catch (error: any) {
-      console.error("❌ Error scheduling consultation:", error?.response?.data || error);
-      const backendMsg = error?.response?.data?.error;
-      toast.error(backendMsg ? `⚠️ ${backendMsg}` : "⚠️ Не удалось запланировать консультацию.");
     } finally {
       setLoadingCall(false);
     }
   };
+
+  // Derived price for the pending consultation — shown in Step 3 before the payment widget opens
+  const pendingConsultationPrice = useMemo(() => {
+    if (!pendingConsultationData) return null;
+    const doctor = doctors.find(d => d.id === pendingConsultationData.doctor_id);
+    const raw = doctor?.online_consultation_price;
+    return raw ? Math.round(Number(raw)) : 5000;
+  }, [pendingConsultationData, doctors]);
 
   // COMMENTED OUT: Urgent consultations removed - all consultations now require time slot selection
   // const handleStartCall = async () => {
@@ -827,6 +834,7 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
                     recommendedDoctor,
                     scheduledConsultation,
                     pendingConsultationData,
+                    consultationPrice: pendingConsultationPrice,
                   } as any}
                 />
               )}

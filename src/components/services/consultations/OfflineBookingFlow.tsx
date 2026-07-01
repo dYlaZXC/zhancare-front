@@ -3,9 +3,9 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, CheckCircle2, Calendar, MapPin, Phone, Building2, Navigation, DoorOpen } from "lucide-react";
-import { api } from "@/utils/api";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { useConsultationPayment } from "@/components/payment/useConsultationPayment";
 import Step2 from "./VideoConsultationStep2";
 import type { Doctor, RecommendedDoctor } from "./types/doctor";
 
@@ -73,6 +73,7 @@ const OfflineBookingFlow: React.FC<OfflineBookingFlowProps> = ({
 }) => {
   const { token } = useAuth();
   const { language: uiLanguage } = useLanguage();
+  const { pay: payForConsultation } = useConsultationPayment();
   const tt = OFFLINE_TEXT[uiLanguage as keyof typeof OFFLINE_TEXT] ?? OFFLINE_TEXT.ru;
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedDoctorId, setSelectedDoctorId] = useState<number | null>(null);
@@ -81,23 +82,27 @@ const OfflineBookingFlow: React.FC<OfflineBookingFlowProps> = ({
 
   const handleConsultationBooked = async (_consultationId: number, data?: any) => {
     const doc = doctors.find(d => d.id === selectedDoctorId);
-    if (!doc || !token) return;
+    if (!doc) return;
 
     const scheduledTime: string = data?.scheduled_time || data?.scheduled_at || '';
+    const amount = doc.online_consultation_price ? Math.round(Number(doc.online_consultation_price)) : 5000;
 
     setBookingError(null);
     try {
-      await api.post(
-        '/clinic-appointments/',
-        {
+      await payForConsultation({
+        paymentType: "offline",
+        amount,
+        description: `Офлайн приём у ${doc.name.split(" ")[0]}`,
+        bookingData: {
           doctor_id: doc.id,
           scheduled_time: scheduledTime,
+          consultation_type: "offline",
         },
-        { headers: { Authorization: `Token ${token}` } }
-      );
+      });
     } catch (err: any) {
-      const msg = err?.response?.data?.error || tt.bookingError;
-      setBookingError(msg);
+      if (err?.message !== "Payment cancelled") {
+        setBookingError(err?.message || tt.bookingError);
+      }
       return;
     }
 

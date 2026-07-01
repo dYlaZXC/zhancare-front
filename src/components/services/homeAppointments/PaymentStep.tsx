@@ -4,6 +4,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { MapPin, Calendar, CreditCard, Shield, ArrowLeft, Loader2, Clock } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useConsultationPayment } from "@/components/payment/useConsultationPayment";
 
 const SERVICE_PRICE = 9900;
 

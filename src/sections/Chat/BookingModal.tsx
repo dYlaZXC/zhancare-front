@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { api } from "@/utils/api";
 import { useAuth } from "@/context/AuthContext";
+import { useConsultationPayment } from "@/components/payment/useConsultationPayment";
 import { useVoiceGuide } from "@/hooks/useVoiceGuide";
 import type { Doctor, TimeSlot } from "@/components/services/consultations/types/doctor";
 import PhoneInput from "@/components/ui/PhoneInput";
@@ -153,6 +154,8 @@ const translations = {
     confirmTitle: "Подтвердите запись",
     selectOtherTime: "Выбрать другое время",
     bookingErrorGeneric: "Ошибка при записи. Попробуйте снова.",
+    consultationCost: "Стоимость",
+    free: "Бесплатно",
     at: "в",
   },
   en: {
@@ -206,6 +209,8 @@ const translations = {
     confirmTitle: "Confirm booking",
     selectOtherTime: "Choose another time",
     bookingErrorGeneric: "Booking error. Please try again.",
+    consultationCost: "Cost",
+    free: "Free",
     at: "at",
   },
   kz: {
@@ -259,6 +264,8 @@ const translations = {
     confirmTitle: "Жазылуды растаңыз",
     selectOtherTime: "Басқа уақытты таңдау",
     bookingErrorGeneric: "Жазылу кезінде қате орын алды. Қайталап көріңіз.",
+    consultationCost: "Құны",
+    free: "Тегін",
     at: "",
   },
   uz: {
@@ -312,6 +319,8 @@ const translations = {
     confirmTitle: "Yozilishni tasdiqlang",
     selectOtherTime: "Boshqa vaqtni tanlash",
     bookingErrorGeneric: "Yozilishda xatolik. Qayta urinib ko'ring.",
+    consultationCost: "Narxi",
+    free: "Bepul",
     at: "",
   },
 };
@@ -325,12 +334,22 @@ export default function BookingModal({
   consultationType = 'online',
 }: BookingModalProps) {
   const { token, user, openAuth } = useAuth();
+  const { pay: payForConsultation } = useConsultationPayment();
   const t = translations[language as keyof typeof translations] || translations.ru;
 
   // State
   const [step, setStep] = useState<BookingStep>("doctors");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
+  // Single source of truth for price — computed when doctor is selected
+  const [consultationPrice, setConsultationPrice] = useState<number | null>(null);
+
+  const resolveDoctorPrice = (doctor: Doctor | null): number | null => {
+    if (!doctor) return null;
+    const raw = doctor.online_consultation_price;
+    if (raw == null || raw === "" || Number(raw) === 0) return null;
+    return Math.round(Number(raw));
+  };
   const [timeslots, setTimeslots] = useState<TimeSlot[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(
     localDateStr(new Date())
@@ -364,6 +383,7 @@ export default function BookingModal({
       if (user?.phone) setConsultationPhone(user.phone);
       if (preselectedDoctor) {
         setSelectedDoctor(preselectedDoctor);
+        setConsultationPrice(resolveDoctorPrice(preselectedDoctor));
         setStep("timeslots");
       } else {
         fetchDoctors();
@@ -501,6 +521,7 @@ export default function BookingModal({
 
   const handleDoctorSelect = (doctor: Doctor) => {
     setSelectedDoctor(doctor);
+    setConsultationPrice(resolveDoctorPrice(doctor));
     setStep("timeslots");
   };
 
@@ -577,71 +598,42 @@ export default function BookingModal({
 
     setBookingLoading(true);
     try {
-      // Send start_utc (from API) — backend validates against the doctor's clinic TZ grid.
-      // Fall back to local string only for slots created without start_utc (e.g. legacy data).
-      const bookingData: any = {
-        doctor_id: selectedDoctor.id,
-        scheduled_time: selectedTimeslot.start_utc ?? selectedTimeslot.start_time,
-        consultation_type: consultationType ?? "online",
-      };
+      const cType = consultationType ?? "online";
+      const price = consultationPrice ?? 5000;
+      const doctorFirstName = selectedDoctor.name.split(" ")[0];
+      const descriptionText = cType === "offline"
+        ? `Офлайн приём у ${doctorFirstName}`
+        : `Онлайн консультация с ${doctorFirstName}`;
 
-      // Add guest info if not logged in
-      if (!isLoggedIn) {
-        bookingData.guest_name = guestInfo.name;
-        bookingData.guest_phone = guestInfo.phone;
-        bookingData.guest_email = guestInfo.email;
-        bookingData.is_guest = true;
-      } else {
-        // For logged-in users, pass the contact details they confirmed
-        bookingData.consultation_email = consultationEmail;
-        if (consultationPhone.trim()) {
-          bookingData.consultation_phone = consultationPhone.trim();
-        }
-      }
+      await payForConsultation({
+        paymentType: cType === "offline" ? "offline" : "online",
+        amount: price,
+        description: descriptionText,
+        bookingData: {
+          doctor_id: selectedDoctor.id,
+          scheduled_time: selectedTimeslot.start_utc ?? selectedTimeslot.start_time,
+          consultation_type: cType,
+        },
+      });
 
-      const headers: Record<string, string> = {};
-      if (token) {
-        headers.Authorization = `Token ${token}`;
-      }
-
-      const res = await api.post(
-        "/consultations/book-dynamic-slot/",
-        bookingData,
-        { headers }
-      );
-
-      if (res.data?.consultation || res.data?.success) {
-        onBookingComplete({
-          doctorName: selectedDoctor.name,
-          doctorType: selectedDoctor.doctor_type,
-          scheduledTime: selectedTimeslot.start_time,
-          isGuest: !isLoggedIn,
-          meetingId: res.data?.meeting_id ?? res.data?.consultation?.meeting_id ?? undefined,
-          consultationId: res.data?.consultation?.id ?? undefined,
-          consultationType,
-          clinicName: selectedDoctor.clinic?.name,
-          clinicAddress: selectedDoctor.clinic?.address,
-          roomNumber: selectedDoctor.room_number,
-          gis2Url: selectedDoctor.clinic?.gis2_url,
-        });
-        onClose();
-      }
+      onBookingComplete({
+        doctorName: selectedDoctor.name,
+        doctorType: selectedDoctor.doctor_type,
+        scheduledTime: selectedTimeslot.start_time,
+        isGuest: !isLoggedIn,
+        consultationType,
+        clinicName: selectedDoctor.clinic?.name,
+        clinicAddress: selectedDoctor.clinic?.address,
+        roomNumber: selectedDoctor.room_number,
+        gis2Url: selectedDoctor.clinic?.gis2_url,
+      });
+      onClose();
     } catch (error: any) {
-      console.error("Error booking consultation:", error);
-      const errorMessage = error?.response?.data?.error ||
-        error?.response?.data?.message ||
-        t.bookingErrorGeneric;
-
-      // Slot was taken — refresh and send user back to pick another time
-      const isSlotTaken = error?.response?.status === 409 ||
-        errorMessage.toLowerCase().includes("занято") ||
-        errorMessage.toLowerCase().includes("taken") ||
-        errorMessage.toLowerCase().includes("slot");
-      if (isSlotTaken && selectedDoctor) {
-        setSelectedTimeslot(null);
-        setStep("timeslots");
-        fetchTimeslots(selectedDoctor.id, selectedDate);
+      if (error?.message === "Payment cancelled") {
+        setBookingLoading(false);
+        return;
       }
+      const errorMessage = error?.message || t.bookingErrorGeneric;
       setBookingError(errorMessage);
     } finally {
       setBookingLoading(false);
@@ -1106,6 +1098,21 @@ export default function BookingModal({
                           </div>
                         </div>
 
+                        {/* Price */}
+                        <div className="border-t border-gray-200 pt-3 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-5 h-5 flex items-center justify-center text-emerald-600">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </div>
+                            <p className="text-sm text-gray-500">{(t as any).consultationCost}</p>
+                          </div>
+                          <p className="font-bold text-emerald-600 text-base">
+                            {(consultationPrice ?? 5000).toLocaleString()} ₸
+                          </p>
+                        </div>
+
                         {/* Email where link will be sent */}
                         {(isLoggedIn ? consultationEmail : guestInfo.email) && (
                           <div className="border-t border-gray-200 pt-3 flex items-center gap-3">
@@ -1165,6 +1172,7 @@ export default function BookingModal({
                           <>
                             <CheckCircle2 className="w-5 h-5" />
                             {t.confirm}
+                            {consultationPrice ? ` · ${consultationPrice.toLocaleString()} ₸` : ""}
                           </>
                         )}
                       </button>

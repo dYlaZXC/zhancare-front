@@ -5,8 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-toastify";
 import { MapPin, AlertCircle, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { api } from "@/utils/api";
 import { useLanguage } from "@/context/LanguageContext";
+import { useConsultationPayment } from "@/components/payment/useConsultationPayment";
 
 const HOME_TEXT = {
   ru: {
@@ -52,6 +52,7 @@ const HomeAppointments: React.FC<HomeAppointmentsProps> = ({ onBack }) => {
   const { user } = useAuth();
   const { language: uiLanguage } = useLanguage();
   const tt = HOME_TEXT[uiLanguage as keyof typeof HOME_TEXT] ?? HOME_TEXT.ru;
+  const { pay: payForConsultation } = useConsultationPayment();
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [step, setStep] = useState<1 | 2>(1);
@@ -84,31 +85,31 @@ const HomeAppointments: React.FC<HomeAppointmentsProps> = ({ onBack }) => {
         ? `${address.trim()}, ${subParts.join(", ")}`
         : address.trim();
 
-      const payload: Record<string, unknown> = {
-        appointment_time: appointmentTime,
-        address: fullAddress,
-        symptoms: symptoms.trim() || null,
-        notes: addressComment.trim() || null,
-      };
-      if (latitude !== null && longitude !== null) {
-        payload.latitude = latitude;
-        payload.longitude = longitude;
-      }
+      const result = await payForConsultation({
+        paymentType: "home",
+        amount: 4950, // 50% prepay of 9 900 ₸
+        description: `Вызов медсестры на дом — ${fullAddress}`,
+        bookingData: {
+          appointment_time: appointmentTime,
+          address: fullAddress,
+          symptoms: symptoms.trim() || null,
+          notes: addressComment.trim() || null,
+          latitude: latitude ?? null,
+          longitude: longitude ?? null,
+        },
+      });
 
-      const res = await api.post("/appointments/", payload);
-      if (res.status === 201 || res.status === 200) {
-        toast.success(tt.paymentAccepted);
-        setAppointmentId(res.data.id);
-      } else {
-        toast.error(tt.callFailed);
+      toast.success(tt.paymentAccepted);
+      // result.resultId is the created HomeAppointment.id (set by webhook)
+      if (result.resultId) {
+        setAppointmentId(Number(result.resultId));
       }
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.error ||
-        err?.response?.data?.detail ||
-        tt.serverError;
-      setError(msg);
-      toast.error(msg);
+      if (err?.message !== "Payment cancelled") {
+        const msg = err?.message || tt.serverError;
+        setError(msg);
+        toast.error(msg);
+      }
     }
     setLoading(false);
   };

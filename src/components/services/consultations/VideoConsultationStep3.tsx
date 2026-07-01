@@ -64,6 +64,7 @@ const STEP3_TEXT = {
     cancel2: "Отменить",
     assignQuestion: "Назначить консультацию?", withDoctorAt: (name: string) => `С доктором ${name} в выбранное время`,
     cancel: "Отмена", confirm: "Подтвердить",
+    consultationCost: "Стоимость консультации",
     locale: "ru-RU",
   },
   kz: {
@@ -98,6 +99,7 @@ const STEP3_TEXT = {
     cancel2: "Бас тарту",
     assignQuestion: "Кеңес тағайындау керек пе?", withDoctorAt: (name: string) => `${name} дәрігермен таңдалған уақытта`,
     cancel: "Бас тарту", confirm: "Растау",
+    consultationCost: "Кеңес құны",
     locale: "kk-KZ",
   },
   en: {
@@ -132,6 +134,7 @@ const STEP3_TEXT = {
     cancel2: "Cancel",
     assignQuestion: "Schedule the consultation?", withDoctorAt: (name: string) => `With Dr. ${name} at the selected time`,
     cancel: "Cancel", confirm: "Confirm",
+    consultationCost: "Consultation cost",
     locale: "en-US",
   },
   uz: {
@@ -166,6 +169,7 @@ const STEP3_TEXT = {
     cancel2: "Bekor qilish",
     assignQuestion: "Konsultatsiya belgilansinmi?", withDoctorAt: (name: string) => `${name} shifokor bilan tanlangan vaqtda`,
     cancel: "Bekor qilish", confirm: "Tasdiqlash",
+    consultationCost: "Konsultatsiya narxi",
     locale: "uz-UZ",
   },
 };
@@ -505,6 +509,7 @@ export interface Step3Props {
     doctor_id: number;
     ai_recommendation_id: number;
   } | null;
+  consultationPrice?: number | null;
 }
 
 const steps = [
@@ -546,6 +551,7 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
   recommendedDoctor,
   scheduledConsultation,
   pendingConsultationData,
+  consultationPrice,
 }) => {
   const { language: uiLanguage } = useLanguage();
   const tt = STEP3_TEXT[uiLanguage as keyof typeof STEP3_TEXT] ?? STEP3_TEXT.ru;
@@ -804,6 +810,19 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
           </div>
         )}
 
+        {/* Price row */}
+        {consultationPrice != null && (
+          <div className="flex items-center gap-3 px-4 py-3.5 border-b border-gray-50">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
+              <span className="text-sm font-bold text-blue-600">₸</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-gray-400 font-medium">{tt.consultationCost}</p>
+              <p className="text-sm font-bold text-gray-900">{consultationPrice.toLocaleString()} ₸</p>
+            </div>
+          </div>
+        )}
+
         {/* Symptoms row */}
         {symptoms && (
           <div className="flex items-start gap-3 px-4 py-3.5 border-b border-gray-50">
@@ -847,7 +866,7 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
           ) : waiting ? (
             <><Clock className="w-4 h-4" /><span>{tt.waitingTime(formatWaitingTime(waitingTime))}</span></>
           ) : (
-            <><Video className="w-4 h-4" /><span>{tt.assignConsultation}</span></>
+            <><Video className="w-4 h-4" /><span>{tt.assignConsultation}{consultationPrice ? ` · ${consultationPrice.toLocaleString()} ₸` : ""}</span></>
           )}
         </motion.button>
       </div>
