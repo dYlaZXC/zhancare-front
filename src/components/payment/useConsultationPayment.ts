@@ -59,7 +59,7 @@ export function useConsultationPayment() {
         description,
         amount,
         currency: currency ?? "KZT",
-        invoiceId: paymentId,   // mapped to InvoiceId in TipTop Pay webhooks
+        externalId: paymentId,  // TipTop maps externalId → InvoiceId in webhooks (renamed from invoiceId)
         userInfo: {
           accountId: String(user?.id ?? ""),
           email: email ?? "",
