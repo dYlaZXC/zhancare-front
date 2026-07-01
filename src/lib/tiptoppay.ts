@@ -19,6 +19,7 @@ export interface TipTopStartOptions {
   amount: number;
   currency?: string;
   paymentSchema?: string;
+  invoiceId?: string;
   externalId?: string;
   userInfo?: { accountId?: string; email?: string };
   culture?: string;
