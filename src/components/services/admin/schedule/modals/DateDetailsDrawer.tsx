@@ -25,6 +25,7 @@ import {
   Trash2,
   FlaskConical,
   ChevronDown,
+  Loader2,
 } from "lucide-react";
 import { ScheduleEvent } from "../types/scheduleTypes";
 import { getStatusColor, getPaymentStatusColor, PAYMENT_TYPE_LABELS } from "../utils/scheduleUtils";
@@ -98,73 +99,161 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: 'Отменено',
 };
 
-function CopyAllButton({ event }: { event: ScheduleEvent }) {
+function WhatsAppIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+    </svg>
+  );
+}
+
+function TelegramIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+    </svg>
+  );
+}
+
+function buildShareText(event: ScheduleEvent): string {
+  const isOnline = event.consultation_type !== 'offline';
+  const link = event.meeting_id
+    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/video-call/patient?meetingId=${event.meeting_id}`
+    : null;
+
+  const lines: (string | null)[] = [
+    '📋 Консультация ZhanCare',
+    '',
+    `📅 Дата: ${event.date}, ${event.time} (${event.duration} мин)`,
+    `🏥 Тип: ${event.type === 'consultation' ? (isOnline ? 'Онлайн' : 'Оффлайн') : event.type === 'diagnostics' ? 'Диагностика' : 'Выезд на дом'}`,
+    `📊 Статус: ${STATUS_LABELS[event.status] ?? event.status}`,
+    '',
+    `👤 Пациент: ${event.patient_name}`,
+    event.patient_phone ? `📞 Телефон: ${event.patient_phone}` : null,
+    event.patient_email ? `📧 Email: ${event.patient_email}` : null,
+    event.patient_birth_date ? `🎂 Дата рождения: ${event.patient_birth_date}` : null,
+  ];
+
+  if (event.doctor_name) {
+    lines.push('', `👨‍⚕️ Доктор: ${event.doctor_name}`);
+    if (event.doctor_specialization) lines.push(`🔬 Специализация: ${event.doctor_specialization}`);
+    if (event.doctor_phone) lines.push(`📞 Телефон врача: ${event.doctor_phone}`);
+    if (event.doctor_email) lines.push(`📧 Email врача: ${event.doctor_email}`);
+  }
+
+  if (event.nurse_name) {
+    lines.push('', `👩‍⚕️ Медсестра: ${event.nurse_name}`);
+    if (event.nurse_phone) lines.push(`📞 Телефон: ${event.nurse_phone}`);
+  }
+
+  if (event.service_name) {
+    lines.push('', `🧪 Услуга: ${event.service_name}`);
+    if (event.clinic_name) lines.push(`🏥 Клиника: ${event.clinic_name}`);
+  }
+
+  if (link) {
+    lines.push('', `🔗 Ссылка на консультацию:`, link);
+  }
+  if (event.access_code) lines.push(`🔑 Код доступа: ${event.access_code}`);
+  if (event.address) lines.push('', `📍 Адрес: ${event.address}`);
+  if (event.notes) lines.push('', `📝 Примечания: ${event.notes}`);
+
+  return lines.filter(l => l !== null).join('\n');
+}
+
+function ShareButtons({ event }: { event: ScheduleEvent }) {
   const [copied, setCopied] = useState(false);
+  const [waSending, setWaSending] = useState(false);
+  const [waSent, setWaSent] = useState(false);
+  const [tgSending, setTgSending] = useState(false);
+  const [tgSent, setTgSent] = useState(false);
 
   const handleCopy = () => {
-    const isOnline = event.consultation_type !== 'offline';
-    const link = event.meeting_id
-      ? `${typeof window !== 'undefined' ? window.location.origin : ''}/video-call/patient?meetingId=${event.meeting_id}`
-      : null;
-
-    const lines: (string | null)[] = [
-      '📋 Консультация ZhanCare',
-      '',
-      `📅 Дата: ${event.date}, ${event.time} (${event.duration} мин)`,
-      `🏥 Тип: ${event.type === 'consultation' ? (isOnline ? 'Онлайн' : 'Оффлайн') : event.type === 'diagnostics' ? 'Диагностика' : 'Выезд на дом'}`,
-      `📊 Статус: ${STATUS_LABELS[event.status] ?? event.status}`,
-      '',
-      `👤 Пациент: ${event.patient_name}`,
-      event.patient_phone ? `📞 Телефон: ${event.patient_phone}` : null,
-      event.patient_email ? `📧 Email: ${event.patient_email}` : null,
-      event.patient_birth_date ? `🎂 Дата рождения: ${event.patient_birth_date}` : null,
-    ];
-
-    if (event.doctor_name) {
-      lines.push('', `👨‍⚕️ Доктор: ${event.doctor_name}`);
-      if (event.doctor_specialization) lines.push(`🔬 Специализация: ${event.doctor_specialization}`);
-      if (event.doctor_phone) lines.push(`📞 Телефон врача: ${event.doctor_phone}`);
-      if (event.doctor_email) lines.push(`📧 Email врача: ${event.doctor_email}`);
-    }
-
-    if (event.nurse_name) {
-      lines.push('', `👩‍⚕️ Медсестра: ${event.nurse_name}`);
-      if (event.nurse_phone) lines.push(`📞 Телефон: ${event.nurse_phone}`);
-    }
-
-    if (event.service_name) {
-      lines.push('', `🧪 Услуга: ${event.service_name}`);
-      if (event.clinic_name) lines.push(`🏥 Клиника: ${event.clinic_name}`);
-    }
-
-    if (link) {
-      lines.push('', `🔗 Ссылка на консультацию:`, link);
-    }
-    if (event.access_code) lines.push(`🔑 Код доступа: ${event.access_code}`);
-    if (event.address) lines.push('', `📍 Адрес: ${event.address}`);
-    if (event.notes) lines.push('', `📝 Примечания: ${event.notes}`);
-
-    navigator.clipboard.writeText(lines.filter(l => l !== null).join('\n')).then(() => {
+    navigator.clipboard.writeText(buildShareText(event)).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     });
   };
 
-  return (
-    <button
-      type="button"
-      onClick={handleCopy}
-      className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-        copied
-          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-          : 'bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-200 hover:border-gray-300'
-      }`}
-    >
-      {copied
-        ? <><Check className="w-4 h-4" /> Скопировано!</>
-        : <><ClipboardList className="w-4 h-4" /> Скопировать всю информацию</>
+  const shareWhatsApp = async () => {
+    if (!event.patient_phone) { toast.error('У пациента нет номера телефона'); return; }
+    const phone = event.patient_phone.replace(/\D/g, '');
+    setWaSending(true);
+    try {
+      await api.post('/whatsapp/reply/', { to: phone, body: buildShareText(event) });
+      setWaSent(true);
+      toast.success('Отправлено в WhatsApp');
+      setTimeout(() => setWaSent(false), 3000);
+    } catch {
+      toast.error('Не удалось отправить в WhatsApp');
+    } finally {
+      setWaSending(false);
+    }
+  };
+
+  const shareTelegram = async () => {
+    if (!event.patient_id) { toast.error('Нет ID пациента'); return; }
+    setTgSending(true);
+    try {
+      const convRes = await api.get('/tg/conversation/', { params: { patient_id: event.patient_id } });
+      if (!convRes.data.found) {
+        toast.warn('Пациент не подключил Telegram бот');
+        return;
       }
-    </button>
+      await api.post('/tg/reply/', { chat_id: convRes.data.chat_id, text: buildShareText(event) });
+      setTgSent(true);
+      toast.success('Отправлено в Telegram');
+      setTimeout(() => setTgSent(false), 3000);
+    } catch {
+      toast.error('Не удалось отправить в Telegram');
+    } finally {
+      setTgSending(false);
+    }
+  };
+
+  return (
+    <div className="flex gap-2">
+      <button
+        type="button"
+        onClick={handleCopy}
+        className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+          copied
+            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+            : 'bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-200 hover:border-gray-300'
+        }`}
+      >
+        {copied ? <Check className="w-4 h-4 flex-shrink-0" /> : <ClipboardList className="w-4 h-4 flex-shrink-0" />}
+        <span>{copied ? 'Скопировано!' : 'Скопировать'}</span>
+      </button>
+      <button
+        type="button"
+        onClick={shareWhatsApp}
+        disabled={waSending || waSent}
+        title="Отправить в WhatsApp"
+        className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all border flex-shrink-0 disabled:opacity-70 ${
+          waSent
+            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+            : 'bg-[#f0fdf4] hover:bg-[#dcfce7] text-[#16a34a] border-[#86efac] hover:border-[#4ade80]'
+        }`}
+      >
+        {waSending ? <Loader2 className="w-4 h-4 animate-spin" /> : waSent ? <Check className="w-4 h-4" /> : <WhatsAppIcon className="w-4 h-4" />}
+        <span className="hidden sm:inline">{waSent ? 'Отправлено' : 'WhatsApp'}</span>
+      </button>
+      <button
+        type="button"
+        onClick={shareTelegram}
+        disabled={tgSending || tgSent}
+        title="Отправить в Telegram"
+        className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all border flex-shrink-0 disabled:opacity-70 ${
+          tgSent
+            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+            : 'bg-[#eff6ff] hover:bg-[#dbeafe] text-[#2563eb] border-[#93c5fd] hover:border-[#60a5fa]'
+        }`}
+      >
+        {tgSending ? <Loader2 className="w-4 h-4 animate-spin" /> : tgSent ? <Check className="w-4 h-4" /> : <TelegramIcon className="w-4 h-4" />}
+        <span className="hidden sm:inline">{tgSent ? 'Отправлено' : 'Telegram'}</span>
+      </button>
+    </div>
   );
 }
 
@@ -443,8 +532,8 @@ function BookingRow({ event, onChanged }: { event: ScheduleEvent; onChanged?: ()
                 </div>
               )}
 
-              {/* Copy all info button */}
-              <CopyAllButton event={event} />
+              {/* Share buttons */}
+              <ShareButtons event={event} />
             </div>
           </motion.div>
         )}
