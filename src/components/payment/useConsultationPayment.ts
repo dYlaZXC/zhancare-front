@@ -45,14 +45,14 @@ export function useConsultationPayment() {
         { headers: token ? { Authorization: `Token ${token}` } : {} }
       );
 
-      const {
-        payment_id: paymentId,
-        amount,
-        currency,
-        description,
-        public_terminal_id: publicTerminalId,
-        email,
-      } = checkoutRes.data;
+      const { free, payment_id: paymentId, result_id: freeResultId } = checkoutRes.data;
+
+      // Free consultation (doctor price = 0) — no payment widget needed
+      if (free) {
+        return { paymentId, resultId: freeResultId ?? "", status: "paid" };
+      }
+
+      const { amount, currency, description, public_terminal_id: publicTerminalId, email } = checkoutRes.data;
 
       // 2. Open TipTop Pay widget
       await openTipTopPayWidget(publicTerminalId, {

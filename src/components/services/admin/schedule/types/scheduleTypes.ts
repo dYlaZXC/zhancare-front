@@ -2,10 +2,22 @@
  * TypeScript interfaces for schedule management
  */
 
+export type PaymentStatus = 'not_required' | 'unpaid' | 'partial' | 'paid' | 'refunded';
+export type PaymentType = 'free' | 'pay_at_clinic' | 'full_prepay' | 'partial_prepay';
+
+export interface PaymentInfo {
+  payment_type: PaymentType;
+  status: PaymentStatus;
+  amount_due: string;
+  amount_paid: string;
+  currency: string;
+}
+
 export interface ScheduleEvent {
   id: string;
   type: 'consultation' | 'appointment' | 'diagnostics';
   consultation_type?: 'online' | 'offline';
+  payment_info?: PaymentInfo | null;
   // Patient
   patient_id: number;
   patient_name: string;

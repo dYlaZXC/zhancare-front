@@ -27,7 +27,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { ScheduleEvent } from "../types/scheduleTypes";
-import { getStatusColor } from "../utils/scheduleUtils";
+import { getStatusColor, getPaymentStatusColor, PAYMENT_TYPE_LABELS } from "../utils/scheduleUtils";
 import { api } from "@/utils/api";
 import { toast } from "react-toastify";
 import RescheduleModal from "./RescheduleModal";
@@ -240,6 +240,18 @@ function BookingRow({ event, onChanged }: { event: ScheduleEvent; onChanged?: ()
           </span>
         )}
         <StatusBadge status={event.status} />
+        {event.payment_info && (() => {
+          const pc = getPaymentStatusColor(event.payment_info.status);
+          return (
+            <span
+              className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0"
+              style={{ backgroundColor: pc.bg, color: pc.text }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: pc.dot }} />
+              {pc.label}
+            </span>
+          );
+        })()}
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); setRescheduleOpen(true); }}
@@ -379,6 +391,46 @@ function BookingRow({ event, onChanged }: { event: ScheduleEvent; onChanged?: ()
                         <CopyButton value={event.access_code} label="код" />
                       </div>
                     )}
+                  </div>
+                );
+              })()}
+
+              {/* Payment info */}
+              {event.payment_info && (() => {
+                const { payment_type, status, amount_due, amount_paid, currency } = event.payment_info;
+                const pc = getPaymentStatusColor(status);
+                const due = Number(amount_due);
+                const paid = Number(amount_paid);
+                return (
+                  <div className="rounded-xl border border-gray-100 bg-white overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
+                      <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Оплата</span>
+                      <span
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+                        style={{ backgroundColor: pc.bg, color: pc.text }}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: pc.dot }} />
+                        {pc.label}
+                      </span>
+                    </div>
+                    <div className="divide-y divide-gray-50">
+                      <div className="flex items-center gap-2 px-4 py-2">
+                        <span className="text-xs text-gray-400 w-28 flex-shrink-0">Тип оплаты</span>
+                        <span className="text-xs font-semibold text-gray-700">{PAYMENT_TYPE_LABELS[payment_type] ?? payment_type}</span>
+                      </div>
+                      {due > 0 && (
+                        <div className="flex items-center gap-2 px-4 py-2">
+                          <span className="text-xs text-gray-400 w-28 flex-shrink-0">К оплате</span>
+                          <span className="text-xs font-semibold text-gray-700">{due.toLocaleString('ru-RU')} {currency}</span>
+                        </div>
+                      )}
+                      {paid > 0 && (
+                        <div className="flex items-center gap-2 px-4 py-2">
+                          <span className="text-xs text-gray-400 w-28 flex-shrink-0">Оплачено</span>
+                          <span className="text-xs font-semibold" style={{ color: pc.text }}>{paid.toLocaleString('ru-RU')} {currency}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })()}

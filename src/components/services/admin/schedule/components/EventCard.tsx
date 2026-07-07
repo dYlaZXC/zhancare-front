@@ -6,6 +6,7 @@ import { Video, Home, FlaskConical, Edit, Trash2 } from 'lucide-react';
 import { api } from '@/utils/api';
 import { toast } from 'react-toastify';
 import { ScheduleEvent } from '../types/scheduleTypes';
+import { getPaymentStatusColor } from '../utils/scheduleUtils';
 import RescheduleModal from '../modals/RescheduleModal';
 import ConfirmDeleteModal from '../modals/ConfirmDeleteModal';
 
@@ -123,8 +124,8 @@ export default function EventCard({ event, onChanged }: EventCardProps) {
           </p>
         )}
 
-        {/* Status badge */}
-        <div className="pl-8 flex items-center gap-1.5">
+        {/* Status + payment badges */}
+        <div className="pl-8 flex items-center gap-1.5 flex-wrap">
           <span
             className="inline-block px-2 py-0.5 rounded-md text-[10px] md:text-xs font-semibold"
             style={{ backgroundColor: statusColor.bg, color: statusColor.text }}
@@ -139,6 +140,18 @@ export default function EventCard({ event, onChanged }: EventCardProps) {
               ⟲ {event.reschedule_count}
             </span>
           )}
+          {event.payment_info && (() => {
+            const pc = getPaymentStatusColor(event.payment_info.status);
+            return (
+              <span
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] md:text-xs font-semibold"
+                style={{ backgroundColor: pc.bg, color: pc.text }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: pc.dot }} />
+                {pc.label}
+              </span>
+            );
+          })()}
         </div>
       </div>
     </motion.div>

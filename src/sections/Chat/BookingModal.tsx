@@ -347,7 +347,7 @@ export default function BookingModal({
   const resolveDoctorPrice = (doctor: Doctor | null): number | null => {
     if (!doctor) return null;
     const raw = doctor.online_consultation_price;
-    if (raw == null || raw === "" || Number(raw) === 0) return null;
+    if (raw == null || raw === "") return null;
     return Math.round(Number(raw));
   };
   const [timeslots, setTimeslots] = useState<TimeSlot[]>([]);
@@ -599,7 +599,7 @@ export default function BookingModal({
     setBookingLoading(true);
     try {
       const cType = consultationType ?? "online";
-      const price = consultationPrice ?? 5000;
+      const price = consultationPrice ?? 0;
       const doctorFirstName = selectedDoctor.name.split(" ")[0];
       const descriptionText = cType === "offline"
         ? `Офлайн приём у ${doctorFirstName}`
@@ -1109,7 +1109,7 @@ export default function BookingModal({
                             <p className="text-sm text-gray-500">{(t as any).consultationCost}</p>
                           </div>
                           <p className="font-bold text-emerald-600 text-base">
-                            {(consultationPrice ?? 5000).toLocaleString()} ₸
+                            {(consultationPrice ?? 0).toLocaleString()} ₸
                           </p>
                         </div>
 

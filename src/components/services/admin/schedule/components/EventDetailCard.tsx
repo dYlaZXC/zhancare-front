@@ -1,9 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Video, Home, User, Stethoscope, MapPin } from "lucide-react";
+import { Video, Home, User, Stethoscope, MapPin, Banknote } from "lucide-react";
 import { ScheduleEvent } from "../types/scheduleTypes";
-import { getStatusColor } from "../utils/scheduleUtils";
+import { getStatusColor, getPaymentStatusColor, PAYMENT_TYPE_LABELS } from "../utils/scheduleUtils";
 
 interface EventDetailCardProps {
   event: ScheduleEvent;
@@ -98,6 +98,39 @@ export default function EventDetailCard({ event }: EventDetailCardProps) {
           </div>
         )}
       </div>
+
+      {/* Payment info */}
+      {event.payment_info && (() => {
+        const { payment_type, status, amount_due, amount_paid, currency } = event.payment_info;
+        const pc = getPaymentStatusColor(status);
+        const due = Number(amount_due);
+        const paid = Number(amount_paid);
+        return (
+          <div className="mt-4 rounded-xl border-2 overflow-hidden" style={{ borderColor: pc.bg }}>
+            <div className="flex items-center justify-between px-4 py-2.5" style={{ backgroundColor: pc.bg }}>
+              <div className="flex items-center gap-2">
+                <Banknote className="w-4 h-4" style={{ color: pc.text }} />
+                <span className="text-sm font-bold" style={{ color: pc.text }}>Оплата</span>
+              </div>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-white/60" style={{ color: pc.text }}>
+                {pc.label}
+              </span>
+            </div>
+            <div className="px-4 py-3 bg-white grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+              <span className="text-gray-500">Тип</span>
+              <span className="font-semibold text-gray-800">{PAYMENT_TYPE_LABELS[payment_type] ?? payment_type}</span>
+              {due > 0 && <>
+                <span className="text-gray-500">К оплате</span>
+                <span className="font-semibold text-gray-800">{due.toLocaleString('ru-RU')} {currency}</span>
+              </>}
+              {paid > 0 && <>
+                <span className="text-gray-500">Оплачено</span>
+                <span className="font-semibold" style={{ color: pc.text }}>{paid.toLocaleString('ru-RU')} {currency}</span>
+              </>}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Notes */}
       {event.notes && (

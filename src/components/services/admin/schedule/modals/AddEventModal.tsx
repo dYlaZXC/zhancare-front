@@ -29,6 +29,10 @@ import {
   Baby,
   Microscope,
   Banknote,
+  Building2,
+  CreditCard,
+  Gift,
+  Wallet,
 } from "lucide-react";
 import StaffScheduleModal from "../../StaffScheduleModal";
 import SearchSelect from "../components/SearchSelect";
@@ -40,6 +44,65 @@ interface AddEventModalProps {
   selectedDate: string | null;
   onEventAdded: () => void;
 }
+
+type PaymentTypeOption = 'pay_at_clinic' | 'free' | 'full_prepay' | 'partial_prepay';
+
+const PAYMENT_TYPE_OPTIONS: {
+  type: PaymentTypeOption;
+  label: string;
+  sub: string;
+  Icon: React.ElementType;
+  selectedBg: string;
+  selectedBorder: string;
+  selectedText: string;
+  selectedIconBg: string;
+  selectedIconColor: string;
+}[] = [
+  {
+    type: 'pay_at_clinic',
+    label: 'В клинике',
+    sub: 'Оплата при визите',
+    Icon: Building2,
+    selectedBg: '#f0fdf4',
+    selectedBorder: '#86efac',
+    selectedText: '#15803d',
+    selectedIconBg: '#dcfce7',
+    selectedIconColor: '#16a34a',
+  },
+  {
+    type: 'free',
+    label: 'Бесплатно',
+    sub: 'Без оплаты',
+    Icon: Gift,
+    selectedBg: '#eff6ff',
+    selectedBorder: '#93c5fd',
+    selectedText: '#1d4ed8',
+    selectedIconBg: '#dbeafe',
+    selectedIconColor: '#2563eb',
+  },
+  {
+    type: 'full_prepay',
+    label: 'Полная предоплата',
+    sub: '100% заранее',
+    Icon: CreditCard,
+    selectedBg: '#faf5ff',
+    selectedBorder: '#c4b5fd',
+    selectedText: '#7c3aed',
+    selectedIconBg: '#ede9fe',
+    selectedIconColor: '#7c3aed',
+  },
+  {
+    type: 'partial_prepay',
+    label: 'Частичная',
+    sub: 'Депозит заранее',
+    Icon: Wallet,
+    selectedBg: '#fffbeb',
+    selectedBorder: '#fcd34d',
+    selectedText: '#b45309',
+    selectedIconBg: '#fef3c7',
+    selectedIconColor: '#d97706',
+  },
+];
 
 const DIAG_CATEGORIES = [
   { id: 'lab',     label: 'Анализы крови',  Icon: FlaskConical },
@@ -61,6 +124,8 @@ export default function AddEventModal({
   onEventAdded
 }: AddEventModalProps) {
   const [consultationType, setConsultationType] = useState<'online' | 'offline' | 'home' | 'diagnostics'>('online');
+  const [paymentType, setPaymentType] = useState<PaymentTypeOption>('pay_at_clinic');
+  const [prepayAmount, setPrepayAmount] = useState('');
   const [formData, setFormData] = useState({
     patient_id: '',
     doctor_id: '',
@@ -194,6 +259,8 @@ export default function AddEventModal({
         notes: ''
       });
       setConsultationType('online');
+      setPaymentType('pay_at_clinic');
+      setPrepayAmount('');
       setShowNewPatientForm(false);
       setNewPatientForm({ first_name: '', last_name: '', phone: '', email: '' });
       setTimePickerOpen(false);
@@ -363,6 +430,10 @@ export default function AddEventModal({
           time: formData.time,
           duration: formData.duration,
           notes: formData.notes,
+          ...(consultationType !== 'home' && {
+            payment_type: paymentType,
+            ...(paymentType === 'partial_prepay' && prepayAmount ? { prepay_amount: prepayAmount } : {}),
+          }),
         });
       }
       toast.success('Запись успешно создана!');
@@ -607,6 +678,11 @@ export default function AddEventModal({
                     value={formData.doctor_id}
                     onChange={(val) => {
                       const member = staffList.find(d => String(d.id) === val);
+                      const rawPrice = member
+                        ? (consultationType === 'online' ? member.online_consultation_price : member.offline_consultation_price)
+                        : null;
+                      const newPrice = rawPrice != null && rawPrice !== '' ? Number(rawPrice) : 0;
+                      if (newPrice > 0 && paymentType === 'free') setPaymentType('pay_at_clinic');
                       setFormData({ ...formData, doctor_id: val, time: '', duration: member?.preferred_consultation_duration || formData.duration });
                     }}
                     placeholder={`Выберите ${isHome ? 'медсестру' : 'доктора'}...`}
@@ -938,6 +1014,79 @@ export default function AddEventModal({
                   Стоимость
                 </span>
               </div>
+            );
+          })()}
+
+          {/* Payment Type (consultations only, after doctor is selected) */}
+          {(consultationType === 'online' || consultationType === 'offline') && formData.doctor_id && (() => {
+            const staffList = doctors;
+            const member = staffList.find(d => String(d.id) === formData.doctor_id);
+            const rawPrice = member
+              ? (consultationType === 'online' ? member.online_consultation_price : member.offline_consultation_price)
+              : null;
+            const doctorPrice = rawPrice != null && rawPrice !== '' ? Number(rawPrice) : 0;
+            const visibleOptions = PAYMENT_TYPE_OPTIONS.filter(o => o.type !== 'free' || doctorPrice === 0);
+            return (
+            <div>
+              <label className="block text-sm font-semibold mb-3" style={{ color: '#1e263e' }}>
+                Тип оплаты
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {visibleOptions.map(({ type, label, sub, Icon, selectedBg, selectedBorder, selectedText, selectedIconBg, selectedIconColor }) => {
+                  const isSelected = paymentType === type;
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setPaymentType(type)}
+                      className="flex items-center gap-3 px-3 py-3 rounded-2xl border-2 text-left transition-all"
+                      style={{
+                        backgroundColor: isSelected ? selectedBg : '#fff',
+                        borderColor: isSelected ? selectedBorder : '#e5e7eb',
+                      }}
+                    >
+                      <div
+                        className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: isSelected ? selectedIconBg : '#f3f4f6' }}
+                      >
+                        <Icon
+                          className="w-5 h-5"
+                          style={{ color: isSelected ? selectedIconColor : '#9ca3af' }}
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold leading-tight" style={{ color: isSelected ? selectedText : '#374151' }}>
+                          {label}
+                        </p>
+                        <p className="text-[11px] text-gray-400 mt-0.5 leading-tight">{sub}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {paymentType === 'partial_prepay' && (
+                <div className="mt-3">
+                  <label className="block text-xs font-semibold mb-1.5 text-gray-600">
+                    Сумма предоплаты <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={prepayAmount}
+                      onChange={e => setPrepayAmount(e.target.value)}
+                      placeholder="0"
+                      min={1}
+                      required
+                      className="w-full px-4 py-3 pr-16 rounded-2xl border-2 border-amber-200 focus:border-amber-400 focus:outline-none text-sm bg-amber-50"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-amber-600">
+                      ₸
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
             );
           })()}
 
