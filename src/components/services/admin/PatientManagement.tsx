@@ -8,8 +8,10 @@ import {
   Users, Search, UserPlus, Mail, Phone, Lock, Calendar,
   MapPin, Building, Loader2, AlertCircle, Edit2, Trash2,
   CheckCircle, XCircle, Clock, Stethoscope, Home, FolderOpen,
-  MessageCircle, ChevronDown,
+  MessageCircle, ChevronDown, ChevronLeft, ChevronRight,
 } from "lucide-react";
+
+const PAGE_SIZE = 20;
 import PatientDocumentsDrawer from "./PatientDocumentsDrawer";
 import { toast } from "react-toastify";
 import { api } from "@/utils/api";
@@ -78,8 +80,11 @@ function ContactMenu({ patient }: { patient: Patient }) {
 
   const goWhatsApp = () => {
     setOpen(false);
-    const raw = patient.phone ?? "";
-    router.push(`/admin/whatsapp${raw ? `?phone=${encodeURIComponent(raw)}` : ""}`);
+    // Normalize to international format (+7XXXXXXXXXX for KZ/RU, +XXXXXXXXXXX otherwise)
+    const normalized = phone
+      ? `+${phone.startsWith("8") && phone.length === 11 ? "7" + phone.slice(1) : phone}`
+      : "";
+    router.push(`/admin/whatsapp${normalized ? `?phone=${encodeURIComponent(normalized)}` : ""}`);
   };
 
   const goTelegram = () => {
@@ -176,6 +181,7 @@ export default function PatientManagement({ user }: PatientManagementProps) {
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [docsPatient, setDocsPatient] = useState<Patient | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deletingPatient, setDeletingPatient] = useState<Patient | null>(null);
   const [clinics, setClinics] = useState<Array<{id: number; name: string}>>([]);
@@ -386,12 +392,14 @@ export default function PatientManagement({ user }: PatientManagementProps) {
     setDeleteLoading(true);
 
     try {
-      await api.delete(`/patients/${deletingPatient.id}/`);
+      await api.patch(`/patients/${deletingPatient.id}/`, { is_active: false });
 
-      // Remove patient from the list
-      setPatients(patients.filter(p => p.id !== deletingPatient.id));
+      // Mark as inactive — patient stays in list and appears in "Неактивные" tab
+      setPatients(patients.map(p =>
+        p.id === deletingPatient.id ? { ...p, is_active: false } : p
+      ));
 
-      toast.success("Пациент успешно удален!");
+      toast.success("Пациент деактивирован и перемещён в Неактивные!");
 
       // Close modal and reset
       setShowDeleteModal(false);
@@ -424,6 +432,12 @@ export default function PatientManagement({ user }: PatientManagementProps) {
       // Sort by created_at descending (newest first)
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
+
+  const totalPages = Math.max(1, Math.ceil(filteredPatients.length / PAGE_SIZE));
+  const paginatedPatients = filteredPatients.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  // Reset to first page when filters or search change
+  useEffect(() => { setCurrentPage(1); }, [searchQuery, filterStatus]);
 
   const stats = {
     total: patients.length,
@@ -498,6 +512,29 @@ export default function PatientManagement({ user }: PatientManagementProps) {
               className="w-full pl-12 pr-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-green-500 focus:outline-none transition-colors"
             />
           </div>
+
+          {/* Compact pagination in toolbar */}
+          {filteredPatients.length > PAGE_SIZE && (
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-2.5 rounded-2xl border-2 border-gray-200 text-gray-600 hover:border-green-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors bg-white"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="text-sm font-medium text-gray-600 px-3 py-2.5 rounded-2xl border-2 border-gray-200 bg-white min-w-[72px] text-center tabular-nums">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="p-2.5 rounded-2xl border-2 border-gray-200 text-gray-600 hover:border-green-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors bg-white"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
 
           {/* Status Filter Buttons */}
           <div className="flex gap-2">
@@ -588,7 +625,7 @@ export default function PatientManagement({ user }: PatientManagementProps) {
             </div>
           ) : (
             <AnimatePresence mode="popLayout">
-              {filteredPatients.map((patient, index) => (
+              {paginatedPatients.map((patient, index) => (
                 <motion.div
                   key={patient.id}
                   initial={initialLoad ? { opacity: 0, y: 20 } : false}

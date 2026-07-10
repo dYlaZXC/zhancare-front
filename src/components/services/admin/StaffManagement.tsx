@@ -35,8 +35,12 @@ import {
   ChevronDown,
   Clock,
   Ban,
-  History
+  History,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
+
+const PAGE_SIZE = 20;
 
 
 import ScheduleTypeSelector from "./schedule/components/ScheduleTypeSelector";
@@ -433,6 +437,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
   const [deletingMember, setDeletingMember] = useState<StaffMember | null>(null);
   const [showDeleted, setShowDeleted] = useState(false);
   const [mouseDownTarget, setMouseDownTarget] = useState<EventTarget | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const [clinicCurrency, setClinicCurrency] = useState<string>('KZT');
 
   useEffect(() => {
@@ -1749,6 +1754,12 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
 
+  const totalPages = Math.max(1, Math.ceil(filteredStaff.length / PAGE_SIZE));
+  const paginatedStaff = filteredStaff.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  // Reset to first page when filters or search change
+  useEffect(() => { setCurrentPage(1); }, [searchQuery, filterRole, filterStatus, showDeleted]);
+
   const stats = {
     total: staff.filter(s => !s.is_deleted).length,
     doctors: staff.filter(s => s.role === 'doctor' && !s.is_deleted).length,
@@ -1828,6 +1839,29 @@ export default function StaffManagement({ user }: StaffManagementProps) {
             />
           </div>
 
+          {/* Compact pagination in toolbar */}
+          {filteredStaff.length > PAGE_SIZE && (
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-2.5 rounded-2xl border-2 border-gray-200 text-gray-600 hover:border-blue-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors bg-white"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="text-sm font-medium text-gray-600 px-3 py-2.5 rounded-2xl border-2 border-gray-200 bg-white min-w-[72px] text-center tabular-nums">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="p-2.5 rounded-2xl border-2 border-gray-200 text-gray-600 hover:border-blue-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors bg-white"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
           {/* Role Filter */}
           <div className="w-full md:w-48">
             <SearchSelect
@@ -1839,6 +1873,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
               value={filterRole}
               onChange={(val) => setFilterRole((val || 'all') as any)}
               placeholder="Все роли"
+              activeFill={filterRole !== 'all'}
             />
           </div>
 
@@ -1855,6 +1890,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
               value={filterStatus}
               onChange={(val) => setFilterStatus((val || 'all') as any)}
               placeholder="Все статусы"
+              activeFill={filterStatus !== 'all'}
             />
           </div>
 
@@ -1923,7 +1959,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
             </div>
           ) : (
             <AnimatePresence mode="popLayout">
-              {filteredStaff.map((member, index) => (
+              {paginatedStaff.map((member, index) => (
                 <motion.div
                   key={member.id}
                   initial={initialLoad ? { opacity: 0, y: 20 } : false}

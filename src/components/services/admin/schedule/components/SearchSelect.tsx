@@ -12,6 +12,7 @@ interface SearchSelectProps {
   onChange: (value: string) => void;
   placeholder: string;
   required?: boolean;
+  activeFill?: boolean;
   renderOption?: (option: { id: number | string; label: string; subtitle?: string }, isSelected: boolean, onSelect: () => void) => React.ReactNode;
 }
 
@@ -21,6 +22,7 @@ export default function SearchSelect({
   onChange,
   placeholder,
   required,
+  activeFill,
   renderOption,
 }: SearchSelectProps) {
   const [search, setSearch] = useState('');
@@ -81,29 +83,37 @@ export default function SearchSelect({
 
   const selectedLabel = options.find(o => String(o.id) === value)?.label;
 
+  const isFilled = activeFill && !!selectedLabel;
+
   return (
     <div ref={containerRef} className="relative">
       <div
-        className={`flex items-center gap-2 w-full px-4 py-3 rounded-2xl border-2 cursor-pointer transition-colors bg-white ${
-          isOpen ? 'border-blue-500 shadow-sm' : 'border-gray-200 hover:border-gray-300'
+        className={`flex items-center gap-2 w-full px-4 py-3 rounded-2xl border-2 cursor-pointer transition-all ${
+          isFilled
+            ? 'bg-blue-600 border-blue-600 shadow-md'
+            : isOpen
+            ? 'bg-white border-blue-500 shadow-sm'
+            : 'bg-white border-gray-200 hover:border-gray-300'
         }`}
         onClick={() => { setIsOpen(!isOpen); setSearch(''); }}
       >
         {selectedLabel ? (
           <>
-            <span className="flex-1 text-sm font-medium text-gray-900">{selectedLabel}</span>
+            <span className={`flex-1 text-sm font-semibold ${isFilled ? 'text-white' : 'text-gray-900'}`}>
+              {selectedLabel}
+            </span>
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onChange(''); }}
-              className="p-0.5 rounded-lg hover:bg-gray-100 transition-colors"
+              className={`p-0.5 rounded-lg transition-colors ${isFilled ? 'hover:bg-blue-500' : 'hover:bg-gray-100'}`}
             >
-              <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+              <X className={`w-4 h-4 ${isFilled ? 'text-blue-200 hover:text-white' : 'text-gray-400 hover:text-gray-600'}`} />
             </button>
           </>
         ) : (
           <span className="flex-1 text-sm text-gray-400">{placeholder}</span>
         )}
-        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 transition-transform ${isFilled ? 'text-blue-200' : 'text-gray-400'} ${isOpen ? 'rotate-180' : ''}`} />
       </div>
 
       {isOpen && panelPos && typeof document !== "undefined" && createPortal(

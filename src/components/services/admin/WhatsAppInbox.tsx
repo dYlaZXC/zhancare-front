@@ -90,9 +90,19 @@ export default function WhatsAppInbox({ initialPhone }: { initialPhone?: string 
       const { data } = await api.get("/whatsapp/messages/");
       const msgs: WaMessage[] = data.messages ?? [];
       setIncomingMsgs(msgs);
-      setContacts(buildContacts(msgs));
-      // Auto-open thread if initialPhone provided
-      if (initialPhone) fetchThread(initialPhone);
+      const built = buildContacts(msgs);
+      setContacts(built);
+      if (initialPhone) {
+        // Try exact match first; fall back to last 10 digits (handles formatting differences)
+        const tail = initialPhone.replace(/\D/g, "").slice(-10);
+        const match = built.find(c => c.number === initialPhone)
+          ?? built.find(c => c.number.replace(/\D/g, "").slice(-10) === tail);
+        // If a normalized contact number differs from initialPhone, update selected
+        // so the sidebar highlights the right contact and fetchThread uses the correct number
+        if (match && match.number !== initialPhone) {
+          setSelected(match.number);
+        }
+      }
     } catch { /* ignore */ } finally {
       setLoading(false);
     }
