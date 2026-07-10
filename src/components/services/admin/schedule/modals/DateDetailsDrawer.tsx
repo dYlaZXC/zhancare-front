@@ -129,16 +129,11 @@ function buildShareText(event: ScheduleEvent): string {
     `📊 Статус: ${STATUS_LABELS[event.status] ?? event.status}`,
     '',
     `👤 Пациент: ${event.patient_name}`,
-    event.patient_phone ? `📞 Телефон: ${event.patient_phone}` : null,
-    event.patient_email ? `📧 Email: ${event.patient_email}` : null,
-    event.patient_birth_date ? `🎂 Дата рождения: ${event.patient_birth_date}` : null,
   ];
 
   if (event.doctor_name) {
     lines.push('', `👨‍⚕️ Доктор: ${event.doctor_name}`);
     if (event.doctor_specialization) lines.push(`🔬 Специализация: ${event.doctor_specialization}`);
-    if (event.doctor_phone) lines.push(`📞 Телефон врача: ${event.doctor_phone}`);
-    if (event.doctor_email) lines.push(`📧 Email врача: ${event.doctor_email}`);
   }
 
   if (event.nurse_name) {
