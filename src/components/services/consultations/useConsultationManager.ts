@@ -36,6 +36,28 @@ export const useConsultationManager = () => {
       else if (Array.isArray(data?.consultations)) videoList = data.consultations;
       videoList.forEach(c => results.push({ ...c, type: "video" as const }));
 
+      // Offline clinic appointments (doctors)
+      if (isDoctor) {
+        try {
+          const { data: clinicData } = await api.get<any>("/clinic-appointments/");
+          const rawClinicList: any[] = Array.isArray(clinicData) ? clinicData : (clinicData?.results || []);
+          rawClinicList.forEach(a =>
+            results.push({
+              id: a.id + 100000,
+              clinic_appointment_id: a.id,
+              type: "offline" as const,
+              status: a.status,
+              scheduled_at: a.appointment_time,
+              appointment_time: a.appointment_time,
+              created_at: a.created_at,
+              patient_name: a.patient_name,
+              clinic_name: a.clinic_name,
+              clinic_address: a.clinic_address,
+            } as Consultation)
+          );
+        } catch { /* endpoint may not exist */ }
+      }
+
       // Offline clinic appointments (patients only)
       if (isPatient) {
         try {

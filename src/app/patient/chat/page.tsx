@@ -1,7 +1,11 @@
 "use client";
 
-import ChatDoctors from "@/components/services/ChatDoctors";
+import PatientChatLayout from "@/sections/Chat/PatientChatLayout";
 
 export default function PatientChatPage() {
-  return <ChatDoctors />;
+  return (
+    <div className="fixed inset-0 z-[60]">
+      <PatientChatLayout />
+    </div>
+  );
 }

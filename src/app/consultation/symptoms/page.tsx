@@ -1,5 +1,5 @@
-import AISymptomsChecker from "@/sections/MeetStyleConsultation/AISymptomsChecker";
+import SymptomsPageLayout from "@/sections/MeetStyleConsultation/SymptomsPageLayout";
 
 export default function SymptomsPage() {
-  return <AISymptomsChecker />;
+  return <SymptomsPageLayout />;
 }

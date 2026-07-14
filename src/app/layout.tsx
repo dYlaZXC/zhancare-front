@@ -94,7 +94,9 @@ export default async function RootLayout({
   return (
     <html lang={brandId === "uz" ? "uz" : "ru"} className="relative">
       <head>
-        <style dangerouslySetInnerHTML={{ __html: `
+        {/* suppressHydrationWarning: browser extensions (Polymer/Lit) may inject a <style>
+            before this one, shifting node positions and triggering a false mismatch. */}
+        <style suppressHydrationWarning dangerouslySetInnerHTML={{ __html: `
           :root {
             --brand-primary: ${brand.primary};
             --brand-secondary: ${brand.secondary};

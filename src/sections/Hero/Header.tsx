@@ -257,7 +257,7 @@ export default function Header() {
                   <button
                     key={key}
                     onClick={() => handleScrollToSection(key)}
-                    className="group relative px-2 py-1 lg:px-3 lg:py-1.5 laptop-hd:px-2.5 laptop-hd:py-1 desktop-fhd:px-3 desktop-fhd:py-1.5 rounded-full border border-white/30 hover:bg-white hover:text-[#1D1D2F] transition-all duration-200 whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-white/50 text-xs lg:text-sm laptop-hd:text-xs desktop-fhd:text-sm"
+                    className="group relative px-2 py-3 lg:px-3 laptop-hd:px-2.5 desktop-fhd:px-3 rounded-full border border-white/30 hover:bg-white hover:text-[#1D1D2F] transition-all duration-200 whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-white/50 text-xs lg:text-sm laptop-hd:text-xs desktop-fhd:text-sm"
                   >
                     <span className="relative z-10">{translations.navigation[key]}</span>
                     <div className="absolute inset-0 bg-white rounded-full transform scale-0 group-hover:scale-100 transition-transform duration-200" />
@@ -268,7 +268,7 @@ export default function Header() {
                 <div ref={tractionRef} className="relative">
                   <button
                     onClick={() => setTractionOpen(prev => !prev)}
-                    className="group relative flex items-center gap-1 px-2 py-1 lg:px-3 lg:py-1.5 laptop-hd:px-2.5 laptop-hd:py-1 desktop-fhd:px-3 desktop-fhd:py-1.5 rounded-full border border-white/30 hover:bg-white hover:text-[#1D1D2F] transition-all duration-200 whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-white/50 text-xs lg:text-sm laptop-hd:text-xs desktop-fhd:text-sm"
+                    className="group relative flex items-center gap-1 px-2 py-3 lg:px-3 laptop-hd:px-2.5 desktop-fhd:px-3 rounded-full border border-white/30 hover:bg-white hover:text-[#1D1D2F] transition-all duration-200 whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-white/50 text-xs lg:text-sm laptop-hd:text-xs desktop-fhd:text-sm"
                     aria-haspopup="true"
                     aria-expanded={tractionOpen}
                   >
@@ -325,22 +325,18 @@ export default function Header() {
               
               <div className="flex items-center gap-1 lg:gap-2 laptop-hd:gap-1.5 desktop-fhd:gap-2 ml-1 lg:ml-2 laptop-hd:ml-1.5 desktop-fhd:ml-2">
                 {/* Language switcher */}
-                <div className="laptop-hd:scale-90 desktop-fhd:scale-100">
-                  <LanguageSwitcher
-                    currentLanguage={language}
-                    setLanguage={setLanguage}
-                  />
-                </div>
+                <LanguageSwitcher
+                  currentLanguage={language}
+                  setLanguage={setLanguage}
+                />
 
                 {/* Authentication */}
                 {user ? (
-                  <div className="laptop-hd:scale-90 desktop-fhd:scale-100">
-                    <UserDropdown user={user} onLogout={handleLogout} />
-                  </div>
+                  <UserDropdown user={user} onLogout={handleLogout} />
                 ) : (
                   <button
                     onClick={() => setIsAuthOpen(true)}
-                    className="group text-white rounded-lg px-2.5 py-1.5 lg:px-4 lg:py-2 laptop-hd:px-3 laptop-hd:py-1.5 desktop-fhd:px-4 desktop-fhd:py-2 font-medium hover:opacity-90 transition-all duration-200 focus:outline-none focus:ring-2 relative overflow-hidden text-xs lg:text-sm laptop-hd:text-xs desktop-fhd:text-sm whitespace-nowrap"
+                    className="group text-white rounded-xl px-4 py-3 font-medium hover:opacity-90 transition-all duration-200 focus:outline-none focus:ring-2 relative overflow-hidden text-sm whitespace-nowrap"
                     style={{ background: `linear-gradient(135deg, ${brand.secondary} 0%, ${brand.primary} 100%)` }}
                   >
                     <span className="relative z-10">
