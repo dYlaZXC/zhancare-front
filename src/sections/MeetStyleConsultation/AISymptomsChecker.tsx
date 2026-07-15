@@ -274,7 +274,98 @@ const UI = {
   },
 };
 
-export default function AISymptomsChecker({ clinic, embedded, initialInput, autoSend }: { clinic?: ClinicContext; embedded?: boolean; initialInput?: string; autoSend?: boolean }) {
+type SavedMessage = { role: "user" | "assistant"; content: string; imageUrl?: string };
+
+interface DoctorSearchResult {
+  id: number; name: string; doctor_type?: string;
+  specialization?: { ru?: string; en?: string; kz?: string; uz?: string };
+  years_of_experience?: number; online_consultation_price?: number;
+  clinic?: { name?: string };
+}
+
+function DoctorSearchBox({ onBook, lang, clinicSlug, accentGrad }: {
+  onBook: (id: number, name: string, doc: DoctorSearchResult) => void;
+  lang: string; clinicSlug?: string; accentGrad: string;
+}) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<DoctorSearchResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const search = (q: string) => {
+    if (!q.trim()) { setResults([]); setSearched(false); return; }
+    setLoading(true);
+    const params = new URLSearchParams({ search: q });
+    if (clinicSlug) params.set("clinic_slug", clinicSlug);
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/consultations/get-random-doctors/?${params}`)
+      .then(r => r.json())
+      .then(data => { setResults(Array.isArray(data) ? data : (data.doctors ?? [])); setSearched(true); })
+      .catch(() => { setResults([]); setSearched(true); })
+      .finally(() => setLoading(false));
+  };
+
+  const handleChange = (v: string) => {
+    setQuery(v);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => search(v), 380);
+  };
+
+  const placeholder: Record<string, string> = { ru: "Имя врача...", en: "Doctor name...", kz: "Дәрігер аты...", uz: "Shifokor ismi..." };
+  const notFound: Record<string, string> = { ru: "Врачи не найдены", en: "No doctors found", kz: "Дәрігер табылмады", uz: "Shifokor topilmadi" };
+  const bookLbl: Record<string, string> = { ru: "Записаться", en: "Book", kz: "Жазылу", uz: "Yozilish" };
+  const searchLbl: Record<string, string> = { ru: "Знаете врача? Найти по имени", en: "Know a doctor? Search by name", kz: "Дәрігерді білесіз бе? Атымен іздеу", uz: "Shifokorni bilasizmi? Ism bo'yicha qidiring" };
+
+  return (
+    <div className="mt-3">
+      <p className="text-[11px] font-semibold mb-2 px-1" style={{ color: "#6b7280" }}>{searchLbl[lang] ?? searchLbl.ru}</p>
+      <div className="relative">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" fill="none" stroke="#9ca3af" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input
+          type="text"
+          value={query}
+          onChange={e => handleChange(e.target.value)}
+          placeholder={placeholder[lang] ?? placeholder.ru}
+          className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm outline-none transition-all"
+          style={{ background: "rgba(37,99,235,0.06)", border: "1px solid rgba(37,99,235,0.18)", color: "#1e293b", fontSize: 13 }}
+          onFocus={e => { (e.target as HTMLInputElement).style.borderColor = "rgba(37,99,235,0.45)"; (e.target as HTMLInputElement).style.background = "rgba(37,99,235,0.10)"; }}
+          onBlur={e => { (e.target as HTMLInputElement).style.borderColor = "rgba(37,99,235,0.18)"; (e.target as HTMLInputElement).style.background = "rgba(37,99,235,0.06)"; }}
+        />
+        {loading && <svg className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin" width="13" height="13" fill="none" stroke="#3b82f6" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-18 0"/></svg>}
+      </div>
+
+      {searched && (
+        <div className="mt-2 space-y-1.5">
+          {results.length === 0 ? (
+            <p className="text-center text-xs py-3" style={{ color: "#9ca3af" }}>{notFound[lang] ?? notFound.ru}</p>
+          ) : results.map(doc => {
+            const spec = doc.specialization ? (doc.specialization[lang as keyof typeof doc.specialization] ?? doc.doctor_type ?? "Врач") : (doc.doctor_type ?? "Врач");
+            return (
+              <div key={doc.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ background: "rgba(37,99,235,0.06)", border: "1px solid rgba(37,99,235,0.14)" }}>
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: accentGrad }}>
+                  <svg width="13" height="13" fill="white" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-semibold truncate" style={{ color: "#1e293b" }}>{doc.name}</p>
+                  <p className="text-[11px] truncate" style={{ color: "#64748b" }}>{spec}{doc.years_of_experience ? ` · ${doc.years_of_experience} л.` : ""}</p>
+                </div>
+                <button
+                  onClick={() => onBook(doc.id, doc.name, doc)}
+                  className="flex-shrink-0 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-white transition-opacity hover:opacity-80"
+                  style={{ background: accentGrad }}
+                >
+                  {bookLbl[lang] ?? bookLbl.ru}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function AISymptomsChecker({ clinic, embedded, initialInput, initialImageUrl, autoSend, initialMessages, onMessagesChange }: { clinic?: ClinicContext; embedded?: boolean; initialInput?: string; initialImageUrl?: string; autoSend?: boolean; initialMessages?: SavedMessage[]; onMessagesChange?: (msgs: SavedMessage[]) => void }) {
   const router = useRouter();
   const { language, setLanguage } = useLanguage();
   const { appLogo, brand } = useBrand();
@@ -305,13 +396,24 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, auto
   };
 
   const [messages, setMessages] = useState<Message[]>(
-    embedded ? [] : [{ role: "assistant", content: clinic?.welcomeMessage ?? getWelcomeMessage() }]
+    initialMessages && initialMessages.length > 0
+      ? initialMessages
+      : embedded ? [] : [{ role: "assistant", content: clinic?.welcomeMessage ?? getWelcomeMessage() }]
   );
   const [input, setInput] = useState(initialInput ?? "");
+  const onMessagesChangeRef = useRef(onMessagesChange);
+  onMessagesChangeRef.current = onMessagesChange;
+  useEffect(() => {
+    if (!onMessagesChangeRef.current) return;
+    const simple = messages
+      .filter((m): m is Message & { role: "user" | "assistant" } => m.role === "user" || m.role === "assistant")
+      .map(m => ({ role: m.role, content: m.content, ...(m.imageUrl ? { imageUrl: m.imageUrl } : {}) }));
+    onMessagesChangeRef.current(simple);
+  }, [messages]);
   const sendFnRef = useRef<(() => void) | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(initialImageUrl ?? null);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [preselectedDoctor, setPreselectedDoctor] = useState<Doctor | null>(null);
   const [bookingConsultationType, setBookingConsultationType] = useState<'online' | 'offline'>('online');
@@ -575,7 +677,7 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, auto
 
   // Auto-send initial message once on mount (works correctly with React Strict Mode)
   useEffect(() => {
-    if (!autoSend || !initialInput?.trim()) return;
+    if (!autoSend || (!initialInput?.trim() && !initialImageUrl)) return;
     const t = setTimeout(() => sendFnRef.current?.(), 120);
     return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1603,6 +1705,14 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, auto
                       >
                         {otherDoctorLabels.viewAll[lang as keyof typeof otherDoctorLabels.viewAll]}
                       </button>
+
+                      {/* Doctor name search */}
+                      <DoctorSearchBox
+                        lang={lang}
+                        clinicSlug={clinic?.clinicSlug}
+                        accentGrad={accentGrad}
+                        onBook={(id, name, doc) => handleBookAppointment(id, name, doc as Parameters<typeof handleBookAppointment>[2])}
+                      />
                     </div>
                   </div>
                   );
