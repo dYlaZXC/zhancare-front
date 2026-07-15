@@ -36,6 +36,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import Image from "next/image";
 import { useBrand } from "@/context/BrandContext";
 import BookingModal from "@/sections/Chat/BookingModal";
+import InlineBookingCard from "@/sections/MeetStyleConsultation/InlineBookingCard";
 import DiagnosticsBookingModal from "@/sections/Chat/DiagnosticsBookingModal";
 import LanguageSwitcher from "@/sections/Hero/LanguageSwitcher";
 import type { Doctor } from "@/components/services/consultations/types/doctor";
@@ -68,7 +69,7 @@ interface BookingConfirmationData {
 type ConsultationFlow = 'online' | 'offline' | 'diagnostics';
 
 interface Message {
-  role: "user" | "assistant" | "doctor-card" | "doctors-list" | "diagnostics-list" | "time-slots" | "booking-confirmation" | "consultation-type-selector" | "geolocation-prompt";
+  role: "user" | "assistant" | "doctor-card" | "doctors-list" | "diagnostics-list" | "time-slots" | "booking-confirmation" | "consultation-type-selector" | "geolocation-prompt" | "booking-flow";
   content: string;
   doctor?: DoctorRecommendation;
   doctors?: DoctorRecommendation[];
@@ -83,6 +84,7 @@ interface Message {
   preliminaryDiagnosis?: string;
   consultationType?: ConsultationFlow;
   isChoice?: boolean;
+  bookingFlowConsultationType?: "online" | "offline";
 }
 
 // ─── Color utilities ──────────────────────────────────────────────────────────
@@ -690,38 +692,29 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
 
   const handleBookAppointment = async (doctorId: number, doctorName: string, doctorRec?: DoctorRecommendation, type: 'online' | 'offline' = 'online') => {
     if (doctorRec) {
-      // Map DoctorRecommendation → Doctor so the modal can skip the doctor-selection step
-      const mapped: Doctor = {
-        id: doctorRec.id,
-        name: doctorRec.name,
-        email: doctorRec.email || "",
-        doctor_type: doctorRec.specialization
-          ? doctorRec.specialization[language as keyof typeof doctorRec.specialization] || doctorRec.doctor_type || ""
-          : doctorRec.doctor_type || "",
-        years_of_experience: doctorRec.years_of_experience,
-        room_number: doctorRec.room_number ?? null,
-        clinic: doctorRec.clinic
-          ? {
-              id: 0,
-              name: doctorRec.clinic.name,
-              address: doctorRec.clinic.address,
-              address_comment: doctorRec.clinic.address_comment,
-              city: doctorRec.clinic.city ?? undefined,
-              gis2_url: doctorRec.clinic.gis2_url,
-              lat: doctorRec.clinic.lat,
-              lng: doctorRec.clinic.lng,
-            }
-          : null,
-        availability_status: "available",
-        language: doctorRec.language ?? null,
-        online_consultation_price: doctorRec.online_consultation_price != null
-          ? String(doctorRec.online_consultation_price)
-          : null,
+      const scheduleIntro: Record<string, string> = {
+        ru: `Смотрю расписание врача ${doctorRec.name}... Вот доступное время — выберите ближайший слот или любое удобное для вас:`,
+        en: `Checking ${doctorRec.name}'s schedule... Here are the available slots — pick the nearest one or any time that works for you:`,
+        kz: `${doctorRec.name} дәрігерінің кестесін қарап жатырмын... Міне қолжетімді уақыт — ең жақын немесе өзіңізге ыңғайлы уақытты таңдаңыз:`,
+        uz: `${doctorRec.name} shifokorining jadvalini ko'rib chiqmoqdaman... Mana mavjud vaqtlar — eng yaqin yoki o'zingizga qulay vaqtni tanlang:`,
       };
-      setPreselectedDoctor(mapped);
-    } else {
-      setPreselectedDoctor(null);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: scheduleIntro[language] ?? scheduleIntro.ru,
+        },
+        {
+          role: "booking-flow",
+          content: "",
+          doctor: doctorRec,
+          bookingFlowConsultationType: type,
+        },
+      ]);
+      return;
     }
+    // No preselected doctor — open the full modal with doctor-selection step
+    setPreselectedDoctor(null);
     setBookingConsultationType(type);
     setIsBookingModalOpen(true);
   };
@@ -2120,7 +2113,17 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                       </div>
                     </div>
                   );
-                })() : (
+                })() : message.role === "booking-flow" && message.doctor ? (
+                  <div className="w-full max-w-sm">
+                    <InlineBookingCard
+                      doctor={message.doctor}
+                      language={language}
+                      accentColor={accentColor}
+                      consultationType={message.bookingFlowConsultationType ?? "online"}
+                      onBookingComplete={handleBookingComplete}
+                    />
+                  </div>
+                ) : (
                   <div className="max-w-[90%] sm:max-w-[85%]">
                     <div
                       className={`rounded-2xl sm:rounded-3xl px-4 py-3 sm:px-6 sm:py-4 shadow-lg ${message.isChoice ? "flex items-center gap-2.5" : ""}`}
