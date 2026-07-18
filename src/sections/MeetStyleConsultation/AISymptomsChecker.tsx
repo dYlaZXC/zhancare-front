@@ -85,6 +85,7 @@ interface Message {
   consultationType?: ConsultationFlow;
   isChoice?: boolean;
   bookingFlowConsultationType?: "online" | "offline";
+  bookingFlowInitialSlot?: { date: string; time: string };
 }
 
 // ─── Color utilities ──────────────────────────────────────────────────────────
@@ -709,6 +710,9 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
           content: "",
           doctor: doctorRec,
           bookingFlowConsultationType: type,
+          bookingFlowInitialSlot: doctorRec.nearest_slot
+            ? { date: doctorRec.nearest_slot.date, time: doctorRec.nearest_slot.time }
+            : undefined,
         },
       ]);
       return;
@@ -1591,22 +1595,37 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                           )}
 
                           {/* Primary CTA */}
-                          <button
-                            onClick={() => handleBookAppointment(message.doctor!.id, message.doctor!.name, message.doctor!)}
-                            disabled={isLoading}
-                            className="w-full py-3.5 font-bold rounded-xl transition-all relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
-                            style={{
-                              background: "linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)",
-                              color: "#1e40af",
-                              boxShadow: "0 8px 24px rgba(0,0,0,0.2)"
-                            }}
-                          >
-                            <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-white opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                            <span className="relative flex items-center justify-center gap-2 text-sm sm:text-base">
-                              <span>{labels.bookAppointment[lang as keyof typeof labels.bookAppointment]}</span>
-                              <span className="group-hover:translate-x-1 transition-transform">→</span>
-                            </span>
-                          </button>
+                          {(() => {
+                            const bookingOpen = messages.some(
+                              (m) => m.role === "booking-flow" && m.doctor?.id === message.doctor!.id
+                            );
+                            return bookingOpen ? (
+                              <div
+                                className="w-full py-3.5 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold"
+                                style={{ background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.75)", border: "1px solid rgba(255,255,255,0.2)" }}
+                              >
+                                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                                <span>{{ ru: "Расписание открыто ↑", en: "Schedule open ↑", kz: "Кесте ашылды ↑", uz: "Jadval ochiq ↑" }[lang as "ru"|"en"|"kz"|"uz"] ?? "Расписание открыто ↑"}</span>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleBookAppointment(message.doctor!.id, message.doctor!.name, message.doctor!)}
+                                disabled={isLoading}
+                                className="w-full py-3.5 font-bold rounded-xl transition-all relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
+                                style={{
+                                  background: "linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)",
+                                  color: "#1e40af",
+                                  boxShadow: "0 8px 24px rgba(0,0,0,0.2)"
+                                }}
+                              >
+                                <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-white opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                <span className="relative flex items-center justify-center gap-2 text-sm sm:text-base">
+                                  <span>{labels.bookAppointment[lang as keyof typeof labels.bookAppointment]}</span>
+                                  <span className="group-hover:translate-x-1 transition-transform">→</span>
+                                </span>
+                              </button>
+                            );
+                          })()}
                         </div>
                       </div>
 
@@ -1665,18 +1684,28 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                                     </div>
 
                                     {/* Book button */}
-                                    <button
-                                      onClick={() => handleBookAppointment(doc.id, doc.name, doc)}
-                                      disabled={isLoading}
-                                      className="w-full py-2 font-bold rounded-lg text-xs transition-all disabled:opacity-50"
-                                      style={{
-                                        background: "linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)",
-                                        color: "#1e40af",
-                                        boxShadow: "0 3px 8px rgba(0,0,0,0.15)"
-                                      }}
-                                    >
-                                      {otherDoctorLabels.book[lang as keyof typeof otherDoctorLabels.book]} →
-                                    </button>
+                                    {messages.some((m) => m.role === "booking-flow" && m.doctor?.id === doc.id) ? (
+                                      <div
+                                        className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1"
+                                        style={{ background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.2)" }}
+                                      >
+                                        <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                                        ↑
+                                      </div>
+                                    ) : (
+                                      <button
+                                        onClick={() => handleBookAppointment(doc.id, doc.name, doc)}
+                                        disabled={isLoading}
+                                        className="w-full py-2 font-bold rounded-lg text-xs transition-all disabled:opacity-50"
+                                        style={{
+                                          background: "linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)",
+                                          color: "#1e40af",
+                                          boxShadow: "0 3px 8px rgba(0,0,0,0.15)"
+                                        }}
+                                      >
+                                        {otherDoctorLabels.book[lang as keyof typeof otherDoctorLabels.book]} →
+                                      </button>
+                                    )}
                                   </div>
                                 </div>
                               );
@@ -2114,14 +2143,26 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                     </div>
                   );
                 })() : message.role === "booking-flow" && message.doctor ? (
-                  <div className="w-full max-w-sm">
-                    <InlineBookingCard
-                      doctor={message.doctor}
-                      language={language}
-                      accentColor={accentColor}
-                      consultationType={message.bookingFlowConsultationType ?? "online"}
-                      onBookingComplete={handleBookingComplete}
-                    />
+                  <div className="max-w-[90%] sm:max-w-[85%] flex gap-2 sm:gap-3">
+                    <div
+                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 mt-1"
+                      style={{ background: accentGrad }}
+                    >
+                      <FontAwesomeIcon icon={faRobot} className="text-xs sm:text-sm" style={{ color: onAccent }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="px-2 py-1 rounded-lg mb-2 inline-block" style={{ background: hexToRgba(accentColor, 0.15), border: `1px solid ${hexToRgba(accentColor, 0.25)}` }}>
+                        <span className="text-xs font-semibold" style={{ color: accentColor }}>{ui.aiLabel}</span>
+                      </div>
+                      <InlineBookingCard
+                        doctor={message.doctor}
+                        language={language}
+                        accentColor={accentColor}
+                        consultationType={message.bookingFlowConsultationType ?? "online"}
+                        initialSlot={message.bookingFlowInitialSlot}
+                        onBookingComplete={handleBookingComplete}
+                      />
+                    </div>
                   </div>
                 ) : (
                   <div className="max-w-[90%] sm:max-w-[85%]">

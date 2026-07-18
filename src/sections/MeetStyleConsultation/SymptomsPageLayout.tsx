@@ -64,7 +64,7 @@ const LABELS = {
 
 export default function SymptomsPageLayout({ clinic }: { clinic?: ClinicContext }) {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, logoutUser } = useAuth();
   const { language } = useLanguage();
   const { brand, appLogo } = useBrand();
 
@@ -81,6 +81,9 @@ export default function SymptomsPageLayout({ clinic }: { clinic?: ClinicContext 
   const emptyFileInputRef = useRef<HTMLInputElement>(null);
   const [initialImage, setInitialImage] = useState<string | null>(null);
   const [loadedMessages, setLoadedMessages] = useState<SavedMessage[]>([]);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
 
   // keep refs in sync for use inside callbacks without stale closures
   const activeSessionIdRef = useRef(activeSessionId);
@@ -114,6 +117,36 @@ export default function SymptomsPageLayout({ clinic }: { clinic?: ClinicContext 
 
   const sessionsRef = useRef(sessions);
   sessionsRef.current = sessions;
+
+  // Close profile dropdown when clicking outside
+  useEffect(() => {
+    if (!profileOpen) return;
+    const handle = (e: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [profileOpen]);
+
+  const handleShare = () => {
+    const sid = activeSessionIdRef.current;
+    if (!sid) return;
+    try {
+      const raw = localStorage.getItem(msgKey(userIdRef.current, sid));
+      const msgs: SavedMessage[] = raw ? JSON.parse(raw) : [];
+      if (!msgs.length) return;
+      const text = msgs
+        .filter(m => m.role === "user" || m.role === "assistant")
+        .map(m => `${m.role === "user" ? "Вы" : "ИИ Ассистент"}: ${m.content}`)
+        .join("\n\n");
+      navigator.clipboard.writeText(text).then(() => {
+        setShareCopied(true);
+        setTimeout(() => setShareCopied(false), 2000);
+      });
+    } catch { /* ignore */ }
+  };
 
   const handleMessagesChange = (msgs: SavedMessage[]) => {
     const sid = activeSessionIdRef.current;
@@ -285,18 +318,16 @@ export default function SymptomsPageLayout({ clinic }: { clinic?: ClinicContext 
 
           {/* Community */}
           <div className="px-3 pb-1 relative z-10">
-            <button
-              className="w-full group relative flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-[13px] text-left transition-all duration-300 overflow-hidden"
-              style={{ background: "rgba(55,114,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.55)", cursor: "pointer" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(55,114,255,0.12)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.18)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(55,114,255,0.05)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.08)"; }}
+            <div
+              className="w-full flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-[13px] text-left"
+              style={{ background: "rgba(55,114,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.28)", cursor: "not-allowed", opacity: 0.55 }}
             >
-              <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.05) 100%)" }}>
+              <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 100%)" }}>
                 <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               </div>
-              {L.community}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 translate-x-full group-hover:translate-x-[-200%] transition-transform duration-700 pointer-events-none" />
-            </button>
+              <span className="flex-1">{L.community}</span>
+              <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.35)" }}>Скоро</span>
+            </div>
           </div>
 
           <div className="relative z-10" style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "8px 16px 10px" }} />
@@ -362,10 +393,12 @@ export default function SymptomsPageLayout({ clinic }: { clinic?: ClinicContext 
             <svg width="13" height="13" fill="none" stroke="#6AA2FF" strokeWidth="1.8" viewBox="0 0 24 24" className="mb-1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
             <div className="text-[12px] font-semibold mb-0.5 text-white">{L.promo}</div>
             <div className="text-[11px] mb-2.5" style={{ color: "rgba(255,255,255,0.42)", lineHeight: 1.4 }}>{L.promoSub}</div>
-            <button className="group relative text-[11px] font-semibold px-3 py-1.5 rounded-xl text-white overflow-hidden transition-all hover:scale-105 active:scale-95"
-                    style={{ background: "linear-gradient(135deg, #3267e6 0%, #1e4099 100%)", border: "1px solid rgba(55,114,255,0.35)", cursor: "pointer", boxShadow: "0 4px 14px rgba(55,114,255,0.28)" }}>
+            <button
+              disabled
+              className="text-[11px] font-semibold px-3 py-1.5 rounded-xl text-white"
+              style={{ background: "rgba(50,103,230,0.40)", border: "1px solid rgba(55,114,255,0.18)", cursor: "not-allowed", opacity: 0.5 }}
+            >
               {L.promoCta}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-full group-hover:translate-x-[-200%] transition-transform duration-700" />
             </button>
           </div>
 
@@ -376,16 +409,14 @@ export default function SymptomsPageLayout({ clinic }: { clinic?: ClinicContext 
                 { label: L.help, icon: <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> },
                 { label: L.settings, icon: <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> },
               ] as { label: string; icon: React.ReactNode }[]).map(item => (
-                <button key={item.label}
-                  className="w-full group relative flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] text-left transition-all duration-300 overflow-hidden"
-                  style={{ background: "rgba(55,114,255,0.05)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.50)", cursor: "pointer" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(55,114,255,0.12)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.18)"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(55,114,255,0.05)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.07)"; }}
+                <div key={item.label}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] text-left"
+                  style={{ background: "rgba(55,114,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.28)", cursor: "not-allowed", opacity: 0.55 }}
                 >
-                  <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%)" }}>{item.icon}</div>
-                  <span>{item.label}</span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 translate-x-full group-hover:translate-x-[-200%] transition-transform duration-700 pointer-events-none" />
-                </button>
+                  <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 100%)" }}>{item.icon}</div>
+                  <span className="flex-1">{item.label}</span>
+                  <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.35)" }}>Скоро</span>
+                </div>
               ))}
             </div>
             <button
@@ -432,9 +463,9 @@ export default function SymptomsPageLayout({ clinic }: { clinic?: ClinicContext 
             )}
 
             {/* Model pill */}
-            <button
-              className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-[12px] sm:text-[13px] font-medium transition-all hover:bg-black/[0.04]"
-              style={{ background: "transparent", border: "1px solid rgba(15,23,42,0.10)", color: "rgba(15,23,42,0.55)", cursor: "pointer" }}
+            <div
+              className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-[12px] sm:text-[13px] font-medium"
+              style={{ background: "transparent", border: "1px solid rgba(15,23,42,0.10)", color: "rgba(15,23,42,0.55)" }}
             >
               <div className="w-[16px] h-[16px] sm:w-[18px] sm:h-[18px] rounded flex items-center justify-center flex-shrink-0" style={{ background: `linear-gradient(135deg, ${brand.primary || "#4F7FFF"} 0%, #6AA2FF 100%)` }}>
                 <svg width="9" height="9" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
@@ -443,34 +474,70 @@ export default function SymptomsPageLayout({ clinic }: { clinic?: ClinicContext 
               <span className="xs:hidden">{botName.split(".")[0]}</span>
               <span className="hidden sm:inline"> 1.0</span>
               <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-            </button>
+            </div>
           </div>
 
           <div className="flex items-center gap-1.5">
-            {/* Share */}
+            {/* Share — copies conversation to clipboard */}
             <button
-              style={iconBtnLight}
+              onClick={handleShare}
+              disabled={!chatStarted}
+              style={{ ...iconBtnLight, opacity: chatStarted ? 1 : 0.30, cursor: chatStarted ? "pointer" : "not-allowed", position: "relative" }}
               className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors hover:bg-black/[0.05]"
-              aria-label="Поделиться"
+              aria-label="Скопировать чат"
+              title={shareCopied ? "Скопировано!" : "Скопировать переписку"}
             >
-              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+              {shareCopied
+                ? <svg width="14" height="14" fill="none" stroke="#22c55e" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                : <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+              }
             </button>
 
-            {/* More */}
-            <button
-              style={iconBtnLight}
-              className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors hover:bg-black/[0.05]"
-              aria-label="Ещё"
-            >
-              <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
-            </button>
+            {/* Avatar + profile dropdown */}
+            <div ref={profileMenuRef} className="relative">
+              <button
+                onClick={() => setProfileOpen(v => !v)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold text-white flex-shrink-0 transition-transform hover:scale-105 active:scale-95"
+                style={{ background: `linear-gradient(135deg, ${brand.secondary || "#001E80"} 0%, ${brand.primary || "#4F7FFF"} 100%)`, boxShadow: `0 0 0 2px rgba(79,127,255,0.25)`, border: "none", cursor: "pointer" }}
+              >
+                {userInitial}
+              </button>
 
-            {/* Avatar */}
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold text-white flex-shrink-0 cursor-pointer"
-              style={{ background: `linear-gradient(135deg, ${brand.secondary || "#001E80"} 0%, ${brand.primary || "#4F7FFF"} 100%)`, boxShadow: `0 0 0 2px rgba(79,127,255,0.25)` }}
-            >
-              {userInitial}
+              <AnimatePresence>
+                {profileOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.92, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.92, y: -4 }}
+                    transition={{ duration: 0.15, ease: "easeOut" }}
+                    className="absolute right-0 mt-2 w-48 rounded-2xl overflow-hidden z-50"
+                    style={{ background: "#ffffff", border: "1px solid rgba(15,23,42,0.10)", boxShadow: "0 8px 32px rgba(15,23,42,0.14)", top: "100%" }}
+                  >
+                    <div className="px-3 py-2.5 border-b" style={{ borderColor: "rgba(15,23,42,0.07)" }}>
+                      <p className="text-[12px] font-semibold truncate" style={{ color: "#0F172A" }}>{userName}</p>
+                      <p className="text-[11px] truncate" style={{ color: "rgba(15,23,42,0.42)" }}>{user?.email ?? ""}</p>
+                    </div>
+                    <div className="py-1">
+                      <button
+                        onClick={() => { setProfileOpen(false); router.push("/patient"); }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-left transition-colors hover:bg-black/[0.04]"
+                        style={{ background: "transparent", border: "none", cursor: "pointer", color: "#0F172A" }}
+                      >
+                        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        {{ ru: "Личный кабинет", en: "My account", kz: "Жеке кабинет", uz: "Shaxsiy kabinet" }[language as "ru"|"en"|"kz"|"uz"] ?? "Личный кабинет"}
+                      </button>
+                      <button
+                        onClick={() => { setProfileOpen(false); logoutUser(); router.push("/"); }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-left transition-colors hover:bg-red-50"
+                        style={{ background: "transparent", border: "none", cursor: "pointer", color: "#dc2626" }}
+                      >
+                        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        {{ ru: "Выйти", en: "Sign out", kz: "Шығу", uz: "Chiqish" }[language as "ru"|"en"|"kz"|"uz"] ?? "Выйти"}
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </motion.div>
@@ -578,7 +645,7 @@ export default function SymptomsPageLayout({ clinic }: { clinic?: ClinicContext 
                     <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                   </button>
                   <div className="flex items-center gap-2">
-                    <button style={{ background: "transparent", border: "none", color: "rgba(15,23,42,0.38)", cursor: "pointer" }} className="w-8 h-8 rounded-xl flex items-center justify-center">
+                    <button disabled style={{ background: "transparent", border: "none", color: "rgba(15,23,42,0.20)", cursor: "not-allowed" }} className="w-8 h-8 rounded-xl flex items-center justify-center">
                       <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
                     </button>
                     <button
