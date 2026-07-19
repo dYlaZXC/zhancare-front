@@ -69,7 +69,7 @@ interface BookingConfirmationData {
 type ConsultationFlow = 'online' | 'offline' | 'diagnostics';
 
 interface Message {
-  role: "user" | "assistant" | "doctor-card" | "doctors-list" | "diagnostics-list" | "time-slots" | "booking-confirmation" | "consultation-type-selector" | "geolocation-prompt" | "booking-flow";
+  role: "user" | "assistant" | "doctor-card" | "doctors-list" | "diagnostics-list" | "time-slots" | "booking-confirmation" | "consultation-type-selector" | "geolocation-prompt" | "booking-flow" | "offline-no-doctors";
   content: string;
   doctor?: DoctorRecommendation;
   doctors?: DoctorRecommendation[];
@@ -86,6 +86,7 @@ interface Message {
   isChoice?: boolean;
   bookingFlowConsultationType?: "online" | "offline";
   bookingFlowInitialSlot?: { date: string; time: string };
+  showAll?: boolean;
 }
 
 // ─── Color utilities ──────────────────────────────────────────────────────────
@@ -796,10 +797,20 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
     ]);
   }, [language]);
 
-  const handleShowOtherDoctors = async () => {
+  const handleShowAllDiagnostics = (msgIndex: number) => {
+    setMessages(prev => prev.map((m, i) => i === msgIndex ? { ...m, showAll: true } : m));
+  };
+
+  const hasAvailableSlot = (doc: { nearest_slot?: { date: string; time: string; label: string } | null }) =>
+    !!doc.nearest_slot && new Date(`${doc.nearest_slot.date}T${doc.nearest_slot.time}:00`) > new Date();
+
+  const handleShowOtherDoctors = async (consultationType?: 'online' | 'offline') => {
     setIsLoading(true);
     try {
-      const doctors = await aiService.getRandomDoctors(clinic?.clinicSlug);
+      const allDoctors = await aiService.getRandomDoctors(clinic?.clinicSlug);
+      const doctors = consultationType === 'offline'
+        ? allDoctors.filter(hasAvailableSlot)
+        : allDoctors;
 
       if (doctors.length > 0) {
         const listLabels: Record<string, string> = {
@@ -814,6 +825,7 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
             role: "doctors-list",
             content: listLabels[language] ?? listLabels.ru,
             doctors,
+            consultationType,
           },
         ]);
       } else {
@@ -899,13 +911,24 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
 
         const fetchOfflineDoctors = async (lat?: number, lng?: number) => {
           const label = (lat !== undefined) ? listLabel : geoUnavailLabel;
-          const doctors = lat !== undefined
+          const rawDoctors = lat !== undefined
             ? await aiService.getNearbyOfflineDoctors(lat, lng!, undefined, clinic?.clinicSlug)
             : await aiService.getRandomDoctors(clinic?.clinicSlug);
+          // Only show doctors who have an available upcoming slot
+          const doctors = rawDoctors.filter(
+            d => !!d.nearest_slot && new Date(`${d.nearest_slot.date}T${d.nearest_slot.time}:00`) > new Date()
+          );
           if (doctors.length > 0) {
-            setMessages(prev => [...prev, { role: "doctors-list", content: label, doctors, consultationType: "offline" }]);
+            const [primary, ...rest] = doctors;
+            setMessages(prev => [...prev, {
+              role: "doctor-card",
+              content: label,
+              doctor: primary,
+              otherDoctors: rest.slice(0, 3),
+              consultationType: "offline",
+            }]);
           } else {
-            setMessages(prev => [...prev, { role: "assistant", content: emptyLabel }]);
+            setMessages(prev => [...prev, { role: "offline-no-doctors", content: "" }]);
           }
           setIsLoading(false);
         };
@@ -928,11 +951,26 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
           await fetchOfflineDoctors();
         }
       } else {
-        // diagnostics — show clinic's diagnostic services, not doctors
-        const label = { en: "Available diagnostic services:", ru: "Доступные услуги диагностики:", kz: "Қолжетімді диагностикалық қызметтер:", uz: "Mavjud diagnostika xizmatlari:" }[lang] ?? "Доступные услуги диагностики:";
+        // diagnostics — AI suggests relevant services based on symptoms, fallback to full list
+        const fallbackLabel = { en: "Available diagnostic services:", ru: "Доступные услуги диагностики:", kz: "Қолжетімді диагностикалық қызметтер:", uz: "Mavjud diagnostika xizmatlari:" }[lang] ?? "Доступные услуги диагностики:";
+        const aiLabel = { en: "Recommended diagnostics for your symptoms:", ru: "Рекомендуемая диагностика по вашим симптомам:", kz: "Симптомдарыңыз бойынша ұсынылатын диагностика:", uz: "Simptomlaringiz bo'yicha tavsiya etilgan diagnostika:" }[lang] ?? "Рекомендуемая диагностика по вашим симптомам:";
         const emptyLabel = { en: "No diagnostic services available at the moment.", ru: "В данный момент диагностические услуги недоступны.", kz: "Қазіргі уақытта диагностикалық қызметтер жоқ.", uz: "Hozircha diagnostika xizmatlari mavjud emas." }[lang] ?? "В данный момент диагностические услуги недоступны.";
-        const services = await aiService.getDiagnosticsServices(clinic?.clinicId);
+
+        const [aiResult, allServices] = await Promise.all([
+          aiService.suggestDiagnostics(accumulatedSymptoms, clinic?.clinicId, clinic?.clinicSlug),
+          aiService.getDiagnosticsServices(clinic?.clinicId),
+        ]);
+
+        const services = (aiResult.success && aiResult.matchingServices.length > 0)
+          ? aiResult.matchingServices
+          : allServices;
+        const label = (aiResult.success && aiResult.matchingServices.length > 0) ? aiLabel : fallbackLabel;
+
         if (services.length > 0) {
+          // If AI provided a summary, prepend it as an assistant message
+          if (aiResult.success && aiResult.summary) {
+            setMessages(prev => [...prev, { role: "assistant", content: aiResult.summary! }]);
+          }
           setMessages(prev => [...prev, { role: "diagnostics-list", content: label, diagnosticsServices: services }]);
         } else {
           setMessages(prev => [...prev, { role: "assistant", content: emptyLabel }]);
@@ -1474,9 +1512,10 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                   };
 
                   // Get specialization in current language (fall back to doctor_type when the field has no translation for this language)
+                  const docSpecFallback: Record<string, string> = { en: "Doctor", ru: "Врач", kz: "Дәрігер", uz: "Shifokor" };
                   const doctorSpecialization = message.doctor.specialization
-                    ? (message.doctor.specialization[lang as keyof typeof message.doctor.specialization] || message.doctor.doctor_type || "Doctor")
-                    : message.doctor.doctor_type || "Doctor";
+                    ? (message.doctor.specialization[lang as keyof typeof message.doctor.specialization] || message.doctor.doctor_type || docSpecFallback[lang])
+                    : (message.doctor.doctor_type || docSpecFallback[lang]);
 
                   const otherDoctorLabels = {
                     bestMatch: { en: "Best Match", ru: "Лучший выбор", kz: "Ең жақсы таңдау", uz: "Eng mos" },
@@ -1484,6 +1523,34 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                     viewAll: { en: "View all doctors →", ru: "Показать всех врачей →", kz: "Барлық дәрігерлерді көрсету →", uz: "Barcha shifokorlarni ko'rsatish →" },
                     book: { en: "Book", ru: "Записаться", kz: "Жазылу", uz: "Yozilish" },
                   };
+
+                  const isOffline = message.consultationType === "offline";
+                  const cardPrimaryGrad = isOffline
+                    ? "linear-gradient(135deg, #0f766e 0%, #0d5c56 50%, #134e4a 100%)"
+                    : "linear-gradient(135deg, #2563eb 0%, #1e40af 50%, #1e3a8a 100%)";
+                  const cardBorderColor = isOffline ? "#5eead4" : "#60a5fa";
+                  const cardBoxShadow = isOffline
+                    ? "0 20px 60px rgba(15,118,110,0.4), 0 0 0 1px rgba(255,255,255,0.1) inset"
+                    : "0 20px 60px rgba(37, 99, 235, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1) inset";
+                  const cardGlowColor = isOffline ? "#5eead4" : "#60a5fa";
+                  const cardGlowColor2 = isOffline ? "#99f6e4" : "#93c5fd";
+                  const dotBorderColor = isOffline ? "#134e4a" : "#1e3a8a";
+                  const subTextColor = isOffline ? "#99f6e4" : "#bfdbfe";
+                  const iconColor = isOffline ? "#5eead4" : "#93c5fd";
+                  const btnBg = isOffline
+                    ? "linear-gradient(135deg, #ffffff 0%, #f0fdfa 100%)"
+                    : "linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)";
+                  const btnTextColor = isOffline ? "#065f46" : "#1e40af";
+                  const compactCardGrad = isOffline
+                    ? "linear-gradient(135deg, #0f766e 0%, #0d5c56 100%)"
+                    : "linear-gradient(135deg, #2563eb 0%, #1e40af 100%)";
+                  const compactBorderColor = isOffline ? "#99f6e4" : "#93c5fd";
+                  const compactShadow = isOffline
+                    ? "0 6px 20px rgba(15,118,110,0.25)"
+                    : "0 6px 20px rgba(37,99,235,0.25)";
+                  const viewAllBg = isOffline ? "rgba(15,118,110,0.08)" : "rgba(37,99,235,0.08)";
+                  const viewAllColor = isOffline ? "#0f766e" : "#2563eb";
+                  const viewAllBorderStyle = isOffline ? "rgba(15,118,110,0.2)" : "rgba(37,99,235,0.2)";
 
                   return (
                   <div className="max-w-[90%] sm:max-w-[85%] flex gap-2 sm:gap-3">
@@ -1502,9 +1569,9 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                       <div
                         className="rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border-2 relative mb-3"
                         style={{
-                          background: "linear-gradient(135deg, #2563eb 0%, #1e40af 50%, #1e3a8a 100%)",
-                          borderColor: "#60a5fa",
-                          boxShadow: "0 20px 60px rgba(37, 99, 235, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1) inset"
+                          background: cardPrimaryGrad,
+                          borderColor: cardBorderColor,
+                          boxShadow: cardBoxShadow
                         }}
                       >
                         {/* Urgent badge */}
@@ -1518,8 +1585,8 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                         )}
 
                         {/* Decorative glows */}
-                        <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #60a5fa 0%, transparent 70%)", filter: "blur(40px)" }}></div>
-                        <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #93c5fd 0%, transparent 70%)", filter: "blur(30px)" }}></div>
+                        <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10" style={{ background: `radial-gradient(circle, ${cardGlowColor} 0%, transparent 70%)`, filter: "blur(40px)" }}></div>
+                        <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full opacity-10" style={{ background: `radial-gradient(circle, ${cardGlowColor2} 0%, transparent 70%)`, filter: "blur(30px)" }}></div>
 
                         <div className="relative px-5 py-5 sm:px-6 sm:py-5">
                           {/* Best match pill */}
@@ -1542,11 +1609,11 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                                 <FontAwesomeIcon icon={faUserMd} className="text-white text-xl sm:text-2xl" />
                                 <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-50"></div>
                               </div>
-                              <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-blue-900 animate-pulse" style={{ background: "#10b981" }}></div>
+                              <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 animate-pulse" style={{ background: "#10b981", borderColor: dotBorderColor }}></div>
                             </div>
                             <div className="flex-1 pt-0.5">
                               <h3 className="text-white font-bold text-base sm:text-lg mb-1 leading-tight">{message.doctor.name}</h3>
-                              <p className="text-blue-200 text-xs sm:text-sm mb-2">{doctorSpecialization}</p>
+                              <p className="text-xs sm:text-sm mb-2" style={{ color: subTextColor }}>{doctorSpecialization}</p>
                               <div className="flex flex-wrap gap-2">
                                 {message.doctor.years_of_experience && (
                                   <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold" style={{ background: "rgba(255,255,255,0.15)", backdropFilter: "blur(10px)" }}>
@@ -1560,9 +1627,9 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                                     <span className="text-amber-200">{message.doctor.clinic.rating.toFixed(1)}</span>
                                   </div>
                                 )}
-                                {message.doctor.online_consultation_price != null && (
+                                {(message.consultationType === "offline" ? message.doctor.offline_consultation_price : message.doctor.online_consultation_price) != null && (
                                   <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold" style={{ background: "rgba(16,185,129,0.18)" }}>
-                                    <span className="text-emerald-200">{message.doctor.online_consultation_price.toLocaleString()} ₸</span>
+                                    <span className="text-emerald-200">{(message.consultationType === "offline" ? message.doctor.offline_consultation_price : message.doctor.online_consultation_price)!.toLocaleString()} ₸</span>
                                   </div>
                                 )}
                               </div>
@@ -1571,17 +1638,55 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
 
                           {/* Clinic row */}
                           {message.doctor.clinic && (
-                            <div className="flex items-center gap-2 mb-4 text-xs text-blue-200">
-                              <FontAwesomeIcon icon={faHospital} className="text-blue-300 text-[11px] flex-shrink-0" />
-                              <span className="font-medium text-white">{message.doctor.clinic.name}</span>
-                              {message.doctor.clinic.city && <><span>·</span><FontAwesomeIcon icon={faLocationDot} className="text-blue-300 text-[10px] flex-shrink-0" /><span>{message.doctor.clinic.city}</span></>}
-                            </div>
+                            isOffline ? (
+                              <div
+                                className="rounded-xl p-3 mb-4 space-y-1.5 text-xs"
+                                style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", backdropFilter: "blur(10px)" }}
+                              >
+                                {/* Name + distance */}
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <FontAwesomeIcon icon={faHospital} className="text-[10px] flex-shrink-0" style={{ color: iconColor }} />
+                                    <span className="font-semibold text-white truncate">{message.doctor.clinic.name}</span>
+                                  </div>
+                                  {message.doctor.clinic.distance_km != null && (
+                                    <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(16,185,129,0.25)", color: "#6ee7b7" }}>
+                                      {message.doctor.clinic.distance_km} {{en:"km",ru:"км",kz:"км",uz:"km"}[lang] ?? "км"}
+                                    </span>
+                                  )}
+                                </div>
+                                {/* Address */}
+                                {message.doctor.clinic.address && (
+                                  <div className="flex items-start gap-1.5">
+                                    <FontAwesomeIcon icon={faLocationDot} className="text-[9px] mt-0.5 flex-shrink-0" style={{ color: iconColor }} />
+                                    <span style={{ color: subTextColor }}>{message.doctor.clinic.address}</span>
+                                  </div>
+                                )}
+                                {/* Cabinet */}
+                                {message.doctor.room_number && (
+                                  <div className="flex items-center gap-1.5">
+                                    <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: iconColor }}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                    </svg>
+                                    <span style={{ color: subTextColor }}>
+                                      {{en:"Cabinet",ru:"Кабинет",kz:"Кабинет",uz:"Xona"}[lang] ?? "Кабинет"} №{message.doctor.room_number}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2 mb-4 text-xs" style={{ color: subTextColor }}>
+                                <FontAwesomeIcon icon={faHospital} className="text-[11px] flex-shrink-0" style={{ color: iconColor }} />
+                                <span className="font-medium text-white">{message.doctor.clinic.name}</span>
+                                {message.doctor.clinic.city && <><span>·</span><FontAwesomeIcon icon={faLocationDot} className="text-[10px] flex-shrink-0" style={{ color: iconColor }} /><span>{message.doctor.clinic.city}</span></>}
+                              </div>
+                            )
                           )}
 
                           {/* Nearest available slot */}
                           {isSlotFuture(message.doctor.nearest_slot) && (
                             <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl text-xs font-medium" style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)" }}>
-                              <FontAwesomeIcon icon={faClock} className="text-blue-200 text-[11px] flex-shrink-0" />
+                              <FontAwesomeIcon icon={faClock} className="text-[11px] flex-shrink-0" style={{ color: subTextColor }} />
                               <span className="text-white opacity-90">
                                 {{
                                   ru: "Ближайший слот:",
@@ -1609,16 +1714,16 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                               </div>
                             ) : (
                               <button
-                                onClick={() => handleBookAppointment(message.doctor!.id, message.doctor!.name, message.doctor!)}
+                                onClick={() => handleBookAppointment(message.doctor!.id, message.doctor!.name, message.doctor!, (message.consultationType as 'online' | 'offline') ?? 'online')}
                                 disabled={isLoading}
                                 className="w-full py-3.5 font-bold rounded-xl transition-all relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
                                 style={{
-                                  background: "linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)",
-                                  color: "#1e40af",
+                                  background: btnBg,
+                                  color: btnTextColor,
                                   boxShadow: "0 8px 24px rgba(0,0,0,0.2)"
                                 }}
                               >
-                                <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-white opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: isOffline ? "linear-gradient(to right, #f0fdfa, #ffffff)" : "linear-gradient(to right, #eff6ff, #ffffff)" }}></div>
                                 <span className="relative flex items-center justify-center gap-2 text-sm sm:text-base">
                                   <span>{labels.bookAppointment[lang as keyof typeof labels.bookAppointment]}</span>
                                   <span className="group-hover:translate-x-1 transition-transform">→</span>
@@ -1638,16 +1743,16 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                           <div className={`grid gap-2 ${message.otherDoctors.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
                             {message.otherDoctors.map((doc, idx) => {
                               const docSpec = doc.specialization
-                                ? (doc.specialization[lang as keyof typeof doc.specialization] || doc.doctor_type || "Doctor")
-                                : doc.doctor_type || "Doctor";
+                                ? (doc.specialization[lang as keyof typeof doc.specialization] || doc.doctor_type || docSpecFallback[lang])
+                                : (doc.doctor_type || docSpecFallback[lang]);
                               return (
                                 <div
                                   key={doc.id || idx}
                                   className="rounded-2xl overflow-hidden border relative"
                                   style={{
-                                    background: "linear-gradient(135deg, #2563eb 0%, #1e40af 100%)",
-                                    borderColor: "#93c5fd",
-                                    boxShadow: "0 6px 20px rgba(37,99,235,0.25)"
+                                    background: compactCardGrad,
+                                    borderColor: compactBorderColor,
+                                    boxShadow: compactShadow
                                   }}
                                 >
                                   <div className="px-3 py-3">
@@ -1660,28 +1765,49 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                                         >
                                           <FontAwesomeIcon icon={faUserMd} className="text-white text-sm" />
                                         </div>
-                                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-blue-900" style={{ background: "#10b981" }}></div>
+                                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2" style={{ background: "#10b981", borderColor: dotBorderColor }}></div>
                                       </div>
                                       <div className="flex-1 min-w-0">
                                         <p className="text-white font-bold text-xs leading-tight truncate">{doc.name}</p>
-                                        <p className="text-blue-200 text-[10px] truncate">{docSpec}</p>
+                                        <p className="text-[10px] truncate" style={{ color: subTextColor }}>{docSpec}</p>
                                       </div>
                                     </div>
 
                                     {/* Experience + price */}
-                                    <div className="flex flex-wrap gap-1.5 mb-2.5">
+                                    <div className="flex flex-wrap gap-1.5 mb-1.5">
                                       {doc.years_of_experience && (
                                         <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]" style={{ background: "rgba(255,255,255,0.15)" }}>
                                           <FontAwesomeIcon icon={faBolt} className="text-amber-300 text-[9px]" />
                                           <span className="text-white font-medium">{doc.years_of_experience} {labels.experience[lang as keyof typeof labels.experience]}</span>
                                         </div>
                                       )}
-                                      {doc.online_consultation_price != null && (
+                                      {(message.consultationType === "offline" ? doc.offline_consultation_price : doc.online_consultation_price) != null && (
                                         <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]" style={{ background: "rgba(16,185,129,0.18)" }}>
-                                          <span className="text-emerald-200 font-medium">{doc.online_consultation_price.toLocaleString()} ₸</span>
+                                          <span className="text-emerald-200 font-medium">{(message.consultationType === "offline" ? doc.offline_consultation_price : doc.online_consultation_price)!.toLocaleString()} ₸</span>
+                                        </div>
+                                      )}
+                                      {isOffline && doc.clinic?.distance_km != null && (
+                                        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]" style={{ background: "rgba(16,185,129,0.25)" }}>
+                                          <span style={{ color: "#6ee7b7" }} className="font-medium">{doc.clinic.distance_km} {{en:"km",ru:"км",kz:"км",uz:"km"}[lang]??""}</span>
                                         </div>
                                       )}
                                     </div>
+                                    {isOffline && doc.room_number && (
+                                      <div className="flex items-center gap-1 mb-2 text-[10px]" style={{ color: subTextColor }}>
+                                        <svg className="w-2.5 h-2.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: iconColor }}>
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                        </svg>
+                                        <span>{{en:"Cabinet",ru:"Каб.",kz:"Каб.",uz:"Xona"}[lang]??""} №{doc.room_number}</span>
+                                      </div>
+                                    )}
+
+                                    {/* Nearest slot */}
+                                    {doc.nearest_slot && new Date(`${doc.nearest_slot.date}T${doc.nearest_slot.time}:00`) > new Date() && (
+                                      <div className="flex items-center gap-1 mb-2 text-[10px] px-2 py-1 rounded-lg" style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)" }}>
+                                        <FontAwesomeIcon icon={faClock} className="text-[9px] flex-shrink-0" style={{ color: subTextColor }} />
+                                        <span className="text-white font-semibold truncate">{doc.nearest_slot.label}</span>
+                                      </div>
+                                    )}
 
                                     {/* Book button */}
                                     {messages.some((m) => m.role === "booking-flow" && m.doctor?.id === doc.id) ? (
@@ -1694,12 +1820,12 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                                       </div>
                                     ) : (
                                       <button
-                                        onClick={() => handleBookAppointment(doc.id, doc.name, doc)}
+                                        onClick={() => handleBookAppointment(doc.id, doc.name, doc, (message.consultationType as 'online' | 'offline') ?? 'online')}
                                         disabled={isLoading}
                                         className="w-full py-2 font-bold rounded-lg text-xs transition-all disabled:opacity-50"
                                         style={{
-                                          background: "linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)",
-                                          color: "#1e40af",
+                                          background: btnBg,
+                                          color: btnTextColor,
                                           boxShadow: "0 3px 8px rgba(0,0,0,0.15)"
                                         }}
                                       >
@@ -1716,13 +1842,13 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
 
                       {/* View all doctors link */}
                       <button
-                        onClick={handleShowOtherDoctors}
+                        onClick={() => handleShowOtherDoctors((message.consultationType as 'online' | 'offline') ?? undefined)}
                         disabled={isLoading}
                         className="w-full py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all disabled:opacity-50"
                         style={{
-                          background: "rgba(37,99,235,0.08)",
-                          color: "#2563eb",
-                          border: "1px solid rgba(37,99,235,0.2)"
+                          background: viewAllBg,
+                          color: viewAllColor,
+                          border: `1px solid ${viewAllBorderStyle}`
                         }}
                       >
                         {otherDoctorLabels.viewAll[lang as keyof typeof otherDoctorLabels.viewAll]}
@@ -1744,13 +1870,31 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
 
                   const isOffline = message.consultationType === "offline";
                   const labels = {
-                    book: { en: "Book", ru: "Записаться", kz: "Жазылу", uz: "Yozilish" },
+                    book: { en: "Book Appointment", ru: "Записаться на прием", kz: "Жазылу", uz: "Qabulga yozilish" },
+                    bestMatch: { en: "Best Match", ru: "Лучший выбор", kz: "Ең жақсы таңдау", uz: "Eng mos" },
                     experience: { en: "years exp", ru: "лет опыта", kz: "жыл тәжірибе", uz: "yillik tajriba" },
                     clinic: { en: "Clinic", ru: "Клиника", kz: "Клиника", uz: "Klinika" },
                     cabinet: { en: "Cabinet", ru: "Кабинет", kz: "Кабинет", uz: "Xona" },
                     map: { en: "Open in 2GIS", ru: "Открыть в 2ГИС", kz: "2ГИС-та ашу", uz: "2GIS'da ochish" },
                     km: { en: "km away", ru: "км от вас", kz: "км қашықтықта", uz: "km uzoqlikda" },
                   };
+                  const specialtyFallback: Record<string, string> = { en: "Doctor", ru: "Врач", kz: "Дәрігер", uz: "Shifokor" };
+
+                  const dlCardGrad = isOffline
+                    ? "linear-gradient(135deg, #0f766e 0%, #0d5c56 100%)"
+                    : "linear-gradient(135deg, #2563eb 0%, #1e40af 100%)";
+                  const dlCardBorder = isOffline ? "#5eead4" : "#60a5fa";
+                  const dlCardShadow = isOffline
+                    ? "0 10px 40px rgba(15,118,110,0.3)"
+                    : "0 10px 40px rgba(37, 99, 235, 0.3)";
+                  const dlGlowColor = isOffline ? "#5eead4" : "#60a5fa";
+                  const dlDotBorder = isOffline ? "#134e4a" : "#1e3a8a";
+                  const dlSubText = isOffline ? "#99f6e4" : "#bfdbfe";
+                  const dlIconColor = isOffline ? "#5eead4" : "#93c5fd";
+                  const dlBtnBg = isOffline
+                    ? "linear-gradient(135deg, #ffffff 0%, #f0fdfa 100%)"
+                    : "linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)";
+                  const dlBtnColor = isOffline ? "#065f46" : "#1e40af";
 
                   return (
                   <div className="max-w-[90%] sm:max-w-[85%] flex gap-2 sm:gap-3">
@@ -1768,23 +1912,30 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                         {message.doctors.map((doctor, idx) => {
                           // Get specialization in current language
                           const doctorSpecialization = doctor.specialization
-                            ? (doctor.specialization[lang as keyof typeof doctor.specialization] || doctor.doctor_type || "Doctor")
-                            : doctor.doctor_type || "Doctor";
+                            ? (doctor.specialization[lang as keyof typeof doctor.specialization] || doctor.doctor_type || specialtyFallback[lang])
+                            : (doctor.doctor_type || specialtyFallback[lang]);
 
                           return (
                             <div
                               key={doctor.id || idx}
                               className="rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl border relative"
                               style={{
-                                background: "linear-gradient(135deg, #2563eb 0%, #1e40af 100%)",
-                                borderColor: "#60a5fa",
-                                boxShadow: "0 10px 40px rgba(37, 99, 235, 0.3)"
+                                background: dlCardGrad,
+                                borderColor: dlCardBorder,
+                                boxShadow: dlCardShadow
                               }}
                             >
                               {/* Decorative elements */}
-                              <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #60a5fa 0%, transparent 70%)", filter: "blur(20px)" }}></div>
+                              <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-10" style={{ background: `radial-gradient(circle, ${dlGlowColor} 0%, transparent 70%)`, filter: "blur(20px)" }}></div>
 
                               <div className="relative px-4 py-3 sm:px-5 sm:py-4">
+                                {/* Best match badge for first card */}
+                                {idx === 0 && (
+                                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full mb-3 text-xs font-bold" style={{ background: "rgba(251,191,36,0.2)", border: "1px solid rgba(251,191,36,0.4)" }}>
+                                    <FontAwesomeIcon icon={faStar} className="text-amber-300 text-[9px]" />
+                                    <span className="text-amber-200">{labels.bestMatch[lang as keyof typeof labels.bestMatch]}</span>
+                                  </div>
+                                )}
                                 <div className="flex items-start gap-3 mb-3">
                                   {/* Avatar */}
                                   <div className="relative flex-shrink-0">
@@ -1799,12 +1950,12 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                                       <FontAwesomeIcon icon={faUserMd} className="text-white text-sm sm:text-base" />
                                     </div>
                                     {/* Status dot */}
-                                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-blue-900" style={{ background: "#10b981" }}></div>
+                                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2" style={{ background: "#10b981", borderColor: dlDotBorder }}></div>
                                   </div>
 
                                   <div className="flex-1">
                                     <h3 className="text-white font-bold text-sm sm:text-base mb-0.5 leading-tight">{doctor.name}</h3>
-                                    <p className="text-blue-100 text-xs sm:text-sm mb-1.5">{doctorSpecialization}</p>
+                                    <p className="text-xs sm:text-sm mb-1.5" style={{ color: dlSubText }}>{doctorSpecialization}</p>
                                     <div className="flex flex-wrap gap-1.5">
                                       {doctor.years_of_experience && (
                                         <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs" style={{ background: "rgba(255, 255, 255, 0.15)" }}>
@@ -1846,8 +1997,8 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                                     {/* Address */}
                                     {isOffline && doctor.clinic.address && (
                                       <div className="flex items-start gap-1">
-                                        <FontAwesomeIcon icon={faLocationDot} className="text-blue-300 text-[9px] mt-0.5 flex-shrink-0" />
-                                        <span className="text-blue-100 text-xs leading-tight">{doctor.clinic.address}</span>
+                                        <FontAwesomeIcon icon={faLocationDot} className="text-[9px] mt-0.5 flex-shrink-0" style={{ color: dlIconColor }} />
+                                        <span className="text-xs leading-tight" style={{ color: dlSubText }}>{doctor.clinic.address}</span>
                                       </div>
                                     )}
 
@@ -1855,8 +2006,8 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                                     <div className="flex items-center justify-between gap-2">
                                       {!isOffline && doctor.clinic.city && (
                                         <div className="flex items-center gap-1">
-                                          <FontAwesomeIcon icon={faLocationDot} className="text-blue-300 text-[9px]" />
-                                          <span className="text-blue-100 text-xs">{doctor.clinic.city}</span>
+                                          <FontAwesomeIcon icon={faLocationDot} className="text-[9px]" style={{ color: dlIconColor }} />
+                                          <span className="text-xs" style={{ color: dlSubText }}>{doctor.clinic.city}</span>
                                         </div>
                                       )}
                                       {doctor.clinic.rating && (
@@ -1870,10 +2021,10 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                                     {/* Room number */}
                                     {isOffline && doctor.room_number && (
                                       <div className="flex items-center gap-1">
-                                        <svg className="w-3 h-3 text-blue-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: dlIconColor }}>
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                                         </svg>
-                                        <span className="text-blue-100 text-xs">{labels.cabinet[lang as keyof typeof labels.cabinet]} №{doctor.room_number}</span>
+                                        <span className="text-xs" style={{ color: dlSubText }}>{labels.cabinet[lang as keyof typeof labels.cabinet]} №{doctor.room_number}</span>
                                       </div>
                                     )}
 
@@ -1899,7 +2050,7 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                                 {/* Nearest slot for alternative doctor */}
                                 {isSlotFuture(doctor.nearest_slot) && (
                                   <div className="flex items-center gap-1.5 mb-2.5 px-2.5 py-1.5 rounded-lg text-xs" style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)" }}>
-                                    <FontAwesomeIcon icon={faClock} className="text-blue-200 text-[11px] flex-shrink-0" />
+                                    <FontAwesomeIcon icon={faClock} className="text-[11px] flex-shrink-0" style={{ color: dlSubText }} />
                                     <span className="text-white font-semibold">{doctor.nearest_slot?.label}</span>
                                   </div>
                                 )}
@@ -1910,8 +2061,8 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                                   disabled={isLoading}
                                   className="w-full py-2.5 sm:py-3 font-bold rounded-lg sm:rounded-xl transition-all relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
                                   style={{
-                                    background: "linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)",
-                                    color: "#1e40af",
+                                    background: dlBtnBg,
+                                    color: dlBtnColor,
                                     boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)"
                                   }}
                                 >
@@ -2042,42 +2193,189 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                   </div>
                   );
                 })() : message.role === "diagnostics-list" && message.diagnosticsServices ? (() => {
-                  const services = message.diagnosticsServices;
+                  const lang = language as "en" | "ru" | "kz" | "uz";
+                  const allServices = message.diagnosticsServices;
+                  const COMPACT_LIMIT = 2;
+                  const [primary, ...rest] = message.showAll ? allServices : allServices;
+                  const compactServices = message.showAll ? rest : rest.slice(0, COMPACT_LIMIT);
+                  const hasMore = !message.showAll && allServices.length > COMPACT_LIMIT + 1;
+
                   const categoryColors: Record<string, string> = {
                     lab: "#2563eb", imaging: "#7c3aed", cardio: "#dc2626",
                     neuro: "#0891b2", ortho: "#16a34a", ophtha: "#d97706",
                     peds: "#db2777", micro: "#65a30d",
                   };
+                  const diagLabels = {
+                    recommended:  { en: "Best Match", ru: "Рекомендуется", kz: "Ұсынылады", uz: "Tavsiya etiladi" },
+                    alsoAvail:    { en: "Also available:", ru: "Также доступно:", kz: "Сонымен қатар:", uz: "Shuningdek mavjud:" },
+                    book:         { en: "Book Appointment", ru: "Записаться на диагностику", kz: "Диагностикаға жазылу", uz: "Diagnostikaga yozilish" },
+                    bookCompact:  { en: "Book", ru: "Записаться", kz: "Жазылу", uz: "Yozilish" },
+                    showAll:      { en: `Show all ${allServices.length}`, ru: `Показать все ${allServices.length} услуг`, kz: `Барлық ${allServices.length}`, uz: `Barcha ${allServices.length}` },
+                  };
+
+                  if (!primary) return null;
                   return (
-                    <div className="space-y-2 w-full max-w-sm">
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">{message.content}</p>
-                      {services.map((svc) => (
-                        <div key={svc.id} className="rounded-2xl p-4 shadow-md" style={{ background: "linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)" }}>
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-white font-semibold text-sm leading-tight">{svc.name}</p>
-                              {svc.description && (
-                                <p className="text-blue-200 text-xs mt-1 line-clamp-2">{svc.description}</p>
+                    <div className="max-w-[90%] sm:max-w-[85%] flex gap-2 sm:gap-3">
+                      {/* Robot icon — matches other message types */}
+                      <div
+                        className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 mt-1"
+                        style={{ background: accentGrad }}
+                      >
+                        <FontAwesomeIcon icon={faRobot} className="text-xs sm:text-sm" style={{ color: onAccent }} />
+                      </div>
+
+                      <div className="flex-1">
+                        {/* Label chip */}
+                        <div className="px-2 py-1 rounded-lg mb-2 inline-block" style={{ background: accentLight }}>
+                          <span className="text-xs font-semibold" style={{ color: accentDark }}>{message.content}</span>
+                        </div>
+
+                        {/* ── PRIMARY card ── */}
+                        <div
+                          className="rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl border relative mb-3"
+                          style={{
+                            background: "linear-gradient(135deg, #6d28d9 0%, #4c1d95 100%)",
+                            borderColor: "#a78bfa",
+                            boxShadow: "0 10px 40px rgba(109,40,217,0.3)"
+                          }}
+                        >
+                          <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #c4b5fd 0%, transparent 70%)", filter: "blur(20px)" }}></div>
+                          <div className="relative px-4 py-4 sm:px-5">
+                            {/* Recommended badge */}
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full mb-3 text-xs font-bold" style={{ background: "rgba(251,191,36,0.2)", border: "1px solid rgba(251,191,36,0.4)" }}>
+                              <FontAwesomeIcon icon={faStar} className="text-amber-300 text-[9px]" />
+                              <span className="text-amber-200">{diagLabels.recommended[lang]}</span>
+                            </div>
+                            <h3 className="text-white font-bold text-sm sm:text-base mb-1 leading-tight">{primary.name}</h3>
+                            {primary.description && (
+                              <p className="text-purple-200 text-xs mb-3 line-clamp-2">{primary.description}</p>
+                            )}
+                            <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                              <span className="text-xs px-2 py-0.5 rounded-full font-medium text-white" style={{ background: categoryColors[primary.category] ?? "#374151" }}>
+                                {primary.category_label}
+                              </span>
+                              <span className="text-purple-200 text-xs">⏱ {primary.duration_minutes} мин</span>
+                              {primary.price && (
+                                <span className="text-white text-xs font-semibold">{Number(primary.price).toLocaleString()} ₸</span>
                               )}
-                              <div className="flex flex-wrap items-center gap-2 mt-2">
-                                <span className="text-xs px-2 py-0.5 rounded-full font-medium text-white" style={{ background: categoryColors[svc.category] ?? "#374151" }}>
-                                  {svc.category_label}
-                                </span>
-                                <span className="text-blue-200 text-xs">⏱ {svc.duration_minutes} мин</span>
-                                {svc.price && (
-                                  <span className="text-white text-xs font-semibold">{Number(svc.price).toLocaleString()} ₸</span>
-                                )}
-                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleBookDiagnosticsService(primary)}
+                              className="w-full py-2.5 sm:py-3 font-bold rounded-lg sm:rounded-xl transition-all relative overflow-hidden group"
+                              style={{ background: "linear-gradient(135deg, #ffffff 0%, #f5f3ff 100%)", color: "#4c1d95", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}
+                            >
+                              <span className="relative flex items-center justify-center gap-1.5 text-xs sm:text-sm">
+                                <span>{diagLabels.book[lang]}</span>
+                                <span className="group-hover:translate-x-0.5 transition-transform">→</span>
+                              </span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* ── COMPACT additional cards ── */}
+                        {compactServices.length > 0 && (
+                          <div className="mb-2">
+                            <p className="text-xs font-semibold mb-2 px-1" style={{ color: "#6b7280" }}>
+                              {diagLabels.alsoAvail[lang]}
+                            </p>
+                            <div className={`grid gap-2 ${compactServices.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                              {compactServices.map((svc) => (
+                                <div
+                                  key={svc.id}
+                                  className="rounded-2xl overflow-hidden border relative"
+                                  style={{ background: "linear-gradient(135deg, #6d28d9 0%, #4c1d95 100%)", borderColor: "#c4b5fd", boxShadow: "0 6px 20px rgba(109,40,217,0.2)" }}
+                                >
+                                  <div className="px-3 py-3">
+                                    <p className="text-white font-bold text-xs leading-tight mb-0.5">{svc.name}</p>
+                                    <div className="flex flex-wrap items-center gap-1 mb-2">
+                                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium text-white" style={{ background: categoryColors[svc.category] ?? "#374151" }}>
+                                        {svc.category_label}
+                                      </span>
+                                      <span className="text-purple-300 text-[10px]">⏱ {svc.duration_minutes} мин</span>
+                                    </div>
+                                    {svc.price && (
+                                      <p className="text-white text-[10px] font-semibold mb-2">{Number(svc.price).toLocaleString()} ₸</p>
+                                    )}
+                                    <button
+                                      onClick={() => handleBookDiagnosticsService(svc)}
+                                      className="w-full py-1.5 font-bold rounded-lg text-xs transition-all"
+                                      style={{ background: "linear-gradient(135deg, #ffffff 0%, #f5f3ff 100%)", color: "#4c1d95", boxShadow: "0 3px 8px rgba(0,0,0,0.15)" }}
+                                    >
+                                      {diagLabels.bookCompact[lang]} →
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
                           </div>
+                        )}
+
+                        {/* Show all button */}
+                        {hasMore && (
                           <button
-                            onClick={() => handleBookDiagnosticsService(svc)}
-                            className="mt-3 w-full py-2 rounded-xl bg-white text-blue-700 text-xs font-bold hover:bg-blue-50 transition-colors"
+                            onClick={() => handleShowAllDiagnostics(index)}
+                            className="w-full py-2.5 text-xs font-semibold rounded-xl transition-all"
+                            style={{ background: "rgba(109,40,217,0.08)", color: "#6d28d9", border: "1px solid rgba(109,40,217,0.2)" }}
                           >
-                            {{ en: "Book", ru: "Записаться", kz: "Жазылу", uz: "Yozilish" }[language as "en" | "ru" | "kz" | "uz"] ?? "Записаться"}
+                            {diagLabels.showAll[lang]} →
                           </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })() : message.role === "offline-no-doctors" ? (() => {
+                  const lang = language as "en" | "ru" | "kz" | "uz";
+                  const copy = {
+                    title:  { en: "No offline doctors available right now", ru: "Нет доступных врачей для приёма", kz: "Офлайн дәрігерлер қол жетімді емес", uz: "Hozirda oflayn shifokorlar mavjud emas" },
+                    body:   { en: "Unfortunately, no doctors with open slots are currently available for in-person visits.", ru: "К сожалению, в данный момент нет врачей с доступными слотами для приёма.", kz: "Өкінішке орай, қазіргі уақытта қабылдауға бос уақыты бар дәрігер жоқ.", uz: "Afsuski, hozirda qabulga bo'sh vaqtli shifokorlar mavjud emas." },
+                    cta:    { en: "Try online consultation", ru: "Попробовать онлайн-консультацию", kz: "Онлайн кеңес алып көру", uz: "Onlayn konsultatsiya sinab ko'ring" },
+                    ctaSub: { en: "Video call with a doctor in minutes", ru: "Видеозвонок с врачом за несколько минут", kz: "Бірнеше минутта дәрігермен бейне байланыс", uz: "Bir necha daqiqada shifokor bilan video qo'ng'iroq" },
+                  };
+                  return (
+                    <div className="max-w-[90%] sm:max-w-[85%] flex gap-2 sm:gap-3">
+                      <div
+                        className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 mt-1"
+                        style={{ background: accentGrad }}
+                      >
+                        <FontAwesomeIcon icon={faRobot} className="text-xs sm:text-sm" style={{ color: onAccent }} />
+                      </div>
+                      <div className="flex-1">
+                        <div
+                          className="rounded-2xl sm:rounded-3xl overflow-hidden shadow-lg border"
+                          style={{ background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)", borderColor: "rgba(255,255,255,0.1)" }}
+                        >
+                          <div className="px-4 py-4 sm:px-5">
+                            {/* Icon + title */}
+                            <div className="flex items-start gap-3 mb-3">
+                              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)" }}>
+                                <FontAwesomeIcon icon={faHouse} className="text-red-400 text-base" />
+                              </div>
+                              <div>
+                                <p className="text-white font-semibold text-sm leading-tight">{copy.title[lang]}</p>
+                                <p className="text-slate-400 text-xs mt-1 leading-snug">{copy.body[lang]}</p>
+                              </div>
+                            </div>
+
+                            {/* Online CTA */}
+                            <button
+                              onClick={() => handleConsultationTypeSelect('online')}
+                              disabled={isLoading}
+                              className="w-full py-3 rounded-xl font-bold transition-all group relative overflow-hidden disabled:opacity-50"
+                              style={{ background: "linear-gradient(135deg, #2563eb 0%, #1e40af 100%)", boxShadow: "0 8px 24px rgba(37,99,235,0.35)" }}
+                            >
+                              <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-5 transition-opacity"></div>
+                              <div className="relative flex flex-col items-center gap-0.5">
+                                <div className="flex items-center gap-2">
+                                  <FontAwesomeIcon icon={faVideo} className="text-white text-sm" />
+                                  <span className="text-white text-sm sm:text-base">{copy.cta[lang]}</span>
+                                  <span className="text-white group-hover:translate-x-0.5 transition-transform">→</span>
+                                </div>
+                                <span className="text-blue-200 text-[10px]">{copy.ctaSub[lang]}</span>
+                              </div>
+                            </button>
+                          </div>
                         </div>
-                      ))}
+                      </div>
                     </div>
                   );
                 })() : message.role === "consultation-type-selector" ? (() => {

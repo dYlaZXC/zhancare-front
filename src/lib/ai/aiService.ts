@@ -105,6 +105,39 @@ export const aiService = {
     return data.success ? (data.doctors as DoctorRecommendation[]) : [];
   },
 
+  /**
+   * AI-powered diagnostics suggestion: given patient symptoms, returns the most
+   * relevant clinic services (ranked by AI-suggested categories) plus a summary.
+   * Falls back to empty on failure — caller should use getDiagnosticsServices as fallback.
+   */
+  async suggestDiagnostics(
+    symptoms: string,
+    clinicId?: number,
+    clinicSlug?: string,
+  ): Promise<{ success: boolean; summary?: string; matchingServices: DiagnosticsServiceItem[] }> {
+    try {
+      const res = await fetch(`${API}/diagnostics/ai-suggest/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          symptoms,
+          ...(clinicId   ? { clinic_id:   clinicId   } : {}),
+          ...(clinicSlug ? { clinic_slug: clinicSlug } : {}),
+        }),
+      });
+      if (!res.ok) return { success: false, matchingServices: [] };
+      const data = await res.json();
+      return {
+        success: !!data.success,
+        summary: data.summary ?? undefined,
+        matchingServices: Array.isArray(data.matching_services) ? (data.matching_services as DiagnosticsServiceItem[]) : [],
+      };
+    } catch {
+      return { success: false, matchingServices: [] };
+    }
+  },
+
   /** Fetch diagnostic services — for a specific clinic, or site-wide when no clinicId is given. */
   async getDiagnosticsServices(clinicId?: number): Promise<DiagnosticsServiceItem[]> {
     const url = clinicId

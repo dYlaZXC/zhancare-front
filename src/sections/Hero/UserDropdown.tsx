@@ -257,7 +257,8 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
         icon: faCog,
         label: t.settings,
         href: "/settings",
-        description: t.accountSettingsDesc
+        description: t.accountSettingsDesc,
+        disabled: true
       }
     ];
   };
@@ -368,28 +369,46 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
 
             {/* Menu Items - Simplified */}
             <div className="py-1">
-              {menuItems.map((item) => (
-                <a
-                  key={item.href}
-                  href={item.href}
-                  className="group flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-gray-50 transition-colors duration-150"
-                >
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gray-100 group-hover:bg-[#3772ff]/10 flex items-center justify-center transition-colors duration-150 shrink-0">
-                    <FontAwesomeIcon
-                      icon={item.icon}
-                      className="text-sm text-gray-600 group-hover:text-[#3772ff] transition-colors duration-150"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-gray-900 text-sm group-hover:text-[#3772ff] transition-colors">
-                      {item.label}
+              {menuItems.map((item) =>
+                item.disabled ? (
+                  <div
+                    key={item.href}
+                    className="flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 cursor-not-allowed opacity-45 select-none"
+                  >
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
+                      <FontAwesomeIcon icon={item.icon} className="text-sm text-gray-400" />
                     </div>
-                    <div className="text-xs text-gray-500 truncate">
-                      {item.description}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-400 text-sm">{item.label}</span>
+                        <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-400">Скоро</span>
+                      </div>
+                      <div className="text-xs text-gray-400 truncate">{item.description}</div>
                     </div>
                   </div>
-                </a>
-              ))}
+                ) : (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    className="group flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-gray-50 transition-colors duration-150"
+                  >
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gray-100 group-hover:bg-[#3772ff]/10 flex items-center justify-center transition-colors duration-150 shrink-0">
+                      <FontAwesomeIcon
+                        icon={item.icon}
+                        className="text-sm text-gray-600 group-hover:text-[#3772ff] transition-colors duration-150"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-gray-900 text-sm group-hover:text-[#3772ff] transition-colors">
+                        {item.label}
+                      </div>
+                      <div className="text-xs text-gray-500 truncate">
+                        {item.description}
+                      </div>
+                    </div>
+                  </a>
+                )
+              )}
             </div>
 
             {/* Logout Section */}
