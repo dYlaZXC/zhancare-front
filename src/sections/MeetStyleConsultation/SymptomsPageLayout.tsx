@@ -232,7 +232,7 @@ export default function SymptomsPageLayout({ clinic }: { clinic?: ClinicContext 
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.22 }}
-            className="fixed inset-0 z-[61] bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[71] bg-black/60 backdrop-blur-sm"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -247,7 +247,7 @@ export default function SymptomsPageLayout({ clinic }: { clinic?: ClinicContext 
           animate={isMobile ? { x: 0 } : { width: 288, opacity: 1 }}
           exit={isMobile ? { x: -288 } : { width: 0, opacity: 0 }}
           transition={{ type: "spring", damping: 30, stiffness: 280, mass: 0.8 }}
-          className={`flex flex-col flex-shrink-0 ${isMobile ? "fixed inset-y-0 left-0 z-[62]" : "relative overflow-hidden"}`}
+          className={`flex flex-col flex-shrink-0 ${isMobile ? "fixed inset-y-0 left-0 z-[72]" : "relative overflow-hidden"}`}
           style={{ borderRight: "1px solid rgba(55,114,255,0.15)" }}
         >
           {/* inner shell — keeps content at full width; owns background + mouse-move effect */}
@@ -444,8 +444,8 @@ export default function SymptomsPageLayout({ clinic }: { clinic?: ClinicContext 
           initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, ease: "easeOut" }}
-          className="flex items-center justify-between flex-shrink-0 px-5 py-2.5"
-          style={{ background: "rgba(250,252,255,0.96)", borderBottom: "1px solid rgba(15,23,42,0.08)", backdropFilter: "blur(12px)" }}
+          className="flex items-center justify-between flex-shrink-0 px-5 py-2.5 relative"
+          style={{ background: "rgba(250,252,255,0.96)", borderBottom: "1px solid rgba(15,23,42,0.08)", backdropFilter: "blur(12px)", zIndex: 70 }}
         >
           <div className="flex items-center gap-2">
             {/* Hamburger (mobile always) / expand chevron (desktop, sidebar closed) */}
@@ -511,7 +511,7 @@ export default function SymptomsPageLayout({ clinic }: { clinic?: ClinicContext 
                     exit={{ opacity: 0, scale: 0.92, y: -4 }}
                     transition={{ duration: 0.15, ease: "easeOut" }}
                     className="absolute right-0 mt-2 w-48 rounded-2xl overflow-hidden z-50"
-                    style={{ background: "#ffffff", border: "1px solid rgba(15,23,42,0.10)", boxShadow: "0 8px 32px rgba(15,23,42,0.14)", top: "100%" }}
+                    style={{ background: "#ffffff", border: "1px solid rgba(15,23,42,0.10)", boxShadow: "0 8px 32px rgba(15,23,42,0.14)", top: "100%", zIndex: 80 }}
                   >
                     <div className="px-3 py-2.5 border-b" style={{ borderColor: "rgba(15,23,42,0.07)" }}>
                       <p className="text-[12px] font-semibold truncate" style={{ color: "#0F172A" }}>{userName}</p>
