@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
@@ -64,6 +64,7 @@ const LABELS = {
 
 export default function SymptomsPageLayout({ clinic }: { clinic?: ClinicContext }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, logoutUser } = useAuth();
   const { language } = useLanguage();
   const { brand, appLogo } = useBrand();
@@ -84,6 +85,7 @@ export default function SymptomsPageLayout({ clinic }: { clinic?: ClinicContext 
   const [profileOpen, setProfileOpen] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+  const autoStartedRef = useRef(false);
 
   // keep refs in sync for use inside callbacks without stale closures
   const activeSessionIdRef = useRef(activeSessionId);
@@ -94,6 +96,17 @@ export default function SymptomsPageLayout({ clinic }: { clinic?: ClinicContext 
 
   const L = LABELS[language as keyof typeof LABELS] ?? LABELS.ru;
   const botName = brand.id === "uz" || language === "uz" ? "JonBot.Ai" : "ZhanBot.AI";
+
+  // Auto-start chat from ?q= param (e.g. redirected from widget chat "Записаться к врачу")
+  useEffect(() => {
+    if (autoStartedRef.current) return;
+    const q = searchParams.get("q")?.trim();
+    if (!q) return;
+    autoStartedRef.current = true;
+    // Small delay so sessions load from localStorage first
+    const t = setTimeout(() => startChat(q), 100);
+    return () => clearTimeout(t);
+  }, []); // eslint-disable-line
 
   // Load sessions from localStorage
   useEffect(() => {

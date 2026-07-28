@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
@@ -192,6 +193,7 @@ export default function PatientChatLayout() {
   const { user } = useAuth();
   const { language } = useLanguage();
   const { brand } = useBrand();
+  const router = useRouter();
   const isUzbek = brand.id === "uz" || language === "uz";
   const ZhanBotLogo = isUzbek ? JonBotLogoUZ : ZhanBotLogoKZ;
   const lang = (t[language as keyof typeof t] ?? t.ru);
@@ -303,7 +305,12 @@ export default function PatientChatLayout() {
     if (el) { el.style.height = "auto"; el.style.height = `${Math.min(el.scrollHeight, 160)}px`; }
   };
 
-  const handleBookAppointment = () => setIsBookingModalOpen(true);
+  const handleBookAppointment = () => {
+    const firstUserMsg = messages.find(m => m.sender === "user")?.text?.trim();
+    const params = new URLSearchParams();
+    if (firstUserMsg) params.set("q", firstUserMsg);
+    router.push(`/consultation/symptoms${firstUserMsg ? `?${params.toString()}` : ""}`);
+  };
 
   const handleBookingComplete = useCallback(
     (d: { doctorName: string; doctorType: string; scheduledTime: string; meetingId?: string }) => {

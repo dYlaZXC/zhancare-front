@@ -322,9 +322,9 @@
     "heading": "Консультация врача",
     "headingHighlight": "за 5 минут",
     "subtitle": "Опишите симптомы → ИИ подберет врача → Оплата → Видео консультация",
-    "startButton": "Начать консультацию",
-    "startingButton": "Запуск...",
-    "scheduleButton": "Запланировать встречу",
+    "startButton": "Описать симптомы",
+    "startingButton": "Загрузка...",
+    "scheduleButton": "Записаться к врачу",
     "features": [
       {
         "title": "Быстро",

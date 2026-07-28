@@ -73,10 +73,10 @@ export const ImpactSection = () => {
   return (
     <section 
       id="impact" 
-      className="relative py-16 sm:py-20 md:py-24 lg:py-28 xl:py-32 laptop-hd:py-24 desktop-fhd:py-32 desktop-qhd:py-40 desktop-4k:py-48 px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 laptop-hd:px-8 desktop-fhd:px-12 desktop-qhd:px-16 desktop-4k:px-24 bg-gradient-to-b from-[#d2dcff] via-[#d2dcff] to-white text-center overflow-hidden"
+      className="relative -mt-px py-16 sm:py-20 md:py-24 lg:py-28 xl:py-32 laptop-hd:py-24 desktop-fhd:py-32 desktop-qhd:py-40 desktop-4k:py-48 px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 laptop-hd:px-8 desktop-fhd:px-12 desktop-qhd:px-16 desktop-4k:px-24 bg-gradient-to-b from-[#d2dcff] via-[#d2dcff] to-white text-center overflow-hidden"
     >
       {/* Responsive Floating Background */}
-      <div className="absolute top-[-50px] sm:top-[-100px] lg:top-[-150px] left-[-75px] sm:left-[-100px] lg:left-[-150px] w-[150px] sm:w-[200px] lg:w-[300px] desktop-qhd:w-[400px] desktop-4k:w-[500px] h-[150px] sm:h-[200px] lg:h-[300px] desktop-qhd:h-[400px] desktop-4k:h-[500px] rounded-full blur-2xl sm:blur-3xl" style={{ backgroundColor: brand.primary, opacity: 0.2 }}></div>
+      <div className="absolute top-[80px] sm:top-[60px] lg:top-[40px] left-[-75px] sm:left-[-100px] lg:left-[-150px] w-[150px] sm:w-[200px] lg:w-[300px] desktop-qhd:w-[400px] desktop-4k:w-[500px] h-[150px] sm:h-[200px] lg:h-[300px] desktop-qhd:h-[400px] desktop-4k:h-[500px] rounded-full blur-2xl sm:blur-3xl" style={{ backgroundColor: brand.primary, opacity: 0.2 }}></div>
       <div className="absolute bottom-[-20%] sm:bottom-[-30%] lg:bottom-[-40%] right-[-75px] sm:right-[-100px] lg:right-[-150px] w-[150px] sm:w-[200px] lg:w-[300px] desktop-qhd:w-[400px] desktop-4k:w-[500px] h-[150px] sm:h-[200px] lg:h-[300px] desktop-qhd:h-[400px] desktop-4k:h-[500px] bg-pink-300 opacity-20 rounded-full blur-2xl sm:blur-3xl"></div>
 
       <div className="container mx-auto relative z-10 max-w-7xl laptop-hd:max-w-6xl desktop-fhd:max-w-7xl desktop-qhd:max-w-8xl desktop-4k:max-w-9xl">

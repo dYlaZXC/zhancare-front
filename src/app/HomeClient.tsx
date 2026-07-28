@@ -104,12 +104,14 @@ export default function HomeClient() {
   return (
     <div>
       <Hero />
-      <ChatSection />
+      {/* <ChatSection /> */}
       <Services />
       <Features />
-      <DoctorsCarousel />
-      <ImpactSection />
-      <Traction />
+      <div className="bg-[#d2dcff]">
+        <DoctorsCarousel />
+        <ImpactSection />
+      </div>
+      {/* <Traction /> */}
       <ProductShowcase />
       <CallToAction />
 

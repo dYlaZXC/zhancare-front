@@ -322,9 +322,9 @@
     "heading": "Doctor consultation",
     "headingHighlight": "in 5 minutes",
     "subtitle": "Describe symptoms → AI selects a doctor → Payment → Video consultation",
-    "startButton": "Start consultation",
-    "startingButton": "Starting...",
-    "scheduleButton": "Schedule a meeting",
+    "startButton": "Describe symptoms",
+    "startingButton": "Loading...",
+    "scheduleButton": "Book a doctor",
     "features": [
       {
         "title": "Fast",

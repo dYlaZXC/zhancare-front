@@ -3,6 +3,7 @@
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaShieldAlt, FaStethoscope } from "react-icons/fa";
 import Image from "next/image";
@@ -20,6 +21,7 @@ export const ChatSection = () => {
   useAuth();
   const { language } = useLanguage();
   const { brand } = useBrand();
+  const router = useRouter();
   const isUzbek = brand.id === "uz" || language === "uz";
   const ZhanBotLogo = isUzbek ? JonBotLogoUZ : ZhanBotLogoKZ;
   const [messages, setMessages] = useState<Message[]>([]);
@@ -65,7 +67,12 @@ export const ChatSection = () => {
 
   const handleSend = () => { onSend(); };
 
-  const handleBookAppointment = () => { setIsBookingModalOpen(true); };
+  const handleBookAppointment = () => {
+    const firstUserMsg = messages.find(m => m.sender === "user")?.text?.trim();
+    const params = new URLSearchParams();
+    if (firstUserMsg) params.set("q", firstUserMsg);
+    router.push(`/consultation/symptoms${firstUserMsg ? `?${params.toString()}` : ""}`);
+  };
 
   const handleBookingComplete = useCallback((bookingDetails: {
     doctorName: string;
