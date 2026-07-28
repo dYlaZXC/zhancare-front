@@ -369,10 +369,11 @@ function DoctorSearchBox({ onBook, lang, clinicSlug, accentGrad }: {
   );
 }
 
-export default function AISymptomsChecker({ clinic, embedded, initialInput, initialImageUrl, autoSend, initialMessages, onMessagesChange }: { clinic?: ClinicContext; embedded?: boolean; initialInput?: string; initialImageUrl?: string; autoSend?: boolean; initialMessages?: SavedMessage[]; onMessagesChange?: (msgs: SavedMessage[]) => void }) {
+export default function AISymptomsChecker({ clinic, embedded, lightMode, hideBack, initialInput, initialImageUrl, autoSend, initialMessages, onMessagesChange }: { clinic?: ClinicContext; embedded?: boolean; lightMode?: boolean; hideBack?: boolean; initialInput?: string; initialImageUrl?: string; autoSend?: boolean; initialMessages?: SavedMessage[]; onMessagesChange?: (msgs: SavedMessage[]) => void }) {
   const router = useRouter();
   const { language, setLanguage } = useLanguage();
   const { appLogo, brand } = useBrand();
+  const isLight = embedded || lightMode;
   const accentColor = clinic?.primaryColor ?? "#3772ff";
   const accentDark = darkenHex(accentColor);
   const accentGrad = `linear-gradient(135deg, ${accentColor} 0%, ${accentDark} 100%)`;
@@ -1113,22 +1114,25 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
   };
 
   return (
-    <div className={embedded ? "flex flex-col flex-1 min-h-0 overflow-hidden" : "min-h-screen flex flex-col"} style={embedded ? {} : { background: "#0A0A1B" }}>
+    <div className={embedded ? "flex flex-col flex-1 min-h-0 overflow-hidden" : "min-h-screen flex flex-col"} style={embedded ? {} : { background: lightMode ? "#F8FAFC" : "#0A0A1B" }}>
       {/* Header — matches landing page scrolled style */}
-      {!embedded && <header className="bg-[#1D1D2F]/95 backdrop-blur-xl shadow-xl border-b border-white/[0.07]">
+      {!embedded && <header className={lightMode ? "bg-white shadow-sm border-b border-gray-200" : "bg-[#1D1D2F]/95 backdrop-blur-xl shadow-xl border-b border-white/[0.07]"}>
         <div className="container mx-auto max-w-5xl px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between gap-2">
             {/* Left — Back + Logo + Bot identity */}
             <div className="flex items-center gap-2 sm:gap-4">
-              <button
-                onClick={() => router.back()}
-                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-lg sm:rounded-xl transition-all hover:scale-105 hover:bg-white/10 text-sm sm:text-base text-white/80 hover:text-white"
-              >
-                <FontAwesomeIcon icon={faArrowLeft} className="text-xs sm:text-sm" />
-                <span className="hidden sm:inline font-medium">{ui.back}</span>
-              </button>
-
-              <div className="w-px h-6 bg-white/15 hidden sm:block" />
+              {!hideBack && (
+                <>
+                  <button
+                    onClick={() => router.back()}
+                    className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-lg sm:rounded-xl transition-all hover:scale-105 text-sm sm:text-base ${lightMode ? "text-gray-500 hover:text-gray-800 hover:bg-gray-100" : "text-white/80 hover:text-white hover:bg-white/10"}`}
+                  >
+                    <FontAwesomeIcon icon={faArrowLeft} className="text-xs sm:text-sm" />
+                    <span className="hidden sm:inline font-medium">{ui.back}</span>
+                  </button>
+                  <div className={`w-px h-6 hidden sm:block ${lightMode ? "bg-gray-200" : "bg-white/15"}`} />
+                </>
+              )}
 
               {clinic?.logoUrl ? (
                 // Clinics upload logos with all kinds of backgrounds (opaque white,
@@ -1143,7 +1147,7 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                 <Image src={appLogo} alt={brand.name + " logo"} height={32} className="h-6 sm:h-8 w-auto" />
               )}
 
-              <div className="w-px h-6 bg-white/15 hidden md:block" />
+              <div className={`w-px h-6 hidden md:block ${lightMode ? "bg-gray-200" : "bg-white/15"}`} />
 
               {/* Bot identity */}
               <div className="hidden md:flex items-center gap-2 sm:gap-3">
@@ -1162,7 +1166,7 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                   </div>
                 </div>
                 <div>
-                  <p className="font-bold text-sm text-white leading-tight">{ui.title}</p>
+                  <p className={`font-bold text-sm leading-tight ${lightMode ? "text-gray-900" : "text-white"}`}>{ui.title}</p>
                   <p className="text-[11px] flex items-center gap-1 leading-tight" style={{ color: hexToRgba(accentColor, 0.75) }}>
                     <FontAwesomeIcon icon={faHeartPulse} className="text-[10px]" />
                     {ui.subtitle}
@@ -1173,10 +1177,10 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
 
             {/* Right side — language switcher + online badge */}
             <div className="flex items-center gap-2 sm:gap-3">
-              <LanguageSwitcher currentLanguage={language} setLanguage={setLanguage} variant="dark" />
+              <LanguageSwitcher currentLanguage={language} setLanguage={setLanguage} variant={lightMode ? "light" : "dark"} />
 
               {/* Online Badge */}
-              <div className="hidden sm:block px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-semibold whitespace-nowrap text-white/80 border border-white/20 bg-white/10">
+              <div className={`hidden sm:block px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border ${lightMode ? "text-gray-600 border-gray-200 bg-gray-50" : "text-white/80 border-white/20 bg-white/10"}`}>
                 {ui.online}
               </div>
             </div>
@@ -1310,11 +1314,11 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                       <div
                         className="rounded-2xl sm:rounded-3xl px-4 py-3 sm:px-6 sm:py-4 shadow-lg border"
                         style={{
-                          background: embedded ? "#F1F5F9" : "rgba(255,255,255,0.055)",
-                          borderColor: embedded ? "#E2E8F0" : "rgba(255,255,255,0.09)"
+                          background: isLight ? "#F1F5F9" : "rgba(255,255,255,0.055)",
+                          borderColor: isLight ? "#E2E8F0" : "rgba(255,255,255,0.09)"
                         }}
                       >
-                        <div className="text-sm sm:text-base break-words" style={{ color: embedded ? "#0F172A" : "rgba(255,255,255,0.88)", overflowWrap: "break-word", wordBreak: "break-word" }}>
+                        <div className="text-sm sm:text-base break-words" style={{ color: isLight ? "#0F172A" : "rgba(255,255,255,0.88)", overflowWrap: "break-word", wordBreak: "break-word" }}>
                           {formatAIMessage(message.content, accentColor)}
                         </div>
                       </div>
@@ -2595,15 +2599,15 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                 >
                   <FontAwesomeIcon icon={faRobot} className="text-xs sm:text-sm" style={{ color: onAccent }} />
                 </div>
-                <div className="rounded-2xl sm:rounded-3xl px-4 py-3 sm:px-6 sm:py-4 shadow-lg border" style={{ background: embedded ? "#F1F5F9" : "rgba(255,255,255,0.055)", borderColor: embedded ? "#E2E8F0" : "rgba(255,255,255,0.09)" }}>
+                <div className="rounded-2xl sm:rounded-3xl px-4 py-3 sm:px-6 sm:py-4 shadow-lg border" style={{ background: isLight ? "#F1F5F9" : "rgba(255,255,255,0.055)", borderColor: isLight ? "#E2E8F0" : "rgba(255,255,255,0.09)" }}>
                   {streamingText ? (
-                    <div className="text-sm sm:text-base break-words" style={{ color: embedded ? "#0F172A" : "rgba(255,255,255,0.88)", overflowWrap: "break-word", wordBreak: "break-word" }}>
+                    <div className="text-sm sm:text-base break-words" style={{ color: isLight ? "#0F172A" : "rgba(255,255,255,0.88)", overflowWrap: "break-word", wordBreak: "break-word" }}>
                       {formatAIMessage(streamingText, accentColor)}
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 sm:gap-3">
                       <FontAwesomeIcon icon={faSpinner} className="animate-spin text-sm sm:text-base" style={{ color: accentColor }} />
-                      <span className="text-sm sm:text-base" style={{ color: embedded ? "rgba(15,23,42,0.55)" : "rgba(255,255,255,0.60)" }}>
+                      <span className="text-sm sm:text-base" style={{ color: isLight ? "rgba(15,23,42,0.55)" : "rgba(255,255,255,0.60)" }}>
                         {{ ru: "Анализирую симптомы...", en: "Analysing symptoms...", kz: "Симптомдарды талдаймын...", uz: "Simptomlarni tahlil qilmoqdaman..." }[language as "ru" | "en" | "kz" | "uz"] ?? "Анализирую симптомы..."}
                       </span>
                     </div>
@@ -2618,7 +2622,7 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
       </div>
 
       {/* Input Area */}
-      <div className={embedded ? "border-t flex-shrink-0" : "sticky bottom-0 backdrop-blur-xl border-t"} style={{ background: embedded ? "#FFFFFF" : "rgba(10,10,27,0.96)", borderColor: embedded ? "rgba(15,23,42,0.08)" : "rgba(255,255,255,0.07)" }}>
+      <div className={embedded ? "border-t flex-shrink-0" : "sticky bottom-0 backdrop-blur-xl border-t"} style={{ background: isLight ? "#FFFFFF" : "rgba(10,10,27,0.96)", borderColor: isLight ? "rgba(15,23,42,0.08)" : "rgba(255,255,255,0.07)" }}>
         <div className="container mx-auto max-w-5xl px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
           {/* Image Preview */}
           {imagePreview && (
@@ -2642,8 +2646,8 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
             {/* Combined Input Container */}
             <div className="relative rounded-3xl border transition-all shadow-lg"
               style={{
-                borderColor: embedded ? "rgba(15,23,42,0.10)" : "rgba(255,255,255,0.10)",
-                background: embedded ? "#F8FAFC" : "rgba(255,255,255,0.06)"
+                borderColor: isLight ? "rgba(15,23,42,0.10)" : "rgba(255,255,255,0.10)",
+                background: isLight ? "#F8FAFC" : "rgba(255,255,255,0.06)"
               }}
             >
               <div className="flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2">
@@ -2655,7 +2659,7 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                   placeholder={ui.placeholder}
                   disabled={isLoading}
                   rows={1}
-                  className={`flex-1 px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 rounded-3xl focus:outline-none focus:ring-0 focus:border-0 disabled:opacity-50 disabled:cursor-not-allowed transition-all bg-transparent text-xs sm:text-sm lg:text-base resize-none overflow-hidden break-words border-0 ${embedded ? "placeholder-slate-400" : "placeholder-white/25"}`}
+                  className={`flex-1 px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 rounded-3xl focus:outline-none focus:ring-0 focus:border-0 disabled:opacity-50 disabled:cursor-not-allowed transition-all bg-transparent text-xs sm:text-sm lg:text-base resize-none overflow-hidden break-words border-0 ${isLight ? "placeholder-slate-400" : "placeholder-white/25"}`}
                   style={{
                     minHeight: "40px",
                     maxHeight: "120px",
@@ -2667,7 +2671,7 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                     WebkitAppearance: "none",
                     MozAppearance: "none",
                     appearance: "none",
-                    color: embedded ? "#0F172A" : "rgba(255,255,255,0.86)"
+                    color: isLight ? "#0F172A" : "rgba(255,255,255,0.86)"
                   }}
                   onInput={(e) => {
                     const target = e.target as HTMLTextAreaElement;
@@ -2736,8 +2740,8 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                   style={{
                     background: (input.trim() || imagePreview) && !isLoading
                       ? accentGrad
-                      : embedded ? "rgba(15,23,42,0.08)" : "rgba(255,255,255,0.10)",
-                    color: (input.trim() || imagePreview) && !isLoading ? onAccent : embedded ? "rgba(15,23,42,0.30)" : "rgba(255,255,255,0.35)"
+                      : isLight ? "rgba(15,23,42,0.08)" : "rgba(255,255,255,0.10)",
+                    color: (input.trim() || imagePreview) && !isLoading ? onAccent : isLight ? "rgba(15,23,42,0.30)" : "rgba(255,255,255,0.35)"
                   }}
                   onMouseEnter={(e) => {
                     if ((input.trim() || imagePreview) && !isLoading) {
@@ -2763,7 +2767,7 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
           </div>
 
           {/* Helper Text */}
-          <div className="mt-2 sm:mt-3 flex items-center justify-center gap-0.5 xs:gap-1 sm:gap-1.5 text-[8px] xs:text-[9px] sm:text-xs px-2" style={{ color: embedded ? "rgba(15,23,42,0.35)" : "rgba(255,255,255,0.28)" }}>
+          <div className="mt-2 sm:mt-3 flex items-center justify-center gap-0.5 xs:gap-1 sm:gap-1.5 text-[8px] xs:text-[9px] sm:text-xs px-2" style={{ color: isLight ? "rgba(15,23,42,0.35)" : "rgba(255,255,255,0.28)" }}>
             <span className="font-medium whitespace-nowrap">{ui.enterHint}</span>
             <span className="whitespace-nowrap">•</span>
             <span className="font-medium whitespace-nowrap">{ui.shiftHint}</span>

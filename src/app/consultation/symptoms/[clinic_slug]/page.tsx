@@ -81,6 +81,8 @@ export default function ClinicAgentPage() {
 
   return (
     <AISymptomsChecker
+      lightMode
+      hideBack
       clinic={{
         clinicId: config.clinic.id,
         clinicSlug: config.slug,
