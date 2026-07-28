@@ -60,13 +60,10 @@ export default function AIConsultationReview({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/ai-api/analyze-consultation/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description, patientName }),
-      });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || "AI error");
+      const { api } = await import("@/utils/api");
+      const res = await api.post("/chat/analyze-consultation/", { description, patientName });
+      const data = res.data;
+      if (data.error) throw new Error(data.error);
       const normalized = Object.fromEntries(
         Object.entries(data.result).map(([k, v]) => [k, typeof v === 'string' ? v : ''])
       );

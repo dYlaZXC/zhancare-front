@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+export const maxDuration = 60; // Vercel Pro: up to 60s function timeout
+
 const API_KEY = process.env.MISTRAL_API_KEY;
 const ENDPOINT = "https://api.mistral.ai/v1/chat/completions";
 
@@ -40,22 +42,32 @@ export async function POST(req: Request) {
       ? `Пациент: ${patientName}\n\nОписание врача:\n${description}`
       : `Описание врача:\n${description}`;
 
-    const response = await fetch(ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "mistral-large-latest",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userMessage },
-        ],
-        temperature: 0.4,
-        response_format: { type: "json_object" },
-      }),
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
+
+    let response: Response;
+    try {
+      response = await fetch(ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "mistral-small-latest",
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: userMessage },
+          ],
+          temperature: 0.4,
+          max_tokens: 1500,
+          response_format: { type: "json_object" },
+        }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       const rawError = await response.text();
@@ -85,6 +97,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ result: parsed });
   } catch (err: any) {
     console.error("analyze-consultation error:", err);
+    if (err?.name === "AbortError") {
+      return NextResponse.json({ error: "AI сервис не ответил вовремя, попробуйте ещё раз" }, { status: 504 });
+    }
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
