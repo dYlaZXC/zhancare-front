@@ -80,6 +80,12 @@ export default function SymptomsPageLayout({ clinic }: { clinic?: ClinicContext 
   const [emptyInput, setEmptyInput] = useState("");
   const [emptyImagePreview, setEmptyImagePreview] = useState<string | null>(null);
   const emptyFileInputRef = useRef<HTMLInputElement>(null);
+  const [isEmptyRecording, setIsEmptyRecording] = useState(false);
+  const [isEmptyTranscribing, setIsEmptyTranscribing] = useState(false);
+  const emptyMediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const emptyAudioChunksRef = useRef<Blob[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const emptyRecognitionRef = useRef<any>(null);
   const [initialImage, setInitialImage] = useState<string | null>(null);
   const [loadedMessages, setLoadedMessages] = useState<SavedMessage[]>([]);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -165,6 +171,77 @@ export default function SymptomsPageLayout({ clinic }: { clinic?: ClinicContext 
     const sid = activeSessionIdRef.current;
     if (!sid) return;
     localStorage.setItem(msgKey(userIdRef.current, sid), JSON.stringify(msgs));
+  };
+
+  const toggleEmptyRecording = async () => {
+    if (isEmptyRecording) {
+      if (emptyRecognitionRef.current) {
+        emptyRecognitionRef.current.stop();
+        emptyRecognitionRef.current = null;
+      } else {
+        emptyMediaRecorderRef.current?.stop();
+      }
+      setIsEmptyRecording(false);
+      return;
+    }
+
+    // ── Live mode: Web Speech API ─────────────────────────────────────────────
+    const SpeechRecognition =
+      (typeof window !== "undefined" && ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition));
+    if (SpeechRecognition) {
+      const langMap: Record<string, string> = { ru: "ru-RU", en: "en-US", kz: "kk-KZ", uz: "uz-UZ" };
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = langMap[language] ?? "ru-RU";
+
+      const baseText = emptyInput.trim();
+      recognition.onresult = (e: any) => {
+        let transcript = "";
+        for (let i = 0; i < e.results.length; i++) {
+          transcript += e.results[i][0].transcript;
+        }
+        setEmptyInput(baseText ? `${baseText} ${transcript}` : transcript);
+      };
+      recognition.onerror = () => { emptyRecognitionRef.current = null; setIsEmptyRecording(false); };
+      recognition.onend = () => { emptyRecognitionRef.current = null; setIsEmptyRecording(false); };
+
+      recognition.start();
+      emptyRecognitionRef.current = recognition;
+      setIsEmptyRecording(true);
+      return;
+    }
+
+    // ── Fallback: MediaRecorder + faster-whisper ──────────────────────────────
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "audio/mp4";
+      const recorder = new MediaRecorder(stream, { mimeType });
+      emptyAudioChunksRef.current = [];
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) emptyAudioChunksRef.current.push(e.data); };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(emptyAudioChunksRef.current, { type: mimeType });
+        emptyAudioChunksRef.current = [];
+        setIsEmptyTranscribing(true);
+        try {
+          const form = new FormData();
+          form.append("audio", blob, `recording.${mimeType.includes("mp4") ? "mp4" : "webm"}`);
+          form.append("lang", language);
+          const API = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+          const res = await fetch(`${API}/chat/transcribe/`, { method: "POST", credentials: "include", body: form });
+          if (res.ok) {
+            const { text } = await res.json() as { text: string };
+            if (text) setEmptyInput(prev => prev ? `${prev} ${text}` : text);
+          }
+        } catch { } finally { setIsEmptyTranscribing(false); }
+      };
+      recorder.start();
+      emptyMediaRecorderRef.current = recorder;
+      setIsEmptyRecording(true);
+    } catch { }
   };
 
   const startChat = (msg: string, imageUrl?: string) => {
@@ -658,8 +735,30 @@ export default function SymptomsPageLayout({ clinic }: { clinic?: ClinicContext 
                     <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                   </button>
                   <div className="flex items-center gap-2">
-                    <button disabled style={{ background: "transparent", border: "none", color: "rgba(15,23,42,0.20)", cursor: "not-allowed" }} className="w-8 h-8 rounded-xl flex items-center justify-center">
-                      <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+                    <button
+                      onClick={toggleEmptyRecording}
+                      disabled={isEmptyTranscribing}
+                      title={isEmptyTranscribing ? "Распознавание..." : isEmptyRecording ? "Остановить запись" : "Голосовой ввод"}
+                      style={{
+                        background: isEmptyRecording ? "#ef4444" : isEmptyTranscribing ? (brand.primary || "#4F7FFF") : "transparent",
+                        border: "none",
+                        color: (isEmptyRecording || isEmptyTranscribing) ? "white" : "rgba(15,23,42,0.45)",
+                        cursor: isEmptyTranscribing ? "not-allowed" : "pointer",
+                      }}
+                      className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors"
+                    >
+                      {isEmptyTranscribing ? (
+                        <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                        </svg>
+                      ) : (
+                        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={isEmptyRecording ? "2.5" : "1.8"} viewBox="0 0 24 24" className={isEmptyRecording ? "animate-pulse" : ""}>
+                          <rect x="9" y="2" width="6" height="12" rx="3"/>
+                          <path d="M5 10a7 7 0 0 0 14 0"/>
+                          <line x1="12" y1="19" x2="12" y2="22"/>
+                        </svg>
+                      )}
                     </button>
                     <button
                       onClick={() => { if (emptyInput.trim() || emptyImagePreview) startChat(emptyInput.trim(), emptyImagePreview ?? undefined); }}

@@ -417,6 +417,11 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
   const sendFnRef = useRef<(() => void) | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(initialImageUrl ?? null);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [preselectedDoctor, setPreselectedDoctor] = useState<Doctor | null>(null);
@@ -687,9 +692,97 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const toggleRecording = () => {
-    setIsRecording(!isRecording);
-    // Implement voice recording logic here
+  const toggleRecording = async () => {
+    if (isRecording) {
+      // Stop whichever mode is active
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+        recognitionRef.current = null;
+      } else {
+        mediaRecorderRef.current?.stop();
+      }
+      setIsRecording(false);
+      return;
+    }
+
+    // ── Live mode: Web Speech API (Chrome / Edge) ─────────────────────────────
+    const SpeechRecognition =
+      (typeof window !== "undefined" && ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition));
+    if (SpeechRecognition) {
+      const langMap: Record<string, string> = { ru: "ru-RU", en: "en-US", kz: "kk-KZ", uz: "uz-UZ" };
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = langMap[language] ?? "ru-RU";
+
+      const baseText = input.trim();
+      recognition.onresult = (e: any) => {
+        let transcript = "";
+        for (let i = 0; i < e.results.length; i++) {
+          transcript += e.results[i][0].transcript;
+        }
+        setInput(baseText ? `${baseText} ${transcript}` : transcript);
+      };
+      recognition.onerror = () => { recognitionRef.current = null; setIsRecording(false); };
+      recognition.onend = () => { recognitionRef.current = null; setIsRecording(false); };
+
+      recognition.start();
+      recognitionRef.current = recognition;
+      setIsRecording(true);
+      return;
+    }
+
+    // ── Fallback: MediaRecorder + faster-whisper ──────────────────────────────
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : MediaRecorder.isTypeSupported("audio/webm")
+        ? "audio/webm"
+        : "audio/mp4";
+
+      const recorder = new MediaRecorder(stream, { mimeType });
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(audioChunksRef.current, { type: mimeType });
+        audioChunksRef.current = [];
+
+        setIsTranscribing(true);
+        try {
+          const form = new FormData();
+          form.append("audio", blob, `recording.${mimeType.includes("mp4") ? "mp4" : "webm"}`);
+          form.append("lang", language);
+
+          const API = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+          const res = await fetch(`${API}/chat/transcribe/`, {
+            method: "POST",
+            credentials: "include",
+            body: form,
+          });
+
+          if (res.ok) {
+            const { text } = await res.json() as { text: string };
+            if (text) setInput((prev) => (prev ? `${prev} ${text}` : text));
+          }
+        } catch {
+          // silently ignore
+        } finally {
+          setIsTranscribing(false);
+        }
+      };
+
+      recorder.start();
+      mediaRecorderRef.current = recorder;
+      setIsRecording(true);
+    } catch {
+      // mic permission denied or not supported
+    }
   };
 
   const handleBookAppointment = async (doctorId: number, doctorName: string, doctorRec?: DoctorRecommendation, type: 'online' | 'offline' = 'online') => {
@@ -867,8 +960,8 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
     ));
 
     const typeLabels = {
-      online:      { en: "Online video consultation", ru: "Онлайн видео-консультация", kz: "Онлайн бейне кеңес", uz: "Onlayn video konsultatsiya" },
-      offline:     { en: "In-person visit",           ru: "Оффлайн приём у врача",     kz: "Офлайн дәрігерге баю", uz: "Shifokor qabuliga shaxsan borish" },
+      online:      { en: "Video call with a doctor", ru: "Видеозвонок врачу",  kz: "Дәрігермен бейне қоңырау", uz: "Shifokor bilan video qo'ng'iroq" },
+      offline:     { en: "At the clinic",            ru: "В клинике",         kz: "Клиникада",                uz: "Klinikada" },
       diagnostics: { en: "Diagnostics",               ru: "Диагностика",               kz: "Диагностика", uz: "Diagnostika" },
     };
     const choiceLabel = typeLabels[type][lang] ?? typeLabels[type].ru;
@@ -1311,8 +1404,8 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                     booked:       { en: "You have successfully booked an appointment with", ru: "Вы успешно записались к врачу", kz: "Дәрігерге сәтті жазылдыңыз:", uz: "Shifokorga muvaffaqiyatli yozildingiz:" },
                     date:         { en: "Date", ru: "Дата", kz: "Күні", uz: "Sana" },
                     time:         { en: "Time", ru: "Время", kz: "Уақыты", uz: "Vaqt" },
-                    typeOnline:   { en: "Online video consultation", ru: "Онлайн видеоконсультация", kz: "Онлайн бейне кеңес", uz: "Onlayn video konsultatsiya" },
-                    typeOffline:  { en: "In-person visit", ru: "Оффлайн приём у врача", kz: "Офлайн дәрігерге баю", uz: "Shifokor qabuliga shaxsan borish" },
+                    typeOnline:   { en: "Video call with a doctor", ru: "Видеозвонок врачу", kz: "Дәрігермен бейне қоңырау", uz: "Shifokor bilan video qo'ng'iroq" },
+                    typeOffline:  { en: "At the clinic",            ru: "В клинике",        kz: "Клиникада",               uz: "Klinikada" },
                     clinic:       { en: "Clinic", ru: "Клиника", kz: "Клиника", uz: "Klinika" },
                     address:      { en: "Address", ru: "Адрес", kz: "Мекенжай", uz: "Manzil" },
                     room:         { en: "Room", ru: "Кабинет", kz: "Кабинет", uz: "Xona" },
@@ -2381,8 +2474,8 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                 })() : message.role === "consultation-type-selector" ? (() => {
                   const isSelected = !!message.selectedConsultationType;
                   const typeConfig = [
-                    { type: 'online'      as ConsultationFlow, label: { en: "Online",      ru: "Онлайн",      kz: "Онлайн",      uz: "Onlayn" },      sub: { en: "video consultation", ru: "видео-консультация", kz: "бейне кеңес", uz: "video konsultatsiya" }, icon: faVideo,        bg: "#1d4ed8" },
-                    { type: 'offline'     as ConsultationFlow, label: { en: "Offline",     ru: "Оффлайн",     kz: "Оффлайн",     uz: "Oflayn" },      sub: { en: "in-person visit",   ru: "приём у врача",     kz: "дәрігерге баю", uz: "shifokor qabuli" }, icon: faHouse,        bg: "#0f766e" },
+                    { type: 'online'      as ConsultationFlow, label: { en: "Video call",   ru: "Видеозвонок врачу", kz: "Дәрігермен бейне қоңырау", uz: "Shifokor bilan video qo'ng'iroq" }, sub: { en: "with a doctor", ru: "онлайн",        kz: "онлайн",        uz: "onlayn" },        icon: faVideo,        bg: "#1d4ed8" },
+                    { type: 'offline'     as ConsultationFlow, label: { en: "At the clinic", ru: "В клинике",       kz: "Клиникада",                uz: "Klinikada" },                              sub: { en: "in-person visit", ru: "приём у врача", kz: "дәрігерге баю", uz: "shifokor qabuli" }, icon: faHouse,        bg: "#0f766e" },
                     { type: 'diagnostics' as ConsultationFlow, label: { en: "Diagnostics", ru: "Диагностика", kz: "Диагностика", uz: "Diagnostika" }, sub: { en: "tests & exams",     ru: "анализы и обследование", kz: "талдау және тексеру", uz: "tahlil va tekshiruv" }, icon: faStethoscope, bg: "#7c3aed" },
                   ];
                   const lang = language as "en" | "ru" | "kz" | "uz";
@@ -2614,16 +2707,25 @@ export default function AISymptomsChecker({ clinic, embedded, initialInput, init
                 {/* Voice Recording Button */}
                 <button
                   onClick={toggleRecording}
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all hover:scale-110"
+                  disabled={isTranscribing}
+                  title={isTranscribing ? "Распознавание..." : isRecording ? "Остановить запись" : "Голосовой ввод"}
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all hover:scale-110 disabled:opacity-60 disabled:cursor-not-allowed"
                   style={{
-                    background: isRecording ? "#ef4444" : "transparent",
-                    color: isRecording ? "white" : accentColor
+                    background: isRecording ? "#ef4444" : isTranscribing ? accentColor : "transparent",
+                    color: (isRecording || isTranscribing) ? "white" : accentColor,
                   }}
                 >
-                  <FontAwesomeIcon
-                    icon={isRecording ? faStop : faMicrophone}
-                    className={`text-sm sm:text-base ${isRecording ? "animate-pulse" : ""}`}
-                  />
+                  {isTranscribing ? (
+                    <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                    </svg>
+                  ) : (
+                    <FontAwesomeIcon
+                      icon={isRecording ? faStop : faMicrophone}
+                      className={`text-sm sm:text-base ${isRecording ? "animate-pulse" : ""}`}
+                    />
+                  )}
                 </button>
 
                 {/* Send Button */}

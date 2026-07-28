@@ -26,15 +26,20 @@ import { isInjectionAttempt, CHAT_ENDPOINT } from "@/lib/ai";
 
 const DoctorVideoCallPage: React.FC = () => {
   const router = useRouter();
-  const { user, isDoctor } = useAuth();
+  const { user, isDoctor, loading: authLoading } = useAuth();
 
-  // Redirect if not a doctor
+  // Auth guards — run after auth is resolved
   useEffect(() => {
-    if (user && !isDoctor) {
-      router.push(`/video-call/patient?${window.location.search}`);
+    if (authLoading) return;
+    if (!user) {
+      // Not logged in — redirect to home (auth popup will open there)
+      router.push(`/?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
       return;
     }
-  }, [user, isDoctor, router]);
+    if (!isDoctor) {
+      router.push(`/video-call/patient?${window.location.search}`);
+    }
+  }, [user, isDoctor, authLoading, router]);
 
   const [meetingId, setMeetingId] = useState<string | null>(null);
   const [consultation, setConsultation] = useState<Consultation | null>(null);
@@ -70,14 +75,15 @@ const DoctorVideoCallPage: React.FC = () => {
   const { language } = useLanguage();
   const t = language === "ru" ? ru.chat : kz.chat;
 
-  // Fetch consultation data from API using meetingId
+  // Fetch consultation data — only after auth is confirmed
   useEffect(() => {
+    if (authLoading || !user || !isDoctor) return;
+
     const fetchConsultationData = async () => {
       try {
         setConsultationLoading(true);
         setConsultationError(null);
 
-        // Get meetingId from URL
         const params = new URLSearchParams(window.location.search);
         const meetingIdParam = params.get("meetingId");
 
@@ -88,7 +94,6 @@ const DoctorVideoCallPage: React.FC = () => {
 
         setMeetingId(meetingIdParam);
 
-        // Fetch consultation data from API
         const response = await api.get(`/consultations/?meeting_id=${meetingIdParam}`);
 
         if (response.data && response.data.length > 0) {
@@ -98,14 +103,19 @@ const DoctorVideoCallPage: React.FC = () => {
         }
       } catch (err: any) {
         console.error('Error fetching consultation data:', err);
-        setConsultationError("Ошибка загрузки данных консультации");
+        const status = err?.response?.status;
+        if (status === 401 || status === 403) {
+          setConsultationError("Нет доступа. Войдите в систему как врач.");
+        } else {
+          setConsultationError("Ошибка загрузки данных консультации");
+        }
       } finally {
         setConsultationLoading(false);
       }
     };
 
     fetchConsultationData();
-  }, []);
+  }, [authLoading, user, isDoctor]);
 
   const handleDisconnect = () => {
     router.push("/doctor/consultations");

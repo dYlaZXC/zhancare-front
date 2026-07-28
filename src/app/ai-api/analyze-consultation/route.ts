@@ -58,8 +58,16 @@ export async function POST(req: Request) {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      return NextResponse.json({ error: error.message || "AI request failed" }, { status: response.status });
+      const rawError = await response.text();
+      let errorMessage = "AI request failed";
+      try {
+        const parsed = JSON.parse(rawError);
+        errorMessage = parsed.message || parsed.error || errorMessage;
+      } catch {
+        // Mistral returned non-JSON (e.g. Cloudflare HTML page)
+        errorMessage = `AI service error (HTTP ${response.status})`;
+      }
+      return NextResponse.json({ error: errorMessage }, { status: response.status });
     }
 
     const data = await response.json();

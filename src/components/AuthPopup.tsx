@@ -252,10 +252,30 @@ const AuthPopup = () => {
 ⏰ *Время:* ${new Date().toLocaleString('ru-RU')}
       `.trim();
 
-      // Wait for Telegram notification to send (topic 4 = Register)
       await sendTelegramNotification(registerMessage, 4);
 
-      setActiveTab("login");
+      // Auto-login with the just-registered credentials
+      try {
+        const loginRes = await api.post("/auth/login/", {
+          phone: cleanPhone,
+          password: data.password,
+          device_name: getDeviceName(),
+        });
+        const ld = loginRes.data;
+        await loginUser(ld.access_token, ld.refresh_token, ld.user);
+        setIsAuthOpen(false);
+        if (!authNoRedirect) {
+          const userRoles: string[] = ld.user.roles ?? [];
+          let redirectUrl = "/patient/video";
+          if (userRoles.includes("doctor")) redirectUrl = "/doctor-profile";
+          else if (userRoles.includes("nurse")) redirectUrl = "/nurse-profile";
+          else if (userRoles.includes("admin")) redirectUrl = "/admin-profile";
+          setTimeout(() => { window.location.href = redirectUrl; }, 500);
+        }
+      } catch {
+        // Auto-login failed — fall back to login tab so user can sign in manually
+        setActiveTab("login");
+      }
     } catch (err: any) {
       const errorData = err?.response?.data;
       let errorMessage = errorMessages.generalError;

@@ -60,7 +60,7 @@ export default function AIConsultationReview({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/analyze-consultation/", {
+      const res = await fetch("/ai-api/analyze-consultation/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ description, patientName }),

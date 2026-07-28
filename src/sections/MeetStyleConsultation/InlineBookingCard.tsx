@@ -458,24 +458,18 @@ export default function InlineBookingCard({
           <button
             onClick={handleConfirm}
             disabled={booking}
-            className="w-full rounded-xl font-bold transition-all duration-150 disabled:opacity-60"
+            className="w-full rounded-xl font-bold transition-all duration-150 disabled:opacity-60 active:scale-[0.98]"
             style={{
               padding: "12px 16px",
               fontSize: 14,
-              background: isLoggedIn ? accentColor : "#f3f4f6",
-              color: isLoggedIn ? "#ffffff" : "#374151",
-              boxShadow: isLoggedIn ? `0 4px 16px ${accentColor}40` : "none",
+              background: accentColor,
+              color: "#ffffff",
+              boxShadow: `0 4px 20px ${accentColor}55`,
             }}
           >
             {booking ? (
               <span className="flex items-center justify-center gap-2">
-                <svg
-                  className="animate-spin w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="animate-spin w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                   <path d="M21 12a9 9 0 1 1-18 0" />
                 </svg>
                 {t.booking}
@@ -483,7 +477,14 @@ export default function InlineBookingCard({
             ) : isLoggedIn ? (
               t.confirm
             ) : (
-              t.signIn
+              <span className="flex items-center justify-center gap-2">
+                <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                  <polyline points="10 17 15 12 10 7"/>
+                  <line x1="15" y1="12" x2="3" y2="12"/>
+                </svg>
+                {t.signIn}
+              </span>
             )}
           </button>
         )}
