@@ -38,6 +38,10 @@ import {
   History,
   ChevronLeft,
   ChevronRight,
+  RefreshCw,
+  Eye,
+  EyeOff,
+  Copy,
 } from "lucide-react";
 
 const PAGE_SIZE = 20;
@@ -477,6 +481,31 @@ export default function StaffManagement({ user }: StaffManagementProps) {
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [validationKey, setValidationKey] = useState(0);
+  const [showStaffPassword, setShowStaffPassword] = useState(false);
+  const [requirePasswordChange, setRequirePasswordChange] = useState(true);
+
+  const generateStaffPassword = () => {
+    const lower = 'abcdefghijklmnopqrstuvwxyz';
+    const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const digits = '0123456789';
+    const special = '!@#$%&*';
+    const all = lower + upper + digits + special;
+    let pass = lower[Math.floor(Math.random() * lower.length)]
+      + upper[Math.floor(Math.random() * upper.length)]
+      + digits[Math.floor(Math.random() * digits.length)]
+      + special[Math.floor(Math.random() * special.length)];
+    for (let i = 4; i < 12; i++) pass += all[Math.floor(Math.random() * all.length)];
+    pass = pass.split('').sort(() => Math.random() - 0.5).join('');
+    setFormData(f => ({ ...f, password: pass }));
+    setShowStaffPassword(true);
+    if (formErrors.password) setFormErrors(prev => { const next = { ...prev }; delete next.password; return next; });
+  };
+
+  const copyStaffPassword = () => {
+    if (!formData.password) return;
+    navigator.clipboard.writeText(formData.password);
+    toast.success('Пароль скопирован');
+  };
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const languageDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -1297,6 +1326,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         diagnostics_commissions: diagCommissions
           .filter(r => r.service_id)
           .map(r => ({ service_id: Number(r.service_id), doctor_share_percent: Number(r.doctor_share_percent) || 0 })),
+        require_password_change: requirePasswordChange,
       };
 
       const response = await api.post("/staff/", payload);
@@ -2324,21 +2354,70 @@ export default function StaffManagement({ user }: StaffManagementProps) {
 
                   {/* Password */}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Пароль <span className="text-red-500">*</span>
-                    </label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Пароль <span className="text-red-500">*</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={generateStaffPassword}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        Сгенерировать
+                      </button>
+                    </div>
                     <div className="relative">
                       <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
-                        type="password"
+                        type={showStaffPassword ? "text" : "password"}
                         value={formData.password}
                         onChange={(e) => { setFormData({ ...formData, password: e.target.value }); clearError('password'); }}
-                        className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 ${formErrors.password ? 'border-red-500' : 'border-gray-200'} focus:border-blue-500 focus:outline-none transition-colors`}
+                        className={`w-full pl-12 pr-20 py-3 rounded-xl border-2 ${formErrors.password ? 'border-red-500' : 'border-gray-200'} focus:border-blue-500 focus:outline-none transition-colors font-mono`}
                         placeholder="Минимум 8 символов"
                         minLength={8}
                       />
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setShowStaffPassword(s => !s)}
+                          className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors"
+                          title={showStaffPassword ? "Скрыть" : "Показать"}
+                        >
+                          {showStaffPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={copyStaffPassword}
+                          className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors"
+                          title="Скопировать пароль"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                     {formErrors.password && <p key={validationKey} className="animate-shake text-red-500 text-xs mt-1">{formErrors.password}</p>}
+
+                    {/* Force password change checkbox */}
+                    <label className="flex items-center gap-2.5 mt-3 cursor-pointer select-none group">
+                      <div
+                        onClick={() => setRequirePasswordChange(v => !v)}
+                        className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-all flex-shrink-0 ${
+                          requirePasswordChange
+                            ? 'bg-blue-600 border-blue-600'
+                            : 'bg-white border-gray-300 group-hover:border-blue-400'
+                        }`}
+                      >
+                        {requirePasswordChange && (
+                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12">
+                            <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
+                      </div>
+                      <span className="text-sm text-gray-600 group-hover:text-gray-800 transition-colors">
+                        Потребовать смену пароля при первом входе
+                      </span>
+                    </label>
                   </div>
 
                   {/* Gender and Birth Date */}

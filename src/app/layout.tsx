@@ -12,6 +12,7 @@ import { BrandProvider } from "@/context/BrandContext";
 import { BRAND_STYLES } from "@/config/brandConfig";
 import type { BrandId } from "@/config/brandConfig";
 import AuthPopup from "@/components/AuthPopup";
+import ForceChangePasswordModal from "@/components/ForceChangePasswordModal";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -172,6 +173,7 @@ export default async function RootLayout({
               <OptimizedConsultationProvider>
                 <main>{children}</main>
                 <AuthPopup />
+                <ForceChangePasswordModal />
               </OptimizedConsultationProvider>
             </BrandProvider>
           </LanguageProvider>

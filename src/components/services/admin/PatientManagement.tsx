@@ -9,6 +9,7 @@ import {
   MapPin, Building, Loader2, AlertCircle, Edit2, Trash2,
   CheckCircle, XCircle, Clock, Stethoscope, Home, FolderOpen,
   MessageCircle, ChevronDown, ChevronLeft, ChevronRight,
+  RefreshCw, Eye, EyeOff, Copy,
 } from "lucide-react";
 
 const PAGE_SIZE = 20;
@@ -47,6 +48,7 @@ interface Patient {
   profession?: string;
 
   clinic?: { id: number; name: string } | null;
+  clinic_created?: boolean;
   last_visit?: string | null;
   last_visit_type?: 'consultation' | 'appointment' | null;
   visits_count?: number;
@@ -173,7 +175,7 @@ export default function PatientManagement({ user }: PatientManagementProps) {
   const [initialLoad, setInitialLoad] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive' | 'clinic_created'>('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -199,6 +201,30 @@ export default function PatientManagement({ user }: PatientManagementProps) {
     clinic_id: '',
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [requirePasswordChange, setRequirePasswordChange] = useState(true);
+
+  const generatePassword = () => {
+    const lower = 'abcdefghijklmnopqrstuvwxyz';
+    const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const digits = '0123456789';
+    const special = '!@#$%&*';
+    const all = lower + upper + digits + special;
+    let pass = lower[Math.floor(Math.random() * lower.length)]
+      + upper[Math.floor(Math.random() * upper.length)]
+      + digits[Math.floor(Math.random() * digits.length)]
+      + special[Math.floor(Math.random() * special.length)];
+    for (let i = 4; i < 12; i++) pass += all[Math.floor(Math.random() * all.length)];
+    pass = pass.split('').sort(() => Math.random() - 0.5).join('');
+    setFormData(f => ({ ...f, password: pass }));
+    setShowPassword(true);
+  };
+
+  const copyPassword = () => {
+    if (!formData.password) return;
+    navigator.clipboard.writeText(formData.password);
+    toast.success('Пароль скопирован');
+  };
 
   useEffect(() => {
     fetchPatients();
@@ -242,7 +268,6 @@ export default function PatientManagement({ user }: PatientManagementProps) {
 
     if (!formData.first_name.trim()) errors.first_name = 'Введите имя';
     if (!formData.last_name.trim()) errors.last_name = 'Введите фамилию';
-    if (!formData.email.trim()) errors.email = 'Введите email';
     if (!formData.phone.trim()) errors.phone = 'Введите номер телефона';
 
     if (!showEditModal) {
@@ -268,7 +293,7 @@ export default function PatientManagement({ user }: PatientManagementProps) {
     setAddLoading(true);
 
     try {
-      const response = await api.post('/patients/', formData);
+      const response = await api.post('/patients/', { ...formData, require_password_change: requirePasswordChange });
       const newPatient = response.data;
 
       // Add new patient to the list
@@ -424,7 +449,8 @@ export default function PatientManagement({ user }: PatientManagementProps) {
       const matchesStatus =
         filterStatus === 'all' ||
         (filterStatus === 'active' && patient.is_active) ||
-        (filterStatus === 'inactive' && !patient.is_active);
+        (filterStatus === 'inactive' && !patient.is_active) ||
+        (filterStatus === 'clinic_created' && !!patient.clinic_created);
 
       return matchesSearch && matchesStatus;
     })
@@ -443,6 +469,7 @@ export default function PatientManagement({ user }: PatientManagementProps) {
     total: patients.length,
     active: patients.filter(p => p.is_active).length,
     inactive: patients.filter(p => !p.is_active).length,
+    clinic_created: patients.filter(p => !!p.clinic_created).length,
   };
 
   return (
@@ -576,6 +603,26 @@ export default function PatientManagement({ user }: PatientManagementProps) {
             >
               <XCircle className="w-5 h-5" />
               Неактивные
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setFilterStatus('clinic_created')}
+              className={`px-4 py-3 rounded-2xl font-semibold transition-all flex items-center gap-2 ${
+                filterStatus === 'clinic_created'
+                  ? 'bg-blue-600 text-white shadow-lg'
+                  : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-blue-300'
+              }`}
+            >
+              <Building className="w-5 h-5" />
+              Созданные клиникой
+              {stats.clinic_created > 0 && (
+                <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${
+                  filterStatus === 'clinic_created' ? 'bg-white/30 text-white' : 'bg-blue-100 text-blue-700'
+                }`}>
+                  {stats.clinic_created}
+                </span>
+              )}
             </motion.button>
           </div>
         </div>
@@ -843,13 +890,12 @@ export default function PatientManagement({ user }: PatientManagementProps) {
                   {/* Email */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Email <span className="text-red-500">*</span>
+                      Email
                     </label>
                     <div className="relative">
                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
                         type="email"
-                        required
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:outline-none transition-colors"
@@ -873,21 +919,70 @@ export default function PatientManagement({ user }: PatientManagementProps) {
 
                   {/* Password */}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Пароль <span className="text-red-500">*</span>
-                    </label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Пароль <span className="text-red-500">*</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={generatePassword}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-green-600 hover:text-green-700 transition-colors"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        Сгенерировать
+                      </button>
+                    </div>
                     <div className="relative">
                       <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
-                        type="password"
+                        type={showPassword ? "text" : "password"}
                         required
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:outline-none transition-colors"
+                        className="w-full pl-12 pr-20 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:outline-none transition-colors font-mono"
                         placeholder="Минимум 8 символов"
                         minLength={8}
                       />
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(s => !s)}
+                          className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors"
+                          title={showPassword ? "Скрыть" : "Показать"}
+                        >
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={copyPassword}
+                          className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors"
+                          title="Скопировать пароль"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
+
+                    {/* Force password change checkbox */}
+                    <label className="flex items-center gap-2.5 mt-3 cursor-pointer select-none group">
+                      <div
+                        onClick={() => setRequirePasswordChange(v => !v)}
+                        className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-all flex-shrink-0 ${
+                          requirePasswordChange
+                            ? 'bg-green-600 border-green-600'
+                            : 'bg-white border-gray-300 group-hover:border-green-400'
+                        }`}
+                      >
+                        {requirePasswordChange && (
+                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12">
+                            <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
+                      </div>
+                      <span className="text-sm text-gray-600 group-hover:text-gray-800 transition-colors">
+                        Потребовать смену пароля при первом входе
+                      </span>
+                    </label>
                   </div>
 
                   {/* Birth Date & Gender */}
@@ -1113,13 +1208,12 @@ export default function PatientManagement({ user }: PatientManagementProps) {
                   {/* Email */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Email <span className="text-red-500">*</span>
+                      Email
                     </label>
                     <div className="relative">
                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
                         type="email"
-                        required
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
@@ -1142,19 +1236,47 @@ export default function PatientManagement({ user }: PatientManagementProps) {
 
                   {/* Password (Optional for edit) */}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Новый пароль <span className="text-gray-500 text-xs">(оставьте пустым, чтобы не менять)</span>
-                    </label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Новый пароль <span className="text-gray-400 text-xs font-normal">(оставьте пустым, чтобы не менять)</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={generatePassword}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        Сгенерировать
+                      </button>
+                    </div>
                     <div className="relative">
                       <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
-                        type="password"
+                        type={showPassword ? "text" : "password"}
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                        className="w-full pl-12 pr-20 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors font-mono"
                         placeholder="Минимум 8 символов"
                         minLength={8}
                       />
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(s => !s)}
+                          className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors"
+                          title={showPassword ? "Скрыть" : "Показать"}
+                        >
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={copyPassword}
+                          className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors"
+                          title="Скопировать пароль"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
 

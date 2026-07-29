@@ -180,6 +180,9 @@ const AuthPopup = () => {
 
       setIsAuthOpen(false);
 
+      // If must change password — modal handles redirect after change
+      if (responseData.user.must_change_password) return;
+
       // If opened from a context (e.g. booking modal) — don't redirect, stay on page
       if (!authNoRedirect) {
         const userRoles: string[] = responseData.user.roles ?? [];
@@ -213,6 +216,8 @@ const AuthPopup = () => {
     await loginUser(accessToken, refreshToken, safeUser);
     toast.success(errorMessages.loginSuccess);
     setIsAuthOpen(false);
+    // If must change password — modal handles redirect after change
+    if (safeUser.must_change_password) return;
     if (!authNoRedirect) {
       const userRoles: string[] = safeUser.roles ?? [];
       let redirectUrl = "/patient/video";

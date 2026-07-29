@@ -59,6 +59,8 @@ export interface User {
 
   // Timestamps
   date_joined?: string;
+
+  must_change_password?: boolean;
 }
 
 interface Session {
@@ -84,6 +86,8 @@ interface AuthContextProps {
   sessionsLoading: boolean;
   loginUser: (accessToken: string, refreshToken: string, userData: User) => void;
   logoutUser: (showMessage?: boolean) => void;
+  mustChangePassword: boolean;
+  clearMustChangePassword: () => void;
   fetchSessions: () => Promise<void>;
   revokeSession: (sessionId: number) => Promise<void>;
   revokeAllOtherSessions: () => Promise<void>;
@@ -108,6 +112,8 @@ const defaultAuthContext: AuthContextProps = {
   sessionsLoading: false,
   loginUser: () => {},
   logoutUser: () => {},
+  mustChangePassword: false,
+  clearMustChangePassword: () => {},
   fetchSessions: async () => {},
   revokeSession: async () => {},
   revokeAllOtherSessions: async () => {},
@@ -134,6 +140,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
 
   // Set axios default Authorization header (Bearer for JWT)
   const setAuthHeader = useCallback((accessToken: string | null) => {
@@ -206,6 +213,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     init();
   }, [setAuthHeader]);
 
+  const clearMustChangePassword = useCallback(() => setMustChangePassword(false), []);
+
   // Login
   const loginUser = useCallback((accessToken: string, refreshToken: string, userData: User) => {
     const enriched: User = { ...userData, role: computeRole(userData.roles) };
@@ -216,6 +225,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setAuthHeader(accessToken);
     // Set auth presence cookie for middleware SSR guard
     document.cookie = `zha_auth=1; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+    if (userData.must_change_password) {
+      setMustChangePassword(true);
+    }
   }, [setAuthHeader]);
 
   // Logout
@@ -299,6 +311,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         sessionsLoading,
         loginUser,
         logoutUser,
+        mustChangePassword,
+        clearMustChangePassword,
         fetchSessions,
         revokeSession,
         revokeAllOtherSessions,
