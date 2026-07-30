@@ -28,6 +28,7 @@ import { ReferralsContent } from "./schedule/views/ReferralsContent";
 interface ScheduleEvent {
   id: string;
   type: 'consultation' | 'appointment' | 'diagnostics';
+  consultation_type?: 'online' | 'offline';
   patient_id: number;
   patient_name: string;
   doctor_id?: number;
