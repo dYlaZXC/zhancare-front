@@ -204,6 +204,8 @@ export default function AddEventModal({
   const [nurses, setNurses] = useState<typeof doctors>([]);
 
   const [clinicCurrency, setClinicCurrency] = useState<string>('KZT');
+  const [clinicName, setClinicName] = useState<string>('');
+  const [clinicAddress, setClinicAddress] = useState<string>('');
 
   // Diagnostics state
   const [diagCategory, setDiagCategory] = useState<string | null>(null);
@@ -228,7 +230,10 @@ export default function AddEventModal({
 
   useEffect(() => {
     api.get('/clinic-stats/').then(res => {
-      if (res.data?.clinic_info?.currency) setClinicCurrency(res.data.clinic_info.currency);
+      const info = res.data?.clinic_info;
+      if (info?.currency) setClinicCurrency(info.currency);
+      if (info?.name)     setClinicName(info.name);
+      if (info?.address)  setClinicAddress(info.address);
     }).catch(() => {});
   }, []);
 
@@ -483,8 +488,8 @@ export default function AddEventModal({
     const patient = patients.find(p => String(p.id) === formData.patient_id);
     const doctor = doctors.find(d => String(d.id) === formData.doctor_id);
     const isOnline = consultationType === 'online';
-    const typeLabel = consultationType === 'online' ? 'Онлайн' : consultationType === 'offline' ? 'Оффлайн' : 'Выезд на дом';
-    const link = createdInfo?.meeting_id
+    const typeLabel = consultationType === 'online' ? 'Видеоконсультация' : consultationType === 'offline' ? 'Приём в клинике' : 'Выезд на дом';
+    const link = isOnline && createdInfo?.meeting_id
       ? `${window.location.origin}/video-call/patient?meetingId=${createdInfo.meeting_id}`
       : null;
 
@@ -504,7 +509,7 @@ export default function AddEventModal({
       '📋 Ваша запись в ZhanCare',
       '',
       `📅 Дата: ${formData.date}, ${formData.time} (${formData.duration} мин)`,
-      `🏥 Тип: ${typeLabel} консультация`,
+      `🏥 Тип: ${typeLabel}`,
     ];
 
     if (doctor) lines.push(`👨‍⚕️ Доктор: ${doctor.first_name} ${doctor.last_name}`);
@@ -513,10 +518,10 @@ export default function AddEventModal({
       lines.push(`👤 Пациент: ${patient.first_name} ${patient.last_name}`);
     }
 
-    if (link) {
+    if (isOnline && link) {
       lines.push('', `🔗 Ссылка для входа:`, link);
     }
-    if (createdInfo?.access_code) {
+    if (isOnline && createdInfo?.access_code) {
       lines.push(`🔑 Код доступа: ${createdInfo.access_code}`);
     }
 
@@ -544,7 +549,12 @@ export default function AddEventModal({
     const patient = patients.find(p => String(p.id) === formData.patient_id);
     const doctor = doctors.find(d => String(d.id) === formData.doctor_id);
     const isOnline = consultationType === 'online';
-    const link = createdInfo.meeting_id
+    const isHome = consultationType === 'home';
+    const typeLabel = consultationType === 'online' ? 'Видеоконсультация'
+      : consultationType === 'offline' ? 'Приём в клинике'
+      : consultationType === 'home' ? 'Выезд на дом'
+      : 'Диагностика';
+    const link = isOnline && createdInfo.meeting_id
       ? `${window.location.origin}/video-call/patient?meetingId=${createdInfo.meeting_id}`
       : null;
     const priceRaw = doctor
@@ -609,6 +619,18 @@ export default function AddEventModal({
           <div className="p-6 space-y-4">
             {/* Summary */}
             <div className="bg-gray-50 rounded-2xl p-4 space-y-2.5 text-sm">
+              {/* Type */}
+              <div className="flex items-center gap-2.5">
+                {isOnline
+                  ? <Video className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+                  : isHome
+                    ? <MapPin className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                    : <Building2 className="w-4 h-4 text-teal-500 flex-shrink-0" />
+                }
+                <span className="text-gray-500 w-24 flex-shrink-0">Тип</span>
+                <span className="font-semibold text-gray-800">{typeLabel}</span>
+              </div>
+
               {patient && (
                 <div className="flex items-center gap-2.5">
                   <User className="w-4 h-4 text-blue-500 flex-shrink-0" />
@@ -623,20 +645,48 @@ export default function AddEventModal({
                   <span className="font-semibold text-gray-800">{doctor.first_name} {doctor.last_name}</span>
                 </div>
               )}
-              {link && (
+
+              {/* Online-only: video link + code */}
+              {isOnline && link && (
                 <div className="flex items-start gap-2.5">
                   <Video className="w-4 h-4 text-indigo-500 flex-shrink-0 mt-0.5" />
                   <span className="text-gray-500 w-24 flex-shrink-0">Ссылка</span>
                   <span className="font-medium text-indigo-600 text-xs break-all leading-relaxed">{link}</span>
                 </div>
               )}
-              {createdInfo.access_code && (
+              {isOnline && createdInfo.access_code && (
                 <div className="flex items-center gap-2.5">
                   <span className="w-4 h-4 text-amber-500 flex-shrink-0 text-center text-xs font-black">🔑</span>
                   <span className="text-gray-500 w-24 flex-shrink-0">Код</span>
                   <span className="font-black font-mono tracking-widest text-gray-800">{createdInfo.access_code}</span>
                 </div>
               )}
+
+              {/* Offline: clinic address */}
+              {!isOnline && !isHome && clinicName && (
+                <div className="flex items-center gap-2.5">
+                  <Building2 className="w-4 h-4 text-teal-500 flex-shrink-0" />
+                  <span className="text-gray-500 w-24 flex-shrink-0">Клиника</span>
+                  <span className="font-semibold text-gray-800">{clinicName}</span>
+                </div>
+              )}
+              {!isOnline && !isHome && clinicAddress && (
+                <div className="flex items-start gap-2.5">
+                  <MapPin className="w-4 h-4 text-teal-400 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-500 w-24 flex-shrink-0">Адрес</span>
+                  <span className="font-medium text-gray-700">{clinicAddress}</span>
+                </div>
+              )}
+
+              {/* Home visit: patient address */}
+              {isHome && patient && (patient as any).address && (
+                <div className="flex items-start gap-2.5">
+                  <MapPin className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-500 w-24 flex-shrink-0">Адрес</span>
+                  <span className="font-medium text-gray-700">{(patient as any).address}</span>
+                </div>
+              )}
+
               {paymentType !== 'free' && price > 0 && (
                 <div className="flex items-center gap-2.5">
                   <Banknote className="w-4 h-4 text-emerald-500 flex-shrink-0" />
@@ -729,8 +779,8 @@ export default function AddEventModal({
             </label>
             <div className="grid grid-cols-2 gap-3">
               {([
-                { type: 'offline',     label: 'Оффлайн',      sub: 'Визит в клинику',         Icon: Home,        bg: '#0f766e' },
-                { type: 'online',      label: 'Онлайн',        sub: 'Видеозвонок',              Icon: Video,       bg: '#1d4ed8' },
+                { type: 'offline',     label: 'Приём в клинике', sub: 'Визит в клинику',         Icon: Home,        bg: '#0f766e' },
+                { type: 'online',      label: 'Видеоконсультация', sub: 'Видеозвонок',              Icon: Video,       bg: '#1d4ed8' },
                 { type: 'home',        label: 'Вызов на дом',  sub: 'Медсестра к вам',          Icon: MapPin,      bg: '#b45309' },
                 { type: 'diagnostics', label: 'Диагностика',   sub: 'Анализы и обследование',   Icon: Stethoscope, bg: '#7c3aed' },
               ] as const).map(({ type, label, sub, Icon, bg }) => (

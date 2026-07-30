@@ -9,7 +9,7 @@ import {
   Plus, Pencil, Trash2, Loader2, X, CheckCircle2, Save,
   FlaskConical, ScanLine, Heart, Brain, Bone, Eye, Baby, Microscope,
   ClipboardList, Clock, Banknote, ToggleLeft, ToggleRight,
-  CalendarDays, Search,
+  CalendarDays, Search, Stethoscope, ChevronDown,
 } from "lucide-react";
 
 const CATEGORIES = [
@@ -24,6 +24,14 @@ const CATEGORIES = [
   { id: "micro",   label: "Микробиология", icon: Microscope,    color: "#0ea5e9" },
 ];
 
+interface StaffMember {
+  id: number;
+  first_name: string;
+  last_name: string;
+  specialization: string | null;
+  role: string;
+}
+
 interface Service {
   id: number;
   name: string;
@@ -36,6 +44,8 @@ interface Service {
   schedules?: Array<{ id: number; weekday: number; start_time: string; end_time: string; is_active: boolean }>;
   capacity_per_slot?: number;
   currency?: string;
+  doctor_id?: number | null;
+  doctor_name?: string | null;
 }
 
 const WEEKDAYS = [
@@ -92,7 +102,7 @@ function weeklyMapToSchedules(
 
 const EMPTY_FORM = {
   name: "", description: "", price: "", duration_minutes: 30, category: "lab",
-  currency: "",
+  currency: "", doctor_id: null as number | null,
 };
 
 export function ServicesView({ user }: { user: any }) {
@@ -106,6 +116,8 @@ export function ServicesView({ user }: { user: any }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [scheduleService, setScheduleService] = useState<Service | null>(null);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [doctorDropdown, setDoctorDropdown] = useState(false);
 
   const fetchServices = useCallback(async () => {
     setLoading(true);
@@ -127,14 +139,22 @@ export function ServicesView({ user }: { user: any }) {
 
   useEffect(() => { fetchServices(); }, [fetchServices]);
 
-  const openCreate = () => { setEditing(null); setForm(EMPTY_FORM); setShowModal(true); };
+  useEffect(() => {
+    api.get('/staff/').then(res => {
+      const list = Array.isArray(res.data) ? res.data : (res.data.results ?? []);
+      setStaff(list.filter((m: StaffMember) => m.role === 'doctor'));
+    }).catch(() => {});
+  }, []);
+
+  const openCreate = () => { setEditing(null); setForm(EMPTY_FORM); setDoctorDropdown(false); setShowModal(true); };
   const openEdit = (s: Service) => {
     setEditing(s);
     setForm({
       name: s.name, description: s.description || "", price: s.price || "",
       duration_minutes: s.duration_minutes, category: s.category,
-      currency: s.currency || "",
+      currency: s.currency || "", doctor_id: s.doctor_id ?? null,
     });
+    setDoctorDropdown(false);
     setShowModal(true);
   };
 
@@ -146,6 +166,7 @@ export function ServicesView({ user }: { user: any }) {
         ...form,
         price: form.price || null,
         currency: form.currency || clinicCurrency,
+        doctor_id: form.doctor_id ?? null,
       };
       if (editing) {
         const res = await api.patch(`/diagnostics/services/${editing.id}/`, payload);
@@ -291,7 +312,13 @@ export function ServicesView({ user }: { user: any }) {
                           </button>
                         </div>
                       </div>
-                      {s.description && <p className="text-xs text-gray-500 mb-3 line-clamp-2">{s.description}</p>}
+                      {s.description && <p className="text-xs text-gray-500 mb-2 line-clamp-2">{s.description}</p>}
+                      {s.doctor_name && (
+                        <div className="flex items-center gap-1.5 text-[11px] text-indigo-600 mb-2">
+                          <Stethoscope size={10} />
+                          <span className="font-semibold">{s.doctor_name}</span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-3 text-[11px] text-gray-500 mb-3 flex-wrap">
                         <span className="flex items-center gap-1"><Clock size={10} /> {s.duration_minutes} мин</span>
                         {s.price && <span className="flex items-center gap-1 font-semibold text-emerald-600"><Banknote size={10} /> {formatPrice(s.price, clinicCurrency)}</span>}
@@ -316,8 +343,8 @@ export function ServicesView({ user }: { user: any }) {
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
             onClick={e => { if (e.target === e.currentTarget) setShowModal(false); }}>
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
-              <div className="px-6 py-5 flex items-center justify-between border-b border-gray-100"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-md">
+              <div className="px-6 py-5 flex items-center justify-between border-b border-gray-100 rounded-t-3xl overflow-hidden"
                 style={{ background: "linear-gradient(135deg, #f0f9ff, #e0f2fe)" }}>
                 <div>
                   <h3 className="text-base font-black text-gray-800">{editing ? "Редактировать услугу" : "Добавить услугу"}</h3>
@@ -327,7 +354,7 @@ export function ServicesView({ user }: { user: any }) {
                   <X size={16} className="text-gray-500" />
                 </button>
               </div>
-              <div className="px-6 py-5 space-y-4">
+              <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
                 <div>
                   <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Категория</label>
                   <div className="grid grid-cols-4 gap-1.5">
@@ -400,8 +427,69 @@ export function ServicesView({ user }: { user: any }) {
                   </div>
                 </div>
 
+                {/* Doctor picker */}
+                <div>
+                  <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">
+                    Ответственный врач
+                  </label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setDoctorDropdown(v => !v)}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 bg-white hover:border-sky-400 transition-all text-left"
+                    >
+                      <Stethoscope size={14} className="text-gray-400 flex-shrink-0" />
+                      <span className="flex-1 truncate">
+                        {form.doctor_id
+                          ? (() => {
+                              const d = staff.find(s => s.id === form.doctor_id);
+                              return d ? `${d.last_name} ${d.first_name}` : 'Врач не найден';
+                            })()
+                          : <span className="text-gray-400">Не назначен</span>
+                        }
+                      </span>
+                      {form.doctor_id && (
+                        <button
+                          type="button"
+                          onClick={e => { e.stopPropagation(); setForm(f => ({ ...f, doctor_id: null })); }}
+                          className="w-5 h-5 rounded-full flex items-center justify-center hover:bg-gray-100"
+                        >
+                          <X size={11} className="text-gray-400" />
+                        </button>
+                      )}
+                      <ChevronDown size={13} className={`text-gray-400 transition-transform flex-shrink-0 ${doctorDropdown ? 'rotate-180' : ''}`} />
+                    </button>
+                    {doctorDropdown && (
+                      <div className="absolute left-0 right-0 top-full mt-1 z-[200] bg-white border border-gray-100 rounded-xl shadow-xl py-1 max-h-52 overflow-y-auto">
+                        <button
+                          type="button"
+                          onClick={() => { setForm(f => ({ ...f, doctor_id: null })); setDoctorDropdown(false); }}
+                          className={`w-full text-left px-4 py-2 text-sm transition-colors hover:bg-gray-50 ${!form.doctor_id ? 'font-semibold text-sky-600' : 'text-gray-500'}`}
+                        >
+                          Не назначен
+                        </button>
+                        {staff.map(d => (
+                          <button
+                            key={d.id}
+                            type="button"
+                            onClick={() => { setForm(f => ({ ...f, doctor_id: d.id })); setDoctorDropdown(false); }}
+                            className={`w-full text-left px-4 py-2 transition-colors hover:bg-gray-50 ${form.doctor_id === d.id ? 'bg-sky-50' : ''}`}
+                          >
+                            <p className={`text-sm font-semibold ${form.doctor_id === d.id ? 'text-sky-700' : 'text-gray-800'}`}>
+                              {d.last_name} {d.first_name}
+                            </p>
+                            {d.specialization && (
+                              <p className="text-[11px] text-gray-400 mt-0.5">{d.specialization}</p>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
               </div>
-              <div className="px-6 pb-5 flex gap-3">
+              <div className="px-6 pb-5 pt-2 flex gap-3 rounded-b-3xl bg-white">
                 <button onClick={() => setShowModal(false)} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 transition-all">
                   Отмена
                 </button>

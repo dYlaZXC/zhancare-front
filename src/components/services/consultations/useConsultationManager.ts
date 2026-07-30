@@ -34,7 +34,11 @@ export const useConsultationManager = () => {
       if (Array.isArray(data)) videoList = data;
       else if (Array.isArray(data?.results)) videoList = data.results;
       else if (Array.isArray(data?.consultations)) videoList = data.consultations;
-      videoList.forEach(c => results.push({ ...c, type: "video" as const }));
+      videoList.forEach(c => {
+        const slotType = c.appointment_slot?.consultation_type;
+        const resolvedType = slotType === 'offline' ? 'offline' : 'video';
+        results.push({ ...c, type: resolvedType as Consultation['type'] });
+      });
 
       // Offline clinic appointments (doctors)
       if (isDoctor) {

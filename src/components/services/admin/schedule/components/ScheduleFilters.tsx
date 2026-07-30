@@ -42,8 +42,8 @@ export default function ScheduleFilters({
           className="flex-1 px-3 md:px-4 py-2 md:py-3 text-sm md:text-base rounded-xl md:rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
         >
           <option value="all">Все типы</option>
-          <option value="consultation">Онлайн</option>
-          <option value="appointment">Оффлайн</option>
+          <option value="consultation">Видеоконсультация</option>
+          <option value="appointment">Приём в клинике</option>
         </select>
 
         {/* Status Filter */}

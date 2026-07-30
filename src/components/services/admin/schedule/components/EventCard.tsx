@@ -30,15 +30,22 @@ interface EventCardProps {
   onChanged?: () => void;
 }
 
-const TYPE_STYLES: Record<ScheduleEvent['type'], { accent: string; bg: string; border: string; gradientTo: string; Icon: typeof Video }> = {
-  consultation: { accent: '#3772ff', bg: '#ebf1ff', border: '#c7d7ff', gradientTo: '#2c5bcc', Icon: Video },
-  appointment:  { accent: '#8b5cf6', bg: '#f3e8ff', border: '#ddd6fe', gradientTo: '#7c3aed', Icon: Home },
-  diagnostics:  { accent: '#0891b2', bg: '#cffafe', border: '#a5f3fc', gradientTo: '#0e7490', Icon: FlaskConical },
-};
+function getEventStyle(event: ScheduleEvent) {
+  if (event.type === 'consultation' && event.consultation_type === 'offline') {
+    return { accent: '#059669', bg: '#dcfce7', border: '#86efac', gradientTo: '#047857', Icon: Home };
+  }
+  if (event.type === 'consultation') {
+    return { accent: '#3772ff', bg: '#ebf1ff', border: '#c7d7ff', gradientTo: '#2c5bcc', Icon: Video };
+  }
+  if (event.type === 'diagnostics') {
+    return { accent: '#0891b2', bg: '#cffafe', border: '#a5f3fc', gradientTo: '#0e7490', Icon: FlaskConical };
+  }
+  return { accent: '#8b5cf6', bg: '#f3e8ff', border: '#ddd6fe', gradientTo: '#7c3aed', Icon: Home };
+}
 
 export default function EventCard({ event, onChanged }: EventCardProps) {
   const statusColor = getStatusColor(event.status);
-  const { accent: accentColor, bg: accentBg, border: accentBorder, gradientTo, Icon: TypeIcon } = TYPE_STYLES[event.type];
+  const { accent: accentColor, bg: accentBg, border: accentBorder, gradientTo, Icon: TypeIcon } = getEventStyle(event);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);

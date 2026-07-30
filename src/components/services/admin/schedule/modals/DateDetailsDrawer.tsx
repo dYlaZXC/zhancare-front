@@ -18,6 +18,7 @@ import {
   Link,
   KeyRound,
   BadgeInfo,
+  DoorOpen,
   Activity,
   ClipboardList,
   Search,
@@ -27,7 +28,7 @@ import {
   ChevronDown,
   Loader2,
 } from "lucide-react";
-import { ScheduleEvent } from "../types/scheduleTypes";
+import { ScheduleEvent, PaymentHistoryEntry } from "../types/scheduleTypes";
 import { getStatusColor, getPaymentStatusColor, PAYMENT_TYPE_LABELS } from "../utils/scheduleUtils";
 import { api } from "@/utils/api";
 import { toast } from "react-toastify";
@@ -125,7 +126,7 @@ function buildShareText(event: ScheduleEvent): string {
     '📋 Консультация ZhanCare',
     '',
     `📅 Дата: ${event.date}, ${event.time} (${event.duration} мин)`,
-    `🏥 Тип: ${event.type === 'consultation' ? (isOnline ? 'Онлайн' : 'Оффлайн') : event.type === 'diagnostics' ? 'Диагностика' : 'Выезд на дом'}`,
+    `🏥 Тип: ${event.type === 'consultation' ? (isOnline ? 'Видеоконсультация' : 'Приём в клинике') : event.type === 'diagnostics' ? 'Диагностика' : 'Выезд на дом'}`,
     `📊 Статус: ${STATUS_LABELS[event.status] ?? event.status}`,
     '',
     `👤 Пациент: ${event.patient_name}`,
@@ -146,10 +147,10 @@ function buildShareText(event: ScheduleEvent): string {
     if (event.clinic_name) lines.push(`🏥 Клиника: ${event.clinic_name}`);
   }
 
-  if (link) {
+  if (isOnline && link) {
     lines.push('', `🔗 Ссылка на консультацию:`, link);
   }
-  if (event.access_code) lines.push(`🔑 Код доступа: ${event.access_code}`);
+  if (isOnline && event.access_code) lines.push(`🔑 Код доступа: ${event.access_code}`);
   if (event.address) lines.push('', `📍 Адрес: ${event.address}`);
   if (event.notes) lines.push('', `📝 Примечания: ${event.notes}`);
 
@@ -256,9 +257,11 @@ function getHeaderInfo(event: ScheduleEvent) {
   const isOnline = event.consultation_type !== 'offline';
   if (event.type === 'consultation') {
     return {
-      icon: <Video className="w-5 h-5" style={{ color: isOnline ? '#3772ff' : '#059669' }} />,
+      icon: isOnline
+        ? <Video className="w-5 h-5" style={{ color: '#3772ff' }} />
+        : <Home className="w-5 h-5" style={{ color: '#059669' }} />,
       iconBg: isOnline ? '#3772ff20' : '#05966920',
-      title: isOnline ? 'Онлайн консультация' : 'Оффлайн консультация',
+      title: isOnline ? 'Видеоконсультация' : 'Приём в клинике',
     };
   }
   if (event.type === 'diagnostics') {
@@ -275,12 +278,46 @@ function getHeaderInfo(event: ScheduleEvent) {
   };
 }
 
+const PAYMENT_STATUS_OPTIONS = [
+  { value: 'not_required', label: 'Не требуется' },
+  { value: 'unpaid', label: 'Не оплачено' },
+  { value: 'partial', label: 'Частично' },
+  { value: 'paid', label: 'Оплачено' },
+  { value: 'refunded', label: 'Возврат' },
+];
+
 function BookingRow({ event, onChanged }: { event: ScheduleEvent; onChanged?: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<string>(event.payment_info?.status ?? 'unpaid');
+  const [paymentNotes, setPaymentNotes] = useState<string>(event.payment_info?.notes ?? '');
+  const [paymentSaving, setPaymentSaving] = useState(false);
+  const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryEntry[]>(event.payment_info?.history ?? []);
   const headerInfo = getHeaderInfo(event);
+
+  const savePayment = async () => {
+    const paymentId = event.payment_info?.id;
+    if (!paymentId) {
+      toast.error('Обновите страницу — ID оплаты не загружен');
+      return;
+    }
+    setPaymentSaving(true);
+    try {
+      const { data } = await api.patch(`/schedule/payment/${paymentId}/`, {
+        status: paymentStatus,
+        notes: paymentNotes,
+      });
+      if (data.history) setPaymentHistory(data.history);
+      toast.success('Статус оплаты обновлён');
+      onChanged?.();
+    } catch {
+      toast.error('Не удалось обновить статус оплаты');
+    } finally {
+      setPaymentSaving(false);
+    }
+  };
 
   const handleDelete = async (reason: string) => {
     setDeleting(true);
@@ -325,7 +362,7 @@ function BookingRow({ event, onChanged }: { event: ScheduleEvent; onChanged?: ()
         )}
         <StatusBadge status={event.status} />
         {event.payment_info && (() => {
-          const pc = getPaymentStatusColor(event.payment_info.status);
+          const pc = getPaymentStatusColor(paymentStatus);
           return (
             <span
               className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0"
@@ -402,6 +439,9 @@ function BookingRow({ event, onChanged }: { event: ScheduleEvent; onChanged?: ()
                   {event.doctor_years_of_experience != null && (
                     <InfoRow icon={<BadgeInfo className="w-3.5 h-3.5" />} value={`${event.doctor_years_of_experience} лет опыта`} />
                   )}
+                  {event.doctor_room_number != null && (
+                    <InfoRow icon={<DoorOpen className="w-3.5 h-3.5" />} value={`Кабинет ${event.doctor_room_number}`} />
+                  )}
                 </div>
               )}
 
@@ -444,8 +484,8 @@ function BookingRow({ event, onChanged }: { event: ScheduleEvent; onChanged?: ()
                 </div>
               )}
 
-              {/* Consultation access — link + meeting id + access code */}
-              {(event.meeting_id || event.access_code) && (() => {
+              {/* Consultation access — link + meeting id + access code (online only) */}
+              {(event.meeting_id || event.access_code) && event.consultation_type !== 'offline' && (() => {
                 const consultLink = event.meeting_id
                   ? `${typeof window !== 'undefined' ? window.location.origin : ''}/video-call/patient?meetingId=${event.meeting_id}`
                   : null;
@@ -481,8 +521,8 @@ function BookingRow({ event, onChanged }: { event: ScheduleEvent; onChanged?: ()
 
               {/* Payment info */}
               {event.payment_info && (() => {
-                const { payment_type, status, amount_due, amount_paid, currency } = event.payment_info;
-                const pc = getPaymentStatusColor(status);
+                const { payment_type, amount_due, amount_paid, currency } = event.payment_info;
+                const pc = getPaymentStatusColor(paymentStatus);
                 const due = Number(amount_due);
                 const paid = Number(amount_paid);
                 return (
@@ -512,6 +552,97 @@ function BookingRow({ event, onChanged }: { event: ScheduleEvent; onChanged?: ()
                         <div className="flex items-center gap-2 px-4 py-2">
                           <span className="text-xs text-gray-400 w-28 flex-shrink-0">Оплачено</span>
                           <span className="text-xs font-semibold" style={{ color: pc.text }}>{paid.toLocaleString('ru-RU')} {currency}</span>
+                        </div>
+                      )}
+                      {/* Saved comment display */}
+                      {paymentNotes && (
+                        <div className="mx-4 my-2 px-3 py-2.5 rounded-lg bg-amber-50 border border-amber-100">
+                          <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wide mb-1">Комментарий к оплате</p>
+                          <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">{paymentNotes}</p>
+                        </div>
+                      )}
+                      {/* Status selector */}
+                      <div className="px-4 py-3 space-y-2">
+                        <p className="text-xs text-gray-400">Изменить статус</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {PAYMENT_STATUS_OPTIONS.map(opt => {
+                            const oc = getPaymentStatusColor(opt.value);
+                            const isSelected = paymentStatus === opt.value;
+                            return (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => setPaymentStatus(opt.value)}
+                                className="px-2.5 py-1 rounded-full text-xs font-semibold transition-all border"
+                                style={isSelected
+                                  ? { backgroundColor: oc.bg, color: oc.text, borderColor: oc.dot }
+                                  : { backgroundColor: 'transparent', color: '#9ca3af', borderColor: '#e5e7eb' }
+                                }
+                              >
+                                {opt.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      {/* Notes edit */}
+                      <div className="px-4 py-3 space-y-1.5">
+                        <p className="text-xs text-gray-400">{paymentNotes ? 'Редактировать комментарий' : 'Добавить комментарий'}</p>
+                        <textarea
+                          value={paymentNotes}
+                          onChange={e => setPaymentNotes(e.target.value)}
+                          placeholder="Комментарий к оплате..."
+                          rows={2}
+                          className="w-full text-xs text-gray-700 border border-gray-100 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-blue-300 bg-gray-50"
+                        />
+                      </div>
+                      {/* Save */}
+                      <div className="px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={savePayment}
+                          disabled={paymentSaving}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors disabled:opacity-60"
+                        >
+                          {paymentSaving
+                            ? <Loader2 className="w-3 h-3 animate-spin" />
+                            : <Check className="w-3 h-3" />
+                          }
+                          {paymentSaving ? 'Сохранение...' : 'Сохранить'}
+                        </button>
+                      </div>
+                      {/* History timeline */}
+                      {paymentHistory.length > 0 && (
+                        <div className="px-4 pb-4 pt-1">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-3">История изменений</p>
+                          <div className="relative pl-4">
+                            <div className="absolute left-1.5 top-1 bottom-1 w-px bg-gray-100" />
+                            {paymentHistory.map((h, i) => {
+                              const oldC = getPaymentStatusColor(h.old_status);
+                              const newC = getPaymentStatusColor(h.new_status);
+                              const dt = new Date(h.created_at);
+                              const dateStr = dt.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' });
+                              const timeStr = dt.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+                              return (
+                                <div key={i} className="relative mb-3 last:mb-0">
+                                  <div className="absolute -left-[11px] top-1 w-2 h-2 rounded-full border-2 border-white" style={{ backgroundColor: newC.dot }} />
+                                  <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold line-through" style={{ backgroundColor: oldC.bg, color: oldC.text }}>{oldC.label}</span>
+                                    <span className="text-gray-300 text-[10px]">→</span>
+                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold" style={{ backgroundColor: newC.bg, color: newC.text }}>{newC.label}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 text-[10px] text-gray-400">
+                                    <span>{h.changed_by}</span>
+                                    <span>·</span>
+                                    <span>{dateStr}, {timeStr}</span>
+                                  </div>
+                                  {h.note && (
+                                    <p className="mt-0.5 text-[11px] text-gray-500 italic">"{h.note}"</p>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       )}
                     </div>

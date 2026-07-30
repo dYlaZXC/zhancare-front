@@ -59,7 +59,7 @@ const PATIENT_PROFILE_TEXT = {
     uploadPhoto: "Загрузить фото",
     deletePhoto: "Удалить фото",
     patient: "Пациент",
-    online: "Онлайн",
+    online: "Видеоконсультация",
     personalData: "Личные данные",
     personalDataSubtitle: "Персональная информация пациента",
     protected: "Защищено",

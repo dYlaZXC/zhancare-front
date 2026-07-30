@@ -24,7 +24,7 @@ export default function EventTypeSelector({ eventType, onChange }: EventTypeSele
           }`}
         >
           <Video className="w-6 h-6 mx-auto mb-2" style={{ color: '#3772ff' }} />
-          <div className="font-semibold">Онлайн консультация</div>
+          <div className="font-semibold">Видеоконсультация</div>
         </button>
         <button
           type="button"
@@ -35,8 +35,8 @@ export default function EventTypeSelector({ eventType, onChange }: EventTypeSele
               : 'border-gray-200 hover:border-gray-300'
           }`}
         >
-          <Home className="w-6 h-6 mx-auto mb-2" style={{ color: '#8b5cf6' }} />
-          <div className="font-semibold">Оффлайн консультация</div>
+          <Home className="w-6 h-6 mx-auto mb-2" style={{ color: '#059669' }} />
+          <div className="font-semibold">Приём в клинике</div>
         </button>
       </div>
     </div>

@@ -19,21 +19,25 @@ export default function EventDetailCard({ event }: EventDetailCardProps) {
       {/* Event Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center"
-            style={{
-              backgroundColor: event.type === 'consultation' ? '#ebf1ff' : '#f3e8ff'
-            }}
-          >
-            {event.type === 'consultation' ? (
-              <Video className="w-6 h-6" style={{ color: '#3772ff' }} />
-            ) : (
-              <Home className="w-6 h-6" style={{ color: '#8b5cf6' }} />
-            )}
-          </div>
+          {(() => {
+            const isVideo = event.type === 'consultation' && event.consultation_type !== 'offline';
+            return (
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center"
+                style={{ backgroundColor: isVideo ? '#ebf1ff' : '#f0fdf4' }}
+              >
+                {isVideo
+                  ? <Video className="w-6 h-6" style={{ color: '#3772ff' }} />
+                  : <Home className="w-6 h-6" style={{ color: '#059669' }} />
+                }
+              </div>
+            );
+          })()}
           <div>
             <h3 className="font-bold text-lg" style={{ color: '#1e263e' }}>
-              {event.type === 'consultation' ? 'Онлайн консультация' : 'Оффлайн консультация'}
+              {event.type === 'consultation'
+                ? (event.consultation_type !== 'offline' ? 'Видеоконсультация' : 'Приём в клинике')
+                : 'Приём в клинике'}
             </h3>
             <p className="text-sm text-gray-600">
               {event.time} ({event.duration} мин)

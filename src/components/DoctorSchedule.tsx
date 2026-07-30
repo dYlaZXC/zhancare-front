@@ -334,7 +334,7 @@ export default function DoctorSchedule() {
   const handleSaveDay = async (day: PlannerDay) => {
     if (plannerConflictDates.has(day.date)) {
       const other = plannerDaysOther.find((o) => o.date === day.date);
-      const otherLabel = plannerType === "online" ? "оффлайн" : "онлайн";
+      const otherLabel = plannerType === "online" ? "в клинике" : "видео";
       toast.error(`Время пересекается с ${otherLabel} расписанием (${other?.start_time}–${other?.end_time}). Измените время.`);
       return;
     }
@@ -374,7 +374,7 @@ export default function DoctorSchedule() {
           return dt.toLocaleDateString("ru-RU", { weekday: "short", day: "numeric", month: "short" });
         });
       toast.error(
-        `Онлайн и оффлайн пересекаются: ${conflictLabels.join(", ")}. Измените время, чтобы они не совпадали.`,
+        `Видео и в клинике пересекаются: ${conflictLabels.join(", ")}. Измените время, чтобы они не совпадали.`,
         { autoClose: 6000 }
       );
       return;
@@ -473,7 +473,7 @@ export default function DoctorSchedule() {
     });
     if (conflictDays.length > 0) {
       const names = conflictDays.map((wd) => WEEKDAY_LABELS[wd]).join(", ");
-      toast.error(`Онлайн и оффлайн пересекаются: ${names}. Измените время.`, { autoClose: 6000 });
+      toast.error(`Видео и в клинике пересекаются: ${names}. Измените время.`, { autoClose: 6000 });
       return;
     }
     setTemplateSaving(true);
@@ -568,7 +568,7 @@ export default function DoctorSchedule() {
               }`}
             >
               <Video className="w-4 h-4" />
-              Онлайн
+              Видеоконсультация
               {plannerConflictDates.size > 0 && (
                 <span className="px-2 py-0.5 rounded-full text-xs bg-red-500 text-white font-bold">
                   ⚠ {plannerConflictDates.size}
@@ -585,7 +585,7 @@ export default function DoctorSchedule() {
               }`}
             >
               <Home className="w-4 h-4" />
-              Оффлайн
+              Приём в клинике
               {plannerConflictDates.size > 0 && (
                 <span className="px-2 py-0.5 rounded-full text-xs bg-red-500 text-white font-bold">
                   ⚠ {plannerConflictDates.size}
@@ -656,7 +656,7 @@ export default function DoctorSchedule() {
                 const isOff = day.is_day_off;
                 const hasConflict = plannerConflictDates.has(day.date);
                 const otherDay = plannerDaysOther.find((o) => o.date === day.date);
-                const otherTypeLabel = plannerType === "online" ? "Оффлайн" : "Онлайн";
+                const otherTypeLabel = plannerType === "online" ? "Приём в клинике" : "Видеоконсультация";
                 const otherTypeKey: ConsultationType = plannerType === "online" ? "offline" : "online";
                 // Fallback to template hours if no explicit availability for other type
                 const weekdayJs = new Date(day.date + "T00:00:00").getDay();
@@ -874,7 +874,7 @@ export default function DoctorSchedule() {
                   }`}
                 >
                   <Video className="w-4 h-4" />
-                  Онлайн
+                  Видеоконсультация
                   {tplConflictCount > 0 && (
                     <span className="px-2 py-0.5 rounded-full text-xs bg-red-500 text-white font-bold">⚠ {tplConflictCount}</span>
                   )}
@@ -886,7 +886,7 @@ export default function DoctorSchedule() {
                   }`}
                 >
                   <Home className="w-4 h-4" />
-                  Оффлайн
+                  Приём в клинике
                   {tplConflictCount > 0 && (
                     <span className="px-2 py-0.5 rounded-full text-xs bg-red-500 text-white font-bold">⚠ {tplConflictCount}</span>
                   )}
@@ -1005,7 +1005,7 @@ export default function DoctorSchedule() {
                     {templateConflict && otherCell && (
                       <div className="mt-2 p-3 bg-red-100 border-l-4 border-red-500 rounded">
                         <p className="text-xs text-red-800 font-semibold">
-                          ⚠️ Конфликт времени! {templateType === "online" ? "Оффлайн" : "Онлайн"} расписание: {otherCell.start_time} — {otherCell.end_time}
+                          ⚠️ Конфликт времени! {templateType === "online" ? "Приём в клинике" : "Видеоконсультация"} расписание: {otherCell.start_time} — {otherCell.end_time}
                         </p>
                         <p className="text-xs text-red-700 mt-1">Измените время или отключите один из графиков</p>
                       </div>
@@ -1058,7 +1058,7 @@ export default function DoctorSchedule() {
       {/* ═══════════════════ TAB: История ═══════════════════ */}
       {activeTab === "history" && (() => {
           const WEEKDAYS_RU = ["Воскресенье","Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"];
-          const CONS_TYPE_RU: Record<string, string> = { online: "Онлайн", offline: "Оффлайн" };
+          const CONS_TYPE_RU: Record<string, string> = { online: "Видеоконсультация", offline: "Приём в клинике" };
 
           const formatFieldValue = (key: string, val: unknown): string => {
             if (val === null || val === undefined) return "—";

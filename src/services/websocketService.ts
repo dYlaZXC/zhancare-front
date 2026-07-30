@@ -559,6 +559,9 @@ class WebSocketService {
             console.log('🔄 Consultation status changed:', data.data || data);
             this.triggerCallbacks('consultation_status_changed', data.data || data);
             break;
+          case 'diagnostics_appointment_created':
+            this.triggerCallbacks('diagnostics_appointment_created', data.data || data);
+            break;
           default:
             // console.log('📨 Unknown message type:', data.type, data);
         }
@@ -953,6 +956,14 @@ class WebSocketService {
 
   offAuthenticationError(callback?: (data: any) => void) {
     this.off('authentication_error', callback);
+  }
+
+  onDiagnosticsAppointmentCreated(callback: (data: any) => void) {
+    this.on('diagnostics_appointment_created', callback);
+  }
+
+  offDiagnosticsAppointmentCreated(callback?: (data: any) => void) {
+    this.off('diagnostics_appointment_created', callback);
   }
 }
 

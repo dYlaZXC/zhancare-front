@@ -380,8 +380,8 @@ export default function SchedulePage() {
                 <div className="flex flex-col sm:flex-row gap-3">
                   {(
                     [
-                      { key: "online",      icon: faVideo,        label: "Онлайн",      desc: "Видеозвонок",          bg: "#1d4ed8", activeShadow: "rgba(29,78,216,0.35)" },
-                      { key: "offline",     icon: faHospital,     label: "Офлайн",      desc: "Личный приём",         bg: "#0f766e", activeShadow: "rgba(15,118,110,0.35)" },
+                      { key: "online",      icon: faVideo,        label: "Видеоконсультация", desc: "Видеозвонок",          bg: "#1d4ed8", activeShadow: "rgba(29,78,216,0.35)" },
+                      { key: "offline",     icon: faHospital,     label: "Приём в клинике", desc: "Личный приём",         bg: "#0f766e", activeShadow: "rgba(15,118,110,0.35)" },
                       { key: "diagnostics", icon: faStethoscope,  label: "Диагностика", desc: "Анализы и обследование", bg: "#7c3aed", activeShadow: "rgba(124,58,237,0.35)" },
                     ] as const
                   ).map(({ key, icon, label, desc, bg, activeShadow }) => {
@@ -528,7 +528,7 @@ export default function SchedulePage() {
                   : "bg-purple-100 text-purple-700"
                 }`}>
                   <FontAwesomeIcon icon={consultationType === "online" ? faVideo : consultationType === "offline" ? faHospital : faStethoscope} />
-                  {consultationType === "online" ? "Онлайн" : consultationType === "offline" ? "Офлайн" : "Диагностика"}
+                  {consultationType === "online" ? "Видеоконсультация" : consultationType === "offline" ? "Приём в клинике" : "Диагностика"}
                 </div>
                 <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-gray-100 text-gray-600">
                   <FontAwesomeIcon icon={faCalendar} />

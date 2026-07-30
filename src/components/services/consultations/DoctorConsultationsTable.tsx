@@ -344,7 +344,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
       case "video":   return { label: "Видео",    icon: <Video className="w-3.5 h-3.5" />,         cls: "bg-cyan-50 text-cyan-600 border-cyan-200" };
       case "chat":    return { label: "Чат",      icon: <MessageSquare className="w-3.5 h-3.5" />, cls: "bg-indigo-50 text-indigo-600 border-indigo-200" };
       case "phone":   return { label: "Телефон",  icon: <Phone className="w-3.5 h-3.5" />,         cls: "bg-teal-50 text-teal-600 border-teal-200" };
-      case "offline": return { label: "Оффлайн",  icon: <MapPin className="w-3.5 h-3.5" />,        cls: "bg-emerald-50 text-emerald-600 border-emerald-200" };
+      case "offline": return { label: "Приём в клинике",  icon: <MapPin className="w-3.5 h-3.5" />,        cls: "bg-emerald-50 text-emerald-600 border-emerald-200" };
       case "home":    return { label: "На дому",  icon: <Home className="w-3.5 h-3.5" />,          cls: "bg-orange-50 text-orange-600 border-orange-200" };
       default:        return { label: "Видео",    icon: <Video className="w-3.5 h-3.5" />,         cls: "bg-cyan-50 text-cyan-600 border-cyan-200" };
     }

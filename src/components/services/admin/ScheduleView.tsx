@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { api } from "@/utils/api";
 import {
@@ -23,6 +23,7 @@ import AddEventModal from "./schedule/modals/AddEventModal";
 import DateDetailsDrawer from "./schedule/modals/DateDetailsDrawer";
 import ArchivedRecordsDrawer from "./schedule/modals/ArchivedRecordsDrawer";
 import { DoctorsScheduleContent } from "./schedule/views/DoctorsScheduleContent";
+import { ReferralsContent } from "./schedule/views/ReferralsContent";
 
 interface ScheduleEvent {
   id: string;
@@ -52,7 +53,7 @@ interface ScheduleViewProps {
 
 export default function ScheduleView({ user }: ScheduleViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<'week' | 'month' | 'doctors'>('month');
+  const [viewMode, setViewMode] = useState<'week' | 'month' | 'doctors' | 'referrals'>('month');
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +72,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
   });
 
   useEffect(() => {
-    if (viewMode === 'doctors') return;
+    if (viewMode === 'doctors' || viewMode === 'referrals') return;
     fetchSchedule();
   }, [currentDate, viewMode]);
 
@@ -315,17 +316,24 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
                     }}
                   >
                     <div className="flex items-center justify-between mb-1 md:mb-2">
-                      <span
-                        className={`inline-flex items-center justify-center w-6 h-6 md:w-8 md:h-8 rounded-full text-xs md:text-sm font-semibold ${
-                          isToday
-                            ? 'bg-blue-600 text-white'
-                            : isCurrentMonth
-                            ? 'text-gray-900'
-                            : 'text-gray-400'
-                        }`}
-                      >
-                        {date.getDate()}
-                      </span>
+                      <div className="flex items-center gap-1">
+                        <span
+                          className={`inline-flex items-center justify-center w-6 h-6 md:w-8 md:h-8 rounded-full text-xs md:text-sm font-semibold ${
+                            isToday
+                              ? 'bg-blue-600 text-white'
+                              : isCurrentMonth
+                              ? 'text-gray-900'
+                              : 'text-gray-400'
+                          }`}
+                        >
+                          {date.getDate()}
+                        </span>
+                        {dayEvents.length > 0 && (
+                          <span className="inline-flex items-center justify-center h-4 md:h-5 px-1 md:px-1.5 rounded-full text-[9px] md:text-[10px] font-bold bg-gray-100 text-gray-500">
+                            {dayEvents.length}
+                          </span>
+                        )}
+                      </div>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -339,33 +347,34 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
                       </button>
                     </div>
 
-                    <div className="space-y-0.5 md:space-y-1">
-                      {dayEvents.slice(0, 2).map((event) => {
-                        const typeStyle = event.type === 'consultation'
-                          ? { bg: '#ebf1ff', color: '#3772ff', Icon: Video }
-                          : event.type === 'diagnostics'
-                          ? { bg: '#cffafe', color: '#0891b2', Icon: FlaskConical }
-                          : { bg: '#f3e8ff', color: '#8b5cf6', Icon: Home };
-                        return (
-                          <div
-                            key={event.id}
-                            className="text-[10px] md:text-xs p-1 md:p-1.5 rounded-md md:rounded-lg cursor-pointer hover:shadow-md transition-shadow"
-                            style={{ backgroundColor: typeStyle.bg, color: typeStyle.color }}
-                          >
-                            <div className="font-semibold truncate flex items-center gap-0.5 md:gap-1">
-                              <typeStyle.Icon className="w-2 h-2 md:w-3 md:h-3 flex-shrink-0" />
-                              {event.time}
+                    {(() => {
+                      if (dayEvents.length === 0) return null;
+                      const videoCount = dayEvents.filter(e => e.type === 'consultation' && e.consultation_type !== 'offline').length;
+                      const clinicCount = dayEvents.filter(e => e.type === 'consultation' && e.consultation_type === 'offline').length;
+                      const diagCount = dayEvents.filter(e => e.type === 'diagnostics').length;
+                      const otherCount = dayEvents.filter(e => e.type !== 'consultation' && e.type !== 'diagnostics').length;
+                      const pills = [
+                        videoCount > 0 && { count: videoCount, Icon: Video, bg: '#ebf1ff', color: '#3772ff', label: 'Видео' },
+                        clinicCount > 0 && { count: clinicCount, Icon: Home, bg: '#dcfce7', color: '#059669', label: 'Приём' },
+                        diagCount > 0 && { count: diagCount, Icon: FlaskConical, bg: '#cffafe', color: '#0891b2', label: 'Диагностика' },
+                        otherCount > 0 && { count: otherCount, Icon: Home, bg: '#f3e8ff', color: '#8b5cf6', label: 'Выезд' },
+                      ].filter(Boolean) as { count: number; Icon: React.ElementType; bg: string; color: string; label: string }[];
+                      return (
+                        <div className="flex flex-col gap-0.5 md:gap-1 mt-0.5">
+                          {pills.map((pill) => (
+                            <div
+                              key={pill.label}
+                              className="flex items-center gap-1 px-1 md:px-1.5 py-0.5 md:py-1 rounded-md md:rounded-lg text-[9px] md:text-[11px] font-semibold"
+                              style={{ backgroundColor: pill.bg, color: pill.color }}
+                            >
+                              <pill.Icon className="w-2 h-2 md:w-3 md:h-3 flex-shrink-0" />
+                              <span className="font-bold">{pill.count}</span>
+                              <span className="hidden md:inline opacity-80">{pill.label}</span>
                             </div>
-                            <div className="truncate opacity-90 hidden md:block">{event.patient_name}</div>
-                          </div>
-                        );
-                      })}
-                      {dayEvents.length > 2 && (
-                        <div className="text-[10px] md:text-xs text-gray-500 font-medium pl-0.5 md:pl-1">
-                          +{dayEvents.length - 2}
+                          ))}
                         </div>
-                      )}
-                    </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
@@ -421,7 +430,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
         {/* Controls */}
         <div className="flex flex-col gap-3 md:gap-4">
           {/* Navigation */}
-          <div className="flex items-center gap-2 md:gap-3 overflow-x-auto">
+          {viewMode !== 'referrals' && <div className="flex items-center gap-2 md:gap-3 overflow-x-auto">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -463,11 +472,11 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
                 <ChevronRight className="w-4 h-4 text-gray-600" />
               </motion.button>
             </div>
-          </div>
+          </div>}
 
           {/* View mode selector */}
           <div className="flex items-center gap-1 md:gap-2 bg-gray-100 p-1 rounded-lg md:rounded-xl overflow-x-auto scrollbar-hide">
-            {(['week', 'month', 'doctors'] as const).map((mode) => (
+            {(['week', 'month', 'doctors', 'referrals'] as const).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
@@ -486,13 +495,20 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
                     <span className="sm:hidden">Врачи</span>
                   </>
                 )}
+                {mode === 'referrals' && (
+                  <>
+                    <FlaskConical className="w-3 h-3 md:w-4 md:h-4" />
+                    <span className="hidden sm:inline">Направления</span>
+                    <span className="sm:hidden">Направл.</span>
+                  </>
+                )}
               </button>
             ))}
           </div>
         </div>
 
         {/* Search and Filters */}
-        <div className="flex flex-col gap-2 md:gap-4 mt-3 md:mt-4">
+        {viewMode !== 'referrals' && <div className="flex flex-col gap-2 md:gap-4 mt-3 md:mt-4">
           {/* Search */}
           <div className="flex-1 relative">
             <Search className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400" />
@@ -511,8 +527,8 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
               <SearchSelect
                 options={[
                   { id: 'all', label: 'Все типы' },
-                  { id: 'consultation', label: 'Онлайн' },
-                  { id: 'appointment', label: 'Оффлайн' },
+                  { id: 'consultation', label: 'Видеоконсультация' },
+                  { id: 'appointment', label: 'Приём в клинике' },
                   { id: 'diagnostics', label: 'Диагностика' },
                 ]}
                 value={filterType}
@@ -537,7 +553,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
               />
             </div>
           </div>
-        </div>
+        </div>}
       </div>
 
       {/* Loading State */}
@@ -572,6 +588,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
           {viewMode === 'week' && renderWeekView()}
           {viewMode === 'month' && renderMonthView()}
           {viewMode === 'doctors' && renderDoctorsView()}
+          {viewMode === 'referrals' && <ReferralsContent />}
         </div>
       )}
 

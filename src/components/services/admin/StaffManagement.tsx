@@ -2133,7 +2133,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                             {member.availability_status === 'available' ? (
                               <>
                                 <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse" />
-                                <span className="hidden sm:inline">Онлайн</span>
+                                <span className="hidden sm:inline">Видео</span>
                                 <span className="sm:hidden">
                                   <CheckCircle className="w-4 h-4" />
                                 </span>
@@ -2141,7 +2141,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                             ) : (
                               <>
                                 <div className="w-2 h-2 bg-gray-400 rounded-full" />
-                                <span className="hidden sm:inline">Офлайн</span>
+                                <span className="hidden sm:inline">В клинике</span>
                                 <span className="sm:hidden">
                                   <XCircle className="w-4 h-4" />
                                 </span>
@@ -2602,7 +2602,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1.5">Оффлайн (в клинике)</label>
+                        <label className="block text-xs text-gray-500 mb-1.5">Приём в клинике</label>
                         <div className="relative">
                           <input
                             type="number"
@@ -2619,7 +2619,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1.5">Онлайн (видеозвонок)</label>
+                        <label className="block text-xs text-gray-500 mb-1.5">Видеоконсультация</label>
                         <div className="relative">
                           <input
                             type="number"
@@ -2643,7 +2643,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Доля врача от консультации</label>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1.5">Оффлайн</label>
+                        <label className="block text-xs text-gray-500 mb-1.5">Приём в клинике</label>
                         <div className="relative">
                           <input
                             type="number"
@@ -2669,7 +2669,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                         })()}
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1.5">Онлайн</label>
+                        <label className="block text-xs text-gray-500 mb-1.5">Видеоконсультация</label>
                         <div className="relative">
                           <input
                             type="number"
@@ -3311,7 +3311,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1.5">Оффлайн (в клинике)</label>
+                        <label className="block text-xs text-gray-500 mb-1.5">Приём в клинике</label>
                         <div className="relative">
                           <input
                             type="number"
@@ -3328,7 +3328,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1.5">Онлайн (видеозвонок)</label>
+                        <label className="block text-xs text-gray-500 mb-1.5">Видеоконсультация</label>
                         <div className="relative">
                           <input
                             type="number"
@@ -3352,7 +3352,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Доля врача от консультации</label>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1.5">Оффлайн</label>
+                        <label className="block text-xs text-gray-500 mb-1.5">Приём в клинике</label>
                         <div className="relative">
                           <input
                             type="number"
@@ -3378,7 +3378,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                         })()}
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1.5">Онлайн</label>
+                        <label className="block text-xs text-gray-500 mb-1.5">Видеоконсультация</label>
                         <div className="relative">
                           <input
                             type="number"

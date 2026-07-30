@@ -1092,7 +1092,7 @@ export default function StaffScheduleModal({
                         const isOff = day.is_day_off;
                         const { hasConflict, otherTime } = getPlannerDayConflict(i);
                         const otherTypeName =
-                          plannerConsultationType === "online" ? "Оффлайн" : "Онлайн";
+                          plannerConsultationType === "online" ? "Приём в клинике" : "Видеоконсультация";
                         return (
                           <div
                             key={day.date}
@@ -1367,7 +1367,7 @@ export default function StaffScheduleModal({
                       }`}
                     >
                       <Video className="w-5 h-5" />
-                      <span>Онлайн</span>
+                      <span>Видеоконсультация</span>
                       {Object.values(getCurrentOnlineSchedule()).filter((d) => d.enabled).length >
                         0 && (
                         <span
@@ -1396,7 +1396,7 @@ export default function StaffScheduleModal({
                       }`}
                     >
                       <Home className="w-5 h-5" />
-                      <span>Оффлайн</span>
+                      <span>Приём в клинике</span>
                       {Object.values(getCurrentOfflineSchedule()).filter((d) => d.enabled).length >
                         0 && (
                         <span
@@ -1553,7 +1553,7 @@ export default function StaffScheduleModal({
                           {hasConflict && (
                             <div className="mt-3 p-3 bg-red-100 border-l-4 border-red-500 rounded">
                               <p className="text-xs text-red-800 font-semibold">
-                                ⚠️ Конфликт времени! {isOnline ? "Оффлайн" : "Онлайн"} расписание:{" "}
+                                ⚠️ Конфликт времени! {isOnline ? "Приём в клинике" : "Видеоконсультация"} расписание:{" "}
                                 {otherTime}
                               </p>
                               <p className="text-xs text-red-700 mt-1">
@@ -1615,8 +1615,8 @@ export default function StaffScheduleModal({
                               }
                               className="w-full px-3 py-2 rounded-lg border-2 border-gray-300 focus:border-amber-500 focus:outline-none text-sm"
                             >
-                              <option value="online">Онлайн</option>
-                              <option value="offline">Оффлайн</option>
+                              <option value="online">Видеоконсультация</option>
+                              <option value="offline">Приём в клинике</option>
                             </select>
                           </div>
                         </div>
@@ -1738,7 +1738,7 @@ export default function StaffScheduleModal({
                                           : "bg-purple-100 text-purple-700"
                                       }`}
                                     >
-                                      {ov.consultation_type === "online" ? "Онлайн" : "Оффлайн"}
+                                      {ov.consultation_type === "online" ? "Видеоконсультация" : "Приём в клинике"}
                                     </span>
                                   </p>
                                   <p

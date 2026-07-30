@@ -101,14 +101,25 @@ const DoctorDashboard: React.FC = () => {
         fetchConsultations();
       };
 
+      // Listen for new diagnostics appointments assigned to this doctor
+      const handleDiagnosticsAppointment = (data: any) => {
+        const appt = data.appointment ?? data;
+        toast.info(
+          `🔬 Новая запись на диагностику: ${appt.service_name || 'Услуга'} — ${appt.patient_name || 'Пациент'} (${appt.appointment_time || ''})`,
+          { autoClose: 10000 }
+        );
+      };
+
       // Setup WebSocket listeners
       websocketService.on('consultation_created', handleConsultationCreated);
       websocketService.on('consultation_status_changed', handleStatusChanged);
+      websocketService.on('diagnostics_appointment_created', handleDiagnosticsAppointment);
 
       // Cleanup listeners on unmount
       return () => {
         websocketService.off('consultation_created', handleConsultationCreated);
         websocketService.off('consultation_status_changed', handleStatusChanged);
+        websocketService.off('diagnostics_appointment_created', handleDiagnosticsAppointment);
       };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { api } from "@/utils/api";
 import { toast } from "react-toastify";
@@ -12,6 +12,11 @@ import {
   Home,
   Check,
   Loader2,
+  Plus,
+  RefreshCw,
+  Eye,
+  EyeOff,
+  Copy,
 } from "lucide-react";
 
 interface AssignConsultationModalProps {
@@ -40,12 +45,66 @@ export default function AssignConsultationModal({
   const [patients, setPatients] = useState<any[]>([]);
   const [patientSearch, setPatientSearch] = useState('');
   const [showPatientDropdown, setShowPatientDropdown] = useState(false);
+  const [dropdownRect, setDropdownRect] = useState<DOMRect | null>(null);
   const [selectedPatient, setSelectedPatient] = useState<{ id: number; name: string; phone?: string } | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<any>(slot || null);
   const [consultationType, setConsultationType] = useState<'online' | 'offline'>('online');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [patientsLoading, setPatientsLoading] = useState(false);
+  const [showNewPatientForm, setShowNewPatientForm] = useState(false);
+  const [newPatientForm, setNewPatientForm] = useState({ first_name: '', last_name: '', phone: '' });
+  const [newPatientPassword, setNewPatientPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [requirePasswordChange, setRequirePasswordChange] = useState(true);
+  const [creatingPatient, setCreatingPatient] = useState(false);
   const patientSearchRef = useRef<HTMLDivElement>(null);
+  const patientInputRef = useRef<HTMLInputElement>(null);
+
+  const generatePassword = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%';
+    let pwd = '';
+    for (let i = 0; i < 12; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
+    setNewPatientPassword(pwd);
+  };
+
+  const copyPassword = () => {
+    if (newPatientPassword) {
+      navigator.clipboard.writeText(newPatientPassword);
+      toast.success('Пароль скопирован');
+    }
+  };
+
+  const handleCreatePatient = async () => {
+    if (!newPatientForm.first_name.trim() || !newPatientForm.last_name.trim() || !newPatientForm.phone.trim()) {
+      toast.error('Заполните обязательные поля: имя, фамилия, телефон');
+      return;
+    }
+    if (!newPatientPassword || newPatientPassword.length < 8) {
+      toast.error('Введите пароль (минимум 8 символов)');
+      return;
+    }
+    setCreatingPatient(true);
+    try {
+      const response = await api.post('/patients/', {
+        ...newPatientForm,
+        password: newPatientPassword,
+        require_password_change: requirePasswordChange,
+      });
+      const created = response.data;
+      setPatients(prev => [...prev, created]);
+      setSelectedPatient({ id: created.id, name: `${created.first_name} ${created.last_name}`, phone: created.phone });
+      setShowNewPatientForm(false);
+      setNewPatientForm({ first_name: '', last_name: '', phone: '' });
+      setNewPatientPassword('');
+      setRequirePasswordChange(true);
+      toast.success(`Пациент ${created.first_name} ${created.last_name} создан и выбран`);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || Object.values(err?.response?.data || {})[0] as string || 'Ошибка создания пациента');
+    } finally {
+      setCreatingPatient(false);
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -54,13 +113,22 @@ export default function AssignConsultationModal({
     setPatientSearch('');
     setNotes('');
     setConsultationType('online');
+    setShowNewPatientForm(false);
+    setNewPatientForm({ first_name: '', last_name: '', phone: '' });
+    setNewPatientPassword('');
+    setRequirePasswordChange(true);
 
     const fetchPatients = async () => {
+      setPatientsLoading(true);
       try {
         const response = await api.get('/patients/?all=true');
-        setPatients(response.data);
-      } catch (err) {
-        console.error("Failed to load patients:", err);
+        const data = Array.isArray(response.data) ? response.data : response.data?.results ?? [];
+        setPatients(data);
+      } catch (err: any) {
+        const msg = err?.response?.data?.error || err?.response?.data?.detail || 'Не удалось загрузить список пациентов';
+        toast.error(msg);
+      } finally {
+        setPatientsLoading(false);
       }
     };
     fetchPatients();
@@ -76,12 +144,14 @@ export default function AssignConsultationModal({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const filteredPatients = patients.filter(p => {
-    const name = `${p.first_name} ${p.last_name}`.toLowerCase();
-    const phone = (p.phone || '').toLowerCase();
-    const q = patientSearch.toLowerCase();
-    return name.includes(q) || phone.includes(q);
-  });
+  const filteredPatients = patientSearch.trim()
+    ? patients.filter(p => {
+        const name = `${p.first_name} ${p.last_name}`.toLowerCase();
+        const phone = (p.phone || '').toLowerCase();
+        const q = patientSearch.toLowerCase();
+        return name.includes(q) || phone.includes(q);
+      })
+    : patients;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -224,7 +294,7 @@ export default function AssignConsultationModal({
                 Тип консультации
               </label>
               <div className="grid grid-cols-2 gap-2">
-                {([['online', 'Онлайн', Video], ['offline', 'Офлайн', Home]] as const).map(([val, label, Icon]) => (
+                {([['online', 'Видеоконсультация', Video], ['offline', 'Приём в клинике', Home]] as const).map(([val, label, Icon]) => (
                   <button
                     key={val}
                     type="button"
@@ -246,9 +316,108 @@ export default function AssignConsultationModal({
 
             {/* Patient search */}
             <div ref={patientSearchRef} className="relative">
-              <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
-                Пациент <span className="text-red-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-semibold" style={{ color: '#1e263e' }}>
+                  Пациент <span className="text-red-500">*</span>
+                </label>
+                {!selectedPatient && (
+                  <button
+                    type="button"
+                    onClick={() => { setShowNewPatientForm(v => !v); setPatientSearch(''); }}
+                    className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg transition-all ${
+                      showNewPatientForm ? 'bg-gray-100 text-gray-500' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                    }`}
+                  >
+                    {showNewPatientForm ? <X className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
+                    {showNewPatientForm ? 'Отмена' : 'Новый пациент'}
+                  </button>
+                )}
+              </div>
+
+              {showNewPatientForm && (
+                <div className="mb-3 p-4 rounded-2xl border-2 border-blue-200 bg-blue-50/40 space-y-3">
+                  <p className="text-xs font-bold text-blue-700 uppercase tracking-wide">Новый пациент</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Имя <span className="text-red-500">*</span></label>
+                      <input
+                        type="text"
+                        value={newPatientForm.first_name}
+                        onChange={e => setNewPatientForm(p => ({ ...p, first_name: e.target.value }))}
+                        placeholder="Имя"
+                        className="w-full px-3 py-2 text-sm rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Фамилия <span className="text-red-500">*</span></label>
+                      <input
+                        type="text"
+                        value={newPatientForm.last_name}
+                        onChange={e => setNewPatientForm(p => ({ ...p, last_name: e.target.value }))}
+                        placeholder="Фамилия"
+                        className="w-full px-3 py-2 text-sm rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Телефон <span className="text-red-500">*</span></label>
+                      <input
+                        type="tel"
+                        value={newPatientForm.phone}
+                        onChange={e => setNewPatientForm(p => ({ ...p, phone: e.target.value }))}
+                        placeholder="+7 (999) 000-00-00"
+                        className="w-full px-3 py-2 text-sm rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Пароль <span className="text-red-500">*</span></label>
+                      <div className="flex gap-1">
+                        <div className="relative flex-1">
+                          <input
+                            type={showNewPassword ? 'text' : 'password'}
+                            value={newPatientPassword}
+                            onChange={e => setNewPatientPassword(e.target.value)}
+                            placeholder="Минимум 8 символов"
+                            className="w-full pl-3 pr-8 py-2 text-sm rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none font-mono"
+                          />
+                          <button type="button" onClick={() => setShowNewPassword(v => !v)}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                            {showNewPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                        <button type="button" onClick={generatePassword}
+                          className="p-2 rounded-xl border-2 border-gray-200 hover:border-blue-400 text-gray-500 hover:text-blue-600 transition-all"
+                          title="Сгенерировать">
+                          <RefreshCw className="w-3.5 h-3.5" />
+                        </button>
+                        <button type="button" onClick={copyPassword}
+                          className="p-2 rounded-xl border-2 border-gray-200 hover:border-green-400 text-gray-500 hover:text-green-600 transition-all"
+                          title="Скопировать">
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={requirePasswordChange}
+                      onChange={e => setRequirePasswordChange(e.target.checked)}
+                      className="w-4 h-4 rounded accent-blue-600"
+                    />
+                    <span className="text-xs text-gray-600 font-medium">Потребовать смену пароля при первом входе</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleCreatePatient}
+                    disabled={creatingPatient}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-60"
+                    style={{ background: 'linear-gradient(135deg, #3772ff 0%, #2c5bcc 100%)' }}
+                  >
+                    {creatingPatient ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                    {creatingPatient ? 'Создание...' : 'Создать и выбрать'}
+                  </button>
+                </div>
+              )}
               {selectedPatient ? (
                 <div className="flex items-center gap-3 px-4 py-3 bg-emerald-50 rounded-xl border-2 border-emerald-200">
                   <div className="w-8 h-8 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
@@ -266,41 +435,67 @@ export default function AssignConsultationModal({
               ) : (
                 <>
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    {patientsLoading
+                      ? <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
+                      : <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    }
                     <input
+                      ref={patientInputRef}
                       type="text"
                       value={patientSearch}
                       onChange={e => { setPatientSearch(e.target.value); setShowPatientDropdown(true); }}
-                      onFocus={() => setShowPatientDropdown(true)}
-                      placeholder="Поиск по имени или телефону..."
-                      className="w-full pl-9 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none text-sm transition-colors"
+                      onFocus={() => {
+                        if (patientInputRef.current) setDropdownRect(patientInputRef.current.getBoundingClientRect());
+                        setShowPatientDropdown(true);
+                      }}
+                      placeholder={patientsLoading ? 'Загрузка пациентов...' : `Поиск среди ${patients.length} пациентов...`}
+                      disabled={patientsLoading}
+                      className="w-full pl-9 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none text-sm transition-colors disabled:bg-gray-50 disabled:text-gray-400"
                     />
                   </div>
-                  {showPatientDropdown && patientSearch.length > 0 && (
-                    <div className="absolute z-10 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden max-h-48 overflow-y-auto">
+                  {showPatientDropdown && !patientsLoading && dropdownRect && (
+                    <div
+                      style={{
+                        position: 'fixed',
+                        top: dropdownRect.bottom + 4,
+                        left: dropdownRect.left,
+                        width: dropdownRect.width,
+                        zIndex: 9999,
+                      }}
+                      className="bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden max-h-56 overflow-y-auto"
+                    >
                       {filteredPatients.length === 0 ? (
-                        <div className="px-4 py-3 text-sm text-gray-400 text-center">Пациенты не найдены</div>
+                        <div className="px-4 py-3 text-sm text-gray-400 text-center">
+                          {patients.length === 0 ? 'Нет доступных пациентов' : 'Пациенты не найдены'}
+                        </div>
                       ) : (
-                        filteredPatients.slice(0, 8).map(p => (
-                          <button
-                            key={p.id}
-                            type="button"
-                            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"
-                            onClick={() => {
-                              setSelectedPatient({ id: p.id, name: `${p.first_name} ${p.last_name}`, phone: p.phone });
-                              setPatientSearch('');
-                              setShowPatientDropdown(false);
-                            }}
-                          >
-                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-400 to-gray-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
-                              {p.first_name[0]}{p.last_name[0]}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-gray-900">{p.first_name} {p.last_name}</p>
-                              {p.phone && <p className="text-xs text-gray-400">{p.phone}</p>}
-                            </div>
-                          </button>
-                        ))
+                        <>
+                          {filteredPatients.slice(0, 20).map(p => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50 transition-colors text-left border-b border-gray-50 last:border-0"
+                              onClick={() => {
+                                setSelectedPatient({ id: p.id, name: `${p.first_name} ${p.last_name}`, phone: p.phone });
+                                setPatientSearch('');
+                                setShowPatientDropdown(false);
+                              }}
+                            >
+                              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+                                {(p.first_name?.[0] || '?')}{(p.last_name?.[0] || '')}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-gray-900 truncate">{p.first_name} {p.last_name}</p>
+                                {p.phone && <p className="text-xs text-gray-400">{p.phone}</p>}
+                              </div>
+                            </button>
+                          ))}
+                          {filteredPatients.length > 20 && (
+                            <p className="px-4 py-2 text-xs text-gray-400 text-center border-t border-gray-100">
+                              Уточните поиск — ещё {filteredPatients.length - 20} пациентов
+                            </p>
+                          )}
+                        </>
                       )}
                     </div>
                   )}

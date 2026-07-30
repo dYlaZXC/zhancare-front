@@ -35,8 +35,8 @@ interface Step1Props {
 
 const SERVICE_BUTTONS_TEXT = {
   ru: {
-    online: { label: "Онлайн", sub: "видео-консультация", action: "Начать" },
-    offline: { label: "Оффлайн", sub: "приём у врача", action: "Записаться" },
+    online: { label: "Видеоконсультация", sub: "видео-консультация", action: "Начать" },
+    offline: { label: "Приём в клинике", sub: "приём у врача", action: "Записаться" },
     home: { label: "Вызов на дом", sub: "медсестра к вам", action: "Вызвать" },
     diagnostics: { label: "Диагностика", sub: "анализы и обследование", action: "Записаться" },
   },

@@ -203,7 +203,7 @@ const TimeslotBooking: React.FC<TimeslotBookingProps> = ({
             >
               <div className="font-medium text-sm">{formatTime(slot.start_time)}</div>
               <div className="text-xs text-gray-500 mt-1">
-                {slot.location_type === 'clinic' ? 'Клиника' : slot.location_type === 'home' ? 'На дому' : 'Онлайн'}
+                {slot.location_type === 'clinic' ? 'Клиника' : slot.location_type === 'home' ? 'На дому' : 'Видео'}
               </div>
             </motion.button>
           ))}

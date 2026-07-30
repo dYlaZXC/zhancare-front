@@ -13,7 +13,7 @@ const OFFLINE_TEXT = {
   ru: {
     bookingError: "Ошибка при записи. Попробуйте снова.",
     appointmentBooked: "Приём записан!", awaitConfirmation: "Ожидайте подтверждения от клиники",
-    offline: "Оффлайн", dateTime: "Дата и время", clinic: "Клиника", address: "Адрес",
+    offline: "Приём в клинике", dateTime: "Дата и время", clinic: "Клиника", address: "Адрес",
     route2gis: "Маршрут на 2ГИС", doctorCabinet: "Кабинет врача", cabinetNo: "№",
     clinicPhone: "Телефон клиники", format: "Формат", inPersonVisit: "Очный приём в клинике",
     toHome: "На главную", done: "Готово", locale: "ru-RU",

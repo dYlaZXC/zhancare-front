@@ -413,7 +413,7 @@ export default function DoctorProfileInfo() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <InputField
-            label={`Онлайн консультация (${getCurrencySymbol(clinicCurrency)})`}
+            label={`Видеоконсультация (${getCurrencySymbol(clinicCurrency)})`}
             value={form.online_consultation_price}
             onChange={hasClinic ? undefined : v => setForm(p => ({ ...p, online_consultation_price: v }))}
             icon={CreditCard}
@@ -422,7 +422,7 @@ export default function DoctorProfileInfo() {
             readOnly={hasClinic}
           />
           <InputField
-            label={`Оффлайн приём (${getCurrencySymbol(clinicCurrency)})`}
+            label={`Приём в клинике (${getCurrencySymbol(clinicCurrency)})`}
             value={form.offline_consultation_price}
             onChange={hasClinic ? undefined : v => setForm(p => ({ ...p, offline_consultation_price: v }))}
             icon={CreditCard}

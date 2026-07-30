@@ -5,12 +5,23 @@
 export type PaymentStatus = 'not_required' | 'unpaid' | 'partial' | 'paid' | 'refunded';
 export type PaymentType = 'free' | 'pay_at_clinic' | 'full_prepay' | 'partial_prepay';
 
+export interface PaymentHistoryEntry {
+  old_status: string;
+  new_status: string;
+  note: string;
+  created_at: string;
+  changed_by: string;
+}
+
 export interface PaymentInfo {
+  id?: string;
   payment_type: PaymentType;
   status: PaymentStatus;
   amount_due: string;
   amount_paid: string;
   currency: string;
+  notes?: string;
+  history?: PaymentHistoryEntry[];
 }
 
 export interface ScheduleEvent {
@@ -32,6 +43,7 @@ export interface ScheduleEvent {
   doctor_email?: string;
   doctor_specialization?: string;
   doctor_years_of_experience?: number;
+  doctor_room_number?: string | number | null;
   // Nurse (appointments only)
   nurse_id?: number;
   nurse_name?: string;

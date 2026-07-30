@@ -23,7 +23,7 @@ const STEP2_TEXT = {
     today: "Сегодня",
     loadingDoctors: "Загружаем врачей...", noDoctorsAvailable: "Нет доступных врачей", noDoctorsFound: "Врачи не найдены",
     confirmBooking: "Подтвердите запись", consultationCost: "Стоимость консультации", clinic: "Клиника",
-    format: "Формат", onlineVideo: "Онлайн · Видео", cancel: "Отмена", booking: "Записываем...",
+    format: "Формат", onlineVideo: "Видеоконсультация", cancel: "Отмена", booking: "Записываем...",
     confirmBookingBtn: "Подтвердить запись", confirmError: "Ошибка при подтверждении времени. Попробуйте снова.",
     locale: "ru-RU", days: ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'],
   },
