@@ -28,6 +28,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { api } from "@/utils/api";
 import { useAuth } from "@/context/AuthContext";
+import { useConsultationPayment } from "@/components/payment/useConsultationPayment";
+import DiagnosticsFlow from "@/components/services/consultations/DiagnosticsFlow";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type ConsultationType = "online" | "offline" | "diagnostics";
@@ -47,6 +49,7 @@ interface DoctorWithSlots {
   slots: SlotInfo[];
   rating?: number;
   years_of_experience?: number;
+  online_consultation_price?: string | number | null;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -222,6 +225,7 @@ export default function SchedulePage() {
   const router = useRouter();
   const { token, user, openAuth } = useAuth();
   const isLoggedIn = !!token && !!user;
+  const { pay: payForConsultation, loading: paymentLoading } = useConsultationPayment();
 
   const [step, setStep] = useState(1);
   const [consultationType, setConsultationType] = useState<ConsultationType>("online");
@@ -270,11 +274,11 @@ export default function SchedulePage() {
     return list;
   }, [doctors, searchQuery, filterSpec, sortBy]);
   const [result, setResult] = useState<{
-    consultation_id: number;
-    meeting_id: string;
-    access_code: string;
-    scheduled_at: string;
-    doctor: { name: string; specialization: string | null };
+    consultation_id?: number;
+    meeting_id?: string | null;
+    access_code?: string | null;
+    scheduled_at?: string;
+    doctor?: { name: string; specialization: string | null };
   } | null>(null);
 
   const days = getNextDays();
@@ -303,21 +307,60 @@ export default function SchedulePage() {
   const handleSubmit = async () => {
     if (!selectedDoctor || !selectedSlot || !selectedDate) return;
     setSubmitting(true);
+
+    const price = selectedDoctor.online_consultation_price
+      ? Math.round(Number(selectedDoctor.online_consultation_price))
+      : 0;
+
+    const doctorName = `${selectedDoctor.first_name} ${selectedDoctor.last_name}`;
+    const paymentType = consultationType === "online" ? "online" : "offline";
+    const scheduledTime = `${selectedDate} ${selectedSlot.start}`;
+
     try {
-      const { data } = await api.post("/consultations/schedule/", {
-        doctor_id: selectedDoctor.doctor_id,
-        scheduled_date: selectedDate,
-        scheduled_time: selectedSlot.start,
-        symptoms,
-        consultation_type: consultationType === "diagnostics" ? "offline" : consultationType,
-      });
-      setResult(data);
-      setStep(4);
+      if (price > 0) {
+        // Payment required — open TipTop Pay widget then show success
+        const typeLabel =
+          consultationType === "online" ? "Онлайн-консультация" :
+          consultationType === "offline" ? "Приём в клинике" : "Диагностика";
+
+        const { paymentId } = await payForConsultation({
+          paymentType,
+          amount: price,
+          description: `${typeLabel} с ${doctorName}`,
+          bookingData: {
+            doctor_id: selectedDoctor.doctor_id,
+            scheduled_time: scheduledTime,
+            consultation_type: consultationType === "diagnostics" ? "offline" : consultationType,
+            symptoms: symptoms || undefined,
+          },
+        });
+
+        // For online: fetch meeting_id/access_code from extended status endpoint
+        if (consultationType === "online") {
+          const { data: statusData } = await api.get(`/payments/consultation/status/${paymentId}/`);
+          setResult({ meeting_id: statusData.meeting_id, access_code: statusData.access_code });
+        } else {
+          setResult({ meeting_id: null, access_code: null });
+        }
+        setStep(4);
+      } else {
+        // Free consultation — create directly without payment
+        const { data } = await api.post("/consultations/schedule/", {
+          doctor_id: selectedDoctor.doctor_id,
+          scheduled_date: selectedDate,
+          scheduled_time: selectedSlot.start,
+          symptoms,
+          consultation_type: consultationType === "diagnostics" ? "offline" : consultationType,
+        });
+        setResult(data);
+        setStep(4);
+      }
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
-        "Ошибка при записи";
-      toast.error(msg);
+      const anyErr = err as { message?: string; response?: { data?: { error?: string } } };
+      if (anyErr?.message !== "Payment cancelled") {
+        const msg = anyErr?.response?.data?.error || anyErr?.message || "Ошибка при записи";
+        toast.error(msg);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -359,7 +402,7 @@ export default function SchedulePage() {
         </div>
       </header>
 
-      <div className="container mx-auto max-w-2xl px-4 py-8 pb-24">
+      <div className="container mx-auto max-w-3xl px-4 py-8 pb-24">
         <AnimatePresence mode="wait">
 
           {/* ══════════════ STEP 1 ══════════════ */}
@@ -397,7 +440,7 @@ export default function SchedulePage() {
                           setSelectedDoctor(null);
                           setSelectedSlot(null);
                         }}
-                        className="group relative flex-1 flex items-center gap-4 px-5 py-4 rounded-2xl overflow-hidden text-left transition-all duration-200"
+                        className="group relative flex-1 flex items-center gap-3 px-4 py-3.5 rounded-2xl overflow-hidden text-left transition-all duration-200"
                         style={
                           isActive
                             ? { backgroundColor: bg, boxShadow: `0 8px 24px ${activeShadow}`, outline: "2px solid white", outlineOffset: "2px" }
@@ -412,9 +455,17 @@ export default function SchedulePage() {
                         {isActive && (
                           <div className="absolute inset-0 bg-white/[0.06] rounded-2xl" />
                         )}
+                        {/* active indicator — absolute so it doesn't steal flex width */}
+                        {isActive && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            <div className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center">
+                              <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                            </div>
+                          </div>
+                        )}
 
                         <div
-                          className="relative w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-200"
+                          className="relative w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-200"
                           style={
                             isActive
                               ? { background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.25)" }
@@ -423,23 +474,15 @@ export default function SchedulePage() {
                         >
                           <FontAwesomeIcon
                             icon={icon}
-                            className="text-lg"
+                            className="text-base"
                             style={{ color: isActive ? "#fff" : bg }}
                           />
                         </div>
 
                         <div className="relative flex-1 min-w-0">
-                          <p className="text-sm font-bold leading-tight" style={{ color: isActive ? "#fff" : "#1e293b" }}>{label}</p>
+                          <p className="text-sm font-bold leading-tight truncate" style={{ color: isActive ? "#fff" : "#1e293b" }}>{label}</p>
                           <p className="text-xs mt-0.5 truncate" style={{ color: isActive ? "rgba(255,255,255,0.65)" : "#94a3b8" }}>{desc}</p>
                         </div>
-
-                        {isActive && (
-                          <div className="relative flex-shrink-0">
-                            <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
-                              <div className="w-2 h-2 rounded-full bg-white" />
-                            </div>
-                          </div>
-                        )}
                       </motion.button>
                     );
                   })}
@@ -499,19 +542,34 @@ export default function SchedulePage() {
                 disabled={!selectedDate}
                 className="w-full py-4 text-white rounded-2xl font-bold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2.5"
                 style={selectedDate
-                  ? { background: "linear-gradient(135deg, #1d4ed8 0%, #4f46e5 100%)", boxShadow: "0 8px 24px rgba(29,78,216,0.35)" }
+                  ? { background: "linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)", boxShadow: "0 8px 24px rgba(29,78,216,0.35)" }
                   : { background: "#e2e8f0" }
                 }
               >
-                <FontAwesomeIcon icon={faUserMd} />
-                Показать врачей
+                <FontAwesomeIcon icon={consultationType === "diagnostics" ? faStethoscope : faUserMd} />
+                {consultationType === "diagnostics" ? "Показать услуги" : "Показать врачей"}
                 <FontAwesomeIcon icon={faChevronRight} className="opacity-70" />
               </motion.button>
             </motion.div>
           )}
 
           {/* ══════════════ STEP 2 ══════════════ */}
-          {step === 2 && (
+          {step === 2 && consultationType === "diagnostics" && (
+            <motion.div
+              key="step2-diagnostics"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              transition={{ duration: 0.3 }}
+            >
+              <DiagnosticsFlow
+                onBack={() => setStep(1)}
+                onComplete={() => setStep(1)}
+              />
+            </motion.div>
+          )}
+
+          {step === 2 && consultationType !== "diagnostics" && (
             <motion.div
               key="step2"
               initial={{ opacity: 0, y: 16 }}
@@ -719,6 +777,11 @@ export default function SchedulePage() {
                             }`}>
                               {freeSlots.length} слот{freeSlots.length === 1 ? "" : freeSlots.length <= 4 ? "а" : "ов"}
                             </span>
+                            {doc.online_consultation_price && (
+                              <span className="text-sm font-extrabold text-emerald-600">
+                                {Number(doc.online_consultation_price).toLocaleString("ru-RU", { maximumFractionDigits: 0 })} ₸
+                              </span>
+                            )}
                             <FontAwesomeIcon
                               icon={isSelected ? faChevronLeft : faChevronRight}
                               className={`text-xs transition-colors ${isSelected ? "text-blue-500" : "text-gray-300"}`}
@@ -864,25 +927,43 @@ export default function SchedulePage() {
 
               {isLoggedIn ? (
                 <>
-                  <button
-                    onClick={handleSubmit}
-                    disabled={submitting}
-                    className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-bold text-sm shadow-xl shadow-blue-200/60 hover:scale-[1.01] transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2.5"
-                  >
-                    {submitting ? (
-                      <>
-                        <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
-                        Создаём запись...
-                      </>
-                    ) : (
-                      <>
-                        <FontAwesomeIcon icon={faCheckCircle} />
-                        Подтвердить запись
-                      </>
-                    )}
-                  </button>
+                  {(() => {
+                    const price = selectedDoctor?.online_consultation_price
+                      ? Math.round(Number(selectedDoctor.online_consultation_price))
+                      : 0;
+                    const isBusy = submitting || paymentLoading;
+                    return (
+                      <button
+                        onClick={handleSubmit}
+                        disabled={isBusy}
+                        className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-2xl font-bold text-sm shadow-xl shadow-blue-200/60 hover:scale-[1.01] transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2.5"
+                      >
+                        {isBusy ? (
+                          <>
+                            <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                            {paymentLoading ? "Обработка оплаты..." : "Создаём запись..."}
+                          </>
+                        ) : price > 0 ? (
+                          <>
+                            <FontAwesomeIcon icon={faCheckCircle} />
+                            Оплатить и записаться
+                            <span className="ml-1 bg-white/20 px-2 py-0.5 rounded-lg text-xs font-extrabold">
+                              {price.toLocaleString("ru-RU")} ₸
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <FontAwesomeIcon icon={faCheckCircle} />
+                            Подтвердить запись
+                          </>
+                        )}
+                      </button>
+                    );
+                  })()}
                   <p className="text-center text-xs text-gray-400 px-4">
-                    После подтверждения вы получите код доступа на email
+                    {selectedDoctor?.online_consultation_price && Number(selectedDoctor.online_consultation_price) > 0
+                      ? "После оплаты запись будет подтверждена и код доступа придёт на email"
+                      : "После подтверждения вы получите код доступа на email"}
                   </p>
                 </>
               ) : (
@@ -957,11 +1038,11 @@ export default function SchedulePage() {
               >
                 <div className="px-5 pt-5 pb-4 space-y-3">
                   {[
-                    { label: "Врач", value: result.doctor.name + (result.doctor.specialization ? ` · ${result.doctor.specialization}` : "") },
+                    { label: "Врач", value: result.doctor ? (result.doctor.name + (result.doctor.specialization ? ` · ${result.doctor.specialization}` : "")) : `${selectedDoctor?.first_name ?? ""} ${selectedDoctor?.last_name ?? ""}` },
                     {
-                      label: "Время", value: new Date(result.scheduled_at).toLocaleString("ru-RU", {
-                        day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
-                      }),
+                      label: "Время", value: result.scheduled_at
+                        ? new Date(result.scheduled_at).toLocaleString("ru-RU", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })
+                        : formatScheduledAt(selectedDate, selectedSlot?.start ?? ""),
                     },
                   ].map(({ label, value }) => (
                     <div key={label} className="flex items-center justify-between gap-4">
@@ -977,8 +1058,8 @@ export default function SchedulePage() {
                     </span>
                   </div>
 
-                  {/* Consultation link */}
-                  {result.meeting_id && (
+                  {/* Consultation link — online only */}
+                  {result.meeting_id && consultationType === "online" && (
                     <div className="pt-3 border-t border-gray-50">
                       <p className="text-xs text-gray-400 font-medium mb-2">Ссылка на консультацию</p>
                       <a
@@ -988,7 +1069,7 @@ export default function SchedulePage() {
                         className="group flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all hover:scale-[1.01]"
                         style={{ background: "linear-gradient(135deg, #eff6ff, #dbeafe)", border: "1px solid #bfdbfe" }}
                       >
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg, #1d4ed8, #4f46e5)" }}>
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg, #1d4ed8, #2563eb)" }}>
                           <FontAwesomeIcon icon={faVideo} className="text-white text-sm" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -999,11 +1080,28 @@ export default function SchedulePage() {
                       </a>
                     </div>
                   )}
+
+                  {/* Offline clinic notice */}
+                  {consultationType === "offline" && (
+                    <div className="pt-3 border-t border-gray-50">
+                      <div className="flex items-center gap-3 px-4 py-3 rounded-xl" style={{ background: "linear-gradient(135deg, #f0fdf4, #dcfce7)", border: "1px solid #bbf7d0" }}>
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-emerald-500">
+                          <FontAwesomeIcon icon={faHospital} className="text-white text-sm" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-emerald-700">Приём в клинике</p>
+                          <p className="text-xs text-emerald-500">Личный визит к врачу</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="bg-amber-50/60 border-t border-amber-100 px-5 py-3">
                   <p className="text-xs text-amber-700 font-medium text-center">
-                    Код доступа и ссылка отправлены на ваш email
+                    {consultationType === "online"
+                      ? "Код доступа и ссылка отправлены на ваш email"
+                      : "Детали записи отправлены на ваш email"}
                   </p>
                 </div>
               </motion.div>
