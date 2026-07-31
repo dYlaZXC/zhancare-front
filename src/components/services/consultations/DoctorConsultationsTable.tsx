@@ -412,6 +412,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
             <span>Отклонить</span>
           </button>
         )}
+        {/* Offline WITH ClinicAppointment — navigate to dedicated offline page */}
         {consultation.type === "offline" && consultation.clinic_appointment_id &&
           (isScheduled || isOngoing || consultation.status === "confirmed") && (
           <button
@@ -421,6 +422,39 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
             <MapPin className="w-3.5 h-3.5" />
             <span>{isOngoing ? "Войти в приём" : "Начать приём"}</span>
           </button>
+        )}
+        {/* Offline WITHOUT ClinicAppointment (Consultation record created from admin panel) */}
+        {consultation.type === "offline" && !consultation.clinic_appointment_id && (
+          <>
+            {isScheduled && joinInfo.canJoin && onStatusChange && (
+              <button
+                onClick={() => onStatusChange(consultation.meeting_id ?? '', 'ongoing')}
+                className={`flex items-center gap-1.5 px-3 py-2 text-white text-xs font-semibold rounded-xl shadow-lg transition-all duration-200 ${
+                  joinInfo.isReady
+                    ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-500/20"
+                    : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-blue-500/20"
+                }`}
+              >
+                <MapPin className="w-3.5 h-3.5" />
+                <span>{joinInfo.isReady ? "Начать приём" : `Через ${joinInfo.timeUntil}`}</span>
+              </button>
+            )}
+            {isScheduled && !joinInfo.canJoin && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-100 border border-gray-200 rounded-xl">
+                <Clock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                <span className="text-[11px] text-gray-500 font-medium whitespace-nowrap">{joinInfo.timeUntil || "просрочено"}</span>
+              </div>
+            )}
+            {isOngoing && (
+              <button
+                onClick={() => window.location.href = `/doctor/consultations/${consultation.meeting_id}/offline/`}
+                className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-emerald-500/20 transition-all duration-200"
+              >
+                <MapPin className="w-3.5 h-3.5" />
+                <span>Перейти к приёму</span>
+              </button>
+            )}
+          </>
         )}
         {consultation.type !== "offline" && isOngoing && (
           <button
@@ -649,9 +683,9 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
                     </span>
                   </div>
 
-                  {/* Status — clickable dropdown if onStatusChange provided; offline status is managed through the appointment page */}
+                  {/* Status — clickable dropdown if onStatusChange provided */}
                   <div className={`px-5 py-4 border-l border-gray-100 hover:bg-gray-50/70 transition-colors ${rowBorder} flex items-center`}>
-                    <StatusDropdown consultation={consultation} onStatusChange={consultation.type !== "offline" ? onStatusChange : undefined} />
+                    <StatusDropdown consultation={consultation} onStatusChange={onStatusChange} />
                   </div>
 
                   {/* Actions */}
@@ -690,7 +724,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
                     <div className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><Clock className="w-3 h-3" />{timeStr ? formatTime(timeStr) : "—"}</div>
                   </div>
                   <div className={`px-5 py-4 border-l border-gray-100 hover:bg-gray-50/70 transition-colors ${rowBorder} flex items-center`}>
-                    <StatusDropdown consultation={consultation} onStatusChange={consultation.type !== "offline" ? onStatusChange : undefined} />
+                    <StatusDropdown consultation={consultation} onStatusChange={onStatusChange} />
                   </div>
                   <div className={`px-5 py-4 border-l border-gray-100 hover:bg-gray-50/70 transition-colors ${rowBorder} flex items-center`}>
                     {renderActions(consultation)}
@@ -726,7 +760,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
                       </div>
                     </div>
                     <div className="flex-shrink-0">
-                      <StatusDropdown consultation={consultation} onStatusChange={consultation.type !== "offline" ? onStatusChange : undefined} />
+                      <StatusDropdown consultation={consultation} onStatusChange={onStatusChange} />
                     </div>
                   </div>
 
@@ -779,7 +813,8 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
                         Отклонить
                       </button>
                     )}
-                    {(isOngoing || (isScheduled && joinInfo.canJoin)) && (
+                    {/* Online video call button */}
+                    {consultation.type !== "offline" && (isOngoing || (isScheduled && joinInfo.canJoin)) && (
                       <button
                         onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id}`}
                         className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-white text-sm font-semibold rounded-xl shadow-md transition-all ${
@@ -790,6 +825,39 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
                       >
                         <Video className="w-4 h-4" />
                         {joinInfo.isReady || isOngoing ? "Подключиться" : `Через ${joinInfo.timeUntil}`}
+                      </button>
+                    )}
+                    {/* Offline WITH ClinicAppointment — navigate to dedicated page */}
+                    {consultation.type === "offline" && consultation.clinic_appointment_id && (isScheduled || isOngoing) && (
+                      <button
+                        onClick={() => window.location.href = `/doctor/appointments/${consultation.clinic_appointment_id}/offline/`}
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-emerald-500 to-green-500 text-white text-sm font-semibold rounded-xl shadow-md shadow-emerald-500/20 transition-all"
+                      >
+                        <MapPin className="w-4 h-4" />
+                        {isOngoing ? "Войти в приём" : "Начать приём"}
+                      </button>
+                    )}
+                    {/* Offline WITHOUT ClinicAppointment — change status inline */}
+                    {consultation.type === "offline" && !consultation.clinic_appointment_id && isScheduled && joinInfo.canJoin && onStatusChange && (
+                      <button
+                        onClick={() => onStatusChange(consultation.meeting_id ?? '', 'ongoing')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-white text-sm font-semibold rounded-xl shadow-md transition-all ${
+                          joinInfo.isReady
+                            ? "bg-gradient-to-r from-emerald-500 to-green-500 shadow-emerald-500/20"
+                            : "bg-gradient-to-r from-blue-600 to-indigo-600 shadow-blue-500/20"
+                        }`}
+                      >
+                        <MapPin className="w-4 h-4" />
+                        {joinInfo.isReady ? "Начать приём" : `Через ${joinInfo.timeUntil}`}
+                      </button>
+                    )}
+                    {consultation.type === "offline" && !consultation.clinic_appointment_id && isOngoing && (
+                      <button
+                        onClick={() => window.location.href = `/doctor/consultations/${consultation.meeting_id}/offline/`}
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-emerald-500 to-green-500 text-white text-sm font-semibold rounded-xl shadow-md shadow-emerald-500/20 transition-all"
+                      >
+                        <MapPin className="w-4 h-4" />
+                        Перейти к приёму
                       </button>
                     )}
                     {!isPending && !isOngoing && (!isScheduled || !joinInfo.canJoin) && (
