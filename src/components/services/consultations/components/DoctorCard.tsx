@@ -26,7 +26,8 @@ const CARD_TEXT = {
     available: "Доступен", busy: "Занят", onBreak: "На перерыве", offline: "Не работает",
     aiRecommends: "AI рекомендует", nameNotSet: "Имя не указано", years: "лет",
     video: "Видео", audio: "Аудио", per: "за", min: "мин",
-    independentDoctor: "Независимый врач", online: "Онлайн",
+    independentDoctor: "Независимый врач", online: "Онлайн", offlineLabel: "Офлайн",
+    inClinicVisit: "Приём в клинике",
     free: "свободно", busySlots: "занято", nearestSlot: "Ближайший слот", clickToGo: "Нажмите, чтобы перейти",
     noFreeSlots: "Нет свободных слотов", locale: "ru-RU",
   },
@@ -34,7 +35,8 @@ const CARD_TEXT = {
     available: "Қолжетімді", busy: "Бос емес", onBreak: "Үзілісте", offline: "Жұмыс істемейді",
     aiRecommends: "AI ұсынады", nameNotSet: "Аты көрсетілмеген", years: "жыл",
     video: "Бейне", audio: "Аудио", per: "", min: "мин",
-    independentDoctor: "Тәуелсіз дәрігер", online: "Онлайн",
+    independentDoctor: "Тәуелсіз дәрігер", online: "Онлайн", offlineLabel: "Офлайн",
+    inClinicVisit: "Клиникада қабылдау",
     free: "бос", busySlots: "бос емес", nearestSlot: "Жақын слот", clickToGo: "Өту үшін басыңыз",
     noFreeSlots: "Бос слот жоқ", locale: "kk-KZ",
   },
@@ -42,7 +44,8 @@ const CARD_TEXT = {
     available: "Available", busy: "Busy", onBreak: "On break", offline: "Not working",
     aiRecommends: "AI recommends", nameNotSet: "Name not set", years: "yrs",
     video: "Video", audio: "Audio", per: "for", min: "min",
-    independentDoctor: "Independent doctor", online: "Online",
+    independentDoctor: "Independent doctor", online: "Online", offlineLabel: "Offline",
+    inClinicVisit: "Clinic visit",
     free: "free", busySlots: "booked", nearestSlot: "Nearest slot", clickToGo: "Click to go",
     noFreeSlots: "No free slots", locale: "en-US",
   },
@@ -50,7 +53,8 @@ const CARD_TEXT = {
     available: "Mavjud", busy: "Band", onBreak: "Tanaffusda", offline: "Ishlamaydi",
     aiRecommends: "AI tavsiya etadi", nameNotSet: "Ism kiritilmagan", years: "yosh",
     video: "Video", audio: "Audio", per: "", min: "daq",
-    independentDoctor: "Mustaqil shifokor", online: "Onlayn",
+    independentDoctor: "Mustaqil shifokor", online: "Onlayn", offlineLabel: "Oflayn",
+    inClinicVisit: "Klinikada qabul",
     free: "bo'sh", busySlots: "band", nearestSlot: "Eng yaqin vaqt", clickToGo: "O'tish uchun bosing",
     noFreeSlots: "Bo'sh vaqt yo'q", locale: "uz-UZ",
   },
@@ -66,6 +70,7 @@ interface DoctorCardProps {
   selectedDate?: string;
   onTimeslotSelect?: (timeslot: TimeSlot) => void;
   onDateSelect?: (date: string) => void;
+  consultationType?: 'online' | 'offline';
 }
 
 const GRADIENTS = [
@@ -87,6 +92,7 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
   selectedDate,
   onTimeslotSelect,
   onDateSelect,
+  consultationType = 'online',
 }) => {
   const { language: uiLanguage } = useLanguage();
   const ct = CARD_TEXT[uiLanguage as keyof typeof CARD_TEXT] ?? CARD_TEXT.ru;
@@ -250,8 +256,21 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
           </div>
         </div>
 
-        {/* Price block — full width, stacks cleanly */}
-        {doctor.online_consultation_price ? (() => {
+        {/* Price / format block */}
+        {consultationType === 'offline' ? (
+          <div className="flex items-center justify-between mt-3 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-semibold">
+              <MapPin size={9} />{ct.inClinicVisit}
+            </span>
+            {doctor.online_consultation_price && (
+              <div className="flex flex-col items-end flex-shrink-0">
+                <span className="text-sm font-black text-emerald-600 leading-none">
+                  {Number(doctor.online_consultation_price).toLocaleString(ct.locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} {getCurrencySymbol(clinicCurrency)}
+                </span>
+              </div>
+            )}
+          </div>
+        ) : doctor.online_consultation_price ? (() => {
           const price = Number(doctor.online_consultation_price);
           const duration = doctor.preferred_consultation_duration || 30;
           const perMin = Math.round(price / duration);
@@ -306,7 +325,7 @@ const DoctorCard: React.FC<DoctorCardProps> = ({
             </div>
           )}
           <div className="flex-shrink-0 flex items-center gap-1 text-[10px] text-gray-400">
-            <MapPin size={9} /><span>{ct.online}</span>
+            <MapPin size={9} /><span>{consultationType === 'offline' ? ct.offlineLabel : ct.online}</span>
           </div>
         </div>
       </div>

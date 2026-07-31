@@ -23,7 +23,7 @@ const STEP2_TEXT = {
     today: "Сегодня",
     loadingDoctors: "Загружаем врачей...", noDoctorsAvailable: "Нет доступных врачей", noDoctorsFound: "Врачи не найдены",
     confirmBooking: "Подтвердите запись", consultationCost: "Стоимость консультации", clinic: "Клиника",
-    format: "Формат", onlineVideo: "Видеоконсультация", cancel: "Отмена", booking: "Записываем...",
+    format: "Формат", onlineVideo: "Видеоконсультация", offlineClinic: "Приём в клинике", cancel: "Отмена", booking: "Записываем...",
     confirmBookingBtn: "Подтвердить запись", confirmError: "Ошибка при подтверждении времени. Попробуйте снова.",
     locale: "ru-RU", days: ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'],
   },
@@ -37,7 +37,7 @@ const STEP2_TEXT = {
     today: "Бүгін",
     loadingDoctors: "Дәрігерлерді жүктеп жатырмыз...", noDoctorsAvailable: "Қолжетімді дәрігерлер жоқ", noDoctorsFound: "Дәрігерлер табылмады",
     confirmBooking: "Жазылуды растаңыз", consultationCost: "Кеңес құны", clinic: "Клиника",
-    format: "Формат", onlineVideo: "Онлайн · Бейне", cancel: "Бас тарту", booking: "Жазылып жатырмыз...",
+    format: "Формат", onlineVideo: "Онлайн · Бейне", offlineClinic: "Клиникада қабылдау", cancel: "Бас тарту", booking: "Жазылып жатырмыз...",
     confirmBookingBtn: "Жазылуды растау", confirmError: "Уақытты растау кезінде қате орын алды. Қайталап көріңіз.",
     locale: "kk-KZ", days: ['Жк','Дс','Сс','Ср','Бс','Жм','Сб'],
   },
@@ -51,7 +51,7 @@ const STEP2_TEXT = {
     today: "Today",
     loadingDoctors: "Loading doctors...", noDoctorsAvailable: "No doctors available", noDoctorsFound: "No doctors found",
     confirmBooking: "Confirm booking", consultationCost: "Consultation cost", clinic: "Clinic",
-    format: "Format", onlineVideo: "Online · Video", cancel: "Cancel", booking: "Booking...",
+    format: "Format", onlineVideo: "Online · Video", offlineClinic: "Clinic visit", cancel: "Cancel", booking: "Booking...",
     confirmBookingBtn: "Confirm booking", confirmError: "Error confirming the time. Please try again.",
     locale: "en-US", days: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
   },
@@ -65,7 +65,7 @@ const STEP2_TEXT = {
     today: "Bugun",
     loadingDoctors: "Shifokorlar yuklanmoqda...", noDoctorsAvailable: "Mavjud shifokorlar yo'q", noDoctorsFound: "Shifokorlar topilmadi",
     confirmBooking: "Yozilishni tasdiqlang", consultationCost: "Konsultatsiya narxi", clinic: "Klinika",
-    format: "Format", onlineVideo: "Onlayn · Video", cancel: "Bekor qilish", booking: "Yozilmoqda...",
+    format: "Format", onlineVideo: "Onlayn · Video", offlineClinic: "Klinikada qabul", cancel: "Bekor qilish", booking: "Yozilmoqda...",
     confirmBookingBtn: "Yozilishni tasdiqlash", confirmError: "Vaqtni tasdiqlashda xatolik yuz berdi. Qayta urinib ko'ring.",
     locale: "uz-UZ", days: ['Ya','Du','Se','Ch','Pa','Ju','Sh'],
   },
@@ -561,6 +561,7 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
                   selectedDate={selectedDate}
                   onTimeslotSelect={handleTimeslotSelect}
                   onDateSelect={setSelectedDate}
+                  consultationType={consultationType}
                 />
               ))}
             </div>
@@ -637,7 +638,9 @@ const VideoConsultationStep2: React.FC<Step2Props> = ({
 
                   <div className="flex items-center justify-between px-4 py-3">
                     <span className="text-sm text-gray-500">{tt.format}</span>
-                    <span className="text-sm font-semibold text-violet-600">{tt.onlineVideo}</span>
+                    <span className={`text-sm font-semibold ${consultationType === 'offline' ? 'text-emerald-600' : 'text-violet-600'}`}>
+                      {consultationType === 'offline' ? tt.offlineClinic : tt.onlineVideo}
+                    </span>
                   </div>
                 </div>
 
