@@ -10,7 +10,8 @@ import {
   faChevronLeft,
   faChevronRight,
   faExpand,
-  faCompress
+  faCompress,
+  faUser
 } from "@fortawesome/free-solid-svg-icons";
 import { useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
@@ -65,6 +66,7 @@ export const Header = ({
   const { user } = useAuth();
   const { language, setLanguage } = useLanguage();
   const [isHovered, setIsHovered] = useState(false);
+  const [avatarBroken, setAvatarBroken] = useState(false);
   const t = HEADER_TEXT[language as keyof typeof HEADER_TEXT] ?? HEADER_TEXT.ru;
 
   return (
@@ -174,10 +176,10 @@ export const Header = ({
                style={{ background: 'linear-gradient(135deg, rgba(55, 114, 255, 0.03) 0%, rgba(41, 53, 143, 0.03) 100%)' }}>
             {/* Mini Avatar */}
             <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center text-sm font-bold text-white shadow-md flex-shrink-0"
-                 style={user.avatar ? undefined : { background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)' }}>
-              {user.avatar
-                ? <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
-                : user.first_name.charAt(0)}
+                 style={(user.avatar && !avatarBroken) ? undefined : { background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)' }}>
+              {user.avatar && !avatarBroken
+                ? <img src={user.avatar} alt="" className="w-full h-full object-cover rounded-[inherit]" onError={() => setAvatarBroken(true)} />
+                : <FontAwesomeIcon icon={faUser} className="text-white text-xs" />}
             </div>
             
             {/* User Info */}

@@ -40,10 +40,13 @@ axiosInstance.interceptors.response.use(
     if (error.response?.status === 401 && !isAuthRequest && !originalRequest._retry) {
       originalRequest._retry = true;
 
-      try {
-        const refresh_token = localStorage.getItem("refresh_token");
-        if (!refresh_token) throw new Error("No refresh token found.");
+      const refresh_token = localStorage.getItem("refresh_token");
+      if (!refresh_token) {
+        // Guest user — no session to restore, just reject silently
+        return Promise.reject(error);
+      }
 
+      try {
         const { data } = await axios.post(`${baseURL}/auth/token/refresh/`, {
           refresh: refresh_token,
         });
@@ -51,7 +54,6 @@ axiosInstance.interceptors.response.use(
         const newAccessToken = data.access;
         localStorage.setItem("access_token", newAccessToken);
 
-        // Set new token on original request and retry it
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return axiosInstance(originalRequest);
       } catch (refreshError) {

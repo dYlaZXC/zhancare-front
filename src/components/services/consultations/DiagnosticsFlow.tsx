@@ -5,12 +5,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, ArrowRight, CheckCircle2, Calendar, Clock,
   FlaskConical, Scan, Heart, Brain, Bone, Eye, Baby, Microscope,
-  Loader2, MapPin, Phone, Sparkles, RefreshCw,
+  Loader2, MapPin, Phone, Sparkles, RefreshCw, Lock, LogIn, UserPlus,
 } from "lucide-react";
 import { api as axiosInstance } from "@/utils/axiosInstance";
 import { getCurrencySymbol } from "@/utils/currency";
 import { useLanguage } from "@/context/LanguageContext";
 import { useConsultationPayment } from "@/components/payment/useConsultationPayment";
+import { useAuth } from "@/context/AuthContext";
 
 const CATEGORY_TEXT = {
   ru: {
@@ -156,6 +157,8 @@ const DiagnosticsFlow: React.FC<DiagnosticsFlowProps> = ({ onBack, onComplete, o
   const { language: uiLanguage } = useLanguage();
   const tt = DIAGNOSTICS_TEXT[uiLanguage as keyof typeof DIAGNOSTICS_TEXT] ?? DIAGNOSTICS_TEXT.ru;
   const { pay: payForConsultation } = useConsultationPayment();
+  const { token, user, openAuth } = useAuth();
+  const isLoggedIn = !!token && !!user;
   const ctext = CATEGORY_TEXT[uiLanguage as keyof typeof CATEGORY_TEXT] ?? CATEGORY_TEXT.ru;
   const CATEGORIES = CATEGORY_META.map(m => ({
     ...m,
@@ -164,6 +167,7 @@ const DiagnosticsFlow: React.FC<DiagnosticsFlowProps> = ({ onBack, onComplete, o
   }));
   const [clinicCurrency, setClinicCurrency] = useState<string>('KZT');
   const [step, setStep] = useState<Step>(1);
+  const [brokenLogos, setBrokenLogos] = useState<Set<number>>(new Set());
 
   const goToStep = (s: Step) => { setStep(s); onStepChange?.(s); };
   const goBack = () => { if (step === 1) onBack(); else goToStep((step - 1) as Step); };
@@ -483,9 +487,14 @@ const DiagnosticsFlow: React.FC<DiagnosticsFlowProps> = ({ onBack, onComplete, o
                       }`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        {svc.clinic_logo ? (
+                        {svc.clinic_logo && !brokenLogos.has(svc.id) ? (
                           <div className="w-8 h-8 rounded-lg overflow-hidden bg-white border border-gray-100 shadow-sm flex-shrink-0 flex items-center justify-center">
-                            <img src={svc.clinic_logo} alt={svc.clinic_name} className="w-full h-full object-contain" />
+                            <img
+                              src={svc.clinic_logo}
+                              alt=""
+                              className="w-full h-full object-contain rounded-[inherit]"
+                              onError={() => setBrokenLogos(prev => new Set(prev).add(svc.id))}
+                            />
                           </div>
                         ) : (
                           <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex-shrink-0 flex items-center justify-center">
@@ -559,16 +568,46 @@ const DiagnosticsFlow: React.FC<DiagnosticsFlowProps> = ({ onBack, onComplete, o
               )}
             </div>
 
-            <motion.button
-              onClick={handleBook}
-              disabled={!selectedService || !selectedDate || !selectedTime || booking}
-              whileHover={selectedService && selectedDate && selectedTime ? { scale: 1.01 } : {}}
-              whileTap={selectedService && selectedDate && selectedTime ? { scale: 0.97 } : {}}
-              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm text-white shadow-md disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-              style={{ background: 'linear-gradient(135deg, #3772ff, #1d4ed8)' }}
-            >
-              {booking ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{tt.confirmBooking} <ArrowRight className="w-4 h-4" /></>}
-            </motion.button>
+            {isLoggedIn ? (
+              <motion.button
+                onClick={handleBook}
+                disabled={!selectedService || !selectedDate || !selectedTime || booking}
+                whileHover={selectedService && selectedDate && selectedTime ? { scale: 1.01 } : {}}
+                whileTap={selectedService && selectedDate && selectedTime ? { scale: 0.97 } : {}}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm text-white shadow-md disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                style={{ background: 'linear-gradient(135deg, #3772ff, #1d4ed8)' }}
+              >
+                {booking ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{tt.confirmBooking} <ArrowRight className="w-4 h-4" /></>}
+              </motion.button>
+            ) : (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-center space-y-3">
+                <div className="w-12 h-12 mx-auto rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #eff6ff, #dbeafe)' }}>
+                  <Lock className="w-5 h-5 text-blue-500" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-sm">Войдите в аккаунт</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">Для записи необходимо войти или зарегистрироваться</p>
+                </div>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => openAuth("login", true)}
+                    className="w-full py-3 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:scale-[1.01]"
+                    style={{ background: 'linear-gradient(135deg, #1d4ed8, #4f46e5)', boxShadow: '0 6px 20px rgba(29,78,216,0.3)' }}
+                  >
+                    <LogIn className="w-4 h-4" />
+                    Войти
+                  </button>
+                  <button
+                    onClick={() => openAuth("register", true)}
+                    className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all hover:bg-gray-50"
+                    style={{ border: '2px solid #1d4ed8', color: '#1d4ed8' }}
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Зарегистрироваться
+                  </button>
+                </div>
+              </div>
+            )}
             </div>{/* end p-4 */}
             </div>{/* end unified card */}
           </motion.div>

@@ -43,6 +43,7 @@ export const NurseSidebar = ({
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [avatarBroken, setAvatarBroken] = useState(false);
   const mobileSidebarRef = useRef<HTMLElement>(null);
   const desktopSidebarRef = useRef<HTMLElement>(null);
   const onSidebarMouseMove = (ref: React.RefObject<HTMLElement>) => (e: React.MouseEvent<HTMLElement>) => {
@@ -502,8 +503,10 @@ export const NurseSidebar = ({
             {isCollapsed ? (
               <div className="relative inline-block mx-auto">
                 <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center text-sm font-bold shadow-2xl border-2 border-white"
-                     style={{ background: user.avatar ? 'transparent' : getRoleGradient(userRole).bg }}>
-                  {user.avatar ? <img src={resolveAvatar(user.avatar)!} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{user.first_name.charAt(0)}</span>}
+                     style={{ background: (user.avatar && !avatarBroken) ? 'transparent' : getRoleGradient(userRole).bg }}>
+                  {user.avatar && !avatarBroken
+                    ? <img src={resolveAvatar(user.avatar)!} alt="" className="w-full h-full object-cover rounded-[inherit]" onError={() => setAvatarBroken(true)} />
+                    : <FontAwesomeIcon icon={faUser} className="text-white text-base" />}
                 </div>
                 <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-white rounded-full flex items-center justify-center shadow border-2 border-white">
                   <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div>
@@ -512,11 +515,13 @@ export const NurseSidebar = ({
             ) : (
               <div className="relative mx-auto w-full max-w-[140px] 2xl:max-w-[180px] aspect-square">
                 <div className="w-full h-full rounded-2xl overflow-hidden flex items-center justify-center text-4xl font-bold shadow-2xl border-2 border-white"
-                     style={{ background: user.avatar ? 'transparent' : getRoleGradient(userRole).bg }}>
-                  {user.avatar
-                    ? <img src={resolveAvatar(user.avatar)!} alt="avatar" className="w-full h-full object-cover" />
-                    : <span className="text-white drop-shadow-lg">{user.first_name.charAt(0)}</span>}
-                  {!user.avatar && <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>}
+                     style={{ background: (user.avatar && !avatarBroken) ? 'transparent' : getRoleGradient(userRole).bg }}>
+                  {user.avatar && !avatarBroken
+                    ? <img src={resolveAvatar(user.avatar)!} alt="" className="w-full h-full object-cover rounded-[inherit]" onError={() => setAvatarBroken(true)} />
+                    : <>
+                        <FontAwesomeIcon icon={faUser} className="text-white/90 drop-shadow-lg" style={{ fontSize: '3rem' }} />
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent pointer-events-none"></div>
+                      </>}
                 </div>
                 <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-lg border-2 border-white">
                   <div className="w-3 h-3 bg-emerald-400 rounded-full animate-pulse"></div>

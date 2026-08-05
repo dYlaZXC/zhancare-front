@@ -1159,12 +1159,19 @@ export default function AIAgentsView() {
                   <div className="relative group flex-shrink-0">
                     <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-gray-200 bg-white flex items-center justify-center shadow-sm">
                       {form.logo_url ? (
-                        <img
-                          src={form.logo_url}
-                          alt="Логотип"
-                          className="w-full h-full object-contain p-1.5"
-                          onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
-                        />
+                        <>
+                          <img
+                            src={form.logo_url}
+                            alt="Логотип"
+                            className="w-full h-full object-contain p-1.5 rounded-[inherit]"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = "none";
+                              const fb = (e.target as HTMLElement).nextElementSibling as HTMLElement | null;
+                              if (fb) fb.style.display = "flex";
+                            }}
+                          />
+                          <Building2 className="w-8 h-8 text-gray-300 hidden items-center justify-center" style={{ display: 'none' }} />
+                        </>
                       ) : (
                         <Building2 className="w-8 h-8 text-gray-300" />
                       )}

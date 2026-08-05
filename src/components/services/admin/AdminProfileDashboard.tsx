@@ -108,6 +108,7 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
   const [savingClinic, setSavingClinic] = useState(false);
   const [savedClinic, setSavedClinic] = useState(false);
   const [clinicLogo, setClinicLogo] = useState<string | null>(null);
+  const [clinicLogoBroken, setClinicLogoBroken] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const logoRef = useRef<HTMLInputElement>(null);
 
@@ -150,6 +151,7 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
           city_name: ci.city || "",
           currency: ci.currency || "KZT",
         });
+        setClinicLogoBroken(false);
         setClinicLogo(ci.logo || null);
       }
     } catch {
@@ -232,6 +234,7 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) { toast.error("Файл слишком большой. Максимум 5 МБ."); return; }
     if (!stats?.clinic_info?.id) return;
+    setClinicLogoBroken(false);
     setClinicLogo(URL.createObjectURL(file));
     setUploadingLogo(true);
     try {
@@ -298,10 +301,10 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
             <div className="w-28 h-28 rounded-3xl overflow-hidden border-4 border-white shadow-2xl"
                  style={{ background: avatarPreview ? 'transparent' : 'linear-gradient(135deg, #3772ff 0%, #2956bf 100%)' }}>
               {avatarPreview ? (
-                <img src={avatarPreview} alt="avatar" className="w-full h-full object-cover" />
+                <img src={avatarPreview} alt="" className="w-full h-full object-cover" onError={() => setAvatarPreview(null)} />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  <span className="text-white font-black text-4xl drop-shadow">{initials || <User className="w-12 h-12" />}</span>
+                  <User className="w-12 h-12 text-white/90 drop-shadow" />
                 </div>
               )}
               {(uploading || deleting) && (
@@ -474,8 +477,8 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
             <div className="flex items-center gap-5 mb-6 p-4 rounded-2xl border border-gray-100 bg-gray-50">
               <div className="relative flex-shrink-0 group">
                 <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-gray-200 bg-white flex items-center justify-center shadow-sm">
-                  {clinicLogo ? (
-                    <img src={clinicLogo} alt="Логотип клиники" className="w-full h-full object-contain p-1.5" />
+                  {clinicLogo && !clinicLogoBroken ? (
+                    <img src={clinicLogo} alt="Логотип клиники" className="w-full h-full object-contain p-1.5 rounded-[inherit]" onError={() => setClinicLogoBroken(true)} />
                   ) : (
                     <Building2 className="w-8 h-8 text-gray-300" />
                   )}
