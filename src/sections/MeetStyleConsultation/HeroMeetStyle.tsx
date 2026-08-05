@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faVideo,
+  faCommentMedical,
   faCalendarPlus,
   faUserMd,
   faShieldAlt,
@@ -158,7 +158,7 @@ export default function HeroMeetStyle() {
 
               <span className="relative z-10 flex items-center justify-center gap-3">
                 <FontAwesomeIcon
-                  icon={faVideo}
+                  icon={faCommentMedical}
                   className={`text-xl ${isStarting ? 'animate-pulse' : ''}`}
                 />
                 <span>{isStarting ? t.startingButton : t.startButton}</span>

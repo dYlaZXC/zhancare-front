@@ -1051,12 +1051,14 @@ export default function SchedulePage() {
                     </div>
                   ))}
 
-                  <div className="flex items-center justify-between gap-4 pt-3 border-t border-gray-50">
-                    <span className="text-xs text-gray-400 font-medium">Код доступа</span>
-                    <span className="font-mono font-extrabold text-lg text-blue-600 bg-blue-50 px-4 py-1.5 rounded-xl tracking-[0.2em] border border-blue-100">
-                      {result.access_code}
-                    </span>
-                  </div>
+                  {result.access_code && (
+                    <div className="flex items-center justify-between gap-4 pt-3 border-t border-gray-50">
+                      <span className="text-xs text-gray-400 font-medium">Код доступа</span>
+                      <span className="font-mono font-extrabold text-lg text-blue-600 bg-blue-50 px-4 py-1.5 rounded-xl tracking-[0.2em] border border-blue-100">
+                        {result.access_code}
+                      </span>
+                    </div>
+                  )}
 
                   {/* Consultation link — online only */}
                   {result.meeting_id && consultationType === "online" && (

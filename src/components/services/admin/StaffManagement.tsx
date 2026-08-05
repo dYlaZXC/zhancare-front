@@ -2133,7 +2133,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                             {member.availability_status === 'available' ? (
                               <>
                                 <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse" />
-                                <span className="hidden sm:inline">Видео</span>
+                                <span className="hidden sm:inline">В сети</span>
                                 <span className="sm:hidden">
                                   <CheckCircle className="w-4 h-4" />
                                 </span>
@@ -2141,7 +2141,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                             ) : (
                               <>
                                 <div className="w-2 h-2 bg-gray-400 rounded-full" />
-                                <span className="hidden sm:inline">В клинике</span>
+                                <span className="hidden sm:inline">Не в сети</span>
                                 <span className="sm:hidden">
                                   <XCircle className="w-4 h-4" />
                                 </span>

@@ -841,8 +841,8 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
             </div>
           </div>
 
-          {/* Tips panel - hidden on mobile, sidebar on desktop */}
-          <div className="hidden lg:block lg:w-80 flex-shrink-0 p-6 bg-gray-50 border-l border-gray-200">
+          {/* Tips panel - hidden on mobile, hidden on step 1 (table view), sidebar on desktop otherwise */}
+          <div className={`flex-shrink-0 p-6 bg-gray-50 border-l border-gray-200 ${activeFlow === 'online' && step === 1 ? 'hidden' : 'hidden lg:block lg:w-72'}`}>
             <div className="sticky top-6">
               <TipsPanel
                 step={step}

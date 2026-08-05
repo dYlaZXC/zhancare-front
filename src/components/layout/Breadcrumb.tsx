@@ -195,7 +195,7 @@ export const Breadcrumb = ({
                 <div className="flex items-center justify-center w-4 h-4">
                   {item.icon}
                 </div>
-                <span className="text-xs font-semibold max-w-[120px] truncate tracking-wide">
+                <span className="text-xs font-semibold max-w-[160px] truncate tracking-wide">
                   {item.title}
                 </span>
               </button>
