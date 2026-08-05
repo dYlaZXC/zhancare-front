@@ -12,7 +12,7 @@ import {
   RefreshCw, Eye, EyeOff, Copy,
 } from "lucide-react";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 50;
 import PatientDocumentsDrawer from "./PatientDocumentsDrawer";
 import { toast } from "react-toastify";
 import { api } from "@/utils/api";
@@ -455,8 +455,13 @@ export default function PatientManagement({ user }: PatientManagementProps) {
       return matchesSearch && matchesStatus;
     })
     .sort((a, b) => {
-      // Sort by created_at descending (newest first)
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      // Patients with visits float to top; within each group sort by date desc
+      const aDate = a.last_visit || a.created_at || '';
+      const bDate = b.last_visit || b.created_at || '';
+      const aHasVisit = !!a.last_visit;
+      const bHasVisit = !!b.last_visit;
+      if (aHasVisit !== bHasVisit) return aHasVisit ? -1 : 1;
+      return bDate > aDate ? 1 : bDate < aDate ? -1 : 0;
     });
 
   const totalPages = Math.max(1, Math.ceil(filteredPatients.length / PAGE_SIZE));
