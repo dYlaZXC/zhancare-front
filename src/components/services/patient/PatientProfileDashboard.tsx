@@ -708,8 +708,11 @@ export default function PatientProfileDashboard() {
   const [deleting, setDeleting] = useState(false);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const [avatarViewOpen, setAvatarViewOpen] = useState(false);
+  const [avatarBroken, setAvatarBroken] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const avatarMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setAvatarBroken(false); }, [avatarPreview]);
 
   useEffect(() => {
     if (!avatarMenuOpen) return;
@@ -863,9 +866,9 @@ export default function PatientProfileDashboard() {
         <div className="relative flex flex-col sm:flex-row items-center sm:items-end gap-6 px-8 py-8 sm:py-10">
           <div className="relative flex-shrink-0" ref={avatarMenuRef}>
             <div className="w-28 h-28 rounded-3xl overflow-hidden border-4 border-white shadow-2xl"
-                 style={{ background: avatarPreview ? "transparent" : "linear-gradient(135deg, #3772ff 0%, #29358f 100%)" }}>
-              {avatarPreview
-                ? <img src={avatarPreview} alt="avatar" className="w-full h-full object-cover" />
+                 style={{ background: avatarPreview && !avatarBroken ? "transparent" : "linear-gradient(135deg, #3772ff 0%, #29358f 100%)" }}>
+              {avatarPreview && !avatarBroken
+                ? <img src={avatarPreview} alt="avatar" className="w-full h-full object-cover rounded-[inherit]" onError={() => setAvatarBroken(true)} />
                 : <div className="w-full h-full flex items-center justify-center"><span className="text-white font-black text-4xl">{initials}</span></div>}
               {(uploading || deleting) && <div className="absolute inset-0 bg-black/50 flex items-center justify-center"><Loader2 className="w-7 h-7 text-white animate-spin" /></div>}
             </div>

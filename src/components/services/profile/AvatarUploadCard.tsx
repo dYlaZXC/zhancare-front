@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { Camera, Trash2, Loader2, User } from "lucide-react";
 import { api } from "@/utils/api";
 import { toast } from "react-toastify";
@@ -23,6 +23,9 @@ export const AvatarUploadCard: React.FC<AvatarUploadCardProps> = ({ user, onAvat
   const [preview, setPreview] = useState<string | null>(resolveAvatarUrl(user.avatar));
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [avatarBroken, setAvatarBroken] = useState(false);
+
+  useEffect(() => { setAvatarBroken(false); }, [preview]);
 
   const initials = `${user.first_name?.[0] ?? ''}${user.last_name?.[0] ?? ''}`.toUpperCase();
 
@@ -80,8 +83,8 @@ export const AvatarUploadCard: React.FC<AvatarUploadCardProps> = ({ user, onAvat
         {/* Avatar circle */}
         <div className="relative flex-shrink-0">
           <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-gray-100 bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-            {preview ? (
-              <img src={preview} alt="avatar" className="w-full h-full object-cover" />
+            {preview && !avatarBroken ? (
+              <img src={preview} alt="avatar" className="w-full h-full object-cover rounded-[inherit]" onError={() => setAvatarBroken(true)} />
             ) : initials ? (
               <span className="text-white font-bold text-2xl">{initials}</span>
             ) : (
