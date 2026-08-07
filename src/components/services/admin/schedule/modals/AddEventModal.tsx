@@ -22,6 +22,8 @@ import {
   Activity,
   FlaskConical,
   Scan,
+  ScanLine,
+  ClipboardList,
   Heart,
   Brain,
   Bone,
@@ -123,16 +125,23 @@ const PAYMENT_TYPE_OPTIONS: {
   },
 ];
 
-const DIAG_CATEGORIES = [
-  { id: 'lab',     label: 'Анализы крови',  Icon: FlaskConical },
-  { id: 'imaging', label: 'Визуализация',   Icon: Scan },
-  { id: 'cardio',  label: 'Кардиология',    Icon: Heart },
-  { id: 'neuro',   label: 'Неврология',     Icon: Brain },
-  { id: 'ortho',   label: 'Ортопедия',      Icon: Bone },
-  { id: 'ophtha',  label: 'Офтальмология',  Icon: Eye },
-  { id: 'peds',    label: 'Педиатрия',      Icon: Baby },
-  { id: 'micro',   label: 'Микробиология',  Icon: Microscope },
-] as const;
+type DiagCategoryItem = { slug: string; name: string; icon: string; color: string };
+
+function getCategoryIconBySlug(icon: string): React.ElementType {
+  const map: Record<string, React.ElementType> = {
+    'flask-conical': FlaskConical,
+    'scan-line':     ScanLine,
+    'heart':         Heart,
+    'brain':         Brain,
+    'bone':          Bone,
+    'eye':           Eye,
+    'baby':          Baby,
+    'microscope':    Microscope,
+    'stethoscope':   Stethoscope,
+    'clipboard-list': ClipboardList,
+  };
+  return map[icon] ?? ClipboardList;
+}
 
 const DIAG_TIMES = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'];
 
@@ -209,6 +218,9 @@ export default function AddEventModal({
 
   // Diagnostics state
   const [diagCategory, setDiagCategory] = useState<string | null>(null);
+  const [diagCategoryList, setDiagCategoryList] = useState<DiagCategoryItem[]>([]);
+  const [diagCategoryOpen, setDiagCategoryOpen] = useState(false);
+  const diagCategoryRef = useRef<HTMLDivElement>(null);
   const [diagServices, setDiagServices] = useState<Array<{
     id: number; name: string; description: string | null;
     price: string | null; duration_minutes: number; clinic_name: string;
@@ -295,6 +307,7 @@ export default function AddEventModal({
       setNewPatientForm({ first_name: '', last_name: '', phone: '', email: '' });
       setTimePickerOpen(false);
       setDiagCategory(null);
+      setDiagCategoryOpen(false);
       setDiagServices([]);
       setSelectedDiagService(null);
       setCreatedInfo(null);
@@ -372,6 +385,25 @@ export default function AddEventModal({
       })
       .catch(() => setDoctorFirstSlots({}));
   }, [formData.date, consultationType, doctors.length]);
+
+  // Close category dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (diagCategoryRef.current && !diagCategoryRef.current.contains(e.target as Node)) {
+        setDiagCategoryOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Fetch category справочник when diagnostics tab is active
+  useEffect(() => {
+    if (consultationType !== 'diagnostics') return;
+    api.get('/diagnostics/categories/').then(res => {
+      setDiagCategoryList(res.data.results ?? res.data);
+    }).catch(() => {});
+  }, [consultationType]);
 
   // Fetch diagnostics services when category changes
   useEffect(() => {
@@ -1066,16 +1098,60 @@ export default function AddEventModal({
                 <label className="block text-sm font-semibold mb-3" style={{ color: '#1e263e' }}>
                   Категория диагностики <span className="text-red-500">*</span>
                 </label>
-                <div className="grid grid-cols-4 gap-2">
-                  {DIAG_CATEGORIES.map(({ id, label, Icon }) => (
-                    <button key={id} type="button" onClick={() => setDiagCategory(id)}
-                      className={`flex flex-col items-center gap-1.5 p-3 rounded-2xl border-2 transition-all text-center ${
-                        diagCategory === id ? 'border-violet-500 bg-violet-50' : 'border-gray-200 hover:border-violet-200 hover:bg-violet-50/50'
-                      }`}>
-                      <Icon className={`w-5 h-5 ${diagCategory === id ? 'text-violet-600' : 'text-gray-400'}`} />
-                      <span className={`text-[10px] font-semibold leading-tight ${diagCategory === id ? 'text-violet-700' : 'text-gray-500'}`}>{label}</span>
-                    </button>
-                  ))}
+                <div className="relative" ref={diagCategoryRef}>
+                  <button type="button"
+                    onClick={() => setDiagCategoryOpen(v => !v)}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl border-2 border-gray-200 hover:border-violet-300 transition-colors text-left focus:outline-none focus:border-violet-400">
+                    {diagCategory ? (() => {
+                      const cat = diagCategoryList.find(c => c.slug === diagCategory);
+                      if (!cat) return <span className="text-sm text-gray-400 flex-1">Выберите категорию...</span>;
+                      const CatIcon = getCategoryIconBySlug(cat.icon);
+                      return (
+                        <>
+                          <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                            style={{ background: `${cat.color}25` }}>
+                            <CatIcon className="w-4 h-4" style={{ color: cat.color }} />
+                          </div>
+                          <span className="text-sm font-semibold text-gray-800 flex-1">{cat.name}</span>
+                        </>
+                      );
+                    })() : (
+                      <span className="text-sm text-gray-400 flex-1">Выберите категорию...</span>
+                    )}
+                    <ChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${diagCategoryOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {diagCategoryOpen && (
+                    <div className="absolute left-0 right-0 top-full mt-1 z-20 bg-white border border-gray-200 rounded-2xl shadow-lg overflow-hidden max-h-60 overflow-y-auto">
+                      {diagCategoryList.length === 0 ? (
+                        <div className="flex items-center justify-center gap-2 px-4 py-4 text-sm text-gray-400">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Загрузка...
+                        </div>
+                      ) : (
+                        diagCategoryList.map(cat => {
+                          const CatIcon = getCategoryIconBySlug(cat.icon);
+                          const isSelected = diagCategory === cat.slug;
+                          return (
+                            <button key={cat.slug} type="button"
+                              onClick={() => {
+                                setDiagCategory(cat.slug);
+                                setDiagCategoryOpen(false);
+                                setSelectedDiagService(null);
+                              }}
+                              className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors ${isSelected ? 'bg-violet-50' : ''}`}>
+                              <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                                style={{ background: `${cat.color}25` }}>
+                                <CatIcon className="w-4 h-4" style={{ color: cat.color }} />
+                              </div>
+                              <span className={`text-sm font-semibold flex-1 ${isSelected ? 'text-violet-700' : 'text-gray-700'}`}>{cat.name}</span>
+                              {isSelected && <CheckCircle2 className="w-4 h-4 text-violet-500 flex-shrink-0" />}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
