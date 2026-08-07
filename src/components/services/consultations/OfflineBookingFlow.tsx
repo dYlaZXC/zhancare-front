@@ -85,7 +85,8 @@ const OfflineBookingFlow: React.FC<OfflineBookingFlowProps> = ({
     if (!doc) return;
 
     const scheduledTime: string = data?.scheduled_time || data?.scheduled_at || '';
-    const amount = doc.online_consultation_price ? Math.round(Number(doc.online_consultation_price)) : 5000;
+    const rawPrice = doc.offline_consultation_price;
+    const amount = (rawPrice !== null && rawPrice !== undefined) ? Math.round(Number(rawPrice)) : 0;
 
     setBookingError(null);
     try {

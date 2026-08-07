@@ -43,6 +43,7 @@ export interface Doctor {
     name_en: string;
   } | null;
   online_consultation_price?: string | null;
+  offline_consultation_price?: string | null;
   preferred_consultation_duration?: number | null;
   language?: string | null;
   work_schedule?: Record<string, WorkScheduleDay> | null;

@@ -549,7 +549,7 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
 
     const doctor = doctors.find(d => d.id === pendingConsultationData.doctor_id);
     const priceRaw = doctor?.online_consultation_price;
-    const amount = priceRaw ? Math.round(Number(priceRaw)) : 5000;
+    const amount = (priceRaw !== null && priceRaw !== undefined) ? Math.round(Number(priceRaw)) : 0;
     const doctorName = doctor ? doctor.name.split(" ")[0] : "врачом";
     const description = `Онлайн консультация с ${doctorName}`;
 
@@ -589,7 +589,7 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
     if (!pendingConsultationData) return null;
     const doctor = doctors.find(d => d.id === pendingConsultationData.doctor_id);
     const raw = doctor?.online_consultation_price;
-    return raw ? Math.round(Number(raw)) : 5000;
+    return (raw !== null && raw !== undefined) ? Math.round(Number(raw)) : 0;
   }, [pendingConsultationData, doctors]);
 
   // COMMENTED OUT: Urgent consultations removed - all consultations now require time slot selection

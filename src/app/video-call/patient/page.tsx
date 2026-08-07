@@ -90,7 +90,9 @@ const PatientVideoCallPage: React.FC = () => {
           const consultationData = response.data[0];
 
           // ⏰ Check if user is trying to connect before scheduled time
-          if (consultationData.scheduled_at) {
+          // Skip time check when doctor has already started the session (ongoing)
+          const isOngoing = consultationData.status === 'ongoing' || consultationData.status === 'in_progress';
+          if (consultationData.scheduled_at && !isOngoing) {
             const scheduledTime = new Date(consultationData.scheduled_at);
             const now = new Date();
             const timeDiff = scheduledTime.getTime() - now.getTime();

@@ -30,6 +30,7 @@ type Props = {
 
 export default function UserDropdown({ user, onLogout, disableClickOutside = false }: Props) {
   const [isOpen, setIsOpen] = useState(false);
+  const [avatarBroken, setAvatarBroken] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const { language } = useLanguage();
 
@@ -301,16 +302,17 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
       >
         {/* Avatar */}
         <div className="relative shrink-0">
-          {user.avatar ? (
+          {user.avatar && !avatarBroken ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={user.avatar}
               alt={`${user.first_name} avatar`}
               className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover ring-2 ring-white/30"
+              onError={() => setAvatarBroken(true)}
             />
           ) : (
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/20 ring-2 ring-white/30 flex items-center justify-center text-xs sm:text-sm font-bold">
-              {getUserInitials()}
+              {getUserInitials() || <FontAwesomeIcon icon={faUser} className="text-white text-xs" />}
             </div>
           )}
 
