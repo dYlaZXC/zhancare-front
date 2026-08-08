@@ -12,10 +12,11 @@ import {
   ClipboardList, Clock, Banknote, ToggleLeft, ToggleRight,
   CalendarDays, Search, Stethoscope, ChevronDown, Tag, Settings,
   ChevronLeft, ChevronRight, RotateCcw, Users,
+  type LucideIcon,
 } from "lucide-react";
 
 // Map icon slug stored in DB → Lucide component
-const ICON_MAP: Record<string, React.ComponentType<{ size?: number; style?: React.CSSProperties; className?: string }>> = {
+const ICON_MAP: Record<string, LucideIcon> = {
   'flask-conical': FlaskConical,
   'scan-line':     ScanLine,
   'heart':         Heart,
@@ -43,7 +44,7 @@ const ICON_OPTIONS = [
   { value: 'tag',            label: 'Тег' },
 ];
 
-function getCategoryIcon(iconSlug: string): React.ComponentType<{ size?: number; style?: React.CSSProperties; className?: string }> {
+function getCategoryIcon(iconSlug: string): LucideIcon {
   return ICON_MAP[iconSlug] ?? ClipboardList;
 }
 
