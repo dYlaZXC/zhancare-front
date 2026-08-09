@@ -12,13 +12,7 @@ import {
   RotateCcw,
   History,
   CheckCircle,
-  Clock,
-  Ban,
-  Trash2,
-  Plus,
 } from "lucide-react";
-
-import ScheduleTypeSelector from "./schedule/components/ScheduleTypeSelector";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -26,7 +20,6 @@ interface StaffMemberMin {
   id: number;
   first_name: string;
   last_name: string;
-  schedule_type?: string;
   schedules?: Array<{
     id?: number;
     consultation_type: "online" | "offline";
@@ -124,10 +117,6 @@ const buildWeeklySchedulesFromMember = (member: StaffMemberMin): WeeklySchedules
   }
   return { [weekStartDate]: week };
 };
-
-const buildEmptyWeeklySchedules = (): WeeklySchedules => ({
-  [getCurrentMondayStr()]: emptyWeek(),
-});
 
 // Build schedules array for saving (template tab)
 const buildSchedulesArray = (
@@ -238,9 +227,6 @@ export default function StaffScheduleModal({
   const [scheduleHistory, setScheduleHistory] = useState<any[]>([]);
   const [mouseDownTarget, setMouseDownTarget] = useState<EventTarget | null>(null);
 
-  // Schedule type for template tab (mirrors formData.schedule_type in parent)
-  const [scheduleTypeMode, setScheduleTypeMode] = useState<"weekly" | "constant">("weekly");
-
   // Template-tab weekday pattern state
   const [scheduleType, setScheduleType] = useState<"online" | "offline">("online");
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
@@ -255,28 +241,7 @@ export default function StaffScheduleModal({
   const [plannerSaving, setPlannerSaving] = useState(false);
   const [plannerDirty, setPlannerDirty] = useState(false);
 
-  // Overrides (legacy, hidden behind `false &&` in template tab)
-  const [overrides, setOverrides] = useState<any[]>([]);
-  const [overrideForm, setOverrideForm] = useState({
-    date: "",
-    consultation_type: "online",
-    is_day_off: false,
-    start_time: "09:00",
-    end_time: "18:00",
-    note: "",
-  });
-  const [overrideSaving, setOverrideSaving] = useState(false);
-
   // ── Fetch helpers ────────────────────────────────────────────────────────────
-
-  const fetchOverrides = useCallback(async (memberId: number) => {
-    try {
-      const { data } = await api.get(`/staff/${memberId}/schedule-overrides/`);
-      setOverrides(data);
-    } catch {
-      setOverrides([]);
-    }
-  }, []);
 
   const fetchScheduleHistory = useCallback(async (memberId: number) => {
     try {
@@ -323,16 +288,7 @@ export default function StaffScheduleModal({
 
     // Reset all state
     setScheduleModalTab("schedule");
-    setOverrides([]);
     setScheduleHistory([]);
-    setOverrideForm({
-      date: "",
-      consultation_type: "online",
-      is_day_off: false,
-      start_time: "09:00",
-      end_time: "18:00",
-      note: "",
-    });
     setScheduleType("online");
     setCurrentWeekIndex(0);
     setPlannerConsultationType("online");
@@ -346,21 +302,18 @@ export default function StaffScheduleModal({
       .get(`/staff/${member.id}/`)
       .then((response) => {
         const fresh: StaffMemberMin = response.data;
-        setScheduleTypeMode((fresh.schedule_type || "weekly") as "weekly" | "constant");
         setWeeklySchedules(buildWeeklySchedulesFromMember(fresh));
       })
       .catch(() => {
-        setScheduleTypeMode((member.schedule_type || "weekly") as "weekly" | "constant");
         setWeeklySchedules(buildWeeklySchedulesFromMember(member));
       })
       .finally(() => {
         setScheduleLoading(false);
         setScheduleModalTab("schedule");
         fetchPlannerWeek(member.id, monday, "online");
-        fetchOverrides(member.id);
         fetchScheduleHistory(member.id);
       });
-  }, [isOpen, member, fetchPlannerWeek, fetchOverrides, fetchScheduleHistory]);
+  }, [isOpen, member, fetchPlannerWeek, fetchScheduleHistory]);
 
   // ── Conflict detection helpers ────────────────────────────────────────────────
 
@@ -415,25 +368,6 @@ export default function StaffScheduleModal({
       return today.toLocaleDateString("sv-SE");
     },
     []
-  );
-
-  const getDateForDay = useCallback(
-    (dayIndex: number): string => {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const dow = today.getDay();
-      const monday = new Date(today);
-      monday.setDate(today.getDate() + (dow === 0 ? -6 : 1 - dow));
-      const weekStart = new Date(monday);
-      weekStart.setDate(monday.getDate() + currentWeekIndex * 7);
-      const target = new Date(weekStart);
-      const offsetFromMonday = dayIndex === 0 ? 6 : dayIndex - 1;
-      target.setDate(weekStart.getDate() + offsetFromMonday);
-      const day = target.getDate();
-      const month = target.toLocaleDateString("ru-RU", { month: "long" });
-      return `${day} ${month}`;
-    },
-    [currentWeekIndex]
   );
 
   const getCurrentOnlineSchedule = useCallback((): Record<string, DaySchedule> => {
@@ -592,7 +526,6 @@ export default function StaffScheduleModal({
     try {
       await api.patch(`/staff/${member.id}/`, {
         schedules: buildSchedulesArray(weeklySchedules),
-        schedule_type: scheduleTypeMode,
       });
       toast.success("Расписание успешно обновлено!");
       onSaved?.();
@@ -606,53 +539,6 @@ export default function StaffScheduleModal({
       toast.error(errorMessage);
     } finally {
       setScheduleLoading(false);
-    }
-  };
-
-  // ── Overrides ─────────────────────────────────────────────────────────────────
-
-  const handleSaveOverride = async () => {
-    if (!member) return;
-    if (!overrideForm.date) {
-      alert("Выберите дату");
-      return;
-    }
-    if (!overrideForm.is_day_off && (!overrideForm.start_time || !overrideForm.end_time)) {
-      alert("Укажите время");
-      return;
-    }
-    setOverrideSaving(true);
-    try {
-      await api.post(`/staff/${member.id}/schedule-overrides/`, {
-        ...overrideForm,
-        start_time: overrideForm.is_day_off ? null : overrideForm.start_time,
-        end_time: overrideForm.is_day_off ? null : overrideForm.end_time,
-      });
-      await fetchOverrides(member.id);
-      await fetchScheduleHistory(member.id);
-      setOverrideForm({
-        date: "",
-        consultation_type: "online",
-        is_day_off: false,
-        start_time: "09:00",
-        end_time: "18:00",
-        note: "",
-      });
-    } catch (e: any) {
-      alert(e?.response?.data?.error || "Ошибка сохранения");
-    } finally {
-      setOverrideSaving(false);
-    }
-  };
-
-  const handleDeleteOverride = async (overrideId: number) => {
-    if (!member) return;
-    try {
-      await api.delete(`/staff/${member.id}/schedule-overrides/${overrideId}/`);
-      setOverrides((prev) => prev.filter((o) => o.id !== overrideId));
-      await fetchScheduleHistory(member.id);
-    } catch {
-      alert("Ошибка удаления");
     }
   };
 
@@ -1252,109 +1138,6 @@ export default function StaffScheduleModal({
               )}
               {!scheduleLoading && scheduleModalTab === "template" && (
                 <>
-                  {/* Schedule Type */}
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-5 rounded-2xl border-2 border-blue-100">
-                    <label className="block text-sm font-semibold text-gray-700 mb-3">
-                      Тип расписания <span className="text-red-500">*</span>
-                    </label>
-                    <ScheduleTypeSelector
-                      scheduleType={scheduleTypeMode}
-                      onChange={(type) => {
-                        setScheduleTypeMode(type);
-                        if (type === (member?.schedule_type || "weekly")) {
-                          setWeeklySchedules(buildWeeklySchedulesFromMember(member!));
-                        } else {
-                          setWeeklySchedules(buildEmptyWeeklySchedules());
-                        }
-                        setCurrentWeekIndex(0);
-                      }}
-                    />
-                    <p className="text-xs text-gray-500 mt-3">
-                      💡 <strong>Недельное:</strong> разное расписание для каждого дня.{" "}
-                      <strong>Постоянное:</strong> одинаковое расписание каждый день.
-                    </p>
-                  </div>
-
-                  {/* Week Navigation - only for weekly schedule */}
-                  {scheduleTypeMode === "weekly" && (
-                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-2xl border-2 border-indigo-100">
-                      {(() => {
-                        const today = new Date();
-                        today.setHours(0, 0, 0, 0);
-                        const currentWeekMonday = new Date(today);
-                        const dayOfWeek = currentWeekMonday.getDay();
-                        const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-                        currentWeekMonday.setDate(currentWeekMonday.getDate() + daysToMonday);
-                        const displayedWeekStart = new Date(currentWeekMonday);
-                        displayedWeekStart.setDate(
-                          currentWeekMonday.getDate() + currentWeekIndex * 7
-                        );
-                        const displayedWeekEnd = new Date(displayedWeekStart);
-                        displayedWeekEnd.setDate(displayedWeekStart.getDate() + 6);
-                        displayedWeekEnd.setHours(23, 59, 59, 999);
-                        const formatDate = (date: Date) =>
-                          date.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
-                        const isCurrentWeek =
-                          today >= displayedWeekStart && today <= displayedWeekEnd;
-                        return (
-                          <div className="flex items-center justify-between gap-4">
-                            <button
-                              type="button"
-                              onClick={() => setCurrentWeekIndex(currentWeekIndex - 1)}
-                              className="p-2 rounded-lg bg-white hover:bg-indigo-100 text-indigo-600 border border-indigo-200 transition-all"
-                              title="Предыдущая неделя"
-                            >
-                              <svg
-                                className="w-5 h-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M15 19l-7-7 7-7"
-                                />
-                              </svg>
-                            </button>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xl">📅</span>
-                              <span className="font-bold text-gray-800">
-                                {formatDate(displayedWeekStart)} — {formatDate(displayedWeekEnd)}
-                              </span>
-                              {isCurrentWeek && (
-                                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded-full">
-                                  Текущая
-                                </span>
-                              )}
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => setCurrentWeekIndex(currentWeekIndex + 1)}
-                              className="p-2 rounded-lg bg-white hover:bg-indigo-100 text-indigo-600 border border-indigo-200 transition-all"
-                              title="Следующая неделя"
-                            >
-                              <svg
-                                className="w-5 h-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M9 5l7 7-7 7"
-                                />
-                              </svg>
-                            </button>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  )}
-
                   {/* Online/Offline Tab Switcher */}
                   <div className="flex rounded-2xl overflow-hidden border-2 border-gray-200">
                     <button
@@ -1488,11 +1271,6 @@ export default function StaffScheduleModal({
                             <div className="flex-1">
                               <p className="font-semibold text-gray-700">
                                 {day.labelRu}
-                                {scheduleTypeMode === "weekly" && (
-                                  <span className="ml-2 text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                                    {getDateForDay(day.dayIndex)}
-                                  </span>
-                                )}
                               </p>
                               {otherEnabled && !currentDaySchedule[day.value]?.enabled && (
                                 <p
@@ -1575,197 +1353,6 @@ export default function StaffScheduleModal({
                       <p className="text-xs text-red-700 mt-1">
                         Исправьте конфликты перед сохранением.
                       </p>
-                    </div>
-                  )}
-
-                  {/* Overrides section (hidden) */}
-                  {false && (
-                    <div className="space-y-6">
-                      {/* Add Override Form */}
-                      <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-5 space-y-4">
-                        <h3 className="font-semibold text-gray-800 flex items-center gap-2">
-                          <Plus className="w-4 h-4 text-amber-600" />
-                          Добавить исключение
-                        </h3>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">
-                              Дата
-                            </label>
-                            <input
-                              type="date"
-                              value={overrideForm.date}
-                              onChange={(e) =>
-                                setOverrideForm((f) => ({ ...f, date: e.target.value }))
-                              }
-                              className="w-full px-3 py-2 rounded-lg border-2 border-gray-300 focus:border-amber-500 focus:outline-none text-sm"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">
-                              Тип
-                            </label>
-                            <select
-                              value={overrideForm.consultation_type}
-                              onChange={(e) =>
-                                setOverrideForm((f) => ({
-                                  ...f,
-                                  consultation_type: e.target.value,
-                                }))
-                              }
-                              className="w-full px-3 py-2 rounded-lg border-2 border-gray-300 focus:border-amber-500 focus:outline-none text-sm"
-                            >
-                              <option value="online">Видеоконсультация</option>
-                              <option value="offline">Приём в клинике</option>
-                            </select>
-                          </div>
-                        </div>
-                        <label className="flex items-center gap-3 cursor-pointer select-none">
-                          <div
-                            onClick={() =>
-                              setOverrideForm((f) => ({ ...f, is_day_off: !f.is_day_off }))
-                            }
-                            className={`w-10 h-6 rounded-full transition-colors relative ${
-                              overrideForm.is_day_off ? "bg-red-500" : "bg-gray-300"
-                            }`}
-                          >
-                            <span
-                              className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${
-                                overrideForm.is_day_off ? "left-5" : "left-1"
-                              }`}
-                            />
-                          </div>
-                          <span className="text-sm font-medium text-gray-700">Выходной день</span>
-                        </label>
-                        {!overrideForm.is_day_off && (
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">
-                                Начало
-                              </label>
-                              <input
-                                type="time"
-                                value={overrideForm.start_time}
-                                onChange={(e) =>
-                                  setOverrideForm((f) => ({ ...f, start_time: e.target.value }))
-                                }
-                                step="900"
-                                className="w-full px-3 py-2 rounded-lg border-2 border-gray-300 focus:border-amber-500 focus:outline-none text-sm"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">
-                                Конец
-                              </label>
-                              <input
-                                type="time"
-                                value={overrideForm.end_time}
-                                onChange={(e) =>
-                                  setOverrideForm((f) => ({ ...f, end_time: e.target.value }))
-                                }
-                                step="900"
-                                className="w-full px-3 py-2 rounded-lg border-2 border-gray-300 focus:border-amber-500 focus:outline-none text-sm"
-                              />
-                            </div>
-                          </div>
-                        )}
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">
-                            Примечание (необязательно)
-                          </label>
-                          <input
-                            type="text"
-                            value={overrideForm.note}
-                            onChange={(e) =>
-                              setOverrideForm((f) => ({ ...f, note: e.target.value }))
-                            }
-                            placeholder="Например: командировка, отпуск..."
-                            className="w-full px-3 py-2 rounded-lg border-2 border-gray-300 focus:border-amber-500 focus:outline-none text-sm"
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={handleSaveOverride}
-                          disabled={overrideSaving || !overrideForm.date}
-                          className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                        >
-                          {overrideSaving ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Plus className="w-4 h-4" />
-                          )}
-                          Сохранить исключение
-                        </button>
-                      </div>
-
-                      {/* Existing Overrides List */}
-                      {overrides.length === 0 ? (
-                        <div className="text-center py-8 text-gray-400">
-                          <Ban className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                          <p className="text-sm">Исключений нет</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                            Существующие исключения
-                          </p>
-                          {overrides.map((ov) => (
-                            <div
-                              key={ov.id}
-                              className={`flex items-center justify-between p-4 rounded-xl border-2 ${
-                                ov.is_day_off
-                                  ? "border-red-200 bg-red-50"
-                                  : "border-amber-200 bg-amber-50"
-                              }`}
-                            >
-                              <div className="flex items-center gap-3">
-                                {ov.is_day_off ? (
-                                  <Ban className="w-4 h-4 text-red-500" />
-                                ) : (
-                                  <Clock className="w-4 h-4 text-amber-600" />
-                                )}
-                                <div>
-                                  <p className="text-sm font-semibold text-gray-800">
-                                    {new Date(ov.date + "T00:00:00").toLocaleDateString("ru-RU", {
-                                      day: "numeric",
-                                      month: "long",
-                                      year: "numeric",
-                                    })}
-                                    <span
-                                      className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${
-                                        ov.consultation_type === "online"
-                                          ? "bg-blue-100 text-blue-700"
-                                          : "bg-purple-100 text-purple-700"
-                                      }`}
-                                    >
-                                      {ov.consultation_type === "online" ? "Видеоконсультация" : "Приём в клинике"}
-                                    </span>
-                                  </p>
-                                  <p
-                                    className={`text-xs mt-0.5 ${
-                                      ov.is_day_off ? "text-red-600" : "text-amber-700"
-                                    }`}
-                                  >
-                                    {ov.is_day_off
-                                      ? "Выходной"
-                                      : `${ov.start_time?.slice(0, 5)} — ${ov.end_time?.slice(0, 5)}`}
-                                    {ov.note && (
-                                      <span className="ml-2 text-gray-500">· {ov.note}</span>
-                                    )}
-                                  </p>
-                                </div>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteOverride(ov.id)}
-                                className="p-2 rounded-lg hover:bg-red-100 text-red-400 hover:text-red-600 transition-colors"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   )}
                 </>

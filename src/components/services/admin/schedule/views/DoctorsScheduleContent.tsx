@@ -16,6 +16,8 @@ import {
   Calendar as CalendarIcon,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   CalendarDays,
   Trash2,
 } from "lucide-react";
@@ -179,11 +181,21 @@ export function DoctorsScheduleContent({
   const todayStr = new Date().toLocaleDateString('sv-SE');
   const weekDays = getWeekStrip();
 
+  const shiftWeek = (direction: 'prev' | 'next') => {
+    const d = new Date(selectedDate + 'T00:00:00');
+    d.setDate(d.getDate() + (direction === 'next' ? 7 : -7));
+    onDateChange(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+  };
+
   return (
     <div className="h-full flex flex-col">
       {/* Week strip */}
       <div className="mb-4 flex flex-col gap-3">
         <div className="flex items-center gap-1.5">
+          <button type="button" onClick={() => shiftWeek('prev')} title="Предыдущая неделя"
+            className="flex-shrink-0 p-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-500 hover:text-gray-700 transition-colors">
+            <ChevronLeft className="w-4 h-4" />
+          </button>
           {weekDays.map((day, i) => {
             const ds = `${day.getFullYear()}-${String(day.getMonth()+1).padStart(2,'0')}-${String(day.getDate()).padStart(2,'0')}`;
             const isSelected = ds === selectedDate;
@@ -207,6 +219,10 @@ export function DoctorsScheduleContent({
               </button>
             );
           })}
+          <button type="button" onClick={() => shiftWeek('next')} title="Следующая неделя"
+            className="flex-shrink-0 p-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-500 hover:text-gray-700 transition-colors">
+            <ChevronRight className="w-4 h-4" />
+          </button>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative flex-1">

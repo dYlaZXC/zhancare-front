@@ -172,6 +172,7 @@ export function ServicesView({ user }: { user: any }) {
   const [loading, setLoading] = useState(true);
   const [clinicCurrency, setClinicCurrency] = useState<string>('KZT');
   const [showModal, setShowModal] = useState(false);
+  const [modalMouseDownTarget, setModalMouseDownTarget] = useState<EventTarget | null>(null);
   const [editing, setEditing] = useState<Service | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
@@ -179,6 +180,7 @@ export function ServicesView({ user }: { user: any }) {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [doctorDropdown, setDoctorDropdown] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [categoryModalMouseDownTarget, setCategoryModalMouseDownTarget] = useState<EventTarget | null>(null);
   const [editingCategory, setEditingCategory] = useState<ServiceCategory | null>(null);
   const [categoryForm, setCategoryForm] = useState(EMPTY_CATEGORY_FORM);
   const [savingCategory, setSavingCategory] = useState(false);
@@ -537,7 +539,11 @@ export function ServicesView({ user }: { user: any }) {
         {showModal && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-            onClick={e => { if (e.target === e.currentTarget) setShowModal(false); }}>
+            onMouseDown={e => setModalMouseDownTarget(e.target)}
+            onClick={e => {
+              if (e.target === e.currentTarget && modalMouseDownTarget === e.currentTarget) setShowModal(false);
+              setModalMouseDownTarget(null);
+            }}>
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
               className="bg-white rounded-3xl shadow-2xl w-full max-w-md">
               <div className="px-6 py-5 flex items-center justify-between border-b border-gray-100 rounded-t-3xl overflow-hidden"
@@ -775,7 +781,11 @@ export function ServicesView({ user }: { user: any }) {
         {showCategoryModal && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-            onClick={e => { if (e.target === e.currentTarget) setShowCategoryModal(false); }}>
+            onMouseDown={e => setCategoryModalMouseDownTarget(e.target)}
+            onClick={e => {
+              if (e.target === e.currentTarget && categoryModalMouseDownTarget === e.currentTarget) setShowCategoryModal(false);
+              setCategoryModalMouseDownTarget(null);
+            }}>
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
               className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
               <div className="px-6 py-5 flex items-center justify-between border-b border-gray-100 flex-shrink-0"
@@ -957,6 +967,7 @@ function ServiceScheduleModal({
   onSaved: (updated: Service) => void;
 }) {
   const [tab, setTab] = useState<'dates' | 'template'>('dates');
+  const [mouseDownTarget, setMouseDownTarget] = useState<EventTarget | null>(null);
 
   // --- Template tab ---
   const [weeklySchedule, setWeeklySchedule] = useState(DEFAULT_WEEKLY_SCHEDULE);
@@ -1105,7 +1116,11 @@ function ServiceScheduleModal({
     <AnimatePresence>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-        onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+        onMouseDown={e => setMouseDownTarget(e.target)}
+        onClick={e => {
+          if (e.target === e.currentTarget && mouseDownTarget === e.currentTarget) onClose();
+          setMouseDownTarget(null);
+        }}>
         <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
           className="bg-white rounded-3xl shadow-2xl w-full max-w-[610px] max-h-[90vh] flex flex-col">
 

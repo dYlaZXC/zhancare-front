@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/api";
 import {
   Search, Loader2, CalendarDays, AlertCircle, Clock,
-  ChevronDown, ChevronUp,
+  ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
   FlaskConical, ScanLine, Heart, Brain, Bone, Eye, Baby, Microscope,
   ClipboardList, Stethoscope, Plus,
 } from "lucide-react";
@@ -59,6 +59,7 @@ export function ServicesScheduleContent({
   const [searchQuery, setSearchQuery] = useState("");
   const [showNoSchedule, setShowNoSchedule] = useState(false);
   const [expandedServices, setExpandedServices] = useState<Set<number>>(new Set());
+  const [nearestSlots, setNearestSlots] = useState<Record<number, { date: string; start: string } | null>>({});
 
   const fetchServices = useCallback(async () => {
     setLoading(true);
@@ -134,7 +135,9 @@ export function ServicesScheduleContent({
   const countForService = (name: string) =>
     events.filter(e => e.type === 'diagnostics' && e.service_name === name && e.date === selectedDate).length;
 
-  // Generate available slots
+  // Generate available slots. For today, slots that already started are dropped —
+  // mirrors the "current <= now" cutoff in diagnostics/views.py's available_slots,
+  // so admins see the same "nothing left today" state patients get when booking.
   const generateSlots = (s: ServiceDay) => {
     if (!s.schedule) return [];
     const { start_time, end_time } = s.schedule;
@@ -145,12 +148,52 @@ export function ServicesScheduleContent({
     const end = eh * 60 + em;
     const fmt = (m: number) =>
       `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+    const now = new Date();
+    const nowMinutes = selectedDate === todayStr ? now.getHours() * 60 + now.getMinutes() : -1;
     const slots: { start: string; end: string }[] = [];
     while (cur + dur <= end) {
-      slots.push({ start: fmt(cur), end: fmt(cur + dur) });
+      if (cur > nowMinutes) {
+        slots.push({ start: fmt(cur), end: fmt(cur + dur) });
+      }
       cur += dur;
     }
     return slots;
+  };
+
+  // Lazily fetch "next opening" for expanded services that have nothing left
+  // on the selected day — avoids a scan-ahead request for every service up front.
+  useEffect(() => {
+    const idsNeedingNearest = services
+      .filter(s => expandedServices.has(s.id) && !(s.id in nearestSlots))
+      .filter(s => generateSlots(s).length === 0)
+      .map(s => s.id);
+
+    idsNeedingNearest.forEach(async id => {
+      try {
+        const res = await api.get(`/diagnostics/services/${id}/nearest-slot/`);
+        setNearestSlots(prev => ({ ...prev, [id]: res.data.slot }));
+      } catch {
+        setNearestSlots(prev => ({ ...prev, [id]: null }));
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expandedServices, services, selectedDate]);
+
+  const MONTHS_SHORT_RU = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+
+  const formatNearestSlotLabel = (slot: { date: string; start: string }) => {
+    if (slot.date === todayStr) return `Сегодня, ${slot.start}`;
+    const tomorrow = new Date(todayStr + 'T00:00:00');
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    if (slot.date === tomorrow.toLocaleDateString('sv-SE')) return `Завтра, ${slot.start}`;
+    const d = new Date(slot.date + 'T00:00:00');
+    return `${d.getDate()} ${MONTHS_SHORT_RU[d.getMonth()]}, ${slot.start}`;
+  };
+
+  const shiftWeek = (direction: 'prev' | 'next') => {
+    const d = new Date(selectedDate + 'T00:00:00');
+    d.setDate(d.getDate() + (direction === 'next' ? 7 : -7));
+    onDateChange(d.toLocaleDateString('sv-SE'));
   };
 
   return (
@@ -158,6 +201,10 @@ export function ServicesScheduleContent({
       {/* Week strip */}
       <div className="mb-4 flex flex-col gap-3">
         <div className="flex items-center gap-1.5">
+          <button type="button" onClick={() => shiftWeek('prev')} title="Предыдущая неделя"
+            className="flex-shrink-0 p-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-500 hover:text-gray-700 transition-colors">
+            <ChevronLeft className="w-4 h-4" />
+          </button>
           {weekDays.map((day, i) => {
             const ds = day.toLocaleDateString('sv-SE');
             const isSelected = ds === selectedDate;
@@ -182,6 +229,10 @@ export function ServicesScheduleContent({
               </button>
             );
           })}
+          <button type="button" onClick={() => shiftWeek('next')} title="Следующая неделя"
+            className="flex-shrink-0 p-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-500 hover:text-gray-700 transition-colors">
+            <ChevronRight className="w-4 h-4" />
+          </button>
         </div>
 
         <div className="relative flex-1">
@@ -326,7 +377,21 @@ export function ServicesScheduleContent({
                   {isExpanded && (
                     <div className="px-5 pb-5 pt-1 border-t border-gray-50">
                       {slots.length === 0 ? (
-                        <p className="text-xs text-gray-400 italic py-3 text-center">Нет доступных слотов</p>
+                        <div className="py-3 text-center">
+                          <p className="text-xs text-gray-400 italic">Нет доступных слотов</p>
+                          {nearestSlots[s.id] === undefined ? (
+                            <p className="text-xs text-gray-300 mt-1">Проверяем ближайший слот…</p>
+                          ) : nearestSlots[s.id] ? (
+                            <button type="button"
+                              onClick={() => onDateChange(nearestSlots[s.id]!.date)}
+                              className="text-xs text-[#3772FF] font-semibold mt-1.5 flex items-center justify-center gap-1.5 mx-auto hover:underline">
+                              <Clock className="w-3 h-3" />
+                              Ближайший слот: {formatNearestSlotLabel(nearestSlots[s.id]!)}
+                            </button>
+                          ) : (
+                            <p className="text-xs text-gray-300 mt-1">Открытых слотов в ближайшие 14 дней нет</p>
+                          )}
+                        </div>
                       ) : (
                         <div className="flex flex-wrap gap-2 mt-3">
                           {slots.map(slot => (

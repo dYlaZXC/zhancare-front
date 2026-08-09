@@ -47,7 +47,6 @@ import {
 const PAGE_SIZE = 20;
 
 
-import ScheduleTypeSelector from "./schedule/components/ScheduleTypeSelector";
 import PhoneInputUI from "@/components/ui/PhoneInput";
 import StaffScheduleModal from "./StaffScheduleModal";
 import { getCurrencySymbol } from "@/utils/currency";
@@ -96,7 +95,6 @@ interface StaffMember {
   diagnostics_commissions?: { id: number; service_id: number; service_name: string; doctor_share_percent: number }[];
   preferred_consultation_duration?: number; // in minutes
   room_number?: string | null;
-  schedule_type?: 'weekly' | 'constant'; // Type of schedule: weekly (different each day) or constant (same every day)
   work_schedule?: {
     [key: string]: { // day name as key
       start: string; // HH:MM format
@@ -476,7 +474,6 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     online_doctor_share_percent: '50',
     preferred_consultation_duration: '',
     room_number: '',
-    schedule_type: 'weekly' as 'weekly' | 'constant',  // Schedule type for doctors
   });
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -1190,7 +1187,6 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       online_doctor_share_percent: '50',
       preferred_consultation_duration: '',
       room_number: '',
-      schedule_type: 'weekly',
     });
     setSpecializations(['']);
     setDiagCommissions([]);
@@ -1358,7 +1354,6 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         online_doctor_share_percent: '50',
         preferred_consultation_duration: '',
         room_number: '',
-        schedule_type: 'weekly',
       });
       setSpecializations(['']);
       setDiagCommissions([]);
@@ -1453,7 +1448,6 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       online_doctor_share_percent: member.online_doctor_share_percent?.toString() || '50',
       preferred_consultation_duration: member.preferred_consultation_duration?.toString() || '',
       room_number: member.room_number || '',
-      schedule_type: (member.schedule_type || 'weekly') as 'weekly' | 'constant',
     });
     setSpecializations(specializationsArray);
     setDiagCommissions(
@@ -1639,7 +1633,6 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       console.log('=== Sending schedule data to backend ===');
       console.log('Online schedule:', JSON.stringify(updateData.online_work_schedule, null, 2));
       console.log('Offline schedule:', JSON.stringify(updateData.offline_work_schedule, null, 2));
-      console.log('Schedule type:', updateData.schedule_type);
 
       const response = await api.patch(`/staff/${editingMember.id}/`, updateData);
       const updatedStaff = response.data;

@@ -143,8 +143,6 @@ function getCategoryIconBySlug(icon: string): React.ElementType {
   return map[icon] ?? ClipboardList;
 }
 
-const DIAG_TIMES = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'];
-
 export default function AddEventModal({
   isOpen,
   onClose,
@@ -217,18 +215,19 @@ export default function AddEventModal({
   const [clinicAddress, setClinicAddress] = useState<string>('');
 
   // Diagnostics state
-  const [diagCategory, setDiagCategory] = useState<string | null>(null);
   const [diagCategoryList, setDiagCategoryList] = useState<DiagCategoryItem[]>([]);
-  const [diagCategoryOpen, setDiagCategoryOpen] = useState(false);
-  const diagCategoryRef = useRef<HTMLDivElement>(null);
   const [diagServices, setDiagServices] = useState<Array<{
     id: number; name: string; description: string | null;
     price: string | null; duration_minutes: number; clinic_name: string;
+    category: string | null; category_label: string | null;
   }>>([]);
   const [selectedDiagService, setSelectedDiagService] = useState<{
     id: number; name: string; price: string | null; duration_minutes: number; clinic_name: string;
+    category: string | null; category_label: string | null;
   } | null>(null);
   const [loadingDiagServices, setLoadingDiagServices] = useState(false);
+  const [diagSlots, setDiagSlots] = useState<Array<{ start: string; end: string; label: string; available: number | null }>>([]);
+  const [loadingDiagSlots, setLoadingDiagSlots] = useState(false);
 
   const fetchStaff = async () => {
     try {
@@ -306,8 +305,6 @@ export default function AddEventModal({
       setShowNewPatientForm(false);
       setNewPatientForm({ first_name: '', last_name: '', phone: '', email: '' });
       setTimePickerOpen(false);
-      setDiagCategory(null);
-      setDiagCategoryOpen(false);
       setDiagServices([]);
       setSelectedDiagService(null);
       setCreatedInfo(null);
@@ -329,21 +326,17 @@ export default function AddEventModal({
     const monday = d.toLocaleDateString('sv-SE');
 
     const scheduleType = (consultationType === 'home' || consultationType === 'diagnostics') ? 'offline' : consultationType;
-    // Fetch both consultation types — use whichever has an entry for this date
-    Promise.allSettled([
-      api.get(`/staff/${formData.doctor_id}/availability/`, { params: { week_start: monday, consultation_type: 'online' } }),
-      api.get(`/staff/${formData.doctor_id}/availability/`, { params: { week_start: monday, consultation_type: 'offline' } }),
-    ]).then(([onlineRes, offlineRes]) => {
-      const onlineData = onlineRes.status === 'fulfilled' ? (onlineRes.value.data as any[]) : [];
-      const offlineData = offlineRes.status === 'fulfilled' ? (offlineRes.value.data as any[]) : [];
-      // Prefer the type matching the selected consultation type
-      const preferred = scheduleType === 'online' ? onlineData : offlineData;
-      const fallback = scheduleType === 'online' ? offlineData : onlineData;
-      const entry =
-        preferred.find(e => e.date === formData.date && !e.is_day_off && e.start_time) ??
-        fallback.find(e => e.date === formData.date && !e.is_day_off && e.start_time);
-      setAvailabilityEntry(entry ? { start_time: entry.start_time, end_time: entry.end_time } : null);
-    }).finally(() => setLoadingAvailability(false));
+    // Only the matching consultation_type — no cross-type fallback. A doctor working
+    // online doesn't imply they see patients in-clinic; no explicit offline schedule
+    // means no offline availability, same "no record = not bookable" rule as diagnostics.
+    api.get(`/staff/${formData.doctor_id}/availability/`, { params: { week_start: monday, consultation_type: scheduleType } })
+      .then(res => {
+        const data = res.data as any[];
+        const entry = data.find(e => e.date === formData.date && !e.is_day_off && e.start_time);
+        setAvailabilityEntry(entry ? { start_time: entry.start_time, end_time: entry.end_time } : null);
+      })
+      .catch(() => setAvailabilityEntry(null))
+      .finally(() => setLoadingAvailability(false));
   }, [formData.doctor_id, formData.date, consultationType]);
 
   // Fetch booked consultations for selected doctor+date to mark busy slots
@@ -386,18 +379,8 @@ export default function AddEventModal({
       .catch(() => setDoctorFirstSlots({}));
   }, [formData.date, consultationType, doctors.length]);
 
-  // Close category dropdown on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (diagCategoryRef.current && !diagCategoryRef.current.contains(e.target as Node)) {
-        setDiagCategoryOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  // Fetch category справочник when diagnostics tab is active
+  // Fetch category справочник when diagnostics tab is active (used only to look up
+  // icon/color for the auto-derived category badge under the service search)
   useEffect(() => {
     if (consultationType !== 'diagnostics') return;
     api.get('/diagnostics/categories/').then(res => {
@@ -405,15 +388,35 @@ export default function AddEventModal({
     }).catch(() => {});
   }, [consultationType]);
 
-  // Fetch diagnostics services when category changes
+  // Fetch all active diagnostics services up front — no category gate; category is
+  // derived from whichever service gets picked, not chosen as a separate step first.
   useEffect(() => {
-    if (consultationType !== 'diagnostics' || !diagCategory) { setDiagServices([]); setSelectedDiagService(null); return; }
+    if (consultationType !== 'diagnostics') { setDiagServices([]); setSelectedDiagService(null); return; }
     setLoadingDiagServices(true);
-    api.get('/diagnostics/services/', { params: { category: diagCategory } })
+    api.get('/diagnostics/services/')
       .then(res => setDiagServices(res.data.results ?? res.data))
       .catch(() => setDiagServices([]))
       .finally(() => setLoadingDiagServices(false));
-  }, [diagCategory, consultationType]);
+  }, [consultationType]);
+
+  // Fetch real available slots for the selected diagnostics service/date — respects
+  // the service's actual schedule (date-specific > weekday template), its own
+  // duration_minutes, capacity_per_slot, already-booked times, past-time cutoff for
+  // today, and this patient's own conflicting bookings. Replaces a hardcoded hourly list.
+  useEffect(() => {
+    if (consultationType !== 'diagnostics' || !selectedDiagService || !formData.date) {
+      setDiagSlots([]);
+      return;
+    }
+    setLoadingDiagSlots(true);
+    setFormData(f => ({ ...f, time: '' }));
+    api.get(`/diagnostics/services/${selectedDiagService.id}/available-slots/`, {
+      params: { date: formData.date, patient_id: formData.patient_id || undefined },
+    })
+      .then(res => setDiagSlots(res.data.slots ?? []))
+      .catch(() => setDiagSlots([]))
+      .finally(() => setLoadingDiagSlots(false));
+  }, [consultationType, selectedDiagService, formData.date, formData.patient_id]);
 
   // Generate time slots from the selected doctor's working hours
   const generateSlots = () => {
@@ -819,7 +822,7 @@ export default function AddEventModal({
                 <motion.button
                   key={type}
                   type="button"
-                  onClick={() => { setConsultationType(type); setFormData(prev => ({ ...prev, doctor_id: '', referring_doctor_id: '', time: '' })); setDiagCategory(null); setSelectedDiagService(null); }}
+                  onClick={() => { setConsultationType(type); setFormData(prev => ({ ...prev, doctor_id: '', referring_doctor_id: '', time: '' })); setSelectedDiagService(null); }}
                   whileHover={{ y: -2, scale: 1.02 }}
                   whileTap={{ scale: 0.97 }}
                   className="group relative flex flex-col gap-3 px-4 py-4 rounded-2xl overflow-hidden text-white text-left transition-all duration-200"
@@ -1091,102 +1094,54 @@ export default function AddEventModal({
             );
           })()}
 
-          {/* Diagnostics — Category + Service */}
+          {/* Diagnostics — Service (search first; category is derived from the pick, not chosen up front) */}
           {consultationType === 'diagnostics' && (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold mb-3" style={{ color: '#1e263e' }}>
-                  Категория диагностики <span className="text-red-500">*</span>
+                <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
+                  Услуга <span className="text-red-500">*</span>
                 </label>
-                <div className="relative" ref={diagCategoryRef}>
-                  <button type="button"
-                    onClick={() => setDiagCategoryOpen(v => !v)}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl border-2 border-gray-200 hover:border-violet-300 transition-colors text-left focus:outline-none focus:border-violet-400">
-                    {diagCategory ? (() => {
-                      const cat = diagCategoryList.find(c => c.slug === diagCategory);
-                      if (!cat) return <span className="text-sm text-gray-400 flex-1">Выберите категорию...</span>;
-                      const CatIcon = getCategoryIconBySlug(cat.icon);
-                      return (
-                        <>
-                          <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                            style={{ background: `${cat.color}25` }}>
-                            <CatIcon className="w-4 h-4" style={{ color: cat.color }} />
-                          </div>
-                          <span className="text-sm font-semibold text-gray-800 flex-1">{cat.name}</span>
-                        </>
-                      );
-                    })() : (
-                      <span className="text-sm text-gray-400 flex-1">Выберите категорию...</span>
-                    )}
-                    <ChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${diagCategoryOpen ? 'rotate-180' : ''}`} />
-                  </button>
+                {loadingDiagServices ? (
+                  <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border-2 border-gray-100 bg-gray-50">
+                    <Loader2 className="w-4 h-4 animate-spin text-violet-400" />
+                    <span className="text-sm text-gray-400">Загрузка услуг...</span>
+                  </div>
+                ) : (
+                  <SearchSelect
+                    options={diagServices.map(svc => ({
+                      id: svc.id,
+                      label: svc.name,
+                      subtitle: [
+                        svc.category_label,
+                        svc.price ? formatPrice(svc.price, clinicCurrency) : null,
+                        svc.duration_minutes ? `${svc.duration_minutes} мин` : null,
+                      ].filter(Boolean).join(' · '),
+                    }))}
+                    value={selectedDiagService ? String(selectedDiagService.id) : ''}
+                    onChange={(val) => {
+                      const svc = diagServices.find(s => String(s.id) === val);
+                      setSelectedDiagService(svc ?? null);
+                    }}
+                    placeholder={diagServices.length === 0 ? 'Нет услуг диагностики' : 'Найти услугу...'}
+                    required
+                  />
+                )}
 
-                  {diagCategoryOpen && (
-                    <div className="absolute left-0 right-0 top-full mt-1 z-20 bg-white border border-gray-200 rounded-2xl shadow-lg overflow-hidden max-h-60 overflow-y-auto">
-                      {diagCategoryList.length === 0 ? (
-                        <div className="flex items-center justify-center gap-2 px-4 py-4 text-sm text-gray-400">
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Загрузка...
-                        </div>
-                      ) : (
-                        diagCategoryList.map(cat => {
-                          const CatIcon = getCategoryIconBySlug(cat.icon);
-                          const isSelected = diagCategory === cat.slug;
-                          return (
-                            <button key={cat.slug} type="button"
-                              onClick={() => {
-                                setDiagCategory(cat.slug);
-                                setDiagCategoryOpen(false);
-                                setSelectedDiagService(null);
-                              }}
-                              className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors ${isSelected ? 'bg-violet-50' : ''}`}>
-                              <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                                style={{ background: `${cat.color}25` }}>
-                                <CatIcon className="w-4 h-4" style={{ color: cat.color }} />
-                              </div>
-                              <span className={`text-sm font-semibold flex-1 ${isSelected ? 'text-violet-700' : 'text-gray-700'}`}>{cat.name}</span>
-                              {isSelected && <CheckCircle2 className="w-4 h-4 text-violet-500 flex-shrink-0" />}
-                            </button>
-                          );
-                        })
-                      )}
+                {selectedDiagService?.category && (() => {
+                  const cat = diagCategoryList.find(c => c.slug === selectedDiagService.category);
+                  if (!cat) return null;
+                  const CatIcon = getCategoryIconBySlug(cat.icon);
+                  return (
+                    <div className="mt-2 flex items-center gap-2">
+                      <div className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
+                        style={{ background: `${cat.color}25` }}>
+                        <CatIcon className="w-3 h-3" style={{ color: cat.color }} />
+                      </div>
+                      <span className="text-xs text-gray-500">Категория: <span className="font-semibold text-gray-700">{cat.name}</span></span>
                     </div>
-                  )}
-                </div>
+                  );
+                })()}
               </div>
-
-              {diagCategory && (
-                <div>
-                  <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
-                    Услуга <span className="text-red-500">*</span>
-                  </label>
-                  {loadingDiagServices ? (
-                    <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border-2 border-gray-100 bg-gray-50">
-                      <Loader2 className="w-4 h-4 animate-spin text-violet-400" />
-                      <span className="text-sm text-gray-400">Загрузка услуг...</span>
-                    </div>
-                  ) : (
-                    <SearchSelect
-                      options={diagServices.map(svc => ({
-                        id: svc.id,
-                        label: svc.name,
-                        subtitle: [
-                          svc.clinic_name,
-                          svc.price ? formatPrice(svc.price, clinicCurrency) : null,
-                          svc.duration_minutes ? `${svc.duration_minutes} мин` : null,
-                        ].filter(Boolean).join(' · '),
-                      }))}
-                      value={selectedDiagService ? String(selectedDiagService.id) : ''}
-                      onChange={(val) => {
-                        const svc = diagServices.find(s => String(s.id) === val);
-                        setSelectedDiagService(svc ?? null);
-                      }}
-                      placeholder={diagServices.length === 0 ? 'Нет услуг в этой категории' : 'Выберите услугу...'}
-                      required
-                    />
-                  )}
-                </div>
-              )}
 
               {/* Optional referring doctor — drives the doctor's diagnostics commission, if one is configured for this service */}
               <div>
@@ -1261,20 +1216,36 @@ export default function AddEventModal({
               Время
             </label>
             {consultationType === 'diagnostics' ? (
-              <div className="flex flex-wrap gap-2">
-                {DIAG_TIMES.map(t => (
-                  <button key={t} type="button" onClick={() => setFormData(f => ({ ...f, time: t }))}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold border-2 transition-all ${
-                      formData.time === t
-                        ? 'text-white border-transparent shadow-sm'
-                        : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-violet-300 hover:text-violet-600'
-                    }`}
-                    style={formData.time === t ? { background: 'linear-gradient(135deg, #7c3aed, #6d28d9)' } : undefined}>
-                    {t}
-                  </button>
-                ))}
-                <input type="text" value={formData.time} required readOnly className="sr-only" tabIndex={-1} />
-              </div>
+              !selectedDiagService ? (
+                <div className="px-4 py-3 rounded-2xl border-2 border-gray-100 bg-gray-50">
+                  <p className="text-sm text-gray-400">Сначала выберите услугу</p>
+                </div>
+              ) : loadingDiagSlots ? (
+                <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border-2 border-gray-100 bg-gray-50">
+                  <Loader2 className="w-4 h-4 animate-spin text-violet-400" />
+                  <span className="text-sm text-gray-400">Загрузка слотов...</span>
+                </div>
+              ) : diagSlots.length === 0 ? (
+                <div className="px-4 py-3 rounded-2xl border-2 border-amber-200 bg-amber-50">
+                  <p className="text-sm text-amber-700">⚠️ На эту дату нет свободных слотов для «{selectedDiagService.name}»</p>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {diagSlots.map(slot => (
+                    <button key={slot.label} type="button" onClick={() => setFormData(f => ({ ...f, time: slot.label }))}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold border-2 transition-all ${
+                        formData.time === slot.label
+                          ? 'text-white border-transparent shadow-sm'
+                          : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-violet-300 hover:text-violet-600'
+                      }`}
+                      style={formData.time === slot.label ? { background: 'linear-gradient(135deg, #7c3aed, #6d28d9)' } : undefined}>
+                      {slot.label}
+                      {slot.available !== null && <span className="ml-1 opacity-70">· {slot.available}</span>}
+                    </button>
+                  ))}
+                  <input type="text" value={formData.time} required readOnly className="sr-only" tabIndex={-1} />
+                </div>
+              )
             ) : formData.doctor_id && formData.date ? (() => {
               const slots = generateSlots();
               const selectedSlot = slots.find(s => s.start === formData.time);

@@ -25,7 +25,6 @@ export { default as NurseInfoCard } from './components/NurseInfoCard';
 export { default as EventTypeSelector } from './components/EventTypeSelector';
 export { default as TimeSlotsSelector } from './components/TimeSlotsSelector';
 export { default as DoctorAvailabilityIndicator } from './components/DoctorAvailabilityIndicator';
-export { default as ScheduleTypeSelector } from './components/ScheduleTypeSelector';
 export { default as EventDetailCard } from './components/EventDetailCard';
 export { DoctorScheduleCard } from './components/DoctorScheduleCard';
 

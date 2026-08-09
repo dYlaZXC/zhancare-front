@@ -7,7 +7,7 @@ import { useBrand } from "@/context/BrandContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faUser,
-  faVideo,
+  faStethoscope,
   faCalendar,
   faFileMedical,
   faHistory,
@@ -77,7 +77,7 @@ export const Sidebar = ({
   const menuItems: MenuItem[] = [
     { id: "profile",   icon: faUser,        title: t.profile,   color: "#3772ff", href: "/patient/profile"   },
     { id: "documents", icon: faFileMedical, title: t.documents, color: "#12263a", href: "/patient/documents" },
-    { id: "video",     icon: faVideo,       title: t.video,     color: "#3267e6", href: "/patient/video"     },
+    { id: "video",     icon: faStethoscope, title: t.video,     color: "#3267e6", href: "/patient/video"     },
     { id: "activity",  icon: faHistory,     title: t.activity,  color: "#29358f", href: "/patient/activity"  },
   ];
   const userRole = computeRole(user?.roles);
