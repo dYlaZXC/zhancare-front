@@ -8,6 +8,7 @@ import {
   FlaskConical, ScanLine, Heart, Brain, Bone, Eye, Baby, Microscope,
   ClipboardList, Stethoscope, Plus,
 } from "lucide-react";
+import AssignDiagnosticsModal from "../modals/AssignDiagnosticsModal";
 
 interface ServiceDay {
   id: number;
@@ -22,10 +23,22 @@ interface ServiceDay {
   appointment_count: number;
 }
 
+interface DiagnosticsEvent {
+  id: string;
+  type: string;
+  service_name?: string;
+  category?: string;
+  date: string;
+  time: string;
+  duration: number;
+  patient_name: string;
+  status: string;
+}
+
 interface ServicesScheduleContentProps {
   selectedDate: string;
   onDateChange: (date: string) => void;
-  events: Array<{ type: string; service_name?: string; category?: string; date: string; time: string }>;
+  events: DiagnosticsEvent[];
   onAddClick: () => void;
 }
 
@@ -60,6 +73,13 @@ export function ServicesScheduleContent({
   const [showNoSchedule, setShowNoSchedule] = useState(false);
   const [expandedServices, setExpandedServices] = useState<Set<number>>(new Set());
   const [nearestSlots, setNearestSlots] = useState<Record<number, { date: string; start: string } | null>>({});
+
+  // Slot-click modal state (mirrors DoctorsScheduleContent pattern)
+  const [assignModal, setAssignModal] = useState<{
+    service: ServiceDay;
+    slot: { start: string; end: string } | null;
+    allSlots: { start: string; end: string }[];
+  } | null>(null);
 
   const fetchServices = useCallback(async () => {
     setLoading(true);
@@ -106,6 +126,14 @@ export function ServicesScheduleContent({
     });
   };
 
+  const handleSlotClick = (service: ServiceDay, slot: { start: string; end: string }, allSlots: { start: string; end: string }[]) => {
+    setAssignModal({ service, slot, allSlots });
+  };
+
+  const handleAddClick = (service: ServiceDay, allSlots: { start: string; end: string }[]) => {
+    setAssignModal({ service, slot: null, allSlots });
+  };
+
   // Week strip
   const getWeekStrip = () => {
     const d = new Date(selectedDate + 'T00:00:00');
@@ -131,9 +159,8 @@ export function ServicesScheduleContent({
   const withSchedule = filtered.filter(s => s.schedule !== null);
   const withoutSchedule = filtered.filter(s => s.schedule === null);
 
-  // Count diagnostics events per service name on selected date
-  const countForService = (name: string) =>
-    events.filter(e => e.type === 'diagnostics' && e.service_name === name && e.date === selectedDate).length;
+  const bookedEventsForService = (name: string): DiagnosticsEvent[] =>
+    events.filter(e => e.type === 'diagnostics' && e.service_name === name && e.date === selectedDate);
 
   // Generate available slots. For today, slots that already started are dropped —
   // mirrors the "current <= now" cutoff in diagnostics/views.py's available_slots,
@@ -306,12 +333,19 @@ export function ServicesScheduleContent({
             {withSchedule.map(s => {
               const Icon = getCategoryIcon(s.icon);
               const slots = generateSlots(s);
-              const booked = countForService(s.name);
+              const bookedEvents = bookedEventsForService(s.name);
+              const booked = bookedEvents.length;
               const isExpanded = expandedServices.has(s.id);
               const cap = s.capacity_per_slot;
               const fillRatio = cap && slots.length > 0
                 ? booked / (slots.length * cap)
                 : slots.length > 0 ? booked / slots.length : -1;
+
+              // Slots that still have capacity left
+              const freeSlots = slots.filter(slot => {
+                const bookedAtTime = bookedEvents.filter(e => e.time === slot.start).length;
+                return cap === null || bookedAtTime < cap;
+              });
 
               const statusDot =
                 fillRatio === -1 ? 'bg-gray-300'
@@ -373,12 +407,12 @@ export function ServicesScheduleContent({
                     </div>
                   </button>
 
-                  {/* Expanded: slots grid */}
+                  {/* Expanded: booked events + free slots */}
                   {isExpanded && (
-                    <div className="px-5 pb-5 pt-1 border-t border-gray-50">
-                      {slots.length === 0 ? (
+                    <div className="px-5 pb-5 pt-1 border-t border-gray-50 space-y-4">
+                      {slots.length === 0 && bookedEvents.length === 0 ? (
                         <div className="py-3 text-center">
-                          <p className="text-xs text-gray-400 italic">Нет доступных слотов</p>
+                          <p className="text-xs text-gray-400 italic">Нет слотов в этот день</p>
                           {nearestSlots[s.id] === undefined ? (
                             <p className="text-xs text-gray-300 mt-1">Проверяем ближайший слот…</p>
                           ) : nearestSlots[s.id] ? (
@@ -393,20 +427,68 @@ export function ServicesScheduleContent({
                           )}
                         </div>
                       ) : (
-                        <div className="flex flex-wrap gap-2 mt-3">
-                          {slots.map(slot => (
-                            <button key={slot.start} type="button" onClick={onAddClick}
-                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-[#3772FF]/20 bg-blue-50 text-[#3772FF] hover:bg-[#3772FF] hover:text-white transition-all">
-                              <Clock className="w-3 h-3" />
-                              {slot.start}
-                            </button>
-                          ))}
-                          <button type="button" onClick={onAddClick}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 text-gray-500 hover:border-[#3772FF] hover:text-[#3772FF] transition-all">
-                            <Plus className="w-3 h-3" />
-                            Добавить
-                          </button>
-                        </div>
+                        <>
+                          {/* Booked appointments */}
+                          {bookedEvents.length > 0 && (
+                            <div className="pt-3">
+                              <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-2">Записи</p>
+                              <div className="flex flex-col gap-2">
+                                {bookedEvents.map(event => {
+                                  const initials = event.patient_name
+                                    .split(' ').map((n: string) => n[0] ?? '').join('').slice(0, 2).toUpperCase();
+                                  return (
+                                    <div key={event.id} className="flex items-center gap-3 bg-white border border-gray-100 rounded-xl px-3.5 py-2.5">
+                                      <div className="w-11 h-11 rounded-xl flex flex-col items-center justify-center text-white flex-shrink-0 shadow-sm"
+                                        style={{ background: `linear-gradient(135deg, ${s.color}cc, ${s.color})` }}>
+                                        <span className="text-[11px] font-black leading-tight">{event.time}</span>
+                                        <span className="text-[8px] opacity-80 mt-0.5">{event.duration}мин</span>
+                                      </div>
+                                      <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 text-xs font-bold flex items-center justify-center flex-shrink-0">
+                                        {initials}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-bold text-gray-900 truncate">{event.patient_name}</p>
+                                        <span className={`inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-md mt-0.5 ${
+                                          event.status === 'completed' ? 'bg-emerald-100 text-emerald-700'
+                                          : event.status === 'cancelled' ? 'bg-red-100 text-red-600'
+                                          : event.status === 'in_progress' ? 'bg-amber-100 text-amber-700'
+                                          : 'bg-blue-100 text-blue-700'
+                                        }`}>
+                                          {event.status === 'completed' ? 'Выполнено'
+                                           : event.status === 'cancelled' ? 'Отменено'
+                                           : event.status === 'in_progress' ? 'В процессе'
+                                           : 'Запланировано'}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Free slots */}
+                          {freeSlots.length > 0 && (
+                            <div className={bookedEvents.length > 0 ? '' : 'pt-3'}>
+                              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-2">Свободные слоты</p>
+                              <div className="flex flex-wrap gap-2">
+                                {freeSlots.map(slot => (
+                                  <button key={slot.start} type="button"
+                                    onClick={() => handleSlotClick(s, slot, freeSlots)}
+                                    className="flex flex-col items-center justify-center px-3 py-2 bg-white border border-emerald-200 rounded-xl hover:bg-emerald-500 hover:border-emerald-500 transition-all group">
+                                    <span className="text-xs font-black text-emerald-700 group-hover:text-white leading-tight">{slot.start}</span>
+                                    <span className="text-[9px] text-emerald-400 group-hover:text-emerald-100">{slot.end}</span>
+                                  </button>
+                                ))}
+                                <button type="button" onClick={() => handleAddClick(s, freeSlots)}
+                                  className="flex flex-col items-center justify-center px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-all">
+                                  <Plus className="w-3.5 h-3.5 text-gray-400" />
+                                  <span className="text-[9px] text-gray-400 mt-0.5">Добавить</span>
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   )}
@@ -416,6 +498,25 @@ export function ServicesScheduleContent({
           </div>
         )}
       </div>
+
+      {assignModal && (
+        <AssignDiagnosticsModal
+          isOpen={!!assignModal}
+          onClose={() => setAssignModal(null)}
+          serviceId={assignModal.service.id}
+          serviceName={assignModal.service.name}
+          serviceCategoryLabel={assignModal.service.category_label}
+          serviceColor={assignModal.service.color}
+          serviceIcon={assignModal.service.icon}
+          slot={assignModal.slot}
+          allSlots={assignModal.allSlots}
+          date={selectedDate}
+          onAssigned={() => {
+            setAssignModal(null);
+            fetchServices();
+          }}
+        />
+      )}
     </div>
   );
 }
