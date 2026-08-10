@@ -386,9 +386,12 @@ export function DoctorsScheduleContent({
                     <div key={member.id} className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
 
                       {/* Row — always visible, click to expand */}
-                      <button
+                      <div
+                        role="button"
+                        tabIndex={0}
                         onClick={() => toggleDoctor(member.id)}
-                        className="w-full flex items-center gap-4 px-5 py-4 hover:bg-gray-50/60 transition-colors text-left"
+                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleDoctor(member.id); } }}
+                        className="w-full flex items-center gap-4 px-5 py-4 hover:bg-gray-50/60 transition-colors cursor-pointer"
                       >
                         {/* Avatar + status dot */}
                         <div className="relative flex-shrink-0">
@@ -453,7 +456,7 @@ export function DoctorsScheduleContent({
 
                         {/* Chevron */}
                         <ChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                      </button>
+                      </div>
 
                       {/* Accordion body */}
                       <AnimatePresence initial={false}>

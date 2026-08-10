@@ -67,8 +67,14 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
   const [filterType, setFilterType] = useState<'all' | 'consultation' | 'appointment' | 'diagnostics'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'scheduled' | 'in_progress' | 'completed' | 'cancelled'>('all');
 
-  // Doctors view specific state
+  // Doctors / services view date
   const [doctorsViewDate, setDoctorsViewDate] = useState(() => {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  });
+
+  // Week view: which day is selected in the compact (mobile/tablet) day-picker
+  const [selectedWeekDay, setSelectedWeekDay] = useState(() => {
     const today = new Date();
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   });
@@ -98,6 +104,11 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
     const newDate = new Date(currentDate);
     if (viewMode === 'week') {
       newDate.setDate(newDate.getDate() + (direction === 'next' ? 7 : -7));
+      // Reset compact day-picker to Monday of the new week
+      const dow = newDate.getDay();
+      const monday = new Date(newDate);
+      monday.setDate(newDate.getDate() - dow + (dow === 0 ? -6 : 1));
+      setSelectedWeekDay(`${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`);
     } else {
       newDate.setMonth(newDate.getMonth() + (direction === 'next' ? 1 : -1));
     }
@@ -105,7 +116,9 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
   };
 
   const goToToday = () => {
-    setCurrentDate(new Date());
+    const today = new Date();
+    setCurrentDate(today);
+    setSelectedWeekDay(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`);
   };
 
   // Get week start (Monday)
@@ -179,59 +192,140 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
   // Render Week View
   const renderWeekView = () => {
     const weekDays = getWeekDays();
+    const weekDayStrings = weekDays.map(toLocalDateStr);
+
+    // If the stored selected day isn't in this week, fall back to today-in-week or Monday
+    const todayStr = toLocalDateStr(new Date());
+    const effectiveDay = weekDayStrings.includes(selectedWeekDay)
+      ? selectedWeekDay
+      : weekDayStrings.includes(todayStr)
+      ? todayStr
+      : weekDayStrings[0];
+
+    const selectedDayDate = weekDays[weekDayStrings.indexOf(effectiveDay)];
+    const selectedDayEvents = getEventsForDate(effectiveDay);
 
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3 md:gap-4">
-        {weekDays.map((day) => {
-          const dateString = toLocalDateStr(day);
-          const dayEvents = getEventsForDate(dateString);
-          const isToday = day.toDateString() === new Date().toDateString();
-
-          return (
-            <motion.div
-              key={day.toISOString()}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`rounded-2xl md:rounded-3xl p-3 md:p-4 border-2 min-h-[400px] md:min-h-[500px] ${
-                isToday ? 'border-blue-500 bg-blue-50/30' : 'border-gray-200 bg-white'
-              }`}
-            >
-              {/* Day header */}
-              <div className="mb-3 md:mb-4 pb-2 md:pb-3 border-b-2 border-gray-200">
-                <div className="text-xs text-gray-500 uppercase font-semibold">
-                  {getDayName(day)}
-                </div>
-                <div className={`text-xl md:text-2xl font-bold mt-1 ${isToday ? 'text-blue-600' : 'text-gray-900'}`}>
-                  {day.getDate()}
-                </div>
+      <>
+        {/* ─── Compact mode: day-picker strip + single-day panel (below xl) ─── */}
+        <div className="xl:hidden flex-1 flex flex-col gap-3 min-h-0">
+          {/* 7-pill day picker */}
+          <div className="flex gap-1.5">
+            {weekDays.map((day) => {
+              const ds = toLocalDateStr(day);
+              const isSelected = ds === effectiveDay;
+              const isToday = day.toDateString() === new Date().toDateString();
+              const count = getEventsForDate(ds).length;
+              return (
                 <button
-                  onClick={() => {
-                    setSelectedDate(dateString);
-                    setShowAddModal(true);
-                  }}
-                  className="mt-2 w-full py-1.5 md:py-2 rounded-lg md:rounded-xl border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1 md:gap-2 text-xs md:text-sm text-gray-600 hover:text-blue-600"
+                  key={ds}
+                  onClick={() => setSelectedWeekDay(ds)}
+                  className={`flex-1 flex flex-col items-center py-2 px-1 rounded-xl border transition-all ${
+                    isSelected
+                      ? 'border-blue-500 bg-blue-600 text-white shadow-md'
+                      : isToday
+                      ? 'border-blue-200 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                  }`}
                 >
-                  <Plus className="w-3 h-3 md:w-4 md:h-4" />
-                  Добавить
+                  <span className={`text-[9px] sm:text-[10px] font-semibold uppercase ${isSelected ? 'opacity-80' : 'opacity-50'}`}>
+                    {getDayName(day)}
+                  </span>
+                  <span className="text-sm sm:text-base font-bold mt-0.5">{day.getDate()}</span>
+                  <span className={`w-1.5 h-1.5 rounded-full mt-1 transition-opacity ${count > 0 ? 'opacity-100' : 'opacity-0'} ${isSelected ? 'bg-white' : 'bg-blue-500'}`} />
                 </button>
-              </div>
+              );
+            })}
+          </div>
 
-              {/* Events list */}
-              <div className="space-y-2">
-                {dayEvents.length > 0 ? (
-                  dayEvents.map((event) => (
-                    <EventCard key={event.id} event={event} onChanged={fetchSchedule} />
-                  ))
-                ) : (
-                  <div className="text-center py-6 md:py-8 text-gray-400 text-xs md:text-sm">
-                    Нет записей
-                  </div>
-                )}
+          {/* Selected day header */}
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm sm:text-base font-semibold text-gray-800 capitalize">
+              {selectedDayDate.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </h3>
+            <button
+              onClick={() => { setSelectedDate(effectiveDay); setShowAddModal(true); }}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50 transition-colors text-xs text-gray-500 hover:text-blue-600"
+            >
+              <Plus className="w-3 h-3" />
+              Добавить
+            </button>
+          </div>
+
+          {/* Events for selected day — fills remaining height, scrolls if needed */}
+          <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
+            {selectedDayEvents.length > 0 ? (
+              selectedDayEvents.map((event) => (
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  onChanged={fetchSchedule}
+                  onClick={() => { setSelectedDate(effectiveDay); setShowDateDetailsDrawer(true); }}
+                />
+              ))
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center gap-3 text-gray-300 select-none">
+                <CalendarIcon className="w-14 h-14 opacity-30" />
+                <p className="text-sm font-medium">Нет записей на этот день</p>
               </div>
-            </motion.div>
-          );
-        })}
-      </div>
+            )}
+          </div>
+        </div>
+
+        {/* ─── Full grid mode (xl+, sidebar present, each column ≥ 160px) ─── */}
+        <div className="hidden xl:grid flex-1 min-h-0 grid-cols-7 gap-3">
+          {weekDays.map((day) => {
+            const dateString = toLocalDateStr(day);
+            const dayEvents = getEventsForDate(dateString);
+            const isToday = day.toDateString() === new Date().toDateString();
+
+            return (
+              <motion.div
+                key={day.toISOString()}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`rounded-2xl p-3 border-2 flex flex-col ${
+                  isToday ? 'border-blue-500 bg-blue-50/30' : 'border-gray-200 bg-white'
+                }`}
+              >
+                {/* Day header — fixed */}
+                <div className="flex-shrink-0 mb-3 pb-2 border-b-2 border-gray-200">
+                  <div className="text-[10px] text-gray-500 uppercase font-semibold">{getDayName(day)}</div>
+                  <div className={`text-xl font-bold mt-0.5 ${isToday ? 'text-blue-600' : 'text-gray-900'}`}>{day.getDate()}</div>
+                  <button
+                    onClick={() => { setSelectedDate(dateString); setShowAddModal(true); }}
+                    className="mt-1.5 w-full py-1 rounded-lg border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1 text-[10px] text-gray-600 hover:text-blue-600"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Добавить
+                  </button>
+                </div>
+
+                {/* Events — scrollable, fills remaining height */}
+                <div className="flex-1 overflow-y-auto space-y-1.5">
+                  {dayEvents.length > 0
+                    ? dayEvents.map((event) => (
+                        <EventCard
+                          key={event.id}
+                          event={event}
+                          onChanged={fetchSchedule}
+                          compact
+                          onClick={() => { setSelectedDate(dateString); setShowDateDetailsDrawer(true); }}
+                        />
+                      ))
+                    : (
+                      <div className="h-full flex flex-col items-center justify-center gap-2 text-gray-300 select-none">
+                        <CalendarIcon className="w-8 h-8 opacity-40" />
+                        <span className="text-[10px] font-medium">Нет записей</span>
+                      </div>
+                    )
+                  }
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </>
     );
   };
 
@@ -275,7 +369,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
     }
 
     return (
-      <div className="h-full flex flex-col">
+      <div className="flex-1 min-h-0 flex flex-col">
         {/* Weekday headers */}
         <div className="grid grid-cols-7 border-b-2 border-gray-300 bg-gray-50 rounded-t-2xl md:rounded-t-3xl">
           {[
@@ -390,23 +484,24 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
   return (
     <div className="w-full h-full flex flex-col overflow-x-hidden">
       {/* Header */}
-      <div className="mb-4 md:mb-6 px-2 md:px-0">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 md:gap-0 mb-4 md:mb-6">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl md:text-3xl font-bold mb-1 md:mb-2 truncate" style={{ color: '#1e263e' }}>
+      <div className="mb-3 md:mb-6">
+        {/* Title + action buttons */}
+        <div className="flex items-center justify-between gap-2 mb-3 md:mb-5">
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-2xl md:text-3xl font-bold leading-tight truncate" style={{ color: '#1e263e' }}>
               Расписание
             </h1>
-            <p className="text-xs md:text-base text-gray-600 truncate">
+            <p className="hidden sm:block text-xs md:text-sm text-gray-500 mt-0.5 truncate">
               Консультации, выезды на дом и записи на диагностику
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowArchiveDrawer(true)}
-              className="flex items-center gap-1.5 px-3 md:px-4 py-2 md:py-3 rounded-xl md:rounded-2xl text-sm font-semibold border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-all whitespace-nowrap shadow-sm"
+              className="flex items-center gap-1.5 px-2.5 md:px-4 py-2 md:py-2.5 rounded-xl text-sm font-semibold border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-all whitespace-nowrap shadow-sm"
             >
               <Archive className="w-4 h-4" />
               <span className="hidden sm:inline">Архив</span>
@@ -419,10 +514,10 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
                 setSelectedDate(null);
                 setShowAddModal(true);
               }}
-              className="flex items-center gap-1 md:gap-2 px-3 md:px-6 py-2 md:py-3 mr-2 rounded-xl md:rounded-2xl text-white text-sm md:text-base font-semibold shadow-lg hover:shadow-xl transition-all whitespace-nowrap"
+              className="flex items-center gap-1.5 px-3 md:px-5 py-2 md:py-2.5 rounded-xl text-white text-sm font-semibold shadow-md hover:shadow-lg transition-all whitespace-nowrap"
               style={{ background: 'linear-gradient(135deg, #3772ff 0%, #2c5bcc 100%)' }}
             >
-              <Plus className="w-4 h-4 md:w-5 md:h-5" />
+              <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">Добавить Запись</span>
               <span className="sm:hidden">Добавить</span>
             </motion.button>
@@ -430,132 +525,139 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
         </div>
 
         {/* Controls */}
-        <div className="flex flex-col gap-3 md:gap-4">
-          {/* Navigation */}
-          {viewMode !== 'referrals' && <div className="flex items-center gap-2 md:gap-3 overflow-x-auto">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                if (viewMode === 'doctors') {
-                  const today = new Date();
-                  setDoctorsViewDate(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`);
-                } else {
-                  goToToday();
-                }
-              }}
-              className="px-4 py-2 text-sm font-semibold rounded-xl text-white whitespace-nowrap flex-shrink-0 transition-all"
-              style={{ backgroundColor: '#3772ff' }}
-            >
-              Сегодня
-            </motion.button>
+        <div className="flex flex-col gap-2 md:gap-3">
+          {/* View mode tabs + Navigation in one row on desktop, stacked on mobile */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            {/* View mode selector */}
+            <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl overflow-x-auto scrollbar-hide flex-shrink-0">
+              {(['week', 'month', 'doctors', 'referrals'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  className={`px-2.5 md:px-4 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-all flex items-center gap-1 md:gap-1.5 whitespace-nowrap flex-shrink-0 ${
+                    viewMode === mode
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  {mode === 'week' && 'Неделя'}
+                  {mode === 'month' && 'Месяц'}
+                  {mode === 'doctors' && (
+                    <>
+                      <Users className="w-3 h-3 md:w-3.5 md:h-3.5 flex-shrink-0" />
+                      <span className="hidden md:inline">График врачей</span>
+                      <span className="md:hidden">Врачи</span>
+                    </>
+                  )}
+                  {mode === 'referrals' && (
+                    <>
+                      <FlaskConical className="w-3 h-3 md:w-3.5 md:h-3.5 flex-shrink-0" />
+                      <span className="hidden md:inline">График услуг</span>
+                      <span className="md:hidden">Услуги</span>
+                    </>
+                  )}
+                </button>
+              ))}
+            </div>
 
-            <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden bg-white">
-              <motion.button
-                whileHover={{ backgroundColor: '#f3f4f6' }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => viewMode === 'doctors' ? navigateDoctorsDay('prev') : navigateDate('prev')}
-                className="p-2 transition-colors flex-shrink-0"
-              >
-                <ChevronLeft className="w-4 h-4 text-gray-600" />
-              </motion.button>
+            {/* Navigation */}
+            {viewMode !== 'referrals' && (
+              <div className="flex items-center gap-2 min-w-0">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    if (viewMode === 'doctors') {
+                      const today = new Date();
+                      setDoctorsViewDate(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`);
+                    } else {
+                      goToToday();
+                    }
+                  }}
+                  className="px-3 py-1.5 text-xs md:text-sm font-semibold rounded-xl text-white whitespace-nowrap flex-shrink-0 transition-all"
+                  style={{ backgroundColor: '#3772ff' }}
+                >
+                  Сегодня
+                </motion.button>
 
-              <div className="flex items-center gap-2 px-3 py-2 whitespace-nowrap font-semibold text-sm border-x border-gray-200" style={{ color: '#1e263e' }}>
-                <CalendarIcon className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                <span className="capitalize">{getDateRangeString()}</span>
+                <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden bg-white flex-1 min-w-0">
+                  <motion.button
+                    whileHover={{ backgroundColor: '#f3f4f6' }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => viewMode === 'doctors' ? navigateDoctorsDay('prev') : navigateDate('prev')}
+                    className="p-2 transition-colors flex-shrink-0"
+                  >
+                    <ChevronLeft className="w-4 h-4 text-gray-600" />
+                  </motion.button>
+
+                  <div className="flex items-center gap-1.5 px-2 py-2 min-w-0 font-semibold text-xs md:text-sm border-x border-gray-200 truncate" style={{ color: '#1e263e' }}>
+                    <CalendarIcon className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                    <span className="capitalize truncate">{getDateRangeString()}</span>
+                  </div>
+
+                  <motion.button
+                    whileHover={{ backgroundColor: '#f3f4f6' }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => viewMode === 'doctors' ? navigateDoctorsDay('next') : navigateDate('next')}
+                    className="p-2 transition-colors flex-shrink-0"
+                  >
+                    <ChevronRight className="w-4 h-4 text-gray-600" />
+                  </motion.button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Search and Filters */}
+          {viewMode !== 'referrals' && (
+            <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
+              {/* Search */}
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Поиск..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 md:py-2.5 text-sm rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                />
               </div>
 
-              <motion.button
-                whileHover={{ backgroundColor: '#f3f4f6' }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => viewMode === 'doctors' ? navigateDoctorsDay('next') : navigateDate('next')}
-                className="p-2 transition-colors flex-shrink-0"
-              >
-                <ChevronRight className="w-4 h-4 text-gray-600" />
-              </motion.button>
-            </div>
-          </div>}
+              <div className="flex gap-2 sm:flex-shrink-0">
+                {/* Type Filter */}
+                <div className="flex-1 sm:w-40 md:w-48">
+                  <SearchSelect
+                    options={[
+                      { id: 'all', label: 'Все типы' },
+                      { id: 'consultation', label: 'Видеоконсультация' },
+                      { id: 'appointment', label: 'Приём в клинике' },
+                      { id: 'diagnostics', label: 'Диагностика' },
+                    ]}
+                    value={filterType}
+                    onChange={(val) => setFilterType((val || 'all') as any)}
+                    placeholder="Все типы"
+                  />
+                </div>
 
-          {/* View mode selector */}
-          <div className="flex items-center gap-1 md:gap-2 bg-gray-100 p-1 rounded-lg md:rounded-xl overflow-x-auto scrollbar-hide">
-            {(['week', 'month', 'doctors', 'referrals'] as const).map((mode) => (
-              <button
-                key={mode}
-                onClick={() => setViewMode(mode)}
-                className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-sm md:text-base font-medium transition-all flex items-center gap-1 md:gap-2 whitespace-nowrap flex-shrink-0 ${
-                  viewMode === mode
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                {mode === 'week' && 'Неделя'}
-                {mode === 'month' && 'Месяц'}
-                {mode === 'doctors' && (
-                  <>
-                    <Users className="w-3 h-3 md:w-4 md:h-4" />
-                    <span className="hidden sm:inline">График врачей</span>
-                    <span className="sm:hidden">Врачи</span>
-                  </>
-                )}
-                {mode === 'referrals' && (
-                  <>
-                    <FlaskConical className="w-3 h-3 md:w-4 md:h-4" />
-                    <span className="hidden sm:inline">График услуг</span>
-                    <span className="sm:hidden">Услуги</span>
-                  </>
-                )}
-              </button>
-            ))}
-          </div>
+                {/* Status Filter */}
+                <div className="flex-1 sm:w-40 md:w-48">
+                  <SearchSelect
+                    options={[
+                      { id: 'all', label: 'Все статусы' },
+                      { id: 'scheduled', label: 'Запланировано' },
+                      { id: 'in_progress', label: 'В процессе' },
+                      { id: 'completed', label: 'Завершено' },
+                      { id: 'cancelled', label: 'Отменено' },
+                    ]}
+                    value={filterStatus}
+                    onChange={(val) => setFilterStatus((val || 'all') as any)}
+                    placeholder="Все статусы"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-
-        {/* Search and Filters */}
-        {viewMode !== 'referrals' && <div className="flex flex-col gap-2 md:gap-4 mt-3 md:mt-4">
-          {/* Search */}
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Поиск..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 md:pl-12 pr-3 md:pr-4 py-2 md:py-3 text-sm md:text-base rounded-xl md:rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
-            />
-          </div>
-
-          <div className="flex gap-2 md:gap-4">
-            {/* Type Filter */}
-            <div className="flex-1">
-              <SearchSelect
-                options={[
-                  { id: 'all', label: 'Все типы' },
-                  { id: 'consultation', label: 'Видеоконсультация' },
-                  { id: 'appointment', label: 'Приём в клинике' },
-                  { id: 'diagnostics', label: 'Диагностика' },
-                ]}
-                value={filterType}
-                onChange={(val) => setFilterType((val || 'all') as any)}
-                placeholder="Все типы"
-              />
-            </div>
-
-            {/* Status Filter */}
-            <div className="flex-1">
-              <SearchSelect
-                options={[
-                  { id: 'all', label: 'Все статусы' },
-                  { id: 'scheduled', label: 'Запланировано' },
-                  { id: 'in_progress', label: 'В процессе' },
-                  { id: 'completed', label: 'Завершено' },
-                  { id: 'cancelled', label: 'Отменено' },
-                ]}
-                value={filterStatus}
-                onChange={(val) => setFilterStatus((val || 'all') as any)}
-                placeholder="Все статусы"
-              />
-            </div>
-          </div>
-        </div>}
       </div>
 
       {/* Loading State */}
@@ -586,7 +688,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
 
       {/* Calendar View */}
       {!loading && (
-        <div className="flex-1 px-2 md:px-0">
+        <div className="flex-1 min-h-0 flex flex-col">
           {viewMode === 'week' && renderWeekView()}
           {viewMode === 'month' && renderMonthView()}
           {viewMode === 'doctors' && renderDoctorsView()}
