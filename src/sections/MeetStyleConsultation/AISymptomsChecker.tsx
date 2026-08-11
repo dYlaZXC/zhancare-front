@@ -2345,7 +2345,13 @@ export default function AISymptomsChecker({ clinic, embedded, lightMode, hideBac
                             </div>
                             <h3 className="text-white font-bold text-sm sm:text-base mb-1 leading-tight">{primary.name}</h3>
                             {primary.description && (
-                              <p className="text-purple-200 text-xs mb-3 line-clamp-2">{primary.description}</p>
+                              <p className="text-purple-200 text-xs mb-2 line-clamp-2">{primary.description}</p>
+                            )}
+                            {primary.clinic_name && (
+                              <div className="flex items-center gap-1 mb-2">
+                                <FontAwesomeIcon icon={faHospital} className="text-purple-300 text-[10px]" />
+                                <span className="text-purple-200 text-xs">{primary.clinic_name}</span>
+                              </div>
                             )}
                             <div className="flex flex-wrap items-center gap-1.5 mb-3">
                               <span className="text-xs px-2 py-0.5 rounded-full font-medium text-white" style={{ background: categoryColors[primary.category] ?? "#374151" }}>
@@ -2384,6 +2390,12 @@ export default function AISymptomsChecker({ clinic, embedded, lightMode, hideBac
                                 >
                                   <div className="px-3 py-3">
                                     <p className="text-white font-bold text-xs leading-tight mb-0.5">{svc.name}</p>
+                                    {svc.clinic_name && (
+                                      <p className="text-purple-300 text-[10px] mb-1 flex items-center gap-1">
+                                        <FontAwesomeIcon icon={faHospital} className="text-[9px]" />
+                                        {svc.clinic_name}
+                                      </p>
+                                    )}
                                     <div className="flex flex-wrap items-center gap-1 mb-2">
                                       <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium text-white" style={{ background: categoryColors[svc.category] ?? "#374151" }}>
                                         {svc.category_label}

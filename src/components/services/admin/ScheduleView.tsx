@@ -369,7 +369,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
     }
 
     return (
-      <div className="flex-1 min-h-0 flex flex-col">
+      <div className="flex flex-col">
         {/* Weekday headers */}
         <div className="grid grid-cols-7 border-b-2 border-gray-300 bg-gray-50 rounded-t-2xl md:rounded-t-3xl">
           {[
@@ -389,7 +389,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
         </div>
 
         {/* Calendar grid */}
-        <div className="flex-1 grid grid-rows-6 bg-white rounded-b-2xl md:rounded-b-3xl overflow-hidden border-2 border-gray-200">
+        <div className="grid grid-rows-6 bg-white rounded-b-2xl md:rounded-b-3xl border-2 border-gray-200">
           {weeks.map((week, weekIndex) => (
             <div key={weekIndex} className="grid grid-cols-7 border-b border-gray-200 last:border-b-0">
               {week.map((date) => {
@@ -688,7 +688,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
 
       {/* Calendar View */}
       {!loading && (
-        <div className="flex-1 min-h-0 flex flex-col">
+        <div className={`flex flex-col ${viewMode === 'month' ? 'flex-1 overflow-y-auto' : 'flex-1 min-h-0'}`}>
           {viewMode === 'week' && renderWeekView()}
           {viewMode === 'month' && renderMonthView()}
           {viewMode === 'doctors' && renderDoctorsView()}

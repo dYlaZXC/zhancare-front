@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -58,43 +58,6 @@ const generateCalendarDates = (daysCount: number = 7) => {
   return dates;
 };
 
-// Fallback hours used when a service has no explicit weekday schedule rows.
-const DEFAULT_START = "09:00";
-const DEFAULT_END = "18:00";
-
-function generateSlots(service: DiagnosticsServiceItem, dateStr: string): string[] {
-  const duration = service.duration_minutes || 30;
-  const jsWeekday = new Date(`${dateStr}T00:00:00`).getDay(); // 0=Sun..6=Sat
-  const modelWeekday = (jsWeekday + 6) % 7; // 0=Mon..6=Sun
-
-  const ranges = (service.schedules ?? [])
-    .filter((s) => s.is_active && s.weekday === modelWeekday)
-    .map((s) => ({ start: s.start_time.slice(0, 5), end: s.end_time.slice(0, 5) }));
-
-  const effectiveRanges = ranges.length > 0 ? ranges : [{ start: DEFAULT_START, end: DEFAULT_END }];
-
-  const now = new Date();
-  const isToday = dateStr === localDateStr(now);
-  const nowMinutes = isToday ? now.getHours() * 60 + now.getMinutes() : -1;
-
-  const slots: string[] = [];
-  for (const range of effectiveRanges) {
-    const [startH, startM] = range.start.split(":").map(Number);
-    const [endH, endM] = range.end.split(":").map(Number);
-    let cur = startH * 60 + startM;
-    const endMin = endH * 60 + endM;
-    while (cur + duration <= endMin) {
-      if (!(isToday && cur <= nowMinutes)) {
-        const h = String(Math.floor(cur / 60)).padStart(2, "0");
-        const m = String(cur % 60).padStart(2, "0");
-        slots.push(`${h}:${m}`);
-      }
-      cur += duration;
-    }
-  }
-  return slots;
-}
-
 export default function DiagnosticsBookingModal({
   isOpen,
   onClose,
@@ -113,15 +76,33 @@ export default function DiagnosticsBookingModal({
   const [emailError, setEmailError] = useState("");
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
+  const [slots, setSlots] = useState<string[]>([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
 
   const calendarDates = generateCalendarDates(7);
-  const slots = useMemo(() => (service ? generateSlots(service, selectedDate) : []), [service, selectedDate]);
+
+  useEffect(() => {
+    if (!isOpen || !service) return;
+    setSlotsLoading(true);
+    setSlots([]);
+    api
+      .get(`/diagnostics/services/${service.id}/available-slots/`, { params: { date: selectedDate } })
+      .then((res) => {
+        const available: string[] = (res.data.slots ?? [])
+          .filter((s: { available: boolean }) => s.available)
+          .map((s: { label: string }) => s.label);
+        setSlots(available);
+      })
+      .catch(() => setSlots([]))
+      .finally(() => setSlotsLoading(false));
+  }, [isOpen, service?.id, selectedDate]);
 
   useEffect(() => {
     if (isOpen) {
       setStep("timeslots");
       setSelectedTime(null);
       setBookingError(null);
+      setSlots([]);
       if (user?.email) setConsultationEmail(user.email);
     }
   }, [isOpen, user?.email]);
@@ -288,7 +269,12 @@ export default function DiagnosticsBookingModal({
 
                 <div>
                   <p className="text-sm font-medium text-gray-700 mb-2">{t.availableTime[lang]}</p>
-                  {slots.length === 0 ? (
+                  {slotsLoading ? (
+                    <div className="flex items-center justify-center py-8 text-gray-400">
+                      <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                      <span className="text-sm">{t.loading[lang]}</span>
+                    </div>
+                  ) : slots.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
                       <Clock className="w-10 h-10 mx-auto mb-2 text-gray-300" />
                       <p>{t.noSlots[lang]}</p>
