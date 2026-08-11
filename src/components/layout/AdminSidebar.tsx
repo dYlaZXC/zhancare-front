@@ -81,9 +81,9 @@ const adminMenu: MenuItem[] = [
     color: "#8b5cf6",
     children: [
       { id: "staff", icon: faUsers, title: "Персонал", color: "#8b5cf6", href: "/admin/staff" },
+      { id: "services", icon: faClipboardList, title: "Услуги", color: "#0ea5e9", href: "/admin/services" },
       { id: "patients", icon: faUserMd, title: "Пациенты", color: "#10b981", href: "/admin/patients" },
       { id: "schedule", icon: faCalendarCheck, title: "Расписание", color: "#295bbf", href: "/admin/schedule" },
-      { id: "services", icon: faClipboardList, title: "Услуги", color: "#0ea5e9", href: "/admin/services" },
       { id: "admins", icon: faUserShield, title: "Администраторы", color: "#f59e0b", href: "/admin/admins", superOnly: true },
       { id: "clinics", icon: faHospital, title: "Клиники", color: "#10b981", href: "/admin/clinics", superOnly: true },
     ],

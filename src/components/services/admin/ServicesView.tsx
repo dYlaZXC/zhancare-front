@@ -15,6 +15,19 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+const TRANSLIT: Record<string, string> = {
+  а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'yo',ж:'zh',з:'z',и:'i',й:'j',
+  к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',
+  х:'kh',ц:'ts',ч:'ch',ш:'sh',щ:'sch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya',
+};
+function toSlug(name: string): string {
+  return name.toLowerCase()
+    .split('').map(c => TRANSLIT[c] ?? c).join('')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 32);
+}
+
 // Map icon slug stored in DB → Lucide component
 const ICON_MAP: Record<string, LucideIcon> = {
   'flask-conical': FlaskConical,
@@ -190,6 +203,8 @@ export function ServicesView({ user }: { user: any }) {
   const [catDropdownOpen, setCatDropdownOpen] = useState(false);
   const [catDropdownRect, setCatDropdownRect] = useState({ top: 0, left: 0, width: 0 });
   const catBtnRef = useRef<HTMLButtonElement>(null);
+  const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -310,7 +325,7 @@ export function ServicesView({ user }: { user: any }) {
   };
   const handleSaveCategory = async () => {
     if (!categoryForm.name.trim()) { toast.error("Введите название категории"); return; }
-    if (!categoryForm.slug.trim()) { toast.error("Введите slug категории"); return; }
+    if (!categoryForm.slug.trim()) { setCategoryForm(f => ({ ...f, slug: toSlug(f.name) })); }
     setSavingCategory(true);
     try {
       if (editingCategory) {
@@ -378,28 +393,56 @@ export function ServicesView({ user }: { user: any }) {
 
       {/* SERVICES */}
       <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex flex-wrap gap-1.5 flex-1">
-              {/* "Все" filter button */}
-              <button onClick={() => setCatFilter("all")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${catFilter === "all" ? "text-white border-transparent shadow-sm bg-[#6366f1]" : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"}`}>
-                <ClipboardList size={11} />
-                Все
-              </button>
-              {categories.map(cat => {
-                const active = catFilter === cat.slug;
-                const Icon = getCategoryIcon(cat.icon);
+          <div className="flex items-center gap-2">
+            {/* Category filter dropdown */}
+            <div className="relative flex-shrink-0" ref={filterDropdownRef}>
+              {(() => {
+                const selectedCat = catFilter === "all" ? null : categories.find(c => c.slug === catFilter);
+                const SelIcon = selectedCat ? getCategoryIcon(selectedCat.icon) : ClipboardList;
                 return (
-                  <button key={cat.id} onClick={() => setCatFilter(cat.slug)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${active ? "text-white border-transparent shadow-sm" : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"}`}
-                    style={active ? { background: cat.color } : {}}>
-                    <Icon size={11} />
-                    {cat.name}
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setFilterDropdownOpen(v => !v)}
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold border border-gray-200 bg-white text-gray-700 hover:border-gray-300 transition-all min-w-[140px]"
+                      style={selectedCat ? { borderColor: selectedCat.color + '60', background: selectedCat.color + '10', color: selectedCat.color } : {}}
+                    >
+                      <SelIcon size={12} />
+                      <span className="flex-1 text-left">{selectedCat ? selectedCat.name : 'Все категории'}</span>
+                      <ChevronDown size={12} className={`transition-transform ${filterDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {filterDropdownOpen && (
+                      <div className="absolute top-full left-0 mt-1 z-50 bg-white rounded-2xl shadow-xl border border-gray-100 py-1.5 min-w-[180px]"
+                        onMouseLeave={() => setFilterDropdownOpen(false)}>
+                        <button
+                          onClick={() => { setCatFilter("all"); setFilterDropdownOpen(false); }}
+                          className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors ${catFilter === "all" ? "bg-indigo-50 text-indigo-600" : "text-gray-600 hover:bg-gray-50"}`}
+                        >
+                          <ClipboardList size={12} />
+                          Все категории
+                        </button>
+                        {categories.map(cat => {
+                          const Icon = getCategoryIcon(cat.icon);
+                          const active = catFilter === cat.slug;
+                          return (
+                            <button key={cat.id}
+                              onClick={() => { setCatFilter(cat.slug); setFilterDropdownOpen(false); }}
+                              className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors ${active ? "text-white" : "text-gray-600 hover:bg-gray-50"}`}
+                              style={active ? { background: cat.color } : {}}
+                            >
+                              <Icon size={12} />
+                              {cat.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
                 );
-              })}
+              })()}
             </div>
-            <div className="flex gap-2">
+
+            <div className="flex gap-2 ml-auto">
               <button onClick={openCreateCategory}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-gray-200 text-gray-600 hover:bg-gray-50 transition-all"
                 title="Управление категориями">
@@ -759,6 +802,46 @@ export function ServicesView({ user }: { user: any }) {
                   )}
                 </div>
 
+                {/* Clinic binding */}
+                <div className="rounded-2xl p-3 border-2 border-blue-100 bg-blue-50">
+                  <div className="flex items-center gap-3">
+                    {user?.clinic?.logo ? (
+                      <div className="flex-shrink-0 bg-white p-1.5 rounded-xl border-2 border-blue-200 shadow-sm w-10 h-10 flex items-center justify-center">
+                        <img
+                          src={user.clinic.logo}
+                          alt={user.clinic.name}
+                          className="w-full h-full object-contain"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            (e.currentTarget.nextElementSibling as HTMLElement | null)?.style && ((e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex');
+                          }}
+                        />
+                        <div style={{ display: 'none' }} className="w-full h-full items-center justify-center">
+                          <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                          </svg>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-sm font-bold text-gray-800">{user?.clinic?.name || 'Ваша клиника'}</p>
+                      <p className="text-xs text-gray-500">Клиника услуги</p>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-blue-600 mt-2 flex items-center gap-1">
+                    <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    {editing ? 'Услуга привязана к этой клинике' : 'Услуга будет автоматически привязана к вашей клинике'}
+                  </p>
+                </div>
+
               </div>
               <div className="px-6 pb-5 pt-2 flex gap-3 rounded-b-3xl bg-white">
                 <button onClick={() => setShowModal(false)} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 transition-all">
@@ -801,7 +884,7 @@ export function ServicesView({ user }: { user: any }) {
 
               <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
                 {/* Existing categories list */}
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
                   {categories.map(cat => {
                     const Icon = getCategoryIcon(cat.icon);
                     return (
@@ -837,19 +920,24 @@ export function ServicesView({ user }: { user: any }) {
                   <p className="text-[11px] font-black text-gray-500 uppercase tracking-widest">
                     {editingCategory ? `Редактировать: ${editingCategory.name}` : "Новая категория"}
                   </p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 block">Название *</label>
-                      <input value={categoryForm.name} onChange={e => setCategoryForm(f => ({ ...f, name: e.target.value }))}
-                        placeholder="Например: Гастроэнтерология"
-                        className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-800 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-400/10 transition-all" />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 block">Slug *</label>
-                      <input value={categoryForm.slug} onChange={e => setCategoryForm(f => ({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
-                        placeholder="gastro"
-                        className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-800 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-400/10 transition-all font-mono" />
-                    </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 block">Название *</label>
+                    <input
+                      value={categoryForm.name}
+                      onChange={e => {
+                        const name = e.target.value;
+                        setCategoryForm(f => ({
+                          ...f,
+                          name,
+                          slug: editingCategory ? f.slug : toSlug(name),
+                        }));
+                      }}
+                      placeholder="Например: Гастроэнтерология"
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-800 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-400/10 transition-all"
+                    />
+                    {categoryForm.slug && (
+                      <p className="text-[10px] text-gray-400 mt-1 font-mono">slug: {categoryForm.slug}</p>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
