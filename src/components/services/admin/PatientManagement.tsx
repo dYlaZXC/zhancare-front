@@ -440,11 +440,27 @@ export default function PatientManagement({ user }: PatientManagementProps) {
   // Filter and sort patients based on search and filters
   const filteredPatients = patients
     .filter((patient) => {
+      // Phones are stored as E.164 (+7XXXXXXXXXX), but people naturally type
+      // Kazakh numbers with a leading 8 instead of +7, plus spaces/dashes
+      // (e.g. "8 708 110-93-16") — a raw substring match against the stored
+      // value never matches that. Normalize both sides the same way the
+      // backend does for phone lookups (see phone_utils.normalize_phone):
+      // strip to digits, then treat a leading 8 as 7.
+      const searchDigits = searchQuery.replace(/\D/g, "");
+      const normalizedSearchDigits =
+        searchDigits.length > 1 && searchDigits[0] === "8"
+          ? "7" + searchDigits.slice(1)
+          : searchDigits;
+      const matchesPhone =
+        !!patient.phone &&
+        normalizedSearchDigits.length > 0 &&
+        patient.phone.replace(/\D/g, "").includes(normalizedSearchDigits);
+
       const matchesSearch =
         patient.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         patient.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         patient.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (patient.phone && patient.phone.includes(searchQuery));
+        matchesPhone;
 
       const matchesStatus =
         filterStatus === 'all' ||
