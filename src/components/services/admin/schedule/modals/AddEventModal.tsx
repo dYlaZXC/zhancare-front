@@ -252,9 +252,9 @@ export default function AddEventModal({
     }
     setLoadingDiagSlots(true);
     setFormData(f => ({ ...f, time: '' }));
-    api.get(`/diagnostics/services/${selectedDiagService.id}/available-slots/`, {
-      params: { date: formData.date, patient_id: formData.patient_id || undefined },
-    })
+    const params: Record<string, string> = { date: formData.date };
+    if (formData.patient_id) params.patient_id = formData.patient_id;
+    api.get(`/diagnostics/services/${selectedDiagService.id}/available-slots/`, { params })
       .then(res => setDiagSlots(res.data.slots ?? []))
       .catch(() => setDiagSlots([]))
       .finally(() => setLoadingDiagSlots(false));
