@@ -607,7 +607,7 @@ export function ServicesView({ user }: { user: any }) {
                     const SelIcon = selected ? getCategoryIcon(selected.icon) : ClipboardList;
                     return (
                       <div className="relative">
-                        <button ref={catBtnRef} type="button"
+                        <button ref={catBtnRef} type="button" title="Выбрать категорию"
                           onClick={() => {
                             if (catBtnRef.current) {
                               const r = catBtnRef.current.getBoundingClientRect();
