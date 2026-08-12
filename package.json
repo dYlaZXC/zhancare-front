@@ -6,7 +6,10 @@
     "dev": "NODE_OPTIONS=--no-deprecation next dev --webpack",
     "build": "next build --webpack",
     "start": "NODE_ENV=production node server.js",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report"
   },
   "dependencies": {
     "@deepgram/sdk": "^4.11.2",
@@ -70,6 +73,7 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@svgr/webpack": "^8.1.0",
     "@types/js-cookie": "^3.0.6",
     "@types/node": "^22.9.0",
