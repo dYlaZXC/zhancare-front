@@ -95,8 +95,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.9"
-          cache: pip
-          cache-dependency-path: ../zhancare-back/requirements.txt
+          # No pip cache: actions/setup-python's cache-dependency-path glob
+          # matcher rejects "../" patterns outright, and zhancare-back is
+          # checked out as a sibling of this workspace, not inside it.
 
       - name: Install backend dependencies
         working-directory: ../zhancare-back
