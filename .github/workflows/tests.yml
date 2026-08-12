@@ -8,6 +8,8 @@ name: Tests
 # Playwright against, and throws all of it away when the job ends.
 on:
   pull_request:
+  # (retrigger: forcing a fresh pull_request event after clearing the
+  # account billing lock that blocked every earlier Actions run)
 
 env:
   DB_NAME: zhancare_test
