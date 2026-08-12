@@ -12,7 +12,10 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 2 : undefined,
+  // 1 worker in CI for now: standard GitHub-hosted runners are 2 vCPUs,
+  // shared with the Django + Next production servers already running.
+  // Revisit once the pipeline itself is proven stable.
+  workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? [["html", { open: "never" }], ["github"]] : "list",
   timeout: 30_000,
 
@@ -32,13 +35,16 @@ export default defineConfig({
     },
   ],
 
-  // Locally, reuse whatever's already listening on :3000 (e.g. `npm run dev`).
-  // In CI the workflow builds+starts the production server itself before
-  // Playwright runs, so this only kicks in as a fallback.
+  // Always reuse whatever's already listening on :3000 rather than
+  // launching a second one — locally that's `npm run dev`; in CI the
+  // workflow builds+starts the production server itself as its own step
+  // (with its own curl-based readiness check) before Playwright ever runs,
+  // so launching another here would just double the build and collide on
+  // the port. The `command` only fires if nothing answers on :3000 at all.
   webServer: {
     command: "npm run build && npm run start",
     url: FRONTEND_URL,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: true,
     timeout: 180_000,
   },
 });

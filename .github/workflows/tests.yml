@@ -131,9 +131,6 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci --legacy-peer-deps
 
-      - name: Type check
-        run: npx tsc --noEmit
-
       - name: Write CI env for the production build
         run: |
           cat > .env.production.local <<'EOF'
@@ -144,6 +141,14 @@ jobs:
           NEXT_PUBLIC_WSS_URL=ws://localhost:8000/ws
           EOF
 
+      # `next build` runs full TypeScript type-checking itself (see
+      # next.config.mjs — typescript.ignoreBuildErrors is not set, so it's
+      # on by default) and, unlike a bare `tsc --noEmit`, correctly
+      # bootstraps next-env.d.ts and the route-types declarations first. A
+      # separate standalone tsc step here ran *before* any of that existed
+      # on a fresh checkout, so every static asset import (`@/assets/*.png`
+      # etc., typed via next/image-types/global) looked unresolvable —
+      # false positives, not real type errors.
       - name: Build frontend
         run: npm run build
 
