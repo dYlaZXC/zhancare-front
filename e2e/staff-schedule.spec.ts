@@ -36,6 +36,11 @@ test("date-based schedule: enable a day, save, and confirm it persists across re
 
   // ── Enable Monday and set its hours ─────────────────────────────────────
   const mondayToggle = page.getByRole("button", { name: "Пн", exact: true });
+  // the day list loads async (fetchPlannerWeek) after the modal opens —
+  // wait for it before checking day-off state below, otherwise on a colder
+  // CI run the check can land before any row has rendered at all, read as
+  // "not a day off" by default, and skip the click that was needed
+  await expect(mondayToggle).toBeVisible({ timeout: 10_000 });
   // scope to the row via the day-toggle button, not hasText: "Понедельник"
   // — .filter({hasText}) matches every ancestor div of that text node, and
   // .last() then picks the innermost one, which is just the label's own
