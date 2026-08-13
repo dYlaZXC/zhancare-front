@@ -411,7 +411,7 @@ export default function AssignDiagnosticsModal({
                             }}
                             className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors">
                             <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-600 text-xs font-bold flex items-center justify-center flex-shrink-0">
-                              {`${p.first_name[0]}${p.last_name[0]}`.toUpperCase()}
+                              {`${p.first_name?.[0] ?? "?"}${p.last_name?.[0] ?? "?"}`.toUpperCase()}
                             </div>
                             <div className="min-w-0">
                               <p className="text-sm font-medium text-gray-900">{p.first_name} {p.last_name}</p>

@@ -296,7 +296,7 @@ export function DoctorsScheduleContent({
                         className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
                         style={{ background: `linear-gradient(135deg, ${cg1}, ${cg2})` }}
                       >
-                        {member.first_name[0]}{member.last_name[0]}
+                        {member.first_name?.[0] ?? "?"}{member.last_name?.[0] ?? "?"}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold text-gray-800 truncate">{member.first_name} {member.last_name}</p>
@@ -399,7 +399,7 @@ export function DoctorsScheduleContent({
                             className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm"
                             style={{ background: `linear-gradient(135deg, ${g1}, ${g2})` }}
                           >
-                            {member.first_name[0]}{member.last_name[0]}
+                            {member.first_name?.[0] ?? "?"}{member.last_name?.[0] ?? "?"}
                           </div>
                           <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${statusColor}`} />
                         </div>
