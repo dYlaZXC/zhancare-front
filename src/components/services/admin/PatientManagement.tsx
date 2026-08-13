@@ -31,9 +31,12 @@ import ayalaClinicLogo from "@/assets/clinics_logos/ayala_clinic.png";
 interface Patient {
   // Basic user fields
   id: number;
-  first_name: string;
-  last_name: string;
-  email: string;
+  // The API can return null for any of these (e.g. a phone-only
+  // registration has no email) — don't call string methods on them without
+  // a null check.
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
   phone: string;
   birth_date?: string;
   gender?: 'male' | 'female' | 'other';
@@ -344,9 +347,9 @@ export default function PatientManagement({ user }: PatientManagementProps) {
   const handleEditClick = (patient: Patient) => {
     setEditingPatient(patient);
     setFormData({
-      first_name: patient.first_name,
-      last_name: patient.last_name,
-      email: patient.email,
+      first_name: patient.first_name ?? '',
+      last_name: patient.last_name ?? '',
+      email: patient.email ?? '',
       phone: patient.phone,
       password: '',
       birth_date: patient.birth_date || '',
@@ -456,10 +459,17 @@ export default function PatientManagement({ user }: PatientManagementProps) {
         normalizedSearchDigits.length > 0 &&
         patient.phone.replace(/\D/g, "").includes(normalizedSearchDigits);
 
+      // first_name/last_name/email are typed as required strings, but the
+      // API can actually return null for any of them (e.g. a patient
+      // registered by phone only has no email) — crashed here in
+      // production as soon as a search query made .filter() reach one of
+      // those patients: "Cannot read properties of null (reading
+      // 'toLowerCase')".
+      const q = searchQuery.toLowerCase();
       const matchesSearch =
-        patient.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        patient.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        patient.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (patient.first_name ?? "").toLowerCase().includes(q) ||
+        (patient.last_name ?? "").toLowerCase().includes(q) ||
+        (patient.email ?? "").toLowerCase().includes(q) ||
         matchesPhone;
 
       const matchesStatus =
@@ -712,7 +722,7 @@ export default function PatientManagement({ user }: PatientManagementProps) {
                           background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
                         }}
                       >
-                        {patient.first_name[0]}{patient.last_name[0]}
+                        {patient.first_name?.[0] ?? "?"}{patient.last_name?.[0] ?? "?"}
                       </div>
 
                       {/* Info */}
