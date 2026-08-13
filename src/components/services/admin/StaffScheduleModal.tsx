@@ -1,219 +1,33 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-toastify";
 import { api } from "@/utils/api";
+import { Calendar, Loader2, RotateCcw, History } from "lucide-react";
+
+import type {
+  StaffScheduleModalProps,
+  StaffMemberMin,
+  DaySchedule,
+  WeeklySchedules,
+} from "./staff-schedule/types/scheduleTypes";
+import { DEFAULT_WEEKDAYS, emptyWeek } from "./staff-schedule/types/scheduleTypes";
+import { getCurrentMondayStr, addDays, formatWeekLabel } from "./staff-schedule/utils/dateHelpers";
+import { buildDefaultWeek } from "./staff-schedule/utils/dateHelpers";
 import {
-  Calendar,
-  Loader2,
-  Video,
-  Home,
-  RotateCcw,
-  History,
-  CheckCircle,
-} from "lucide-react";
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface StaffMemberMin {
-  id: number;
-  first_name: string;
-  last_name: string;
-  schedules?: Array<{
-    id?: number;
-    consultation_type: "online" | "offline";
-    weekday: number;
-    start_time: string;
-    end_time: string;
-    is_active: boolean;
-  }>;
-}
-
-export interface StaffScheduleModalProps {
-  isOpen: boolean;
-  member: StaffMemberMin | null;
-  onClose: () => void;
-  onSaved?: () => void;
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-type DaySchedule = { start: string; end: string; enabled: boolean };
-type WeekSchedule = {
-  online: Record<string, DaySchedule>;
-  offline: Record<string, DaySchedule>;
-};
-type WeeklySchedules = Record<string, WeekSchedule>;
-
-const DEFAULT_WEEKDAYS = [
-  { value: "monday", labelRu: "Понедельник", labelShort: "Пн", dayIndex: 1 },
-  { value: "tuesday", labelRu: "Вторник", labelShort: "Вт", dayIndex: 2 },
-  { value: "wednesday", labelRu: "Среда", labelShort: "Ср", dayIndex: 3 },
-  { value: "thursday", labelRu: "Четверг", labelShort: "Чт", dayIndex: 4 },
-  { value: "friday", labelRu: "Пятница", labelShort: "Пт", dayIndex: 5 },
-  { value: "saturday", labelRu: "Суббота", labelShort: "Сб", dayIndex: 6 },
-  { value: "sunday", labelRu: "Воскресенье", labelShort: "Вс", dayIndex: 0 },
-];
-
-const WEEKDAY_TO_NAME: Record<number, string> = {
-  0: "monday",
-  1: "tuesday",
-  2: "wednesday",
-  3: "thursday",
-  4: "friday",
-  5: "saturday",
-  6: "sunday",
-};
-
-const makeDay = (start: string, end: string, enabled = false): DaySchedule => ({
-  start,
-  end,
-  enabled,
-});
-
-const emptyWeek = (): WeekSchedule => ({
-  online: {
-    monday: makeDay("09:00", "18:00"),
-    tuesday: makeDay("09:00", "18:00"),
-    wednesday: makeDay("09:00", "18:00"),
-    thursday: makeDay("09:00", "18:00"),
-    friday: makeDay("09:00", "18:00"),
-    saturday: makeDay("10:00", "14:00"),
-    sunday: makeDay("10:00", "14:00"),
-  },
-  offline: {
-    monday: makeDay("09:00", "18:00"),
-    tuesday: makeDay("09:00", "18:00"),
-    wednesday: makeDay("09:00", "18:00"),
-    thursday: makeDay("09:00", "18:00"),
-    friday: makeDay("09:00", "18:00"),
-    saturday: makeDay("10:00", "14:00"),
-    sunday: makeDay("10:00", "14:00"),
-  },
-});
-
-const getCurrentMondayStr = (): string => {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const dow = now.getDay();
-  now.setDate(now.getDate() + (dow === 0 ? -6 : 1 - dow));
-  return now.toLocaleDateString("sv-SE");
-};
-
-const buildWeeklySchedulesFromMember = (member: StaffMemberMin): WeeklySchedules => {
-  const weekStartDate = getCurrentMondayStr();
-  const week = emptyWeek();
-  const rows = member.schedules || [];
-  for (const row of rows) {
-    const dayName = WEEKDAY_TO_NAME[row.weekday];
-    if (dayName && (row.consultation_type === "online" || row.consultation_type === "offline")) {
-      (week[row.consultation_type] as Record<string, DaySchedule>)[dayName] = {
-        start: row.start_time.slice(0, 5),
-        end: row.end_time.slice(0, 5),
-        enabled: row.is_active,
-      };
-    }
-  }
-  return { [weekStartDate]: week };
-};
-
-// Build schedules array for saving (template tab)
-const buildSchedulesArray = (
-  weeklySchedules: WeeklySchedules
-): Array<{
-  consultation_type: string;
-  weekday: number;
-  start_time: string;
-  end_time: string;
-  is_active: boolean;
-}> => {
-  const DAY_TO_WEEKDAY: Record<string, number> = {
-    monday: 0,
-    tuesday: 1,
-    wednesday: 2,
-    thursday: 3,
-    friday: 4,
-    saturday: 5,
-    sunday: 6,
-  };
-  const merged = new Map<
-    string,
-    { consultation_type: string; weekday: number; start_time: string; end_time: string; is_active: boolean }
-  >();
-  const sortedEntries = Object.entries(weeklySchedules).sort(([a], [b]) => a.localeCompare(b));
-  for (const [, weekEntry] of sortedEntries) {
-    for (const type of ["online", "offline"] as const) {
-      const dayMap = weekEntry[type];
-      if (!dayMap) continue;
-      for (const [day, cfg] of Object.entries(dayMap)) {
-        const weekday = DAY_TO_WEEKDAY[day] ?? 0;
-        const key = `${type}-${weekday}`;
-        if (cfg.enabled) {
-          merged.set(key, {
-            consultation_type: type,
-            weekday,
-            start_time: cfg.start,
-            end_time: cfg.end,
-            is_active: true,
-          });
-        }
-      }
-    }
-  }
-  return Array.from(merged.values());
-};
-
-// Planner helpers
-const getMondayOf = (dateStr: string): string => {
-  const d = new Date(dateStr + "T00:00:00");
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  return d.toLocaleDateString("sv-SE");
-};
-
-const addDays = (dateStr: string, n: number): string => {
-  const d = new Date(dateStr + "T00:00:00");
-  d.setDate(d.getDate() + n);
-  return d.toLocaleDateString("sv-SE");
-};
-
-const formatWeekLabel = (mondayStr: string): string => {
-  const start = new Date(mondayStr + "T00:00:00");
-  const end = new Date(mondayStr + "T00:00:00");
-  end.setDate(end.getDate() + 6);
-  const fmt = (d: Date) => d.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
-  return `${fmt(start)} — ${fmt(end)}`;
-};
-
-const isCurrentWeekPlanner = (mondayStr: string): boolean => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const monday = new Date(mondayStr + "T00:00:00");
-  const sunday = new Date(mondayStr + "T00:00:00");
-  sunday.setDate(sunday.getDate() + 6);
-  return today >= monday && today <= sunday;
-};
-
-const buildDefaultWeek = (weekStart: string): any[] =>
-  Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(weekStart + "T00:00:00");
-    d.setDate(d.getDate() + i);
-    const dow = d.getDay();
-    const isWeekend = dow === 0 || dow === 6;
-    return {
-      date: d.toLocaleDateString("sv-SE"),
-      avail_id: null,
-      is_day_off: isWeekend,
-      start_time: isWeekend ? null : "09:00",
-      end_time: isWeekend ? null : "18:00",
-      note: "",
-      source: "empty",
-    };
-  });
+  buildWeeklySchedulesFromMember,
+  buildSchedulesArray,
+  timeRangesOverlap,
+} from "./staff-schedule/utils/scheduleTransforms";
+import { DateScheduleTab } from "./staff-schedule/tabs/DateScheduleTab";
+import { TemplateScheduleTab } from "./staff-schedule/tabs/TemplateScheduleTab";
+import { ScheduleHistoryTab } from "./staff-schedule/tabs/ScheduleHistoryTab";
 
 // ── Main Component ─────────────────────────────────────────────────────────────
+// Shell: owns tab selection, the selected member, open/close, and coordinates
+// saving. Each tab's own body (and the domain it reads/writes — DoctorAvailability
+// for "schedule", DoctorSchedule for "template") lives in staff-schedule/tabs/.
 
 export default function StaffScheduleModal({
   isOpen,
@@ -317,23 +131,6 @@ export default function StaffScheduleModal({
 
   // ── Conflict detection helpers ────────────────────────────────────────────────
 
-  const timeRangesOverlap = useCallback(
-    (start1: string, end1: string, start2: string, end2: string): boolean => {
-      const toMin = (t: string) => {
-        const [h, m] = t.split(":").map(Number);
-        return h * 60 + m;
-      };
-      const s1 = toMin(start1),
-        e1 = toMin(end1),
-        s2 = toMin(start2),
-        e2 = toMin(end2);
-      const ae1 = e1 < s1 ? e1 + 1440 : e1;
-      const ae2 = e2 < s2 ? e2 + 1440 : e2;
-      return s1 < ae2 && s2 < ae1;
-    },
-    []
-  );
-
   const getPlannerDayConflict = useCallback(
     (dayIndex: number): { hasConflict: boolean; otherTime: string } => {
       const current = plannerDays[dayIndex];
@@ -348,7 +145,7 @@ export default function StaffScheduleModal({
       const overlap = timeRangesOverlap(cs, ce, os, oe);
       return { hasConflict: overlap, otherTime: `${os} – ${oe}` };
     },
-    [plannerDays, plannerOtherDays, timeRangesOverlap]
+    [plannerDays, plannerOtherDays]
   );
 
   const plannerConflictCount = useMemo(
@@ -392,7 +189,7 @@ export default function StaffScheduleModal({
       }
       return false;
     },
-    [weeklySchedules, currentWeekIndex, getWeekStartDate, timeRangesOverlap]
+    [weeklySchedules, currentWeekIndex, getWeekStartDate]
   );
 
   const getConflictDays = useCallback((): string[] => {
@@ -802,660 +599,45 @@ export default function StaffScheduleModal({
             {/* Body */}
             <div className="p-6 space-y-4">
 
-              {/* ── PLANNER TAB (schedule by date) ── */}
               {scheduleModalTab === "schedule" && (
-                <div className="space-y-4">
-                  {/* Consultation type toggle */}
-                  <div
-                    className={`flex rounded-2xl overflow-hidden border-2 transition-colors ${
-                      plannerConflictCount > 0 && plannerConsultationType !== "online"
-                        ? "border-red-200"
-                        : "border-gray-200"
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => handlePlannerTypeChange("online")}
-                      title={
-                        plannerConflictCount > 0 && plannerConsultationType !== "online"
-                          ? "Исправьте конфликты перед переключением"
-                          : undefined
-                      }
-                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 font-semibold text-sm transition-all ${
-                        plannerConsultationType === "online"
-                          ? "bg-blue-500 text-white"
-                          : plannerConflictCount > 0
-                          ? "text-red-400 bg-red-50 cursor-not-allowed"
-                          : "text-gray-600 hover:bg-gray-50"
-                      }`}
-                    >
-                      <Video className="w-4 h-4" /> Онлайн
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handlePlannerTypeChange("offline")}
-                      title={
-                        plannerConflictCount > 0 && plannerConsultationType !== "offline"
-                          ? "Исправьте конфликты перед переключением"
-                          : undefined
-                      }
-                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 font-semibold text-sm transition-all ${
-                        plannerConsultationType === "offline"
-                          ? "bg-purple-500 text-white"
-                          : plannerConflictCount > 0
-                          ? "text-red-400 bg-red-50 cursor-not-allowed"
-                          : "text-gray-600 hover:bg-gray-50"
-                      }`}
-                    >
-                      <Home className="w-4 h-4" /> Оффлайн
-                    </button>
-                  </div>
-
-                  {/* Week nav */}
-                  <div
-                    className={`flex items-center justify-between border-2 rounded-2xl px-4 py-3 transition-colors ${
-                      plannerConflictCount > 0
-                        ? "bg-red-50 border-red-200"
-                        : "bg-indigo-50 border-indigo-100"
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => handlePlannerWeekNav(-1)}
-                      disabled={plannerConflictCount > 0}
-                      title={
-                        plannerConflictCount > 0
-                          ? "Исправьте конфликты перед переходом"
-                          : undefined
-                      }
-                      className={`p-2 rounded-lg border transition-all ${
-                        plannerConflictCount > 0
-                          ? "bg-red-100 border-red-200 text-red-300 cursor-not-allowed"
-                          : "bg-white hover:bg-indigo-100 text-indigo-600 border-indigo-200"
-                      }`}
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15 19l-7-7 7-7"
-                        />
-                      </svg>
-                    </button>
-                    <div className="flex items-center gap-2 text-sm font-bold text-gray-800">
-                      <span className="text-base">📅</span>
-                      {plannerWeekStart ? formatWeekLabel(plannerWeekStart) : "..."}
-                      {plannerWeekStart && isCurrentWeekPlanner(plannerWeekStart) && (
-                        <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded-full">
-                          Текущая
-                        </span>
-                      )}
-                      {plannerConflictCount > 0 && (
-                        <span className="px-2 py-0.5 bg-red-100 text-red-600 text-xs font-bold rounded-full">
-                          ⚠ {plannerConflictCount} конфл.
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handlePlannerWeekNav(1)}
-                      disabled={plannerConflictCount > 0}
-                      title={
-                        plannerConflictCount > 0
-                          ? "Исправьте конфликты перед переходом"
-                          : undefined
-                      }
-                      className={`p-2 rounded-lg border transition-all ${
-                        plannerConflictCount > 0
-                          ? "bg-red-100 border-red-200 text-red-300 cursor-not-allowed"
-                          : "bg-white hover:bg-indigo-100 text-indigo-600 border-indigo-200"
-                      }`}
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5l7 7-7 7"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-
-                  {/* Conflict banner */}
-                  {!plannerLoading && plannerConflictCount > 0 && (
-                    <div className="flex items-start gap-3 px-4 py-3 bg-red-50 border-2 border-red-300 rounded-2xl">
-                      <span className="text-lg flex-shrink-0">⛔</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-red-700">
-                          {plannerConflictCount === 1
-                            ? "1 конфликт расписания"
-                            : `${plannerConflictCount} конфликта расписания`}
-                        </p>
-                        <p className="text-xs text-red-600 mt-0.5">
-                          Онлайн и оффлайн расписание пересекаются по времени. Исправьте конфликты
-                          — переключение вкладок и сохранение заблокированы.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Days */}
-                  {plannerLoading ? (
-                    <div className="flex justify-center py-10">
-                      <Loader2 className="w-7 h-7 animate-spin text-indigo-400" />
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {plannerDays.map((day, i) => {
-                        const d = new Date(day.date + "T00:00:00");
-                        const dayNames = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
-                        const fullNames = [
-                          "Воскресенье",
-                          "Понедельник",
-                          "Вторник",
-                          "Среда",
-                          "Четверг",
-                          "Пятница",
-                          "Суббота",
-                        ];
-                        const dateLabel = d.toLocaleDateString("ru-RU", {
-                          day: "numeric",
-                          month: "short",
-                        });
-                        const isFromAvail = day.source === "availability";
-                        const isOff = day.is_day_off;
-                        const { hasConflict, otherTime } = getPlannerDayConflict(i);
-                        const otherTypeName =
-                          plannerConsultationType === "online" ? "Приём в клинике" : "Видеоконсультация";
-                        return (
-                          <div
-                            key={day.date}
-                            className={`rounded-xl border-2 p-3 transition-all ${
-                              hasConflict
-                                ? "border-red-400 bg-red-50"
-                                : isOff
-                                ? "border-gray-200 bg-gray-50"
-                                : plannerConsultationType === "online"
-                                ? "border-blue-400 bg-blue-50"
-                                : "border-purple-400 bg-purple-50"
-                            }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              {/* Day toggle */}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const nowOff = !isOff;
-                                  updatePlannerDay(i, {
-                                    is_day_off: nowOff,
-                                    ...(!nowOff
-                                      ? {
-                                          start_time: day.start_time || "09:00",
-                                          end_time: day.end_time || "18:00",
-                                        }
-                                      : {}),
-                                  });
-                                }}
-                                className={`flex-shrink-0 w-11 h-11 rounded-xl border-2 font-semibold text-xs transition-all ${
-                                  hasConflict
-                                    ? "border-red-500 bg-red-500 text-white"
-                                    : isOff
-                                    ? "border-gray-300 bg-white text-gray-400"
-                                    : isFromAvail
-                                    ? plannerConsultationType === "online"
-                                      ? "border-blue-500 bg-blue-500 text-white"
-                                      : "border-purple-500 bg-purple-500 text-white"
-                                    : "border-gray-300 bg-white text-gray-500"
-                                }`}
-                              >
-                                {dayNames[d.getDay()]}
-                              </button>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-sm font-semibold text-gray-800">
-                                    {fullNames[d.getDay()]}
-                                  </span>
-                                  <span className="text-xs text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded-full">
-                                    {dateLabel}
-                                  </span>
-                                  {day.source === "template" && (
-                                    <span className="text-xs text-gray-300 italic">из шаблона</span>
-                                  )}
-                                  {hasConflict && (
-                                    <span className="text-[10px] font-bold text-red-600 bg-red-100 border border-red-300 px-1.5 py-0.5 rounded-full">
-                                      ⚠ Конфликт
-                                    </span>
-                                  )}
-                                </div>
-                                {isOff && (
-                                  <p className="text-xs text-gray-400 mt-0.5">Выходной</p>
-                                )}
-                                {hasConflict && (
-                                  <p className="text-xs text-red-600 mt-0.5 font-medium">
-                                    {otherTypeName}: {otherTime} — пересечение времени
-                                  </p>
-                                )}
-                                {!isOff &&
-                                  !hasConflict &&
-                                  plannerOtherDays[i] &&
-                                  !plannerOtherDays[i].is_day_off &&
-                                  plannerOtherDays[i].start_time && (
-                                    <p
-                                      className={`text-xs mt-0.5 ${
-                                        plannerConsultationType === "online"
-                                          ? "text-purple-500"
-                                          : "text-blue-500"
-                                      }`}
-                                    >
-                                      {otherTypeName}: {plannerOtherDays[i].start_time} –{" "}
-                                      {plannerOtherDays[i].end_time}
-                                    </p>
-                                  )}
-                              </div>
-                              {!isOff && (
-                                <div className="flex items-center gap-2">
-                                  <input
-                                    type="time"
-                                    value={day.start_time || "09:00"}
-                                    step="900"
-                                    onChange={(e) =>
-                                      updatePlannerDay(i, { start_time: e.target.value })
-                                    }
-                                    className={`w-28 px-2 py-1.5 rounded-lg border-2 focus:outline-none text-sm transition-colors ${
-                                      hasConflict
-                                        ? "border-red-300 focus:border-red-500 bg-white"
-                                        : "border-gray-200 focus:border-indigo-400"
-                                    }`}
-                                  />
-                                  <span className="text-gray-300">—</span>
-                                  <input
-                                    type="time"
-                                    value={day.end_time || "18:00"}
-                                    step="900"
-                                    onChange={(e) =>
-                                      updatePlannerDay(i, { end_time: e.target.value })
-                                    }
-                                    className={`w-28 px-2 py-1.5 rounded-lg border-2 focus:outline-none text-sm transition-colors ${
-                                      hasConflict
-                                        ? "border-red-300 focus:border-red-500 bg-white"
-                                        : "border-gray-200 focus:border-indigo-400"
-                                    }`}
-                                  />
-                                </div>
-                              )}
-                              {/* Action buttons */}
-                              <div className="flex gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => handleSavePlannerDay(day)}
-                                  disabled={hasConflict}
-                                  className={`p-1.5 rounded-lg transition-colors ${
-                                    hasConflict
-                                      ? "bg-red-100 text-red-300 cursor-not-allowed"
-                                      : "bg-indigo-100 hover:bg-indigo-200 text-indigo-600"
-                                  }`}
-                                  title={hasConflict ? "Исправьте конфликт времени" : "Сохранить"}
-                                >
-                                  <CheckCircle className="w-4 h-4" />
-                                </button>
-                                {isFromAvail && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeletePlannerDay(day)}
-                                    className="p-1.5 rounded-lg bg-gray-100 hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors"
-                                    title="Сброс к шаблону"
-                                  >
-                                    <RotateCcw className="w-4 h-4" />
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                <DateScheduleTab
+                  plannerWeekStart={plannerWeekStart}
+                  plannerConsultationType={plannerConsultationType}
+                  plannerDays={plannerDays}
+                  plannerOtherDays={plannerOtherDays}
+                  plannerLoading={plannerLoading}
+                  plannerConflictCount={plannerConflictCount}
+                  getPlannerDayConflict={getPlannerDayConflict}
+                  onTypeChange={handlePlannerTypeChange}
+                  onWeekNav={handlePlannerWeekNav}
+                  onUpdateDay={updatePlannerDay}
+                  onSaveDay={handleSavePlannerDay}
+                  onDeleteDay={handleDeletePlannerDay}
+                />
               )}
 
-              {/* ── TEMPLATE TAB (weekday pattern) ── */}
               {scheduleLoading && scheduleModalTab === "template" && (
                 <div className="flex items-center justify-center py-16">
                   <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
                 </div>
               )}
               {!scheduleLoading && scheduleModalTab === "template" && (
-                <>
-                  {/* Online/Offline Tab Switcher */}
-                  <div className="flex rounded-2xl overflow-hidden border-2 border-gray-200">
-                    <button
-                      type="button"
-                      onClick={() => setScheduleType("online")}
-                      className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 font-semibold transition-all ${
-                        scheduleType === "online"
-                          ? "bg-blue-500 text-white"
-                          : "text-gray-600 hover:bg-gray-50"
-                      }`}
-                    >
-                      <Video className="w-5 h-5" />
-                      <span>Видеоконсультация</span>
-                      {Object.values(getCurrentOnlineSchedule()).filter((d) => d.enabled).length >
-                        0 && (
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs ${
-                            scheduleType === "online"
-                              ? "bg-blue-600 text-white"
-                              : "bg-blue-100 text-blue-700"
-                          }`}
-                        >
-                          {Object.values(getCurrentOnlineSchedule()).filter((d) => d.enabled).length}
-                        </span>
-                      )}
-                      {getConflictDays().length > 0 && (
-                        <span className="px-2 py-0.5 rounded-full text-xs bg-red-500 text-white font-bold">
-                          ⚠ {getConflictDays().length}
-                        </span>
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setScheduleType("offline")}
-                      className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 font-semibold transition-all ${
-                        scheduleType === "offline"
-                          ? "bg-purple-500 text-white"
-                          : "text-gray-600 hover:bg-gray-50"
-                      }`}
-                    >
-                      <Home className="w-5 h-5" />
-                      <span>Приём в клинике</span>
-                      {Object.values(getCurrentOfflineSchedule()).filter((d) => d.enabled).length >
-                        0 && (
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs ${
-                            scheduleType === "offline"
-                              ? "bg-purple-600 text-white"
-                              : "bg-purple-100 text-purple-700"
-                          }`}
-                        >
-                          {
-                            Object.values(getCurrentOfflineSchedule()).filter((d) => d.enabled)
-                              .length
-                          }
-                        </span>
-                      )}
-                      {getConflictDays().length > 0 && (
-                        <span className="px-2 py-0.5 rounded-full text-xs bg-red-500 text-white font-bold">
-                          ⚠ {getConflictDays().length}
-                        </span>
-                      )}
-                    </button>
-                  </div>
-
-                  {/* Schedule Days */}
-                  <div
-                    className={`space-y-3 p-4 rounded-2xl ${
-                      scheduleType === "online" ? "bg-blue-50/40" : "bg-purple-50/40"
-                    }`}
-                  >
-                    {scheduleType === "online" ? (
-                      <p className="text-sm text-blue-700 font-medium mb-2">
-                        Настройте расписание для онлайн приемов
-                      </p>
-                    ) : (
-                      <p className="text-sm text-purple-700 font-medium mb-2">
-                        Настройте расписание для оффлайн приемов
-                      </p>
-                    )}
-                    {DEFAULT_WEEKDAYS.map((day) => {
-                      const currentOnlineSchedule = getCurrentOnlineSchedule();
-                      const currentOfflineSchedule = getCurrentOfflineSchedule();
-                      const hasConflict = getScheduleConflict(day.value);
-                      const isOnline = scheduleType === "online";
-                      const currentDaySchedule = isOnline
-                        ? currentOnlineSchedule
-                        : currentOfflineSchedule;
-                      const otherSchedule = isOnline
-                        ? currentOfflineSchedule
-                        : currentOnlineSchedule;
-                      const otherEnabled = otherSchedule[day.value]?.enabled;
-                      const otherTime = otherEnabled
-                        ? `${otherSchedule[day.value]?.start} - ${otherSchedule[day.value]?.end}`
-                        : "";
-
-                      return (
-                        <div
-                          key={day.value}
-                          className={`rounded-xl border-2 p-4 transition-all bg-white ${
-                            hasConflict
-                              ? "border-red-500 bg-red-50"
-                              : currentDaySchedule[day.value]?.enabled
-                              ? isOnline
-                                ? "border-blue-500 bg-blue-50"
-                                : "border-purple-500 bg-purple-50"
-                              : "border-gray-200"
-                          }`}
-                        >
-                          <div className="flex items-center gap-4">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                isOnline
-                                  ? toggleOnlineDay(day.value)
-                                  : toggleOfflineDay(day.value)
-                              }
-                              className={`flex items-center justify-center w-12 h-12 rounded-xl border-2 transition-all font-semibold text-sm ${
-                                hasConflict
-                                  ? "border-red-500 bg-red-500 text-white"
-                                  : currentDaySchedule[day.value]?.enabled
-                                  ? isOnline
-                                    ? "border-blue-500 bg-blue-500 text-white"
-                                    : "border-purple-500 bg-purple-500 text-white"
-                                  : "border-gray-300 bg-white text-gray-600 hover:border-gray-400"
-                              }`}
-                              title={day.labelRu}
-                            >
-                              {day.labelShort}
-                            </button>
-                            <div className="flex-1">
-                              <p className="font-semibold text-gray-700">
-                                {day.labelRu}
-                              </p>
-                              {otherEnabled && !currentDaySchedule[day.value]?.enabled && (
-                                <p
-                                  className={`text-xs mt-1 ${
-                                    isOnline ? "text-purple-600" : "text-blue-600"
-                                  }`}
-                                >
-                                  {isOnline ? "🏠 Оффлайн:" : "📱 Онлайн:"} {otherTime}
-                                </p>
-                              )}
-                            </div>
-                            {currentDaySchedule[day.value]?.enabled && (
-                              <div className="flex items-center gap-3">
-                                <div>
-                                  <label className="block text-xs text-gray-600 mb-1">С</label>
-                                  <input
-                                    type="time"
-                                    value={currentDaySchedule[day.value]?.start || "09:00"}
-                                    onChange={(e) =>
-                                      isOnline
-                                        ? updateOnlineDayTime(day.value, "start", e.target.value)
-                                        : updateOfflineDayTime(day.value, "start", e.target.value)
-                                    }
-                                    step="900"
-                                    className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
-                                      hasConflict
-                                        ? "border-red-300 focus:border-red-500"
-                                        : isOnline
-                                        ? "border-gray-300 focus:border-blue-500"
-                                        : "border-gray-300 focus:border-purple-500"
-                                    }`}
-                                  />
-                                </div>
-                                <div className="text-gray-400 pt-5">—</div>
-                                <div>
-                                  <label className="block text-xs text-gray-600 mb-1">До</label>
-                                  <input
-                                    type="time"
-                                    value={currentDaySchedule[day.value]?.end || "18:00"}
-                                    onChange={(e) =>
-                                      isOnline
-                                        ? updateOnlineDayTime(day.value, "end", e.target.value)
-                                        : updateOfflineDayTime(day.value, "end", e.target.value)
-                                    }
-                                    step="900"
-                                    className={`w-32 px-3 py-2 rounded-lg border-2 focus:outline-none transition-colors text-sm ${
-                                      hasConflict
-                                        ? "border-red-300 focus:border-red-500"
-                                        : isOnline
-                                        ? "border-gray-300 focus:border-blue-500"
-                                        : "border-gray-300 focus:border-purple-500"
-                                    }`}
-                                  />
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                          {hasConflict && (
-                            <div className="mt-3 p-3 bg-red-100 border-l-4 border-red-500 rounded">
-                              <p className="text-xs text-red-800 font-semibold">
-                                ⚠️ Конфликт времени! {isOnline ? "Приём в клинике" : "Видеоконсультация"} расписание:{" "}
-                                {otherTime}
-                              </p>
-                              <p className="text-xs text-red-700 mt-1">
-                                Измените время или отключите один из графиков
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Conflict warning */}
-                  {getConflictDays().length > 0 && (
-                    <div className="p-4 bg-red-50 border-2 border-red-200 rounded-2xl">
-                      <p className="text-sm text-red-800 font-bold">
-                        ⛔ Обнаружены конфликты расписания! ({getConflictDays().length} дней)
-                      </p>
-                      <p className="text-xs text-red-700 mt-1">
-                        Исправьте конфликты перед сохранением.
-                      </p>
-                    </div>
-                  )}
-                </>
+                <TemplateScheduleTab
+                  scheduleType={scheduleType}
+                  onScheduleTypeChange={setScheduleType}
+                  getCurrentOnlineSchedule={getCurrentOnlineSchedule}
+                  getCurrentOfflineSchedule={getCurrentOfflineSchedule}
+                  getScheduleConflict={getScheduleConflict}
+                  getConflictDays={getConflictDays}
+                  onToggleOnlineDay={toggleOnlineDay}
+                  onToggleOfflineDay={toggleOfflineDay}
+                  onUpdateOnlineDayTime={updateOnlineDayTime}
+                  onUpdateOfflineDayTime={updateOfflineDayTime}
+                />
               )}
 
-              {/* ── HISTORY TAB ── */}
               {!scheduleLoading && scheduleModalTab === "history" && (
-                <div className="space-y-3">
-                  {scheduleHistory.length === 0 ? (
-                    <div className="text-center py-8 text-gray-400">
-                      <History className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                      <p className="text-sm">История изменений пуста</p>
-                    </div>
-                  ) : (
-                    scheduleHistory.map((entry: any) => {
-                      const actionColor =
-                        entry.action === "create"
-                          ? "text-green-600 bg-green-50 border-green-200"
-                          : entry.action === "delete"
-                          ? "text-red-600 bg-red-50 border-red-200"
-                          : "text-blue-600 bg-blue-50 border-blue-200";
-                      const actionLabel =
-                        entry.action === "create"
-                          ? "Создано"
-                          : entry.action === "delete"
-                          ? "Удалено"
-                          : "Изменено";
-                      const entityLabel =
-                        entry.entity_type === "base" ? "Базовое расписание" : "Исключение";
-                      const changedAt = new Date(entry.changed_at).toLocaleString("ru-RU", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      });
-                      return (
-                        <div key={entry.id} className={`p-4 rounded-xl border-2 ${actionColor}`}>
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={`text-xs font-bold px-2 py-0.5 rounded-full border ${actionColor}`}
-                              >
-                                {actionLabel}
-                              </span>
-                              <span className="text-xs text-gray-500">{entityLabel}</span>
-                            </div>
-                            <span className="text-xs text-gray-400">{changedAt}</span>
-                          </div>
-                          {entry.changed_by_name && (
-                            <p className="text-xs text-gray-500 mb-2">
-                              Изменил: {entry.changed_by_name}
-                            </p>
-                          )}
-                          <div className="grid grid-cols-2 gap-2 mt-2">
-                            {entry.before && (
-                              <div className="bg-white/60 rounded-lg p-2">
-                                <p className="text-xs font-semibold text-gray-500 mb-1">До</p>
-                                {Object.entries(entry.before)
-                                  .filter(([k]) =>
-                                    [
-                                      "start_time",
-                                      "end_time",
-                                      "is_day_off",
-                                      "is_active",
-                                      "weekday",
-                                      "date",
-                                    ].includes(k)
-                                  )
-                                  .map(([k, v]) => (
-                                    <p key={k} className="text-xs text-gray-700">
-                                      <span className="text-gray-400">{k}:</span> {String(v)}
-                                    </p>
-                                  ))}
-                              </div>
-                            )}
-                            {entry.after && (
-                              <div className="bg-white/60 rounded-lg p-2">
-                                <p className="text-xs font-semibold text-gray-500 mb-1">После</p>
-                                {Object.entries(entry.after)
-                                  .filter(([k]) =>
-                                    [
-                                      "start_time",
-                                      "end_time",
-                                      "is_day_off",
-                                      "is_active",
-                                      "weekday",
-                                      "date",
-                                    ].includes(k)
-                                  )
-                                  .map(([k, v]) => (
-                                    <p key={k} className="text-xs text-gray-700">
-                                      <span className="text-gray-400">{k}:</span> {String(v)}
-                                    </p>
-                                  ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
+                <ScheduleHistoryTab history={scheduleHistory} />
               )}
             </div>
 
