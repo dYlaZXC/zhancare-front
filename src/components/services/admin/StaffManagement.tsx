@@ -63,9 +63,12 @@ import SearchSelect from "./schedule/components/SearchSelect";
 interface StaffMember {
   // Basic user fields
   id: number;
-  first_name: string;
-  last_name: string;
-  email: string;
+  // Required by the create/edit form, but not guaranteed non-null for
+  // every record at runtime (e.g. legacy data) — same caveat as
+  // PatientManagement.tsx's Patient interface.
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
   phone: string;
   role: 'doctor' | 'nurse';
   gender?: 'male' | 'female' | 'other' | null;
@@ -1446,9 +1449,9 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       specializationsArray.push('');
     }
     setFormData({
-      first_name: member.first_name,
-      last_name: member.last_name,
-      email: member.email,
+      first_name: member.first_name ?? '',
+      last_name: member.last_name ?? '',
+      email: member.email ?? '',
       phone: member.phone,
       password: '',
       role: member.role,
@@ -1774,10 +1777,14 @@ export default function StaffManagement({ user }: StaffManagementProps) {
   // Filter and sort staff based on search and filters
   const filteredStaff = staff
     .filter((member) => {
+      // Typed as required strings, but not guaranteed null-safe at runtime
+      // — same crash class fixed in PatientManagement.tsx's search filter
+      // ("Cannot read properties of null (reading 'toLowerCase')").
+      const q = searchQuery.toLowerCase();
       const matchesSearch =
-        member.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        member.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        member.email.toLowerCase().includes(searchQuery.toLowerCase());
+        (member.first_name ?? "").toLowerCase().includes(q) ||
+        (member.last_name ?? "").toLowerCase().includes(q) ||
+        (member.email ?? "").toLowerCase().includes(q);
 
       const matchesRole = filterRole === 'all' || member.role === filterRole;
       const matchesStatus =
@@ -2020,7 +2027,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                             : 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)'
                         }}
                       >
-                        {member.first_name[0]}{member.last_name[0]}
+                        {member.first_name?.[0] ?? "?"}{member.last_name?.[0] ?? "?"}
                       </div>
 
                       {/* Info */}
@@ -3746,9 +3753,18 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       </AnimatePresence>
 
       {/* Schedule Modal */}
+      {/* StaffScheduleModal's own member type keeps first_name/last_name
+          required — it only uses them for display text, so a fallback here
+          is simpler than threading nullability through that file too. */}
       <StaffScheduleModal
         isOpen={showScheduleModal}
-        member={scheduleMember}
+        member={
+          scheduleMember && {
+            ...scheduleMember,
+            first_name: scheduleMember.first_name ?? '',
+            last_name: scheduleMember.last_name ?? '',
+          }
+        }
         onClose={() => { setShowScheduleModal(false); setScheduleMember(null); }}
         onSaved={() => { fetchStaff(showDeleted); }}
       />
