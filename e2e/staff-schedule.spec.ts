@@ -9,8 +9,18 @@ import path from "path";
  * manage.py seed_test_data) directly rather than creating a new one, since
  * it's only exercising the schedule modal itself.
  *
- * Enable a day, set its hours, save the whole week (handleSaveEntireWeek),
- * close the modal, reopen it, and confirm the change persisted.
+ * Enable a day, set its hours, save just that day (the row's own inline
+ * save button, not the footer's whole-week save), close the modal, reopen
+ * it, and confirm the change persisted.
+ *
+ * Deliberately NOT using the whole-week save (handleSaveEntireWeek): it
+ * POSTs all 7 days at once, including the ones this test never touched —
+ * for a doctor with no prior availability, that explicitly marks every
+ * other day of the week "day off". Those overrides outlive this test run
+ * and take priority over that doctor's template schedule on those dates
+ * (see StaffScheduleModal.tsx's TemplateScheduleTab comment: date-specific
+ * availability always wins), which broke add-event.spec.ts when it later
+ * tried to book that same doctor on one of those "poisoned" days.
  */
 
 test.use({ storageState: path.join(__dirname, ".auth/clinic-admin.json") });
@@ -56,12 +66,12 @@ test("date-based schedule: enable a day, save, and confirm it persists across re
   await mondayRow.locator('input[type="time"]').first().fill("09:30");
   await mondayRow.locator('input[type="time"]').last().fill("17:30");
 
-  // whole-week save button in the footer — every enabled day row also has
-  // its own icon-only save button whose accessible name is the same
-  // "Сохранить" (derived from its title attribute), so .last() picks the
-  // footer's text button, which always renders after all the day rows
-  await page.getByRole("button", { name: "Сохранить", exact: true }).last().click();
-  await expect(page.getByText("Неделя сохранена")).toBeVisible({ timeout: 10_000 });
+  // the row's own inline save (handleSavePlannerDay) — scoped to Monday's
+  // row so this only ever touches the one day under test, not the whole
+  // week. Its accessible name is also "Сохранить" (from its title attr),
+  // same as the footer's whole-week button, so scoping matters here.
+  await mondayRow.getByTitle("Сохранить").click();
+  await expect(page.getByText("Сохранено")).toBeVisible({ timeout: 10_000 });
 
   // ── Close and reopen — confirm it persisted, not just local state ──────
   await page.getByRole("button", { name: "Закрыть", exact: true }).click();
