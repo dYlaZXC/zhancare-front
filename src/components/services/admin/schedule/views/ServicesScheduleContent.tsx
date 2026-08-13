@@ -21,6 +21,9 @@ interface ServiceDay {
   color: string;
   schedule: { start_time: string; end_time: string } | null;
   appointment_count: number;
+  // The service's own responsible/performing doctor.
+  doctor_id?: number | null;
+  doctor_name?: string | null;
 }
 
 interface DiagnosticsEvent {
@@ -508,6 +511,7 @@ export function ServicesScheduleContent({
           serviceCategoryLabel={assignModal.service.category_label}
           serviceColor={assignModal.service.color}
           serviceIcon={assignModal.service.icon}
+          serviceDoctorName={assignModal.service.doctor_name ?? null}
           slot={assignModal.slot}
           allSlots={assignModal.allSlots}
           date={selectedDate}

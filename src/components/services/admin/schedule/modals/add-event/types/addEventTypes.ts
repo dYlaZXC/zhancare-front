@@ -39,6 +39,10 @@ export interface DiagService {
   clinic_name: string;
   category: string | null;
   category_label: string | null;
+  // The service's own responsible/performing doctor — who actually
+  // carries this out, distinct from whoever refers a patient to it.
+  doctor_id?: number | null;
+  doctor_name?: string | null;
 }
 
 export interface DiagCategoryItem {

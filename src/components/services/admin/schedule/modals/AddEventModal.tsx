@@ -338,9 +338,8 @@ export default function AddEventModal({
           scheduled_time: `${formData.date}T${formData.time}:00`,
           notes: formData.notes,
         });
-        toast.success('Запись успешно создана!');
-        onClose();
         onEventAdded();
+        setCreatedInfo({});
       } else {
         const resp = await api.post('/schedule/', {
           type: consultationType === 'home' ? 'home_visit' : 'consultation',
@@ -373,6 +372,7 @@ export default function AddEventModal({
   if (createdInfo !== null) {
     const patient = patients.find(p => String(p.id) === formData.patient_id);
     const doctor = doctors.find(d => String(d.id) === formData.doctor_id);
+    const referringDoctor = doctors.find(d => String(d.id) === formData.referring_doctor_id);
     return (
       <EventSuccessScreen
         consultationType={consultationType}
@@ -382,6 +382,8 @@ export default function AddEventModal({
         createdInfo={createdInfo}
         patient={patient}
         doctor={doctor}
+        diagService={selectedDiagService}
+        referringDoctor={referringDoctor}
         clinicName={clinicName}
         clinicAddress={clinicAddress}
         onClose={onClose}
