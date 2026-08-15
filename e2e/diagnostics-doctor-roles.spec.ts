@@ -15,15 +15,10 @@ import path from "path";
  * ever got wired to the same field again.
  */
 
-const WEEKDAY_RU = [
-  "Воскресенье",
-  "Понедельник",
-  "Вторник",
-  "Среда",
-  "Четверг",
-  "Пятница",
-  "Суббота",
-]; // index matches JS Date.getDay()
+const MONTHS_SHORT_RU = [
+  "янв", "фев", "мар", "апр", "май", "июн",
+  "июл", "авг", "сен", "окт", "ноя", "дек",
+];
 
 test.use({ storageState: path.join(__dirname, ".auth/clinic-admin.json") });
 
@@ -54,6 +49,23 @@ test("diagnostics booking keeps referring and performing doctor distinct end to 
   const performerServiceDisplayName = `${performerLastName} ${performerFirstName}`;
 
   page.on("dialog", (d) => d.accept());
+
+  // Booking date: tomorrow, computed in the CLINIC's own timezone
+  // (Asia/Almaty), not the runner's. Two independent reasons to avoid
+  // "today": (1) the backend's slot generator filters out anything before
+  // clinic-local now() — if the runner's own calendar date is already a
+  // full clinic-local day behind/ahead near midnight, "today" can read as
+  // fully elapsed; (2) even with perfectly aligned timezones, "today" can
+  // legitimately have zero slots left if the runner happens to execute
+  // after the service's own working hours (06:00–23:00) already closed for
+  // the day. Tomorrow comfortably avoids both.
+  const targetDate = await page.evaluate(() => {
+    const almatyToday = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Almaty" }).format(new Date());
+    const [y, m, d] = almatyToday.split("-").map(Number);
+    return new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10); // YYYY-MM-DD
+  });
+  const [, targetMonth, targetDay] = targetDate.split("-").map(Number);
+  const targetRowLabel = `${targetDay} ${MONTHS_SHORT_RU[targetMonth - 1]}.`;
 
   // ── Create the performing doctor ────────────────────────────────────
   await page.goto("/admin/staff", { waitUntil: "load" });
@@ -110,39 +122,68 @@ test("diagnostics booking keeps referring and performing doctor distinct end to 
   await page.getByRole("button", { name: "Добавить", exact: true }).click();
   await expect(page.getByText(serviceName, { exact: true })).toBeVisible({ timeout: 10_000 });
 
-  // ── Give the service a same-day template schedule so a slot exists ──
+  // ── Give the service an exact-date availability override for targetDate ──
+  // Uses the "По датам" tab (this modal's default tab) instead of the
+  // "Постоянное" weekday-recurring one: an exact date sidesteps any
+  // weekday/timezone translation entirely — no guessing which day-of-week
+  // button corresponds to targetDate under whatever timezone is in play.
   const serviceRow = page
     .locator("div")
     .filter({ hasText: serviceName })
     .filter({ has: page.getByTitle("Расписание") })
     .last();
   await serviceRow.getByTitle("Расписание").click();
-  await expect(page.getByRole("button", { name: "Постоянное" })).toBeVisible({ timeout: 10_000 });
-  await page.getByRole("button", { name: "Постоянное" }).click();
+  await expect(page.getByText("По датам", { exact: true })).toBeVisible({ timeout: 10_000 });
 
-  const todayLabel = WEEKDAY_RU[await page.evaluate(() => new Date().getDay())];
-  const todayToggle = page.getByRole("button", { name: todayLabel === "Понедельник" ? "Пн"
-    : todayLabel === "Вторник" ? "Вт" : todayLabel === "Среда" ? "Ср" : todayLabel === "Четверг" ? "Чт"
-    : todayLabel === "Пятница" ? "Пт" : todayLabel === "Суббота" ? "Сб" : "Вс", exact: true });
-  await expect(todayToggle).toBeVisible({ timeout: 10_000 });
-  const todayRow = page.locator("div").filter({ has: todayToggle }).last();
-  const alreadyOn = await todayRow.getByText("выходной").isVisible().catch(() => false);
-  if (alreadyOn) await todayToggle.click();
-  const timeInputs = todayRow.locator('input[type="time"]');
+  // Rows are direct children of this specific container — scoping here
+  // (rather than an unscoped page-wide `div` filter) avoids matching every
+  // ancestor div that also happens to contain the target row's text.
+  const dayRows = page.locator("div.px-5.pb-5.space-y-2 > div");
+  const targetRow = dayRows.filter({ hasText: targetRowLabel });
+  const loadingSpinner = page.locator("div.flex.items-center.justify-center.py-12");
+  // This exact class combo (px-6 py-4 flex items-center gap-3) is unique to
+  // the week-navigator bar in this modal — its last button is "next week".
+  const nextWeekButton = page.locator("div.px-6.py-4.flex.items-center.gap-3 button").last();
+
+  // Wait for the initial week's rows to actually load before checking
+  // whether targetDate is among them — otherwise the check below can race
+  // the fetch and see zero rows, triggering an unnecessary (and wrong)
+  // week-forward click even when targetDate was in the first week all along.
+  await loadingSpinner.waitFor({ state: "hidden", timeout: 10_000 }).catch(() => {});
+  await expect(dayRows.first()).toBeVisible({ timeout: 10_000 });
+  // The modal always opens on the current week; targetDate only falls
+  // outside it if today is Sunday (tomorrow = next Monday). Bounded retry
+  // instead of a single click, since this is a bit fuzzy across the current
+  // week widget's own (browser-local) notion of "today".
+  for (let i = 0; i < 2 && !(await targetRow.isVisible().catch(() => false)); i++) {
+    await nextWeekButton.click();
+    await loadingSpinner.waitFor({ state: "visible", timeout: 2_000 }).catch(() => {});
+    await loadingSpinner.waitFor({ state: "hidden", timeout: 5_000 }).catch(() => {});
+  }
+  await expect(targetRow).toBeVisible({ timeout: 10_000 });
+
+  const isDayOff = await targetRow.getByText("выходной", { exact: false }).isVisible().catch(() => false);
+  if (isDayOff) await targetRow.getByTitle("Отметить как рабочий").click();
+  const timeInputs = targetRow.locator('input[type="time"]');
   await expect(timeInputs.first()).toBeVisible();
   await timeInputs.first().fill("06:00");
   await timeInputs.last().fill("23:00");
-  await page.getByRole("button", { name: "Сохранить шаблон" }).click();
-  await expect(page.getByRole("button", { name: "Сохранить шаблон" })).not.toBeVisible({
-    timeout: 10_000,
-  });
+  await targetRow.getByTitle("Сохранить день").click();
+  await expect(targetRow.getByText("Сохранено")).toBeVisible({ timeout: 10_000 });
+  // Unlike the template tab (which auto-closes via onSaved), per-date saves
+  // leave the modal open — close it explicitly.
+  await page.getByRole("button", { name: "Закрыть", exact: true }).click();
+  await expect(page.getByText("По датам", { exact: true })).not.toBeVisible({ timeout: 10_000 });
 
   // ── Book: diagnostics, this service, both doctors ───────────────────
   await page.goto("/admin/schedule", { waitUntil: "load" });
   await page.getByRole("button", { name: "Добавить Запись", exact: true }).click();
 
-  await expect(page.getByText("Диагностика", { exact: true })).toBeVisible({ timeout: 10_000 });
-  await page.getByText("Диагностика", { exact: true }).click();
+  // Scoped to the role: "Диагностика" alone also matches an unrelated
+  // breadcrumb/filter label elsewhere on the page at desktop viewport width.
+  const diagnosticsTypeButton = page.getByRole("button", { name: "Диагностика Анализы и обследование" });
+  await expect(diagnosticsTypeButton).toBeVisible({ timeout: 10_000 });
+  await diagnosticsTypeButton.click();
 
   await page.getByText("Выберите пациента...").click();
   await page.getByText("Иван Пациентов", { exact: true }).click();
@@ -158,6 +199,11 @@ test("diagnostics booking keeps referring and performing doctor distinct end to 
 
   await page.getByText("Без врача — выручка полностью клинике").click();
   await page.getByText("Дмитрий Врачёв", { exact: true }).click();
+
+  // Override the modal's default date to targetDate — it otherwise
+  // defaults to clinic-local "today", but the service's availability was
+  // only configured for tomorrow above.
+  await page.locator('input[type="date"]').fill(targetDate);
 
   // diagnostics slots render as a flat button list (unlike online/offline
   // consultations, which use a click-to-open dropdown) — no trigger to
