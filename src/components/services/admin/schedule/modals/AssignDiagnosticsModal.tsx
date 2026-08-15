@@ -36,6 +36,10 @@ interface AssignDiagnosticsModalProps {
   serviceCategoryLabel: string;
   serviceColor: string;
   serviceIcon: string;
+  // The service's own responsible/performing doctor — who actually
+  // carries this out. Read-only here since it's fixed by the service,
+  // not chosen per booking.
+  serviceDoctorName: string | null;
   slot: Slot | null;
   allSlots: Slot[];
   date: string;
@@ -50,6 +54,7 @@ export default function AssignDiagnosticsModal({
   serviceCategoryLabel,
   serviceColor,
   serviceIcon,
+  serviceDoctorName,
   slot,
   allSlots,
   date,
@@ -212,6 +217,20 @@ export default function AssignDiagnosticsModal({
               <span className="flex-shrink-0 text-xs font-bold px-2 py-1 rounded-lg text-white"
                 style={{ background: serviceColor }}>
                 {serviceCategoryLabel}
+              </span>
+            </div>
+
+            {/* Исполнитель услуги — fixed by the service itself, distinct
+                from whoever ends up referring the patient (not chosen in
+                this modal at all — this flow doesn't collect a referring
+                doctor, unlike AddEventModal's diagnostics section). */}
+            <div className="flex items-center gap-2 px-3.5 py-2.5 bg-violet-50/60 rounded-xl border border-violet-100">
+              <Stethoscope className="w-4 h-4 text-violet-500 flex-shrink-0" />
+              <span className="text-xs text-gray-500">
+                Исполнитель услуги:{' '}
+                <span className="font-semibold text-gray-700">
+                  {serviceDoctorName || 'Не назначен'}
+                </span>
               </span>
             </div>
 

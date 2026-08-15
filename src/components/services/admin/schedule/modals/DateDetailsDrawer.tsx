@@ -132,7 +132,12 @@ function buildShareText(event: ScheduleEvent): string {
     `👤 Пациент: ${event.patient_name}`,
   ];
 
-  if (event.doctor_name) {
+  if (event.type === 'diagnostics') {
+    // Two distinct, independent roles for a diagnostics booking — never
+    // just "Доктор", which is ambiguous about which one is meant.
+    if (event.doctor_name) lines.push('', `📝 Назначивший врач: ${event.doctor_name}`);
+    if (event.performing_doctor_name) lines.push('', `🔬 Исполнитель услуги: ${event.performing_doctor_name}`);
+  } else if (event.doctor_name) {
     lines.push('', `👨‍⚕️ Доктор: ${event.doctor_name}`);
     if (event.doctor_specialization) lines.push(`🔬 Специализация: ${event.doctor_specialization}`);
   }
@@ -419,8 +424,36 @@ function BookingRow({ event, onChanged }: { event: ScheduleEvent; onChanged?: ()
             className="overflow-hidden"
           >
             <div className="px-5 pb-5 pt-1 space-y-3 bg-gray-50/40">
-              {/* Doctor */}
-              {event.doctor_name && (
+              {/* Doctor — diagnostics events have two distinct, independent
+                  roles (whoever referred the patient vs whoever actually
+                  performs the test), so they get their own separate,
+                  explicitly-labeled blocks rather than the single generic
+                  "Доктор" block every other event type uses. Neither role
+                  carries specialization/phone/email/room here — the
+                  backend only fetches those for consultation/appointment
+                  events, not diagnostics. */}
+              {event.type === 'diagnostics' ? (
+                <>
+                  {event.doctor_name && (
+                    <div className="bg-blue-50/60 rounded-xl p-4 space-y-2">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <User className="w-3.5 h-3.5 text-blue-600" />
+                        <span className="text-xs font-bold text-blue-700 uppercase tracking-wide">Назначивший врач</span>
+                      </div>
+                      <p className="font-semibold text-gray-900 text-sm leading-snug">{event.doctor_name}</p>
+                    </div>
+                  )}
+                  {event.performing_doctor_name && (
+                    <div className="bg-violet-50/60 rounded-xl p-4 space-y-2">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Stethoscope className="w-3.5 h-3.5 text-violet-600" />
+                        <span className="text-xs font-bold text-violet-700 uppercase tracking-wide">Исполнитель услуги</span>
+                      </div>
+                      <p className="font-semibold text-gray-900 text-sm leading-snug">{event.performing_doctor_name}</p>
+                    </div>
+                  )}
+                </>
+              ) : event.doctor_name && (
                 <div className="bg-emerald-50/60 rounded-xl p-4 space-y-2">
                   <div className="flex items-center gap-1.5 mb-1">
                     <Stethoscope className="w-3.5 h-3.5 text-emerald-600" />
