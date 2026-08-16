@@ -13,6 +13,10 @@ export type ConsultationStatus =
 export interface Consultation {
   id: number;
   meeting_id?: string;
+  // Numeric user ids — present in the API response (plain FK fields on the
+  // backend serializer), just not previously declared here.
+  patient?: number;
+  doctor?: number;
   patient_name?: string;
   patient_email?: string | null;
   status: ConsultationStatus;
@@ -29,7 +33,7 @@ export interface Consultation {
   appointment_time?: string;
   symptoms?: string;
   is_urgent?: boolean;
-  type?: "video" | "phone" | "chat" | "offline" | "home";
+  type?: "video" | "phone" | "chat" | "offline" | "home" | "diagnostics";
   consultation_type?: string;
   // Clinic appointment extras
   clinic_name?: string;
@@ -38,6 +42,12 @@ export interface Consultation {
   clinic_appointment_id?: number; // real DB id (before +100000 offset)
   // Home appointment extras
   home_appointment_id?: number;  // real DB id (before +200000 offset)
+  // Diagnostics appointment extras — this doctor is the PERFORMING doctor
+  // (who carries out the test), independent from referring_doctor_name
+  // (who ordered it and drives commission, possibly a different person).
+  diagnostics_appointment_id?: number; // real DB id (before +300000 offset)
+  service_name?: string;
+  referring_doctor_name?: string | null;
   address?: string;
   latitude?: number;
   longitude?: number;

@@ -9,6 +9,23 @@ const CONSULTATION_EVENTS = new Set([
   "consultation_status_changed",
 ]);
 
+// DiagnosticsAppointment.status uses its own vocabulary (scheduled/confirmed/
+// in_progress/completed/cancelled) — different from the generic Consultation
+// status the rest of the table/stats/filters understand (pending/ongoing/
+// completed/cancelled/missed/planned/scheduled). Normalize at the source so
+// every downstream consumer (status badge, "Активные"/"Запланировано" stats,
+// tab filters) keeps working without knowing diagnostics rows exist.
+const DIAGNOSTICS_STATUS_DISPLAY_MAP: Record<string, Consultation["status"]> = {
+  scheduled: "scheduled",
+  confirmed: "scheduled",
+  in_progress: "ongoing",
+  completed: "completed",
+  cancelled: "cancelled",
+};
+
+const mapDiagnosticsStatus = (rawStatus: string): Consultation["status"] =>
+  DIAGNOSTICS_STATUS_DISPLAY_MAP[rawStatus] ?? (rawStatus as Consultation["status"]);
+
 export const useConsultationManager = () => {
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [newConsultation, setNewConsultation] = useState<Consultation | null>(null);
@@ -57,6 +74,33 @@ export const useConsultationManager = () => {
               patient_name: a.patient_name,
               clinic_name: a.clinic_name,
               clinic_address: a.clinic_address,
+            } as Consultation)
+          );
+        } catch { /* endpoint may not exist */ }
+
+        // Diagnostics appointments where this doctor is the PERFORMING
+        // doctor — who actually carries out the test, independent from
+        // the referring doctor (who ordered it, possibly someone else
+        // entirely, and drives commission — see DiagnosticsAppointment.doctor
+        // vs performing_doctor). Previously invisible here no matter who
+        // booked them: a patient self-booking, or an admin via AddEventModal.
+        try {
+          const { data: diagData } = await api.get<any>("/diagnostics/appointments/performing-appointments/");
+          const rawDiagList: any[] = Array.isArray(diagData) ? diagData : (diagData?.results || []);
+          rawDiagList.forEach(a =>
+            results.push({
+              id: a.id + 300000,
+              diagnostics_appointment_id: a.id,
+              type: "diagnostics" as const,
+              status: mapDiagnosticsStatus(a.status),
+              scheduled_at: a.appointment_time,
+              appointment_time: a.appointment_time,
+              created_at: a.created_at,
+              patient_name: a.patient_name,
+              clinic_name: a.clinic_name,
+              clinic_address: a.clinic_address,
+              service_name: a.service_display?.name || a.service_name,
+              referring_doctor_name: a.doctor_name,
             } as Consultation)
           );
         } catch { /* endpoint may not exist */ }

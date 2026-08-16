@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { api } from "@/utils/api";
 import { useAuth } from "@/context/AuthContext";
+import type { Consultation } from "@/types/consultation";
 import { useConsultationManager } from "./consultations/useConsultationManager";
 import DoctorConsultationsTable from "./consultations/DoctorConsultationsTable";
 import UrgentConsultationPopup, { IncomingConsultation } from "./consultations/UrgentConsultationPopup";
@@ -221,9 +222,31 @@ const DoctorConsultations: React.FC = () => {
     fetchConsultations();
   };
 
-  const changeConsultationStatus = async (meeting_id: string, newStatus: string) => {
+  // Same status vocabulary mismatch as DoctorConsultationsNew — diagnostics
+  // rows use DiagnosticsAppointment.status, not the generic consultation one.
+  const DIAGNOSTICS_STATUS_MAP: Record<string, string> = {
+    pending: "scheduled",
+    planned: "scheduled",
+    scheduled: "scheduled",
+    ongoing: "in_progress",
+    completed: "completed",
+    cancelled: "cancelled",
+  };
+
+  const changeConsultationStatus = async (consultation: Consultation, newStatus: string) => {
     try {
-      await api.post(`/consultations/${meeting_id}/status/`, { status: newStatus });
+      if (consultation.type === "diagnostics" && consultation.diagnostics_appointment_id) {
+        const diagnosticsStatus = DIAGNOSTICS_STATUS_MAP[newStatus] ?? newStatus;
+        await api.patch(
+          `/diagnostics/appointments/${consultation.diagnostics_appointment_id}/update-status/`,
+          { status: diagnosticsStatus }
+        );
+      } else if (!consultation.meeting_id) {
+        toast.error("Не удалось определить ID консультации");
+        return;
+      } else {
+        await api.post(`/consultations/${consultation.meeting_id}/status/`, { status: newStatus });
+      }
       toast.success("Статус консультации обновлен");
       fetchConsultations();
     } catch {

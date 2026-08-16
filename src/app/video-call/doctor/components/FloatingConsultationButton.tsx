@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faFileWaveform,
@@ -27,7 +28,8 @@ import {
 import ConsultationForm, { ConsultationFormData } from "./ConsultationForm";
 import PatientComplaintsForm from "./forms/PatientComplaintsForm";
 import AnamnesisForm from "./forms/AnamnesisForm";
-import DiagnosticsForm from "./forms/DiagnosticsForm";
+import DiagnosticsForm, { DiagnosticReferral } from "./forms/DiagnosticsForm";
+import AudioWaveform from "./AudioWaveform";
 import TreatmentRecommendationsForm from "./forms/TreatmentRecommendationsForm";
 import DiagnosisForm from "./forms/DiagnosisForm";
 import { Sparkles } from "lucide-react";
@@ -35,6 +37,12 @@ import AIConsultationReview from "./AIConsultationReview";
 import { Consultation } from "@/types/consultation";
 import { api } from "@/utils/api";
 import { isInjectionAttempt, CHAT_ENDPOINT } from "@/lib/ai";
+
+const formatRecordingDuration = (totalSeconds: number): string => {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+};
 
 interface FloatingConsultationButtonProps {
   consultation: Consultation;
@@ -50,10 +58,15 @@ interface FloatingConsultationButtonProps {
   }) => void;
   transcript?: string;
   isTranscribing?: boolean;
+  micStream?: MediaStream | null;
+  recordingDuration?: number;
   onStartRecording?: () => void;
   onStopRecording?: () => void;
   onOpenSheet?: () => void;
   hasData?: boolean;
+  doctorId?: number;
+  doctorClinicId?: number;
+  patientId?: number;
 }
 
 const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, FloatingConsultationButtonProps>(({
@@ -62,13 +75,32 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
   onGenerateReport,
   transcript = '',
   isTranscribing = false,
+  micStream = null,
+  recordingDuration = 0,
   onStartRecording,
   onStopRecording,
   onOpenSheet,
-  hasData
+  hasData,
+  doctorId,
+  doctorClinicId,
+  patientId
 }, ref) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'complaints' | 'anamnesis' | 'diagnostics' | 'treatment' | 'diagnosis' | 'notes' | 'prescription' | 'recommendations' | 'ai-chat' | 'transcription' | null>(null);
+
+  // Lifted (not local to DiagnosticsForm) so the referral chips survive
+  // switching away from and back to the Диагностика tab — DiagnosticsForm
+  // unmounts when activeTab changes.
+  const [diagnosticsReferrals, setDiagnosticsReferrals] = useState<DiagnosticReferral[]>([]);
+
+  // Sidebar tab tooltip — portaled to <body> so it isn't clipped by the
+  // scrollable button list (overflow-y-auto forces overflow-x to clip too)
+  const [sidebarTooltip, setSidebarTooltip] = useState<{ label: string; top: number; left: number } | null>(null);
+  const showSidebarTooltip = (e: React.MouseEvent<HTMLButtonElement>, label: string) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setSidebarTooltip({ label, top: rect.top + rect.height / 2, left: rect.left });
+  };
+  const hideSidebarTooltip = () => setSidebarTooltip(null);
 
   // Expose openSheet method via ref
   React.useImperativeHandle(ref, () => ({
@@ -882,14 +914,16 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
                       e.currentTarget.style.backgroundColor = '#242e4b';
                       e.currentTarget.style.color = '#ebf1ff';
                     }
+                    showSidebarTooltip(e, tab.label);
                   }}
                   onMouseLeave={(e) => {
                     if (activeTab !== tab.id) {
                       e.currentTarget.style.backgroundColor = '#202942';
                       e.currentTarget.style.color = '#bcc0ca';
                     }
+                    hideSidebarTooltip();
                   }}
-                  title={tab.label}
+                  aria-label={tab.label}
                 >
                   <FontAwesomeIcon icon={tab.icon} className="text-xl" />
                   {tab.hasFilled && (
@@ -912,14 +946,16 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
                     e.currentTarget.style.backgroundColor = '#242e4b';
                     e.currentTarget.style.color = '#ebf1ff';
                   }
+                  showSidebarTooltip(e, 'ИИ Ассистент');
                 }}
                 onMouseLeave={(e) => {
                   if (activeTab !== 'ai-chat') {
                     e.currentTarget.style.backgroundColor = '#202942';
                     e.currentTarget.style.color = '#bcc0ca';
                   }
+                  hideSidebarTooltip();
                 }}
-                title="ИИ Ассистент"
+                aria-label="ИИ Ассистент"
               >
                 <FontAwesomeIcon icon={faRobot} className="text-xl" />
               </button>
@@ -938,14 +974,16 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
                     e.currentTarget.style.backgroundColor = '#242e4b';
                     e.currentTarget.style.color = '#ebf1ff';
                   }
+                  showSidebarTooltip(e, 'Транскрипция');
                 }}
                 onMouseLeave={(e) => {
                   if (activeTab !== 'transcription') {
                     e.currentTarget.style.backgroundColor = '#202942';
                     e.currentTarget.style.color = '#bcc0ca';
                   }
+                  hideSidebarTooltip();
                 }}
-                title="Транскрипция"
+                aria-label="Транскрипция"
               >
                 <FontAwesomeIcon icon={faMicrophone} className="text-xl" />
                 {isTranscribing && (
@@ -960,14 +998,41 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
                 onClick={() => setIsOpen(false)}
                 className="w-full flex items-center justify-center py-3 rounded-lg transition-all duration-200"
                 style={{ backgroundColor: '#dc2626', color: '#ebf1ff' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
-                title="Закрыть"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ef4444';
+                  showSidebarTooltip(e, 'Закрыть');
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#dc2626';
+                  hideSidebarTooltip();
+                }}
+                aria-label="Закрыть"
               >
                 <FontAwesomeIcon icon={faXmark} className="text-xl" />
               </button>
             </div>
           </div>
+
+          {/* Sidebar tab tooltip — portaled to <body> so scroll-container overflow can't clip it */}
+          {sidebarTooltip && typeof document !== 'undefined' && createPortal(
+            <div
+              className="fixed px-3 py-2 rounded-lg shadow-lg pointer-events-none z-[9999] whitespace-nowrap text-sm"
+              style={{
+                top: sidebarTooltip.top,
+                left: sidebarTooltip.left - 8,
+                transform: 'translate(-100%, -50%)',
+                backgroundColor: '#0f1424',
+                color: '#ebf1ff'
+              }}
+            >
+              {sidebarTooltip.label}
+              <div
+                className="absolute left-full top-1/2 -translate-y-1/2 border-4 border-transparent"
+                style={{ borderLeftColor: '#0f1424' }}
+              ></div>
+            </div>,
+            document.body
+          )}
 
           {/* Form Panel - Opens next to sidebar when button is clicked */}
           {activeTab && (
@@ -1058,6 +1123,11 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
                   <DiagnosticsForm
                     value={consultationFormData.diagnostics}
                     onChange={(value) => handleFormUpdate('diagnostics', value)}
+                    clinicId={doctorClinicId}
+                    patientId={patientId}
+                    doctorId={doctorId}
+                    referrals={diagnosticsReferrals}
+                    onReferralsChange={setDiagnosticsReferrals}
                   />
                 )}
 
@@ -1077,15 +1147,6 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
 
                 {activeTab === 'notes' && (
                   <div className="backdrop-blur-sm rounded-xl p-4 border h-full flex flex-col" style={{ backgroundColor: '#202942', borderColor: '#283353' }}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2956bf' }}>
-                        <FontAwesomeIcon icon={faNotesMedical} className="text-sm" style={{ color: '#ebf1ff' }} />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-sm" style={{ color: '#ebf1ff' }}>Заметки консультации</h3>
-                        <p className="text-xs" style={{ color: '#bcc0ca' }}>Дополнительные записи о ходе консультации</p>
-                      </div>
-                    </div>
                     <textarea
                       value={sessionNotes}
                       onChange={(e) => setSessionNotes(e.target.value)}
@@ -1111,15 +1172,6 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
 
                 {activeTab === 'prescription' && (
                   <div className="backdrop-blur-sm rounded-xl p-4 border h-full flex flex-col" style={{ backgroundColor: '#202942', borderColor: '#283353' }}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2956bf' }}>
-                        <FontAwesomeIcon icon={faPrescriptionBottle} className="text-sm" style={{ color: '#ebf1ff' }} />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-sm" style={{ color: '#ebf1ff' }}>Рецепт</h3>
-                        <p className="text-xs" style={{ color: '#bcc0ca' }}>Назначенные препараты и дозировки</p>
-                      </div>
-                    </div>
                     <textarea
                       value={prescription}
                       onChange={(e) => setPrescription(e.target.value)}
@@ -1145,15 +1197,6 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
 
                 {activeTab === 'recommendations' && (
                   <div className="backdrop-blur-sm rounded-xl p-4 border h-full flex flex-col" style={{ backgroundColor: '#202942', borderColor: '#283353' }}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2956bf' }}>
-                        <FontAwesomeIcon icon={faClipboardList} className="text-sm" style={{ color: '#ebf1ff' }} />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-sm" style={{ color: '#ebf1ff' }}>Рекомендации</h3>
-                        <p className="text-xs" style={{ color: '#bcc0ca' }}>Общие рекомендации и назначения</p>
-                      </div>
-                    </div>
                     <textarea
                       value={recommendations}
                       onChange={(e) => setRecommendations(e.target.value)}
@@ -1180,16 +1223,6 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
                 {/* AI Chat Tab */}
                 {activeTab === 'ai-chat' && (
                   <div className="backdrop-blur-sm rounded-xl p-4 border h-full flex flex-col" style={{ backgroundColor: '#202942', borderColor: '#283353' }}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2956bf' }}>
-                        <FontAwesomeIcon icon={faRobot} className="text-sm" style={{ color: '#ebf1ff' }} />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-sm" style={{ color: '#ebf1ff' }}>ИИ Ассистент</h3>
-                        <p className="text-xs" style={{ color: '#bcc0ca' }}>Медицинский помощник на базе ИИ</p>
-                      </div>
-                    </div>
-
                     {/* Chat Messages */}
                     <div ref={aiChatRef} className="flex-1 overflow-y-auto space-y-3 mb-3 custom-scrollbar">
                         {aiMessages.length === 0 ? (
@@ -1320,25 +1353,16 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
                   {/* Transcription Tab */}
                   {activeTab === 'transcription' && (
                     <div className="backdrop-blur-sm rounded-xl p-4 border h-full flex flex-col" style={{ backgroundColor: '#202942', borderColor: '#283353' }}>
-                      <div className="flex items-center justify-between gap-2 mb-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#16a34a' }}>
-                            <FontAwesomeIcon icon={faMicrophone} className="text-sm" style={{ color: '#ebf1ff' }} />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-sm" style={{ color: '#ebf1ff' }}>Транскрипция консультации</h3>
-                            <p className="text-xs" style={{ color: '#bcc0ca' }}>
-                              {isTranscribing ? 'Запись активна...' : 'Начните запись для транскрипции'}
-                            </p>
-                          </div>
-                        </div>
-                        {isTranscribing && (
+                      {isTranscribing && (
+                        <div className="flex justify-end mb-3">
                           <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{ backgroundColor: '#1e263e' }}>
                             <FontAwesomeIcon icon={faCircle} className="text-[6px] text-red-500 animate-pulse" />
-                            <span className="text-xs font-medium" style={{ color: '#ef4444' }}>REC</span>
+                            <span className="text-xs font-medium tabular-nums" style={{ color: '#ef4444' }}>
+                              {formatRecordingDuration(recordingDuration)}
+                            </span>
                           </div>
-                        )}
-                      </div>
+                        </div>
+                      )}
 
                       {/* Recording Control Button */}
                       <div className="mb-3">
@@ -1346,7 +1370,7 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
                           onClick={isTranscribing ? onStopRecording : onStartRecording}
                           className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg ${
                             isTranscribing
-                              ? 'bg-red-600 hover:bg-red-700 animate-pulse'
+                              ? 'bg-red-600 hover:bg-red-700'
                               : 'bg-emerald-600 hover:bg-emerald-700'
                           }`}
                           style={{ color: '#ebf1ff' }}
@@ -1355,6 +1379,13 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
                           <span>{isTranscribing ? 'Остановить запись' : 'Начать запись'}</span>
                         </button>
                       </div>
+
+                      {/* Live mic level — animates with the actual audio input while recording */}
+                      {isTranscribing && (
+                        <div className="mb-3 rounded-lg border overflow-hidden px-2" style={{ backgroundColor: '#1e263e', borderColor: '#283353' }}>
+                          <AudioWaveform stream={micStream} active={isTranscribing} barColor="#10b981" />
+                        </div>
+                      )}
 
                       {/* Transcription Content */}
                       <div className="flex-1 overflow-y-auto rounded-lg border p-4 custom-scrollbar" style={{ backgroundColor: '#1e263e', borderColor: '#283353' }}>

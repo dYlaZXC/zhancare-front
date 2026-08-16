@@ -49,6 +49,10 @@ const DoctorVideoCallPage: React.FC = () => {
   const safeUserName = user?.first_name || user?.email?.split("@")[0] || "doctor";
   const userEmail = user?.email || `${safeUserName.toLowerCase().replace(/\s+/g, "")}@medical.com`;
 
+  // Doctor's clinic id — already loaded onto the auth user via GET /user-profile/profile/,
+  // just not reflected in the loosely-typed `profiles` field.
+  const doctorClinicId = (user as any)?.profiles?.doctor?.clinic?.id as number | undefined;
+
   // Get patient name for doctor interface
   const patientName = consultation?.patient_name || "Пациент";
 
@@ -65,6 +69,8 @@ const DoctorVideoCallPage: React.FC = () => {
     transcript,
     isConnected: isTranscribing,
     error: transcriptionError,
+    stream: micStream,
+    duration: recordingDuration,
     startTranscription,
     stopTranscription,
     clearTranscript,
@@ -444,8 +450,13 @@ const DoctorVideoCallPage: React.FC = () => {
         onGenerateReport={handleGenerateReport}
         transcript={transcript}
         isTranscribing={isTranscribing}
+        micStream={micStream}
+        recordingDuration={recordingDuration}
         onStartRecording={handleStartRecording}
         onStopRecording={handleStopRecording}
+        doctorId={user?.id}
+        doctorClinicId={doctorClinicId}
+        patientId={consultation?.patient}
       />
     </div>
   );
