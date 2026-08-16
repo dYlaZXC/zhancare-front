@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { api } from "@/utils/api";
 import { useAuth } from "@/context/AuthContext";
+import type { Consultation } from "@/types/consultation";
 import { useConsultationManager } from "./consultations/useConsultationManager";
 import DoctorConsultationsTable from "./consultations/DoctorConsultationsTable";
 import UrgentConsultationPopup, { IncomingConsultation } from "./consultations/UrgentConsultationPopup";
@@ -198,13 +199,33 @@ const DoctorConsultationsNew: React.FC = () => {
     fetchConsultations();
   };
 
-  const changeConsultationStatus = async (meeting_id: string, newStatus: string) => {
-    if (!meeting_id) {
-      toast.error("Не удалось определить ID консультации");
-      return;
-    }
+  // The generic status dropdown offers one vocabulary (pending/ongoing/completed/
+  // cancelled/missed/planned) shared by video, offline and diagnostics rows, but
+  // DiagnosticsAppointment.status uses its own set (scheduled/confirmed/in_progress/
+  // completed/cancelled) — map the values that have a clear equivalent.
+  const DIAGNOSTICS_STATUS_MAP: Record<string, string> = {
+    pending: "scheduled",
+    planned: "scheduled",
+    scheduled: "scheduled",
+    ongoing: "in_progress",
+    completed: "completed",
+    cancelled: "cancelled",
+  };
+
+  const changeConsultationStatus = async (consultation: Consultation, newStatus: string) => {
     try {
-      await api.post(`/consultations/${encodeURIComponent(meeting_id)}/status/`, { status: newStatus });
+      if (consultation.type === "diagnostics" && consultation.diagnostics_appointment_id) {
+        const diagnosticsStatus = DIAGNOSTICS_STATUS_MAP[newStatus] ?? newStatus;
+        await api.patch(
+          `/diagnostics/appointments/${consultation.diagnostics_appointment_id}/update-status/`,
+          { status: diagnosticsStatus }
+        );
+      } else if (!consultation.meeting_id) {
+        toast.error("Не удалось определить ID консультации");
+        return;
+      } else {
+        await api.post(`/consultations/${encodeURIComponent(consultation.meeting_id)}/status/`, { status: newStatus });
+      }
       toast.success("Статус обновлён");
       fetchConsultations();
     } catch (err: any) {

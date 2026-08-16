@@ -96,16 +96,19 @@ export default function AIConsultationReview({
         />
 
         <motion.div
+          layout
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className={`relative flex flex-col overflow-hidden shadow-2xl transition-all duration-300 ${
-            isFullscreen
-              ? "w-full h-full rounded-none"
-              : "w-full max-w-2xl max-h-[90vh] rounded-2xl"
+          transition={{ layout: { duration: 0.35, ease: [0.32, 0.72, 0, 1] }, default: { duration: 0.2 } }}
+          className={`relative flex flex-col overflow-hidden shadow-2xl ${
+            isFullscreen ? "w-full h-full" : "w-full max-w-2xl max-h-[90vh]"
           }`}
-          style={{ background: "#1a2035", border: "1px solid #283353" }}
+          style={{
+            background: "#1a2035",
+            border: "1px solid #283353",
+            borderRadius: isFullscreen ? 0 : 16,
+          }}
           onClick={e => e.stopPropagation()}
         >
           {/* Header */}

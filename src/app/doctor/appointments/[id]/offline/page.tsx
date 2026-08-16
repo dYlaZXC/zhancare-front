@@ -18,6 +18,7 @@ interface ClinicAppointment {
   id: number;
   clinic?: number;
   patient?: number;
+  doctor?: number;
   patient_name: string;
   doctor_name: string;
   clinic_name: string;
@@ -357,7 +358,9 @@ export default function OfflineConsultationPage() {
       const { data } = await api.post<{ appointment: { id: number } }>("/diagnostics/appointments/", {
         service_id: service.id,
         patient_id: appointment.patient,
-        doctor_id: appointment.id,
+        // Referring doctor = the doctor this clinic appointment is assigned
+        // to (drives commission on the backend) — not the appointment's own PK.
+        doctor_id: appointment.doctor,
         scheduled_time: selectedSlot,
       });
       const appointmentId = data?.appointment?.id;

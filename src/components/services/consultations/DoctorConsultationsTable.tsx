@@ -26,6 +26,7 @@ import {
   Check,
   Edit,
   FileText,
+  FlaskConical,
 } from "lucide-react";
 import { useConsultationManager } from "./useConsultationManager";
 import type { Consultation } from "@/types/consultation";
@@ -35,7 +36,7 @@ interface DoctorConsultationsTableProps {
   showFilters?: boolean;
   onAccept?: (meetingId: string) => void;
   onReject?: (meetingId: string) => void;
-  onStatusChange?: (meetingId: string, newStatus: string) => void;
+  onStatusChange?: (consultation: Consultation, newStatus: string) => void;
 }
 
 type FilterStatus = "all" | "pending" | "ongoing" | "completed" | "cancelled" | "missed" | "planned" | "scheduled";
@@ -146,7 +147,7 @@ function StatusDropdown({
   onStatusChange,
 }: {
   consultation: Consultation;
-  onStatusChange?: (meetingId: string, newStatus: string) => void;
+  onStatusChange?: (consultation: Consultation, newStatus: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -216,7 +217,7 @@ function StatusDropdown({
                 <button
                   key={s.value}
                   onClick={() => {
-                    onStatusChange!(consultation.meeting_id ?? "", s.value);
+                    onStatusChange!(consultation, s.value);
                     setOpen(false);
                   }}
                   className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm transition-colors text-left ${
@@ -335,6 +336,8 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
       case "missed":     return { label: "Пропущена",     icon: <XCircle className="w-3.5 h-3.5" />,      cls: "bg-orange-50 text-orange-600 border-orange-200" };
       case "planned":
       case "scheduled":  return { label: "Запланирована", icon: <Calendar className="w-3.5 h-3.5" />,     cls: "bg-violet-50 text-violet-600 border-violet-200" };
+      case "confirmed":  return { label: "Подтверждена",  icon: <CheckCircle2 className="w-3.5 h-3.5" />, cls: "bg-blue-50 text-blue-600 border-blue-200" };
+      case "in_progress": return { label: "В процессе",   icon: <Activity className="w-3.5 h-3.5" />,     cls: "bg-amber-50 text-amber-600 border-amber-200" };
       default:           return { label: "Неизвестно",    icon: <Clock className="w-3.5 h-3.5" />,        cls: "bg-gray-50 text-gray-500 border-gray-200" };
     }
   };
@@ -346,6 +349,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
       case "phone":   return { label: "Телефон",  icon: <Phone className="w-3.5 h-3.5" />,         cls: "bg-teal-50 text-teal-600 border-teal-200" };
       case "offline": return { label: "Приём в клинике",  icon: <MapPin className="w-3.5 h-3.5" />,        cls: "bg-emerald-50 text-emerald-600 border-emerald-200" };
       case "home":    return { label: "На дому",  icon: <Home className="w-3.5 h-3.5" />,          cls: "bg-orange-50 text-orange-600 border-orange-200" };
+      case "diagnostics": return { label: "Диагностика", icon: <FlaskConical className="w-3.5 h-3.5" />, cls: "bg-purple-50 text-purple-600 border-purple-200" };
       default:        return { label: "Видео",    icon: <Video className="w-3.5 h-3.5" />,         cls: "bg-cyan-50 text-cyan-600 border-cyan-200" };
     }
   };
@@ -428,7 +432,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
           <>
             {isScheduled && joinInfo.canJoin && onStatusChange && (
               <button
-                onClick={() => onStatusChange(consultation.meeting_id ?? '', 'ongoing')}
+                onClick={() => onStatusChange(consultation, 'ongoing')}
                 className={`flex items-center gap-1.5 px-3 py-2 text-white text-xs font-semibold rounded-xl shadow-lg transition-all duration-200 ${
                   joinInfo.isReady
                     ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-500/20"
@@ -456,7 +460,19 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
             )}
           </>
         )}
-        {consultation.type !== "offline" && isOngoing && (
+        {/* Diagnostics — dedicated documentation page, not the video-call route.
+            Only surfaced once the doctor has actually started it (in_progress);
+            before that there's nothing to document yet. */}
+        {consultation.type === "diagnostics" && consultation.diagnostics_appointment_id && isOngoing && (
+          <button
+            onClick={() => window.location.href = `/doctor/appointments/${consultation.diagnostics_appointment_id}/diagnostics/`}
+            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-cyan-500/20 transition-all duration-200"
+          >
+            <FlaskConical className="w-3.5 h-3.5" />
+            <span>Открыть</span>
+          </button>
+        )}
+        {consultation.type !== "offline" && consultation.type !== "diagnostics" && isOngoing && (
           <button
             onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id ?? ""}`}
             className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-blue-500/20 transition-all duration-200"
@@ -465,7 +481,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
             <span>Войти</span>
           </button>
         )}
-        {consultation.type !== "offline" && isScheduled && consultation.scheduled_at && (
+        {consultation.type !== "offline" && consultation.type !== "diagnostics" && isScheduled && consultation.scheduled_at && (
           joinInfo.canJoin ? (
             <button
               onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id ?? ""}`}
@@ -813,8 +829,18 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
                         Отклонить
                       </button>
                     )}
+                    {/* Diagnostics — dedicated documentation page, only once started */}
+                    {consultation.type === "diagnostics" && consultation.diagnostics_appointment_id && isOngoing && (
+                      <button
+                        onClick={() => window.location.href = `/doctor/appointments/${consultation.diagnostics_appointment_id}/diagnostics/`}
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-sm font-semibold rounded-xl shadow-md shadow-cyan-500/20 transition-all"
+                      >
+                        <FlaskConical className="w-4 h-4" />
+                        Открыть
+                      </button>
+                    )}
                     {/* Online video call button */}
-                    {consultation.type !== "offline" && (isOngoing || (isScheduled && joinInfo.canJoin)) && (
+                    {consultation.type !== "offline" && consultation.type !== "diagnostics" && (isOngoing || (isScheduled && joinInfo.canJoin)) && (
                       <button
                         onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id}`}
                         className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-white text-sm font-semibold rounded-xl shadow-md transition-all ${
@@ -840,7 +866,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
                     {/* Offline WITHOUT ClinicAppointment — change status inline */}
                     {consultation.type === "offline" && !consultation.clinic_appointment_id && isScheduled && joinInfo.canJoin && onStatusChange && (
                       <button
-                        onClick={() => onStatusChange(consultation.meeting_id ?? '', 'ongoing')}
+                        onClick={() => onStatusChange(consultation, 'ongoing')}
                         className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-white text-sm font-semibold rounded-xl shadow-md transition-all ${
                           joinInfo.isReady
                             ? "bg-gradient-to-r from-emerald-500 to-green-500 shadow-emerald-500/20"
