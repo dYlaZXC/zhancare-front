@@ -15,6 +15,9 @@ interface UseDeepgramReturn {
   segments: TranscriptSegment[];
   isConnected: boolean;
   error: string | null;
+  stream: MediaStream | null;
+  /** Seconds elapsed since recording started — resets to 0 once stopped. */
+  duration: number;
   startTranscription: () => Promise<void>;
   stopTranscription: () => void;
   clearTranscript: () => void;
@@ -25,10 +28,21 @@ export const useDeepgram = (): UseDeepgramReturn => {
   const [segments, setSegments] = useState<TranscriptSegment[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [duration, setDuration] = useState(0);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const connectionRef = useRef<any>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  // Elapsed recording timer — ticks while connected, resets once stopped.
+  useEffect(() => {
+    if (!isConnected) {
+      setDuration(0);
+      return;
+    }
+    const interval = setInterval(() => setDuration((d) => d + 1), 1000);
+    return () => clearInterval(interval);
+  }, [isConnected]);
 
   const startTranscription = useCallback(async () => {
     try {
@@ -168,6 +182,8 @@ export const useDeepgram = (): UseDeepgramReturn => {
     segments,
     isConnected,
     error,
+    stream: streamRef.current,
+    duration,
     startTranscription,
     stopTranscription,
     clearTranscript,
