@@ -4,6 +4,7 @@ import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   LiveKitRoom,
   VideoConference,
+  useRemoteParticipants,
 } from "@livekit/components-react";
 import { RoomOptions, VideoPresets } from "livekit-client";
 import "@livekit/components-styles";
@@ -11,8 +12,34 @@ import { api } from "@/utils/api";
 import { Loader2, RefreshCw } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faRecordVinyl
+  faRecordVinyl,
+  faUserClock
 } from "@fortawesome/free-solid-svg-icons";
+
+// Must render inside <LiveKitRoom> — useRemoteParticipants reads the room
+// context. Shows nothing once the patient's participant actually joins the
+// room (camera-off is a separate state, already handled by LiveKit's own
+// participant tile — this only covers "hasn't connected at all yet").
+const WaitingForPatientOverlay: React.FC<{ patientName: string }> = ({ patientName }) => {
+  const remoteParticipants = useRemoteParticipants();
+  if (remoteParticipants.length > 0) return null;
+
+  return (
+    <div className="absolute inset-0 z-[5] flex items-center justify-center bg-gradient-to-br from-emerald-900/40 via-gray-900/60 to-teal-900/40 backdrop-blur-sm pointer-events-none">
+      <div className="text-center px-6">
+        <div className="mb-5 inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-600/20 border-2 border-emerald-400/30 backdrop-blur-sm">
+          <FontAwesomeIcon icon={faUserClock} className="text-2xl text-emerald-300" />
+        </div>
+        <h3 className="text-lg font-semibold text-white mb-2">Ожидаем пациента</h3>
+        <p className="text-sm text-emerald-200/80 mb-4">{patientName} ещё не подключился к звонку</p>
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
+          <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+          <span className="text-xs text-white/70">Ожидание подключения...</span>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 interface DoctorVideoFrameProps {
   meetingId: string;
@@ -278,6 +305,8 @@ const DoctorVideoFrame: React.FC<DoctorVideoFrameProps> = ({
       >
           <VideoConference />
 
+          <WaitingForPatientOverlay patientName={patientName} />
+
           {/* Responsive CSS for Doctor View: Patient Large, Doctor Small */}
           <style dangerouslySetInnerHTML={{
             __html: `
@@ -348,6 +377,14 @@ const DoctorVideoFrame: React.FC<DoctorVideoFrameProps> = ({
 
               .lk-video-conference .lk-grid-layout {
                 position: relative !important;
+              }
+
+              /* Keep the control bar (mic/camera/share/chat) above the
+                 "waiting for patient" overlay's backdrop-blur, so it never
+                 renders blurred/washed-out before the patient connects. */
+              .lk-video-conference .lk-control-bar {
+                position: relative !important;
+                z-index: 20 !important;
               }
 
               /* Fix video object-fit to prevent different zooming on different screens */
