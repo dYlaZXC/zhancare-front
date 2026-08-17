@@ -53,15 +53,8 @@ const DoctorVideoHeader: React.FC<DoctorVideoHeaderProps> = ({
   const [connectionQuality, setConnectionQuality] = useState<'excellent' | 'good' | 'poor'>('good');
   const [isExpanded, setIsExpanded] = useState(false);
   const [networkLatency, setNetworkLatency] = useState(38);
-  const [isLoading, setIsLoading] = useState(true);
   const intervalRef = useRef<NodeJS.Timeout>();
   const startTimeRef = useRef<number>(Date.now());
-
-  // Simulate loading state
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1200);
-    return () => clearTimeout(timer);
-  }, []);
 
   // Sync timer with started_at from API when available
   useEffect(() => {
@@ -175,35 +168,6 @@ const DoctorVideoHeader: React.FC<DoctorVideoHeaderProps> = ({
   };
 
   const theme = getConsultationTheme();
-
-  if (isLoading) {
-    return (
-      <header className="relative backdrop-blur-md border-b border-white/10 p-3 sm:p-4 lg:p-6 z-10 bg-gradient-to-br from-emerald-900/90 to-teal-800/90">
-        <div className="animate-pulse space-y-3 sm:space-y-4">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0">
-            <div className="flex items-center gap-3 sm:gap-4">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-emerald-700"></div>
-              <div className="space-y-2">
-                <div className="h-5 sm:h-6 bg-emerald-700 rounded w-48 sm:w-64"></div>
-                <div className="h-3 sm:h-4 bg-emerald-700 rounded w-24 sm:w-32"></div>
-              </div>
-            </div>
-            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-emerald-700 self-center sm:self-auto"></div>
-            <div className="flex gap-2 sm:gap-4 justify-center sm:justify-start">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="w-10 h-12 sm:w-12 sm:h-16 bg-emerald-700 rounded-lg"></div>
-              ))}
-            </div>
-          </div>
-          <div className="hidden sm:flex justify-center gap-4 lg:gap-6">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-4 bg-emerald-700 rounded w-20 sm:w-24"></div>
-            ))}
-          </div>
-        </div>
-      </header>
-    );
-  }
 
   return (
     <header
