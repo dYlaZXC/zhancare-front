@@ -29,6 +29,7 @@ import {
   FlaskConical,
 } from "lucide-react";
 import { useConsultationManager } from "./useConsultationManager";
+import ConsultationSheetModal from "./ConsultationSheetModal";
 import type { Consultation } from "@/types/consultation";
 
 interface DoctorConsultationsTableProps {
@@ -258,6 +259,7 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [detailsConsultation, setDetailsConsultation] = useState<Consultation | null>(null);
+  const [sheetConsultation, setSheetConsultation] = useState<Consultation | null>(null);
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
   const itemsPerPage = 10;
@@ -502,7 +504,15 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
           )
         )}
         <button
+          onClick={() => setSheetConsultation(consultation)}
+          title="Консультационный лист"
+          className="p-2 text-gray-400 hover:text-indigo-600 bg-gray-50 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 rounded-xl transition-all duration-200"
+        >
+          <FileText className="w-4 h-4" />
+        </button>
+        <button
           onClick={() => setDetailsConsultation(consultation)}
+          title="Детали приёма"
           className="p-2 text-gray-400 hover:text-blue-600 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-200 rounded-xl transition-all duration-200"
         >
           <Eye className="w-4 h-4" />
@@ -899,6 +909,13 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
                         {consultation.type === "offline" ? "Открыть приём" : "Детали"}
                       </button>
                     )}
+                    <button
+                      onClick={() => setSheetConsultation(consultation)}
+                      title="Консультационный лист"
+                      className="p-2.5 bg-gray-50 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 text-gray-400 hover:text-indigo-600 rounded-xl transition-colors"
+                    >
+                      <FileText className="w-4 h-4" />
+                    </button>
                     <button className="p-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-400 rounded-xl transition-colors">
                       <MoreHorizontal className="w-4 h-4" />
                     </button>
@@ -981,13 +998,20 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
                       <Eye className="w-4 h-4 text-gray-400" />
                       Детали приёма
                     </button>
+                    <button
+                      onClick={() => { setSheetConsultation(c); setOpenMenuId(null); }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-indigo-600 hover:bg-indigo-50 text-left transition-colors"
+                    >
+                      <FileText className="w-4 h-4 text-indigo-400" />
+                      Консультационный лист
+                    </button>
                     {c.type === "offline" && clinicId && (
                       <button
                         onClick={() => { window.location.href = `/doctor/appointments/${clinicId}/offline/`; }}
                         className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-blue-600 hover:bg-blue-50 text-left transition-colors"
                       >
-                        <FileText className="w-4 h-4 text-blue-400" />
-                        Консультационный лист
+                        <Edit className="w-4 h-4 text-blue-400" />
+                        Редактировать приём
                       </button>
                     )}
                   </>
@@ -1077,6 +1101,13 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
           </div>
         );
       })(), document.body)}
+
+      {sheetConsultation && (
+        <ConsultationSheetModal
+          consultation={sheetConsultation}
+          onClose={() => setSheetConsultation(null)}
+        />
+      )}
     </div>
   );
 };
