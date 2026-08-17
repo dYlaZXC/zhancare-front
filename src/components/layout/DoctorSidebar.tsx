@@ -6,7 +6,6 @@ import { useClinicCurrency } from "@/context/BrandContext";
 import LogoIcon from "../../../public/logo_icon.png";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faCalendar,
   faCalendarAlt,
   faNotesMedical,
   faVideo,
@@ -45,7 +44,6 @@ const doctorMenu: MenuItem[] = [
     color: "#3267e6",
     children: [
       { id: "consultations", icon: faVideo, title: "Консультации", color: "#295bbf", href: "/doctor/consultations" },
-      { id: "appointments", icon: faCalendar, title: "Вызовы на дом", color: "#3772ff", href: "/doctor/appointments" },
       { id: "patients", icon: faNotesMedical, title: "История пациентов", color: "#3267e6", href: "/doctor/patients" },
     ],
   },

@@ -193,14 +193,6 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
       bg: '#0f766e',
     },
     {
-      label: st.home.label,
-      sub: st.home.sub,
-      icon: <MapPin size={20} />,
-      action: st.home.action,
-      onClick: onHome,
-      bg: '#b45309',
-    },
-    {
       label: st.diagnostics.label,
       sub: st.diagnostics.sub,
       icon: <Stethoscope size={20} />,
@@ -208,21 +200,41 @@ const VideoConsultationStep1: React.FC<Step1Props> = ({
       onClick: onDiagnostics,
       bg: '#7c3aed',
     },
+    {
+      label: st.home.label,
+      sub: st.home.sub,
+      icon: <MapPin size={20} />,
+      action: st.home.action,
+      onClick: onHome,
+      bg: '#b45309',
+      disabled: true, // temporarily disabled — service not ready yet
+    },
   ];
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      {serviceButtons.map(({ label, sub, icon, action, onClick, bg }) => (
+      {serviceButtons.map(({ label, sub, icon, action, onClick, bg, disabled }) => (
         <motion.button
           key={label}
-          onClick={onClick}
-          whileHover={{ y: -3, scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
-          className="group relative flex flex-col gap-3 px-4 py-4 rounded-2xl overflow-hidden text-white text-left transition-colors duration-200"
+          onClick={disabled ? undefined : onClick}
+          disabled={disabled}
+          whileHover={disabled ? undefined : { y: -3, scale: 1.02 }}
+          whileTap={disabled ? undefined : { scale: 0.97 }}
+          className={`group relative flex flex-col gap-3 px-4 py-4 rounded-2xl overflow-hidden text-white text-left transition-colors duration-200 ${
+            disabled ? "opacity-50 grayscale cursor-not-allowed" : ""
+          }`}
           style={{ backgroundColor: bg }}
         >
           {/* Hover overlay */}
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 rounded-2xl" />
+          {!disabled && (
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 rounded-2xl" />
+          )}
+
+          {disabled && (
+            <span className="absolute top-2 right-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-black/30">
+              Скоро
+            </span>
+          )}
 
           <div className="relative w-10 h-10 rounded-xl bg-white/20 border border-white/25 flex items-center justify-center flex-shrink-0">
             {icon}
