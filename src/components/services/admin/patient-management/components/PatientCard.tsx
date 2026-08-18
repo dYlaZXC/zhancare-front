@@ -45,7 +45,7 @@ export function PatientCard({
               background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
             }}
           >
-            {patient.first_name[0]}{patient.last_name[0]}
+            {patient.first_name?.[0] ?? "?"}{patient.last_name?.[0] ?? "?"}
           </div>
 
           {/* Info */}

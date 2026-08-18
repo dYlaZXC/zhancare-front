@@ -38,9 +38,9 @@ export function PatientFormModal({
   const [form, setForm] = useState<PatientFormData>(() => {
     if (mode === "edit" && initial) {
       return {
-        first_name: initial.first_name,
-        last_name: initial.last_name,
-        email: initial.email,
+        first_name: initial.first_name ?? "",
+        last_name: initial.last_name ?? "",
+        email: initial.email ?? "",
         phone: initial.phone,
         password: "",
         birth_date: initial.birth_date || "",

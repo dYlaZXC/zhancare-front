@@ -7,7 +7,7 @@ import { toast } from "react-toastify";
 import {
   Banknote, Building2, Check, CheckCircle2, Copy, Loader2, MapPin, Stethoscope, User, Video,
 } from "lucide-react";
-import type { ConsultationType, CreatedInfo, EventFormData, Patient, PaymentTypeOption, StaffMember } from "../types/addEventTypes";
+import type { ConsultationType, CreatedInfo, DiagService, EventFormData, Patient, PaymentTypeOption, StaffMember } from "../types/addEventTypes";
 
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
@@ -40,6 +40,8 @@ export function EventSuccessScreen({
   createdInfo,
   patient,
   doctor,
+  diagService,
+  referringDoctor,
   clinicName,
   clinicAddress,
   onClose,
@@ -51,6 +53,11 @@ export function EventSuccessScreen({
   createdInfo: CreatedInfo;
   patient: Patient | undefined;
   doctor: StaffMember | undefined;
+  // Diagnostics only. diagService.doctor_name is the performing doctor
+  // (fixed by the service itself); referringDoctor is who ordered the
+  // test — a different, independent, optional role.
+  diagService?: DiagService | null;
+  referringDoctor?: StaffMember | undefined;
   clinicName: string;
   clinicAddress: string;
   onClose: () => void;
@@ -85,6 +92,12 @@ export function EventSuccessScreen({
     ];
 
     if (doctor) lines.push(`👨‍⚕️ Доктор: ${doctor.first_name} ${doctor.last_name}`);
+    // Performing doctor only — this text goes to the patient, and the
+    // referring doctor (who ordered the test) is an internal/billing
+    // concept, not something relevant to share with them.
+    if (consultationType === 'diagnostics' && diagService?.doctor_name) {
+      lines.push(`👨‍⚕️ Исполнитель: ${diagService.doctor_name}`);
+    }
     if (patient) {
       lines.push('');
       lines.push(`👤 Пациент: ${patient.first_name} ${patient.last_name}`);
@@ -191,6 +204,21 @@ export function EventSuccessScreen({
                 <Stethoscope className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                 <span className="text-gray-500 w-24 flex-shrink-0">Доктор</span>
                 <span className="font-semibold text-gray-800">{doctor.first_name} {doctor.last_name}</span>
+              </div>
+            )}
+            {/* Diagnostics: two distinct, independent roles — never just "Доктор" */}
+            {consultationType === 'diagnostics' && diagService?.doctor_name && (
+              <div className="flex items-center gap-2.5">
+                <Stethoscope className="w-4 h-4 text-violet-500 flex-shrink-0" />
+                <span className="text-gray-500 w-24 flex-shrink-0">Исполнитель</span>
+                <span className="font-semibold text-gray-800">{diagService.doctor_name}</span>
+              </div>
+            )}
+            {consultationType === 'diagnostics' && referringDoctor && (
+              <div className="flex items-center gap-2.5">
+                <User className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                <span className="text-gray-500 w-24 flex-shrink-0">Назначил</span>
+                <span className="font-semibold text-gray-800">{referringDoctor.first_name} {referringDoctor.last_name}</span>
               </div>
             )}
 

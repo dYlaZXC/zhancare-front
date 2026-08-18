@@ -105,7 +105,7 @@ export function ServiceFormModal({
           <div>
             <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Категория</label>
             <div className="relative">
-              <button ref={catBtnRef} type="button"
+              <button ref={catBtnRef} type="button" title="Выбрать категорию"
                 onClick={() => {
                   if (catBtnRef.current) {
                     const r = catBtnRef.current.getBoundingClientRect();

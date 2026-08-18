@@ -8,9 +8,12 @@
 export interface Patient {
   // Basic user fields
   id: number;
-  first_name: string;
-  last_name: string;
-  email: string;
+  // The API can return null for any of these (e.g. a phone-only
+  // registration has no email) — don't call string methods on them without
+  // a null check.
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
   phone: string;
   birth_date?: string;
   gender?: 'male' | 'female' | 'other';

@@ -9,9 +9,12 @@
 export interface StaffMember {
   // Basic user fields
   id: number;
-  first_name: string;
-  last_name: string;
-  email: string;
+  // Required by the create/edit form, but not guaranteed non-null for
+  // every record at runtime (e.g. legacy data) — same caveat as
+  // PatientManagement.tsx's Patient interface.
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
   phone: string;
   role: 'doctor' | 'nurse';
   gender?: 'male' | 'female' | 'other' | null;

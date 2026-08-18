@@ -9,8 +9,12 @@ import {
   Mic, MicOff, Play, Square, Save, Clock, MapPin,
   User, FileText, Activity, Stethoscope, Pill, ClipboardList,
   Sparkles, ChevronLeft, AlertTriangle, Plus, X, CheckCircle,
+  Search, CalendarCheck, ChevronUp,
 } from "lucide-react";
 import { useDeepgram } from "@/hooks/useDeepgram";
+import { useAuth } from "@/context/AuthContext";
+import { aiService } from "@/lib/ai/aiService";
+import { DiagnosticsServiceItem } from "@/lib/ai/types";
 import AIConsultationReview from "@/app/video-call/doctor/components/AIConsultationReview";
 
 interface OfflineConsultation {
@@ -33,13 +37,25 @@ interface OfflineConsultation {
   appointment_slot?: { consultation_type?: string; clinic?: number } | null;
 }
 
+// Catalog-sourced referrals carry `serviceId` (used for dedup and to upgrade
+// an already-added referral in place when it gets booked); manually typed
+// referrals have neither.
+interface DiagnosticReferral {
+  serviceId?: number;
+  name: string;
+  categoryLabel?: string;
+  price?: string | null;
+  bookedAt?: string;
+  appointmentId?: number;
+}
+
 interface ConsultationFormData {
   complaints: string;
   anamnesis: string;
   diagnostics: string;
   treatment: string;
   diagnosis: string;
-  referrals: { name: string }[];
+  referrals: DiagnosticReferral[];
 }
 
 const EMPTY_FORM: ConsultationFormData = {
@@ -107,7 +123,7 @@ const FIELDS_AFTER = [
   },
 ];
 
-function parseReferrals(sessionNotes: string | null): { name: string }[] {
+function parseReferrals(sessionNotes: string | null): DiagnosticReferral[] {
   if (!sessionNotes) return [];
   try {
     const parsed = JSON.parse(sessionNotes);
@@ -119,6 +135,11 @@ function parseReferrals(sessionNotes: string | null): { name: string }[] {
 export default function OfflineConsultationByMeetingPage() {
   const { meetingId } = useParams<{ meetingId: string }>();
   const router = useRouter();
+  const { user } = useAuth();
+  // Prefer the clinic this specific booking is tied to; fall back to the
+  // doctor's own clinic (already loaded onto the auth user via
+  // GET /user-profile/profile/, no extra request needed).
+  const doctorClinicId = (user as any)?.profiles?.doctor?.clinic?.id as number | undefined;
 
   const [consultation, setConsultation] = useState<OfflineConsultation | null>(null);
   const [loading, setLoading] = useState(true);
@@ -128,6 +149,20 @@ export default function OfflineConsultationByMeetingPage() {
   const [showAI, setShowAI] = useState(false);
   const [showNavGuard, setShowNavGuard] = useState(false);
   const [manualReferral, setManualReferral] = useState("");
+
+  // Diagnostics catalog + inline booking
+  const [showServicePanel, setShowServicePanel] = useState(false);
+  const [clinicServices, setClinicServices] = useState<DiagnosticsServiceItem[]>([]);
+  const [servicesLoading, setServicesLoading] = useState(false);
+  const [serviceSearch, setServiceSearch] = useState("");
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [bookingServiceId, setBookingServiceId] = useState<number | null>(null);
+  const [bookingDate, setBookingDate] = useState("");
+  const [bookingSlots, setBookingSlots] = useState<{ start: string; end: string; label: string; available: number }[]>([]);
+  const [bookingSlotsLoading, setBookingSlotsLoading] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [bookingSubmitting, setBookingSubmitting] = useState(false);
+
   const pendingNavUrl = useRef<string | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number | null>(null);
@@ -165,6 +200,21 @@ export default function OfflineConsultationByMeetingPage() {
   }, [meetingId]);
 
   useEffect(() => { fetchConsultation(); }, [fetchConsultation]);
+
+  const clinicIdForServices = consultation?.appointment_slot?.clinic ?? doctorClinicId;
+
+  useEffect(() => {
+    if (!clinicIdForServices) {
+      setClinicServices([]);
+      return;
+    }
+    setServicesLoading(true);
+    aiService
+      .getDiagnosticsServices(clinicIdForServices)
+      .then(setClinicServices)
+      .catch(() => setClinicServices([]))
+      .finally(() => setServicesLoading(false));
+  }, [clinicIdForServices]);
 
   useEffect(() => {
     if (consultation?.status !== "ongoing" || !startTimeRef.current) return;
@@ -218,7 +268,124 @@ export default function OfflineConsultationByMeetingPage() {
   };
 
   const handleRemoveReferral = (index: number) => {
+    const referral = formData.referrals[index];
+    if (referral?.appointmentId) {
+      const confirmed = window.confirm(
+        "Приём уже создан в системе. Удаление уберёт направление только из этого списка — сама запись на приём останется активной. Продолжить?"
+      );
+      if (!confirmed) return;
+    }
     setFormData(prev => ({ ...prev, referrals: prev.referrals.filter((_, i) => i !== index) }));
+  };
+
+  // Diagnostics catalog — filtering, add-without-booking, inline booking
+  const canBookDiagnostics = Boolean(consultation?.patient && user?.id);
+
+  const filteredServices = clinicServices.filter(s => {
+    const matchCat = activeCategory === "all" || s.category === activeCategory;
+    const q = serviceSearch.trim().toLowerCase();
+    const matchSearch = !q || s.name.toLowerCase().includes(q) || (s.description ?? "").toLowerCase().includes(q);
+    return matchCat && matchSearch;
+  });
+
+  const uniqueCategories = Array.from(
+    new Map(clinicServices.map(s => [s.category, s.category_label])).entries()
+  );
+
+  const nextDays = Array.from({ length: 14 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    return {
+      iso: d.toISOString().slice(0, 10),
+      label: d.toLocaleDateString("ru-KZ", { weekday: "short", day: "numeric", month: "short" }),
+    };
+  });
+
+  const handleAddReferral = (service: DiagnosticsServiceItem) => {
+    if (formData.referrals.some(r => r.serviceId === service.id)) return;
+    setFormData(prev => ({
+      ...prev,
+      referrals: [...prev.referrals, {
+        serviceId: service.id,
+        name: service.name,
+        categoryLabel: service.category_label,
+        price: service.price,
+      }],
+    }));
+  };
+
+  const openBooking = (service: DiagnosticsServiceItem) => {
+    if (bookingServiceId === service.id) {
+      setBookingServiceId(null);
+      return;
+    }
+    setBookingServiceId(service.id);
+    setBookingDate("");
+    setBookingSlots([]);
+    setSelectedSlot(null);
+  };
+
+  const fetchSlots = async (serviceId: number, date: string) => {
+    setBookingDate(date);
+    setSelectedSlot(null);
+    setBookingSlots([]);
+    setBookingSlotsLoading(true);
+    try {
+      const patientParam = consultation?.patient ? `&patient_id=${consultation.patient}` : "";
+      const { data } = await api.get<{ slots: typeof bookingSlots }>(
+        `/diagnostics/services/${serviceId}/available-slots/?date=${date}${patientParam}`
+      );
+      setBookingSlots(data.slots ?? []);
+    } catch {
+      setBookingSlots([]);
+    } finally {
+      setBookingSlotsLoading(false);
+    }
+  };
+
+  const handleBook = async (service: DiagnosticsServiceItem) => {
+    if (!selectedSlot || !canBookDiagnostics || !consultation) return;
+    setBookingSubmitting(true);
+    try {
+      const { data } = await api.post<{ appointment: { id: number } }>("/diagnostics/appointments/", {
+        service_id: service.id,
+        patient_id: consultation.patient,
+        // Referring doctor = the doctor running this appointment (drives
+        // commission on the backend) — never an appointment/consultation PK.
+        doctor_id: user?.id,
+        scheduled_time: selectedSlot,
+      });
+      const appointmentId = data?.appointment?.id;
+      const slotObj = bookingSlots.find(s => s.start === selectedSlot);
+      const dateLabel = nextDays.find(d => d.iso === bookingDate)?.label ?? bookingDate;
+      const timeLabel = slotObj?.label ?? selectedSlot;
+
+      setFormData(prev => {
+        const existingIndex = prev.referrals.findIndex(r => r.serviceId === service.id);
+        const bookedReferral: DiagnosticReferral = {
+          serviceId: service.id,
+          name: service.name,
+          categoryLabel: service.category_label,
+          price: service.price,
+          bookedAt: selectedSlot,
+          appointmentId,
+        };
+        if (existingIndex === -1) {
+          return { ...prev, referrals: [...prev.referrals, bookedReferral] };
+        }
+        // Already added without a booking — upgrade in place instead of duplicating.
+        const referrals = [...prev.referrals];
+        referrals[existingIndex] = bookedReferral;
+        return { ...prev, referrals };
+      });
+
+      toast.success(`Записано: ${service.name} — ${dateLabel}, ${timeLabel}`);
+      setBookingServiceId(null);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Ошибка при записи");
+    } finally {
+      setBookingSubmitting(false);
+    }
   };
 
   const handleAIApply = (fields: Record<string, string>) => {
@@ -511,6 +678,15 @@ export default function OfflineConsultationByMeetingPage() {
                     </span>
                   )}
                 </div>
+                {clinicIdForServices && (
+                  <button
+                    onClick={() => setShowServicePanel(p => !p)}
+                    className="flex items-center gap-1 text-xs text-cyan-600 hover:text-cyan-800 font-semibold transition-colors"
+                  >
+                    {showServicePanel ? <ChevronUp className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                    Услуга из каталога
+                  </button>
+                )}
               </div>
 
               <textarea
@@ -521,12 +697,164 @@ export default function OfflineConsultationByMeetingPage() {
                 className="w-full px-4 py-3 text-sm text-gray-800 placeholder-gray-400 resize-none border border-transparent focus:outline-none focus:ring-2 focus:border-cyan-400 focus:ring-cyan-100 transition-all"
               />
 
+              {/* Expandable clinic services catalog */}
+              {showServicePanel && (
+                <div className="border-t border-gray-100 p-4 space-y-3 bg-gray-50">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Поиск услуги..."
+                      value={serviceSearch}
+                      onChange={e => setServiceSearch(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-100 focus:border-cyan-300 transition-all"
+                    />
+                  </div>
+
+                  {uniqueCategories.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        onClick={() => setActiveCategory("all")}
+                        className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                          activeCategory === "all" ? "bg-cyan-500 text-white" : "bg-white border border-gray-200 text-gray-500"
+                        }`}
+                      >
+                        Все
+                      </button>
+                      {uniqueCategories.map(([catId, catLabel]) => (
+                        <button
+                          key={catId}
+                          onClick={() => setActiveCategory(catId)}
+                          className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                            activeCategory === catId ? "bg-cyan-500 text-white" : "bg-white border border-gray-200 text-gray-500"
+                          }`}
+                        >
+                          {catLabel}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="max-h-72 overflow-y-auto space-y-2">
+                    {servicesLoading && (
+                      <p className="text-xs text-center py-4 text-gray-400">Загрузка услуг...</p>
+                    )}
+                    {!servicesLoading && filteredServices.length === 0 && (
+                      <p className="text-xs text-center py-4 text-gray-400">Ничего не найдено</p>
+                    )}
+                    {filteredServices.map(service => {
+                      const isAdded = formData.referrals.some(r => r.serviceId === service.id);
+                      const isBookingOpen = bookingServiceId === service.id;
+                      return (
+                        <div key={service.id} className="bg-white border border-gray-200 rounded-xl p-2.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-gray-800 truncate">{service.name}</p>
+                              <p className="text-xs text-gray-400">
+                                {service.category_label}
+                                {service.price ? ` · ${Number(service.price).toLocaleString("ru-KZ")} ₸` : ""}
+                                {service.duration_minutes ? ` · ${service.duration_minutes} мин` : ""}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                              <button
+                                onClick={() => handleAddReferral(service)}
+                                disabled={isAdded}
+                                className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1 ${
+                                  isAdded ? "bg-emerald-50 text-emerald-600" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                }`}
+                              >
+                                {isAdded ? <CheckCircle className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                                {isAdded ? "Добавлено" : "Добавить"}
+                              </button>
+                              {canBookDiagnostics && (
+                                <button
+                                  onClick={() => openBooking(service)}
+                                  className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                    isBookingOpen ? "bg-cyan-500 text-white" : "bg-cyan-50 text-cyan-700 hover:bg-cyan-100"
+                                  }`}
+                                >
+                                  Записать
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {isBookingOpen && (
+                            <div className="mt-2.5 pt-2.5 border-t border-gray-100">
+                              <div className="flex gap-1.5 overflow-x-auto pb-1.5 mb-2">
+                                {nextDays.map(d => (
+                                  <button
+                                    key={d.iso}
+                                    onClick={() => fetchSlots(service.id, d.iso)}
+                                    className={`flex-shrink-0 px-2.5 py-1.5 rounded-lg text-xs whitespace-nowrap transition-colors ${
+                                      bookingDate === d.iso ? "bg-cyan-500 text-white" : "bg-gray-100 text-gray-500"
+                                    }`}
+                                  >
+                                    {d.label}
+                                  </button>
+                                ))}
+                              </div>
+
+                              {bookingSlotsLoading && <p className="text-xs text-gray-400">Загрузка слотов...</p>}
+                              {!bookingSlotsLoading && bookingDate && bookingSlots.length === 0 && (
+                                <p className="text-xs text-gray-400">Нет свободных слотов на эту дату</p>
+                              )}
+                              {bookingSlots.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 mb-2">
+                                  {bookingSlots.map(slot => (
+                                    <button
+                                      key={slot.start}
+                                      onClick={() => setSelectedSlot(slot.start)}
+                                      className={`px-2.5 py-1 rounded-lg text-xs flex items-center gap-1 transition-colors ${
+                                        selectedSlot === slot.start ? "bg-cyan-500 text-white" : "bg-gray-100 text-gray-500"
+                                      }`}
+                                    >
+                                      <Clock className="w-3 h-3" />
+                                      {slot.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+
+                              {selectedSlot && (
+                                <button
+                                  onClick={() => handleBook(service)}
+                                  disabled={bookingSubmitting}
+                                  className="w-full py-1.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 bg-emerald-500 text-white transition-colors disabled:opacity-60"
+                                >
+                                  <CalendarCheck className="w-3.5 h-3.5" />
+                                  {bookingSubmitting ? "Записываем..." : "Подтвердить запись"}
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {formData.referrals.length > 0 && (
                 <div className="px-4 pb-3 flex flex-wrap gap-2 border-t border-gray-50 pt-2">
                   {formData.referrals.map((ref, i) => (
                     <div key={i} className="flex items-center gap-1.5 bg-cyan-50 border border-cyan-200 text-cyan-800 text-xs rounded-xl px-3 py-1.5">
+                      {ref.appointmentId && <CalendarCheck className="w-3 h-3 text-emerald-600" />}
+                      {ref.categoryLabel && (
+                        <span className="text-cyan-400 text-[10px] uppercase tracking-wide font-semibold">
+                          {ref.categoryLabel}
+                        </span>
+                      )}
                       <span className="font-medium">{ref.name}</span>
-                      <button onClick={() => handleRemoveReferral(i)} className="ml-0.5 text-cyan-400 hover:text-cyan-700 transition-colors">
+                      {ref.price != null && (
+                        <span className="text-cyan-500">{Number(ref.price).toLocaleString("ru-KZ")} ₸</span>
+                      )}
+                      <button
+                        onClick={() => handleRemoveReferral(i)}
+                        className="ml-0.5 text-cyan-400 hover:text-cyan-700 transition-colors"
+                        title={ref.appointmentId ? "Убрать из списка (запись останется активной)" : "Удалить"}
+                      >
                         <X className="w-3 h-3" />
                       </button>
                     </div>

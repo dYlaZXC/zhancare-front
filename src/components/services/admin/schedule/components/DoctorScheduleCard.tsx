@@ -78,7 +78,7 @@ export function DoctorScheduleCard({
       <div className="px-4 pt-4 pb-3 border-b border-gray-100">
         <div className="flex items-center gap-3 mb-3">
           <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${gradientClass} flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm`}>
-            {doctor.first_name[0]}{doctor.last_name[0]}
+            {doctor.first_name?.[0] ?? "?"}{doctor.last_name?.[0] ?? "?"}
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-sm text-gray-900 truncate leading-tight">

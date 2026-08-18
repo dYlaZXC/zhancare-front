@@ -36,7 +36,11 @@ export interface ScheduleEvent {
   patient_email?: string;
   patient_birth_date?: string;
   patient_gender?: string;
-  // Doctor
+  // Doctor. For diagnostics events specifically, `doctor_*` is the
+  // *referring* doctor (who ordered the test — may be nobody in
+  // particular) and `performing_doctor_*` is who actually carries it
+  // out (the service's own responsible doctor, snapshotted at booking
+  // time) — two distinct roles, don't conflate them in the UI.
   doctor_id?: number;
   doctor_name?: string;
   doctor_phone?: string;
@@ -44,6 +48,9 @@ export interface ScheduleEvent {
   doctor_specialization?: string;
   doctor_years_of_experience?: number;
   doctor_room_number?: string | number | null;
+  // Performing doctor (diagnostics only)
+  performing_doctor_id?: number | null;
+  performing_doctor_name?: string | null;
   // Nurse (appointments only)
   nurse_id?: number;
   nurse_name?: string;

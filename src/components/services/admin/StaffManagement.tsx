@@ -221,10 +221,14 @@ export default function StaffManagement({ user }: StaffManagementProps) {
   // Filter and sort staff based on search and filters
   const filteredStaff = staff
     .filter((member) => {
+      // Typed as required strings, but not guaranteed null-safe at runtime
+      // — same crash class fixed in PatientManagement.tsx's search filter
+      // ("Cannot read properties of null (reading 'toLowerCase')").
+      const q = searchQuery.toLowerCase();
       const matchesSearch =
-        member.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        member.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        member.email.toLowerCase().includes(searchQuery.toLowerCase());
+        (member.first_name ?? "").toLowerCase().includes(q) ||
+        (member.last_name ?? "").toLowerCase().includes(q) ||
+        (member.email ?? "").toLowerCase().includes(q);
 
       const matchesRole = filterRole === 'all' || member.role === filterRole;
       const matchesStatus =
@@ -416,9 +420,18 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       </AnimatePresence>
 
       {/* Schedule Modal */}
+      {/* StaffScheduleModal's own member type keeps first_name/last_name
+          required — it only uses them for display text, so a fallback here
+          is simpler than threading nullability through that file too. */}
       <StaffScheduleModal
         isOpen={showScheduleModal}
-        member={scheduleMember}
+        member={
+          scheduleMember && {
+            ...scheduleMember,
+            first_name: scheduleMember.first_name ?? '',
+            last_name: scheduleMember.last_name ?? '',
+          }
+        }
         onClose={() => { setShowScheduleModal(false); setScheduleMember(null); }}
         onSaved={() => { fetchStaff(showDeleted); }}
       />

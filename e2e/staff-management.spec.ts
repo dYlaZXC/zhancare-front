@@ -62,8 +62,10 @@ test("create doctor, edit, and confirm schedule survives edit + persists across 
   await editedCard.getByTitle("Расписание").click();
 
   await expect(page.getByRole("button", { name: "По датам" })).toBeVisible({ timeout: 10_000 });
-  await expect(page.getByRole("button", { name: "Постоянное" })).toBeVisible();
-  await page.getByRole("button", { name: "Постоянное" }).click();
+  // exact: true everywhere below — the footer's "Сохранить постоянное"
+  // save button also matches this tab button's name as a substring
+  await expect(page.getByRole("button", { name: "Постоянное", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Постоянное", exact: true }).click();
 
   await page.getByTitle("Понедельник").click();
   await expect(page.locator('input[type="time"]').first()).toBeVisible();
@@ -73,13 +75,17 @@ test("create doctor, edit, and confirm schedule survives edit + persists across 
   // modal closes itself on successful save (same convention as the other
   // admin form modals in this codebase) — wait for it to leave the DOM
   // rather than clicking a stale "Закрыть" button
-  await expect(page.getByRole("button", { name: "Постоянное" })).not.toBeVisible({
+  await expect(page.getByRole("button", { name: "Постоянное", exact: true })).not.toBeVisible({
     timeout: 10_000,
   });
 
-  // reopen and confirm the toggle survived
+  // reopen and confirm the toggle survived — scheduleModalTab is local
+  // component state that persists across close/reopen (the modal hides via
+  // a conditional render, not an unmount), so this second open can land
+  // straight back on "template" with its footer save button already
+  // showing, which is exactly what made the unscoped locator ambiguous
   await editedCard.getByTitle("Расписание").click();
-  await page.getByRole("button", { name: "Постоянное" }).click();
+  await page.getByRole("button", { name: "Постоянное", exact: true }).click();
   await expect(page.getByTitle("Понедельник")).toHaveClass(/bg-blue-500|border-blue-500/);
   await expect(page.locator('input[type="time"]').first()).toHaveValue("10:00");
 });

@@ -1,8 +1,6 @@
 "use client";
 
 import React from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faDiagnoses } from "@fortawesome/free-solid-svg-icons";
 
 interface DiagnosisFormProps {
   value: string;
@@ -15,16 +13,6 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
 }) => {
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#10b981' }}>
-          <FontAwesomeIcon icon={faDiagnoses} className="text-lg" style={{ color: '#ebf1ff' }} />
-        </div>
-        <div>
-          <h3 className="font-semibold text-base" style={{ color: '#ebf1ff' }}>Диагноз</h3>
-          <p className="text-xs" style={{ color: '#bcc0ca' }}>Окончательный или предварительный диагноз</p>
-        </div>
-      </div>
-
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}

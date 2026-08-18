@@ -48,7 +48,7 @@ export function StaffCard({
                 : 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)'
             }}
           >
-            {member.first_name[0]}{member.last_name[0]}
+            {member.first_name?.[0] ?? "?"}{member.last_name?.[0] ?? "?"}
           </div>
 
           {/* Info */}

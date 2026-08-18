@@ -21,6 +21,16 @@ import { DateTimeSection } from "./add-event/components/DateTimeSection";
 import { PaymentSection } from "./add-event/components/PaymentSection";
 import { EventSuccessScreen } from "./add-event/components/EventSuccessScreen";
 
+// "Today" must be computed in the CLINIC's own timezone, not the browser's —
+// a browser-local date can already be a day behind/ahead of the clinic's
+// actual calendar date near midnight, which made diagnostics slot lookups
+// silently return empty (the backend compares against clinic-local `now()`).
+// Falls back to Asia/Almaty, matching the backend's own fallback and the
+// only timezone any clinic in this system is currently configured with.
+function getClinicToday(tz: string): string {
+  return new Intl.DateTimeFormat('sv-SE', { timeZone: tz }).format(new Date());
+}
+
 interface AddEventModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -41,7 +51,7 @@ export default function AddEventModal({
     patient_id: '',
     doctor_id: '',
     referring_doctor_id: '',
-    date: selectedDate || (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; })(),
+    date: selectedDate || getClinicToday('Asia/Almaty'),
     time: '',
     duration: 30,
     notes: ''
@@ -65,6 +75,7 @@ export default function AddEventModal({
   const [clinicCurrency, setClinicCurrency] = useState<string>('KZT');
   const [clinicName, setClinicName] = useState<string>('');
   const [clinicAddress, setClinicAddress] = useState<string>('');
+  const [clinicTimezone, setClinicTimezone] = useState<string>('Asia/Almaty');
 
   // Diagnostics state
   const [diagCategoryList, setDiagCategoryList] = useState<DiagCategoryItem[]>([]);
@@ -87,9 +98,10 @@ export default function AddEventModal({
   useEffect(() => {
     api.get('/clinic-stats/').then(res => {
       const info = res.data?.clinic_info;
-      if (info?.currency) setClinicCurrency(info.currency);
-      if (info?.name)     setClinicName(info.name);
-      if (info?.address)  setClinicAddress(info.address);
+      if (info?.currency)  setClinicCurrency(info.currency);
+      if (info?.name)      setClinicName(info.name);
+      if (info?.address)   setClinicAddress(info.address);
+      if (info?.time_zone) setClinicTimezone(info.time_zone);
     }).catch(() => {});
   }, []);
 
@@ -132,8 +144,7 @@ export default function AddEventModal({
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
-      const today = new Date();
-      const dateString = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+      const dateString = getClinicToday(clinicTimezone);
 
       setFormData({
         patient_id: '',
@@ -155,6 +166,10 @@ export default function AddEventModal({
       setCreatedInfo(null);
     }
   }, [isOpen, selectedDate]);
+  // clinicTimezone intentionally excluded: it's read at the moment isOpen
+  // flips true (populated on mount, well before any realistic modal-open),
+  // not as a trigger — re-running this effect on a late-arriving timezone
+  // update would reset an in-progress form the user is actively filling in.
 
   // Fetch working hours for selected doctor+date from "По датам" availability
   useEffect(() => {
@@ -338,9 +353,8 @@ export default function AddEventModal({
           scheduled_time: `${formData.date}T${formData.time}:00`,
           notes: formData.notes,
         });
-        toast.success('Запись успешно создана!');
-        onClose();
         onEventAdded();
+        setCreatedInfo({});
       } else {
         const resp = await api.post('/schedule/', {
           type: consultationType === 'home' ? 'home_visit' : 'consultation',
@@ -373,6 +387,7 @@ export default function AddEventModal({
   if (createdInfo !== null) {
     const patient = patients.find(p => String(p.id) === formData.patient_id);
     const doctor = doctors.find(d => String(d.id) === formData.doctor_id);
+    const referringDoctor = doctors.find(d => String(d.id) === formData.referring_doctor_id);
     return (
       <EventSuccessScreen
         consultationType={consultationType}
@@ -382,6 +397,8 @@ export default function AddEventModal({
         createdInfo={createdInfo}
         patient={patient}
         doctor={doctor}
+        diagService={selectedDiagService}
+        referringDoctor={referringDoctor}
         clinicName={clinicName}
         clinicAddress={clinicAddress}
         onClose={onClose}
