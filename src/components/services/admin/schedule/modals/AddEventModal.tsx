@@ -283,15 +283,23 @@ export default function AddEventModal({
     const [startH, startM] = start_time.split(':').map(Number);
     const [endH, endM] = end_time.split(':').map(Number);
     let cur = startH * 60 + startM;
-    const endMin = endH * 60 + endM;
+    let endMin = endH * 60 + endM;
+    // Overnight schedule (e.g. 20:00–00:00): end time is numerically <= start
+    // time because it lands on the next calendar day — extend past midnight
+    // instead of treating the shift as zero-length.
+    if (endMin <= cur) endMin += 24 * 60;
     const now = new Date();
     const isToday = formData.date === now.toLocaleDateString('sv-SE');
     const nowMinutes = isToday ? now.getHours() * 60 + now.getMinutes() : -1;
+    const fmt = (mins: number) => {
+      const m = mins % (24 * 60);
+      return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+    };
     const slots: DoctorSlot[] = [];
     while (cur + duration <= endMin) {
       if (isToday && cur <= nowMinutes) { cur += duration; continue; }
-      const s = `${String(Math.floor(cur / 60)).padStart(2, '0')}:${String(cur % 60).padStart(2, '0')}`;
-      const e = `${String(Math.floor((cur + duration) / 60)).padStart(2, '0')}:${String((cur + duration) % 60).padStart(2, '0')}`;
+      const s = fmt(cur);
+      const e = fmt(cur + duration);
       slots.push({ start: s, end: e, busy: bookedTimes.has(s) });
       cur += duration;
     }

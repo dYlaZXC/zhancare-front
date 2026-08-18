@@ -6,6 +6,7 @@ import { Lock, Eye, EyeOff, ShieldCheck, Loader2, AlertCircle } from "lucide-rea
 import { toast } from "react-toastify";
 import { api, getAccessToken } from "@/utils/api";
 import { useAuth } from "@/context/AuthContext";
+import PdfViewerModal from "./auth/PdfViewerModal";
 
 export default function ForceChangePasswordModal() {
   const { mustChangePassword, clearMustChangePassword, updateUser, user } = useAuth();
@@ -16,6 +17,18 @@ export default function ForceChangePasswordModal() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [consentPersonalData, setConsentPersonalData] = useState(false);
+  const [consentInformAgreement, setConsentInformAgreement] = useState(false);
+  const [consentOffer, setConsentOffer] = useState(false);
+  const allConsentsChecked = consentPersonalData && consentInformAgreement && consentOffer;
+
+  const [pdfModal, setPdfModal] = useState<{ isOpen: boolean; url: string; title: string }>({
+    isOpen: false, url: "", title: "",
+  });
+  const openPdfModal = (docType: string, title: string) =>
+    setPdfModal({ isOpen: true, url: `/docs/${docType}_rus.pdf`, title });
+  const closePdfModal = () => setPdfModal({ isOpen: false, url: "", title: "" });
 
   if (!mustChangePassword) return null;
 
@@ -42,6 +55,10 @@ export default function ForceChangePasswordModal() {
     }
     if (newPassword !== confirmPassword) {
       setError("Пароли не совпадают");
+      return;
+    }
+    if (!allConsentsChecked) {
+      setError("Необходимо принять все условия ниже");
       return;
     }
 
@@ -183,6 +200,72 @@ export default function ForceChangePasswordModal() {
               )}
             </div>
 
+            {/* Consent checkboxes */}
+            <div className="space-y-2.5 pt-1">
+              <div className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  id="fcp-consentPersonalData"
+                  checked={consentPersonalData}
+                  onChange={(e) => { setConsentPersonalData(e.target.checked); setError(null); }}
+                  disabled={loading}
+                  className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                <label htmlFor="fcp-consentPersonalData" className="text-sm text-gray-700 leading-tight cursor-pointer">
+                  Я согласен с{" "}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); openPdfModal("consent_to_the_collection_of_personal_data", "Согласие на сбор персональных данных"); }}
+                    className="text-blue-600 hover:text-blue-700 underline focus:outline-none"
+                  >
+                    согласием на сбор персональных данных
+                  </button>
+                </label>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  id="fcp-consentInformAgreement"
+                  checked={consentInformAgreement}
+                  onChange={(e) => { setConsentInformAgreement(e.target.checked); setError(null); }}
+                  disabled={loading}
+                  className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                <label htmlFor="fcp-consentInformAgreement" className="text-sm text-gray-700 leading-tight cursor-pointer">
+                  Я согласен с{" "}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); openPdfModal("inform_aggrement", "Информированное согласие"); }}
+                    className="text-blue-600 hover:text-blue-700 underline focus:outline-none"
+                  >
+                    информированным согласием
+                  </button>
+                </label>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  id="fcp-consentOffer"
+                  checked={consentOffer}
+                  onChange={(e) => { setConsentOffer(e.target.checked); setError(null); }}
+                  disabled={loading}
+                  className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                <label htmlFor="fcp-consentOffer" className="text-sm text-gray-700 leading-tight cursor-pointer">
+                  Я согласен с{" "}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); openPdfModal("offer", "Договор оферты"); }}
+                    className="text-blue-600 hover:text-blue-700 underline focus:outline-none"
+                  >
+                    договором оферты
+                  </button>
+                </label>
+              </div>
+            </div>
+
             {/* Error */}
             {error && (
               <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-red-50 border border-red-200">
@@ -194,7 +277,7 @@ export default function ForceChangePasswordModal() {
             {/* Submit */}
             <button
               type="submit"
-              disabled={loading || !newPassword || !confirmPassword}
+              disabled={loading || !newPassword || !confirmPassword || !allConsentsChecked}
               className="w-full py-3 rounded-xl font-bold text-white text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               style={{ background: "linear-gradient(135deg, #3b82f6, #6366f1)" }}
             >
@@ -206,6 +289,13 @@ export default function ForceChangePasswordModal() {
           </form>
         </motion.div>
       </div>
+
+      <PdfViewerModal
+        isOpen={pdfModal.isOpen}
+        onClose={closePdfModal}
+        pdfUrl={pdfModal.url}
+        title={pdfModal.title}
+      />
     </AnimatePresence>
   );
 }
