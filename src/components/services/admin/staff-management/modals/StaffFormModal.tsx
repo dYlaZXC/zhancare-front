@@ -132,6 +132,8 @@ export function StaffFormModal({
         online_consultation_price: initial.online_consultation_price?.toString() || '',
         offline_doctor_share_percent: initial.offline_doctor_share_percent?.toString() || '50',
         online_doctor_share_percent: initial.online_doctor_share_percent?.toString() || '50',
+        offline_payment_preference: initial.offline_payment_preference || 'pay_at_clinic',
+        online_payment_preference: initial.online_payment_preference || 'pay_at_clinic',
         preferred_consultation_duration: initial.preferred_consultation_duration?.toString() || '',
         room_number: initial.room_number || '',
       };
@@ -267,6 +269,8 @@ export function StaffFormModal({
         online_consultation_price: form.online_consultation_price ? Number(form.online_consultation_price) : null,
         offline_doctor_share_percent: form.offline_doctor_share_percent ? Number(form.offline_doctor_share_percent) : 50,
         online_doctor_share_percent: form.online_doctor_share_percent ? Number(form.online_doctor_share_percent) : 50,
+        offline_payment_preference: form.offline_payment_preference,
+        online_payment_preference: form.online_payment_preference,
         preferred_consultation_duration: form.preferred_consultation_duration ? Number(form.preferred_consultation_duration) : null,
         room_number: form.room_number || null,
         schedules: buildSchedulesArray(weeklySchedules),

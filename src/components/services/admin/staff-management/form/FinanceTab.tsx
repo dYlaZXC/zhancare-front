@@ -1,9 +1,93 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
+import { Building2, CreditCard, Plus, Trash2, Wallet } from "lucide-react";
 import { getCurrencySymbol } from "@/utils/currency";
 import SearchSelect from "../../schedule/components/SearchSelect";
 import type { StaffFormData } from "../types/staffTypes";
+
+const PAYMENT_PREFERENCE_OPTIONS: {
+  value: string;
+  label: string;
+  sub: string;
+  Icon: React.ElementType;
+  selectedBg: string;
+  selectedBorder: string;
+  selectedText: string;
+  selectedIconBg: string;
+  selectedIconColor: string;
+}[] = [
+  {
+    value: 'pay_at_clinic',
+    label: 'Без предоплаты',
+    sub: 'Оплата на приёме',
+    Icon: Building2,
+    selectedBg: '#f0fdf4',
+    selectedBorder: '#86efac',
+    selectedText: '#15803d',
+    selectedIconBg: '#dcfce7',
+    selectedIconColor: '#16a34a',
+  },
+  {
+    value: 'full_prepay',
+    label: 'Полная предоплата',
+    sub: '100% заранее',
+    Icon: CreditCard,
+    selectedBg: '#faf5ff',
+    selectedBorder: '#c4b5fd',
+    selectedText: '#7c3aed',
+    selectedIconBg: '#ede9fe',
+    selectedIconColor: '#7c3aed',
+  },
+  {
+    value: 'partial_prepay',
+    label: 'Частичная',
+    sub: 'Депозит заранее',
+    Icon: Wallet,
+    selectedBg: '#fffbeb',
+    selectedBorder: '#fcd34d',
+    selectedText: '#b45309',
+    selectedIconBg: '#fef3c7',
+    selectedIconColor: '#d97706',
+  },
+];
+
+function PaymentPreferenceButtons({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="space-y-2">
+      {PAYMENT_PREFERENCE_OPTIONS.map(({ value: optValue, label, sub, Icon, selectedBg, selectedBorder, selectedText, selectedIconBg, selectedIconColor }) => {
+        const isSelected = value === optValue;
+        return (
+          <button
+            key={optValue}
+            type="button"
+            onClick={() => onChange(optValue)}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 text-left transition-all"
+            style={{
+              backgroundColor: isSelected ? selectedBg : '#fff',
+              borderColor: isSelected ? selectedBorder : '#e5e7eb',
+            }}
+          >
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ backgroundColor: isSelected ? selectedIconBg : '#f3f4f6' }}
+            >
+              <Icon
+                className="w-4 h-4"
+                style={{ color: isSelected ? selectedIconColor : '#9ca3af' }}
+              />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold leading-tight" style={{ color: isSelected ? selectedText : '#374151' }}>
+                {label}
+              </p>
+              <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">{sub}</p>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 export function FinanceTab({
   form,
@@ -68,6 +152,27 @@ export function FinanceTab({
                 {getCurrencySymbol(clinicCurrency)}
               </span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Payment preference: how the doctor prefers to receive payment, per consultation type */}
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-2">Предпочтительный способ оплаты</label>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1.5">Приём в клинике</label>
+            <PaymentPreferenceButtons
+              value={form.offline_payment_preference}
+              onChange={(v) => set('offline_payment_preference', v)}
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1.5">Видеоконсультация</label>
+            <PaymentPreferenceButtons
+              value={form.online_payment_preference}
+              onChange={(v) => set('online_payment_preference', v)}
+            />
           </div>
         </div>
       </div>

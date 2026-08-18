@@ -523,6 +523,7 @@ export default function AddEventModal({
             doctorId={formData.doctor_id}
             loadingAvailability={loadingAvailability}
             slots={slots}
+            availabilityEntry={availabilityEntry}
             timePickerOpen={timePickerOpen}
             onTimePickerToggle={() => setTimePickerOpen(v => !v)}
             timePickerRef={timePickerRef}

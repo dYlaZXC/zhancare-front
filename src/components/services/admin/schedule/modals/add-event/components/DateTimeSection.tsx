@@ -23,6 +23,7 @@ export function DateTimeSection({
   doctorId,
   loadingAvailability,
   slots,
+  availabilityEntry,
   timePickerOpen,
   onTimePickerToggle,
   timePickerRef,
@@ -40,6 +41,7 @@ export function DateTimeSection({
   doctorId: string;
   loadingAvailability: boolean;
   slots: DoctorSlot[];
+  availabilityEntry: { start_time: string; end_time: string } | null;
   timePickerOpen: boolean;
   onTimePickerToggle: () => void;
   timePickerRef: RefObject<HTMLDivElement>;
@@ -137,9 +139,14 @@ export function DateTimeSection({
           }
 
           if (slots.length === 0) {
+            const staffLabel = consultationType === 'home' ? 'медсестры' : 'доктора';
             return (
               <div className="px-4 py-3 rounded-2xl border-2 border-amber-200 bg-amber-50">
-                <p className="text-sm text-amber-700">⚠️ У выбранного {consultationType === 'home' ? 'медсестры' : 'доктора'} нет рабочих часов на эту дату</p>
+                <p className="text-sm text-amber-700">
+                  {availabilityEntry
+                    ? `⚠️ На сегодня рабочее время у выбранного ${staffLabel} уже закончилось (${availabilityEntry.start_time}–${availabilityEntry.end_time})`
+                    : `⚠️ У выбранного ${staffLabel} нет рабочих часов на эту дату`}
+                </p>
               </div>
             );
           }

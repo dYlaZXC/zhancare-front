@@ -38,6 +38,8 @@ export interface StaffMember {
   online_consultation_price?: number;
   offline_doctor_share_percent?: number;
   online_doctor_share_percent?: number;
+  offline_payment_preference?: 'pay_at_clinic' | 'full_prepay' | 'partial_prepay';
+  online_payment_preference?: 'pay_at_clinic' | 'full_prepay' | 'partial_prepay';
   diagnostics_commissions?: { id: number; service_id: number; service_name: string; doctor_share_percent: number }[];
   preferred_consultation_duration?: number; // in minutes
   room_number?: string | null;
@@ -113,6 +115,8 @@ export interface StaffFormData {
   online_consultation_price: string;
   offline_doctor_share_percent: string;
   online_doctor_share_percent: string;
+  offline_payment_preference: string;
+  online_payment_preference: string;
   preferred_consultation_duration: string;
   room_number: string;
 }
@@ -135,6 +139,8 @@ export const EMPTY_STAFF_FORM: StaffFormData = {
   online_consultation_price: '',
   offline_doctor_share_percent: '50',
   online_doctor_share_percent: '50',
+  offline_payment_preference: 'pay_at_clinic',
+  online_payment_preference: 'pay_at_clinic',
   preferred_consultation_duration: '',
   room_number: '',
 };
