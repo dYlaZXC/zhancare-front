@@ -66,34 +66,47 @@ export function PaymentSection({
   prepayAmount,
   onPrepayAmountChange,
   doctorPrice,
+  doctorPreference,
 }: {
   paymentType: PaymentTypeOption;
   onPaymentTypeChange: (type: PaymentTypeOption) => void;
   prepayAmount: string;
   onPrepayAmountChange: (val: string) => void;
   doctorPrice: number;
+  doctorPreference?: PaymentTypeOption;
 }) {
   const visibleOptions = PAYMENT_TYPE_OPTIONS.filter(o => o.type !== 'free' || doctorPrice === 0);
 
   return (
     <div>
-      <label className="block text-sm font-semibold mb-3" style={{ color: '#1e263e' }}>
-        Тип оплаты
-      </label>
+      <div className="flex items-center gap-2 mb-3">
+        <label className="block text-sm font-semibold" style={{ color: '#1e263e' }}>
+          Тип оплаты
+        </label>
+        {doctorPreference && paymentType === doctorPreference && (
+          <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+            Как настроено у врача
+          </span>
+        )}
+      </div>
       <div className="grid grid-cols-2 gap-2">
         {visibleOptions.map(({ type, label, sub, Icon, selectedBg, selectedBorder, selectedText, selectedIconBg, selectedIconColor }) => {
           const isSelected = paymentType === type;
+          const isDoctorDefault = doctorPreference === type;
           return (
             <button
               key={type}
               type="button"
               onClick={() => onPaymentTypeChange(type)}
-              className="flex items-center gap-3 px-3 py-3 rounded-2xl border-2 text-left transition-all"
+              className="relative flex items-center gap-3 px-3 py-3 rounded-2xl border-2 text-left transition-all"
               style={{
                 backgroundColor: isSelected ? selectedBg : '#fff',
-                borderColor: isSelected ? selectedBorder : '#e5e7eb',
+                borderColor: isSelected ? selectedBorder : (isDoctorDefault ? '#bfdbfe' : '#e5e7eb'),
               }}
             >
+              {isDoctorDefault && !isSelected && (
+                <span className="absolute -top-1.5 -right-1.5 w-3 h-3 rounded-full bg-blue-500 ring-2 ring-white" title="Предпочтение врача" />
+              )}
               <div
                 className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
                 style={{ backgroundColor: isSelected ? selectedIconBg : '#f3f4f6' }}

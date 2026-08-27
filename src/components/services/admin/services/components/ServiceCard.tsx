@@ -28,91 +28,111 @@ export function ServiceCard({
   const hasSchedule = !!(service.schedules && service.schedules.some(sc => sc.is_active));
 
   return (
-    <motion.div layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-      className={`bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all px-5 py-4 ${!service.is_active ? "opacity-60" : ""}`}>
-      <div className="flex items-center gap-4">
-
-        {/* Category icon — mirrors the avatar in personnel cards */}
-        <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm"
-          style={{ background: `linear-gradient(135deg, ${catColor}cc, ${catColor})` }}>
-          <Icon size={20} className="text-white" />
-        </div>
-
-        {/* Main info */}
-        <div className="flex-1 min-w-0">
-          {/* Name + badges row */}
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="text-base font-bold text-gray-900">{service.name}</span>
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full text-white"
-              style={{ background: catColor }}>
-              {service.category_label}
-            </span>
-            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
-              service.is_active
-                ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
-                : 'text-gray-500 bg-gray-100 border-gray-200'
-            }`}>
-              {service.is_active ? '✓ Активна' : 'Неактивна'}
-            </span>
-            {!hasSchedule && (
-              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200">
-                Нет расписания
-              </span>
-            )}
+    <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      className={`rounded-3xl p-6 border-2 border-gray-100 hover:border-sky-200 transition-all bg-white shadow-sm hover:shadow-md ${!service.is_active ? "opacity-60" : ""}`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          {/* Category icon — mirrors the avatar in personnel cards */}
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0"
+            style={{ background: `linear-gradient(135deg, ${catColor}cc, ${catColor})` }}>
+            <Icon className="w-7 h-7 text-white" />
           </div>
 
-          {/* Doctor — mirrors specialty line in personnel */}
-          {service.doctor_name && (
-            <div className="flex items-center gap-1.5 text-xs text-indigo-600 mb-1.5">
-              <Stethoscope size={11} />
-              <span className="font-semibold">{service.doctor_name}</span>
+          {/* Main info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <h3 className="text-lg font-bold text-gray-800">{service.name}</h3>
+              <span className="px-3 py-1 rounded-full text-xs font-semibold text-white"
+                style={{ background: catColor }}>
+                {service.category_label}
+              </span>
             </div>
-          )}
 
-          {/* Meta row — mirrors email/phone/date in personnel */}
-          <div className="flex items-center gap-4 text-xs text-gray-400 flex-wrap">
-            <span className="flex items-center gap-1">
-              <Clock size={11} /> {service.duration_minutes} мин
-            </span>
-            {service.price && (
-              <span className="flex items-center gap-1 font-semibold text-emerald-600">
-                <Banknote size={11} /> {formatPrice(service.price, clinicCurrency)}
-              </span>
+            {service.doctor_name && (
+              <p className="text-sm font-medium text-indigo-600 mb-2 flex items-center gap-2">
+                <Stethoscope className="w-4 h-4" />
+                {service.doctor_name}
+              </p>
             )}
-            {service.capacity_per_slot && (
+
+            <div className="flex items-center gap-6 text-sm text-gray-600 flex-wrap">
               <span className="flex items-center gap-1">
-                <Users size={11} /> {service.capacity_per_slot} на слот
+                <Clock className="w-4 h-4" /> {service.duration_minutes} мин
               </span>
-            )}
-            {service.description && (
-              <span className="hidden md:block italic truncate max-w-[220px]">{service.description}</span>
-            )}
+              {service.price && (
+                <span className="flex items-center gap-1 font-semibold text-emerald-600">
+                  <Banknote className="w-4 h-4" /> {formatPrice(service.price, clinicCurrency)}
+                </span>
+              )}
+              {service.capacity_per_slot && (
+                <span className="flex items-center gap-1">
+                  <Users className="w-4 h-4" /> {service.capacity_per_slot} на слот
+                </span>
+              )}
+              {service.description && (
+                <span className="hidden md:block italic truncate max-w-[220px] text-gray-400">{service.description}</span>
+              )}
+            </div>
+
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                service.is_active
+                  ? 'text-emerald-700 bg-emerald-50 border-emerald-100'
+                  : 'text-gray-500 bg-gray-50 border-gray-100'
+              }`}>
+                {service.is_active ? '✓ Активна' : 'Неактивна'}
+              </span>
+              {!hasSchedule && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-100">
+                  Нет расписания
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Right: status toggle + action buttons — mirrors "В сети" + icons */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        {/* Status & Actions — mirrors PatientCard/StaffCard's right-hand action rail */}
+        <div className="flex items-center gap-3 flex-shrink-0">
           <button onClick={() => onToggle(service)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-sm hover:shadow-md ${
               service.is_active
-                ? 'text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100'
-                : 'text-gray-500 bg-gray-50 border-gray-200 hover:bg-gray-100'
+                ? 'bg-green-100 text-green-700 hover:bg-green-200 border-2 border-green-300'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border-2 border-gray-300'
             }`}>
-            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${service.is_active ? 'bg-emerald-500' : 'bg-gray-400'}`} />
+            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${service.is_active ? 'bg-green-600 animate-pulse' : 'bg-gray-400'}`} />
             {service.is_active ? 'Активна' : 'Выкл'}
           </button>
-          <button onClick={() => onEdit(service)}
-            className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-gray-100 transition-colors" title="Редактировать">
-            <Pencil size={14} className="text-gray-400" />
-          </button>
-          <button onClick={() => onSchedule(service)}
-            className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-sky-50 transition-colors" title="Расписание">
-            <CalendarDays size={14} className="text-gray-400" />
-          </button>
-          <button onClick={() => onDelete(service)}
-            className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-red-50 transition-colors" title="Удалить">
-            <Trash2 size={14} className="text-red-400" />
-          </button>
+
+          <div className="flex items-center gap-2 bg-gray-50 rounded-xl p-1">
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => onEdit(service)}
+              className="p-2.5 rounded-lg hover:bg-white transition-all group"
+              title="Редактировать"
+            >
+              <Pencil className="w-5 h-5 text-gray-500 group-hover:text-blue-600 transition-colors" />
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => onSchedule(service)}
+              className="p-2.5 rounded-lg hover:bg-white transition-all group"
+              title="Расписание"
+            >
+              <CalendarDays className="w-5 h-5 text-gray-500 group-hover:text-sky-600 transition-colors" />
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => onDelete(service)}
+              className="p-2.5 rounded-lg hover:bg-white transition-all group"
+              title="Удалить"
+            >
+              <Trash2 className="w-5 h-5 text-gray-500 group-hover:text-red-600 transition-colors" />
+            </motion.button>
+          </div>
         </div>
       </div>
     </motion.div>

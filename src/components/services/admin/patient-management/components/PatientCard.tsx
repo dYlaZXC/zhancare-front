@@ -1,16 +1,54 @@
 "use client";
 
-import Image from "next/image";
+import type { ComponentType } from "react";
 import { motion } from "framer-motion";
 import {
   Mail, Phone, MapPin, Building, Edit2, Trash2,
-  Stethoscope, Home, Clock, FolderOpen,
+  Stethoscope, Home, Clock, FolderOpen, Cake, Briefcase, Globe, Heart, User,
 } from "lucide-react";
 import type { Patient } from "../types/patientTypes";
 import { ContactMenu } from "./ContactMenu";
 
-import bnClinicLogo from "@/assets/clinics_logos/bn-clinica.png";
-import ayalaClinicLogo from "@/assets/clinics_logos/ayala_clinic.png";
+function ClinicBadge({ clinic }: { clinic: { id: number; name: string } }) {
+  return (
+    <div className="inline-flex items-center gap-2 pl-1.5 pr-3 py-1 rounded-full border border-green-200 bg-green-50/60">
+      <Building className="w-4 h-4 text-green-600 flex-shrink-0" />
+      <span className="text-sm font-medium text-green-700">{clinic.name}</span>
+    </div>
+  );
+}
+
+function InfoChip({ icon: Icon, label }: { icon: ComponentType<{ className?: string }>; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-600 border border-gray-100">
+      <Icon className="w-3 h-3" />
+      {label}
+    </span>
+  );
+}
+
+function calculateAge(birthDate?: string): number | null {
+  if (!birthDate) return null;
+  const birth = new Date(birthDate);
+  if (isNaN(birth.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - birth.getFullYear();
+  const monthDiff = now.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) age--;
+  return age >= 0 ? age : null;
+}
+
+const GENDER_LABEL: Record<string, string> = { male: 'Мужской', female: 'Женский', other: 'Другое' };
+const MARITAL_STATUS_LABEL: Record<string, string> = {
+  single: 'Не женат/не замужем', married: 'Женат/замужем', divorced: 'Разведен(а)', widowed: 'Вдовец/вдова',
+};
+function pluralYears(age: number): string {
+  const mod10 = age % 10, mod100 = age % 100;
+  if (mod100 >= 11 && mod100 <= 14) return 'лет';
+  if (mod10 === 1) return 'год';
+  if (mod10 >= 2 && mod10 <= 4) return 'года';
+  return 'лет';
+}
 
 export function PatientCard({
   patient,
@@ -36,11 +74,11 @@ export function PatientCard({
       layout
       className="rounded-3xl p-6 border-2 border-gray-100 hover:border-green-200 transition-all bg-white shadow-sm hover:shadow-md"
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4 flex-1">
+      <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4 lg:w-[34%] flex-shrink-0">
           {/* Avatar */}
           <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-xl font-bold"
+            className="w-16 h-16 rounded-full flex items-center justify-center text-white text-xl font-bold flex-shrink-0"
             style={{
               background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
             }}
@@ -48,33 +86,64 @@ export function PatientCard({
             {patient.first_name?.[0] ?? "?"}{patient.last_name?.[0] ?? "?"}
           </div>
 
-          {/* Info */}
-          <div className="flex-1">
-            <h3 className="text-lg font-bold text-gray-800 mb-1">
-              {patient.first_name} {patient.last_name}
-            </h3>
-            <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-              <span className="flex items-center gap-1">
-                <Mail className="w-4 h-4" />
-                {patient.email}
+          {/* Identity */}
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <h3 className="text-lg font-bold text-gray-800">
+                {patient.first_name} {patient.last_name}
+              </h3>
+              {patient.is_active ? (
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                  Активен
+                </span>
+              ) : (
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
+                  Неактивен
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col gap-0.5 text-sm text-gray-600">
+              <span className="flex items-center gap-1.5 truncate">
+                <Mail className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate">{patient.email}</span>
               </span>
               {patient.phone && (
-                <span className="flex items-center gap-1">
-                  <Phone className="w-4 h-4" />
+                <span className="flex items-center gap-1.5">
+                  <Phone className="w-4 h-4 flex-shrink-0" />
                   {patient.phone}
                 </span>
               )}
               {patient.city && (
-                <span className="flex items-center gap-1">
-                  <MapPin className="w-4 h-4" />
+                <span className="flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4 flex-shrink-0" />
                   {patient.city}
                 </span>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Additional info — fills the space between identity and actions */}
+        <div className="flex-1 min-w-0 flex flex-col gap-2">
+          <div className="flex items-stretch gap-3">
+            {(() => {
+              const age = calculateAge(patient.birth_date);
+              const hasDemographics = age !== null || patient.gender || patient.profession || patient.marital_status || patient.citizenship;
+              return hasDemographics ? (
+                <div className="rounded-2xl bg-gray-50 border border-gray-100 p-3 flex flex-wrap items-center content-center gap-2">
+                  {age !== null && <InfoChip icon={Cake} label={`${age} ${pluralYears(age)}`} />}
+                  {patient.gender && <InfoChip icon={User} label={GENDER_LABEL[patient.gender] ?? patient.gender} />}
+                  {patient.profession && <InfoChip icon={Briefcase} label={patient.profession} />}
+                  {patient.marital_status && <InfoChip icon={Heart} label={MARITAL_STATUS_LABEL[patient.marital_status] ?? patient.marital_status} />}
+                  {patient.citizenship && <InfoChip icon={Globe} label={patient.citizenship} />}
+                </div>
+              ) : null;
+            })()}
+
             {/* Last visit + visits count */}
-            <div className="mt-2 flex flex-wrap items-center gap-2">
+            <div className="rounded-2xl bg-blue-50 border border-blue-100 p-3 flex flex-wrap items-center content-center gap-2">
               {patient.last_visit ? (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-white text-blue-700 border border-blue-100">
                   {patient.last_visit_type === 'consultation'
                     ? <Stethoscope className="w-3 h-3" />
                     : <Home className="w-3 h-3" />
@@ -85,52 +154,32 @@ export function PatientCard({
                   })}
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-50 text-gray-400 border border-gray-100">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-white text-gray-400 border border-gray-100">
                   <Clock className="w-3 h-3" />
                   Визитов нет
                 </span>
               )}
               {(patient.visits_count ?? 0) > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-white text-emerald-700 border border-emerald-100">
                   {patient.visits_count} {patient.visits_count === 1 ? 'визит' : 'визитов'}
                 </span>
               )}
             </div>
-
-            {patient.clinic && (
-              <div className="mt-2 flex items-center gap-2">
-                {(patient.clinic.id === 913 || patient.clinic.name?.toLowerCase().includes('ayala')) ? (
-                  <div className="bg-white px-1.5 py-0.5 rounded border border-green-200">
-                    <Image src={ayalaClinicLogo} alt="Ayala Clinic" width={40} height={14} className="object-contain" priority={false} />
-                  </div>
-                ) : (patient.clinic.name?.toLowerCase().includes('bn') || patient.clinic.name?.toLowerCase().includes('бн')) ? (
-                  <div className="bg-white px-1.5 py-0.5 rounded border border-green-200">
-                    <Image src={bnClinicLogo} alt="BN Clinic" width={40} height={14} className="object-contain" priority={false} />
-                  </div>
-                ) : (
-                  <Building className="w-4 h-4 text-green-600" />
-                )}
-                <span className="text-sm font-medium text-green-700">
-                  {patient.clinic.name}
-                </span>
-              </div>
-            )}
           </div>
+
+          {(patient.clinic || (patient.additional_clinics && patient.additional_clinics.length > 0)) && (
+            <div className="flex flex-wrap items-center gap-2">
+              {[patient.clinic, ...(patient.additional_clinics ?? [])]
+                .filter((c): c is { id: number; name: string } => !!c)
+                .map((c) => (
+                  <ClinicBadge key={c.id} clinic={c} />
+                ))}
+            </div>
+          )}
         </div>
 
-        {/* Status & Actions */}
-        <div className="flex items-center gap-3">
-          {/* Status Badge */}
-          {patient.is_active ? (
-            <span className="px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-700">
-              Активен
-            </span>
-          ) : (
-            <span className="px-3 py-1 rounded-full text-sm font-semibold bg-gray-100 text-gray-600">
-              Неактивен
-            </span>
-          )}
-
+        {/* Actions */}
+        <div className="flex items-center gap-3 flex-shrink-0">
           {/* Contact Button */}
           <ContactMenu patient={patient} />
 

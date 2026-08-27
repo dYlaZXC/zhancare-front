@@ -7,7 +7,7 @@ import { toast } from "react-toastify";
 import { Loader2, ClipboardList } from "lucide-react";
 
 import type { Service, ServiceCategory, StaffMember } from "./services/types/serviceTypes";
-import { ServicesHeader } from "./services/components/ServicesHeader";
+import { ServicesHeader, ServicesStatsCards } from "./services/components/ServicesHeader";
 import { ServicesToolbar } from "./services/components/ServicesToolbar";
 import { ServiceCard } from "./services/components/ServiceCard";
 import { ServiceFormModal } from "./services/modals/ServiceFormModal";
@@ -101,14 +101,15 @@ export function ServicesView({ user }: { user: any }) {
     return s.name.toLowerCase().includes(serviceSearchLower);
   });
   const totalActive = services.filter(s => s.is_active).length;
+  const totalInactive = services.filter(s => !s.is_active).length;
 
   return (
-    <div className="w-full space-y-5">
+    <div className="w-full">
+      <div className="mb-8">
+        <ServicesHeader onOpenCreate={openCreate} />
 
-      <ServicesHeader totalActive={totalActive} />
+        <ServicesStatsCards total={services.length} active={totalActive} inactive={totalInactive} />
 
-      {/* SERVICES */}
-      <div className="space-y-4">
         <ServicesToolbar
           categories={categories}
           catFilter={catFilter}
@@ -116,9 +117,11 @@ export function ServicesView({ user }: { user: any }) {
           serviceSearch={serviceSearch}
           onServiceSearchChange={setServiceSearch}
           onOpenCategories={() => setShowCategoryModal(true)}
-          onOpenCreate={openCreate}
         />
+      </div>
 
+      {/* SERVICES */}
+      <div>
         {loading ? (
           <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-sky-500" /></div>
         ) : filtered.length === 0 ? (

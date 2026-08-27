@@ -31,6 +31,23 @@ function getClinicToday(tz: string): string {
   return new Intl.DateTimeFormat('sv-SE', { timeZone: tz }).format(new Date());
 }
 
+// Mirrors PatientFormModal's generator — guarantees one of each character
+// class rather than a plain Math.random() slice, which could (rarely) land
+// on something that fails the backend's password strength check.
+function generateRandomPassword(): string {
+  const lower = 'abcdefghijklmnopqrstuvwxyz';
+  const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const digits = '0123456789';
+  const special = '!@#$%&*';
+  const all = lower + upper + digits + special;
+  let pass = lower[Math.floor(Math.random() * lower.length)]
+    + upper[Math.floor(Math.random() * upper.length)]
+    + digits[Math.floor(Math.random() * digits.length)]
+    + special[Math.floor(Math.random() * special.length)];
+  for (let i = 4; i < 12; i++) pass += all[Math.floor(Math.random() * all.length)];
+  return pass.split('').sort(() => Math.random() - 0.5).join('');
+}
+
 interface AddEventModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -59,7 +76,7 @@ export default function AddEventModal({
   const [submitting, setSubmitting] = useState(false);
   const [createdInfo, setCreatedInfo] = useState<CreatedInfo | null>(null);
   const [showNewPatientForm, setShowNewPatientForm] = useState(false);
-  const [newPatientForm, setNewPatientForm] = useState<NewPatientForm>({ first_name: '', last_name: '', phone: '', email: '' });
+  const [newPatientForm, setNewPatientForm] = useState<NewPatientForm>({ first_name: '', last_name: '', phone: '', email: '', password: generateRandomPassword(), referral_source: '' });
   const [creatingPatient, setCreatingPatient] = useState(false);
   const [scheduleEditMember, setScheduleEditMember] = useState<{ id: number; first_name: string; last_name: string } | null>(null);
   const [availabilityEntry, setAvailabilityEntry] = useState<{ start_time: string; end_time: string } | null>(null);
@@ -159,7 +176,7 @@ export default function AddEventModal({
       setPaymentType('pay_at_clinic');
       setPrepayAmount('');
       setShowNewPatientForm(false);
-      setNewPatientForm({ first_name: '', last_name: '', phone: '', email: '' });
+      setNewPatientForm({ first_name: '', last_name: '', phone: '', email: '', password: generateRandomPassword(), referral_source: '' });
       setTimePickerOpen(false);
       setDiagServices([]);
       setSelectedDiagService(null);
@@ -316,25 +333,34 @@ export default function AddEventModal({
   };
 
   const handleCreatePatient = async () => {
-    if (!newPatientForm.first_name.trim() || !newPatientForm.last_name.trim() || !newPatientForm.phone.trim()) {
-      toast.error('Заполните обязательные поля: имя, фамилия, телефон');
+    if (!newPatientForm.first_name.trim() || !newPatientForm.last_name.trim() || !newPatientForm.phone.trim() || !newPatientForm.password.trim()) {
+      toast.error('Заполните обязательные поля: имя, фамилия, телефон, пароль');
       return;
     }
     setCreatingPatient(true);
     try {
-      const tempPassword = Math.random().toString(36).slice(-8) + 'Aa1!';
-      const response = await api.post('/patients/', { ...newPatientForm, password: tempPassword });
+      const response = await api.post('/patients/', newPatientForm);
       const created = response.data;
       setPatients(prev => [...prev, created]);
       setFormData(prev => ({ ...prev, patient_id: String(created.id) }));
       setShowNewPatientForm(false);
-      setNewPatientForm({ first_name: '', last_name: '', phone: '', email: '' });
-      toast.success(`Пациент создан. Временный пароль: ${tempPassword}`);
+      setNewPatientForm({ first_name: '', last_name: '', phone: '', email: '', password: generateRandomPassword(), referral_source: '' });
+      const notified = created.email_sent
+        ? (created.whatsapp_sent ? ' Данные для входа отправлены на email и в WhatsApp.' : ' Данные для входа отправлены на email.')
+        : (created.whatsapp_sent || created.whatsapp_queued ? ' Данные для входа отправлены в WhatsApp.' : '');
+      toast.success(`Пациент создан.${notified}`);
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || Object.values(err?.response?.data || {})[0] as string || 'Ошибка создания пациента');
     } finally {
       setCreatingPatient(false);
     }
+  };
+
+  const generateNewPatientPassword = () => setNewPatientForm(p => ({ ...p, password: generateRandomPassword() }));
+  const copyNewPatientPassword = () => {
+    if (!newPatientForm.password) return;
+    navigator.clipboard.writeText(newPatientForm.password);
+    toast.success('Пароль скопирован');
   };
 
   const handleDoctorChange = (val: string) => {
@@ -344,7 +370,29 @@ export default function AddEventModal({
       ? (consultationType === 'online' ? member.online_consultation_price : member.offline_consultation_price)
       : null;
     const newPrice = rawPrice != null && rawPrice !== '' ? Number(rawPrice) : 0;
-    if (newPrice > 0 && paymentType === 'free') setPaymentType('pay_at_clinic');
+
+    // Default the payment type to whatever this doctor has configured as their
+    // preference for this consultation type — the admin can still pick a
+    // different option afterward via the Payment Type buttons below. A price
+    // of 0 (not set) makes any prepay amount meaningless, so treat it as free
+    // regardless of the doctor's configured preference.
+    if (member && (consultationType === 'online' || consultationType === 'offline')) {
+      if (newPrice <= 0) {
+        setPaymentType('free');
+        setPrepayAmount('');
+      } else {
+        const pref = consultationType === 'online' ? member.online_payment_preference : member.offline_payment_preference;
+        const prepayPct = consultationType === 'online' ? member.online_prepay_percent : member.offline_prepay_percent;
+        setPaymentType(pref || 'pay_at_clinic');
+        if (pref === 'partial_prepay') {
+          const pct = prepayPct ?? 50;
+          setPrepayAmount(String(Math.round(newPrice * pct / 100)));
+        } else {
+          setPrepayAmount('');
+        }
+      }
+    }
+
     setFormData({ ...formData, doctor_id: val, time: '', duration: member?.preferred_consultation_duration || formData.duration });
   };
 
@@ -420,6 +468,11 @@ export default function AddEventModal({
     const rawPrice = member ? (consultationType === 'online' ? member.online_consultation_price : member.offline_consultation_price) : null;
     return rawPrice != null && rawPrice !== '' ? Number(rawPrice) : 0;
   })();
+  const doctorPaymentPreference = (() => {
+    if (consultationType !== 'online' && consultationType !== 'offline') return undefined;
+    const member = doctors.find(d => String(d.id) === formData.doctor_id);
+    return member ? (consultationType === 'online' ? member.online_payment_preference : member.offline_payment_preference) : undefined;
+  })();
 
   // Price summary
   let priceSummary: { price: string; label: string } | null = null;
@@ -441,21 +494,21 @@ export default function AddEventModal({
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
-        className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto scrollbar-hide"
+        className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto scrollbar-hide"
       >
-        <div className="flex items-center justify-between mb-6">
+        <div className="sticky top-0 z-10 bg-white border-b-2 border-gray-100 px-8 py-6 rounded-t-3xl flex items-center justify-between">
           <h2 className="text-2xl font-bold" style={{ color: '#1e263e' }}>
             Добавить Запись
           </h2>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
+            className="p-2 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-xl transition-colors"
           >
-            <X className="w-6 h-6" />
+            <X className="w-6 h-6 text-gray-700" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="px-8 pt-8 space-y-6">
           {/* Consultation Type */}
           <div>
             <label className="block text-sm font-semibold mb-3" style={{ color: '#1e263e' }}>
@@ -504,6 +557,8 @@ export default function AddEventModal({
             onNewPatientFormChange={setNewPatientForm}
             creatingPatient={creatingPatient}
             onCreatePatient={handleCreatePatient}
+            onGeneratePassword={generateNewPatientPassword}
+            onCopyPassword={copyNewPatientPassword}
           />
 
           {/* Doctor / Nurse (hidden for diagnostics) */}
@@ -581,6 +636,7 @@ export default function AddEventModal({
               prepayAmount={prepayAmount}
               onPrepayAmountChange={setPrepayAmount}
               doctorPrice={doctorPrice}
+              doctorPreference={doctorPaymentPreference}
             />
           )}
 
@@ -599,18 +655,19 @@ export default function AddEventModal({
           </div>
 
           {/* Submit Buttons */}
-          <div className="flex gap-4">
+          <div className="sticky bottom-0 z-10 -mx-8 flex gap-4 rounded-b-3xl border-t-2 border-gray-100 bg-white px-8 pt-6 pb-8">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-6 py-3 rounded-2xl border-2 border-gray-200 font-semibold hover:bg-gray-50 transition-colors"
+              disabled={submitting}
+              className="flex-1 px-6 py-3 rounded-2xl border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
             >
               Отмена
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="flex-1 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
+              className="flex-1 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               style={{ background: 'linear-gradient(135deg, #3772ff 0%, #2c5bcc 100%)' }}
             >
               {submitting && <Loader2 className="w-4 h-4 animate-spin" />}

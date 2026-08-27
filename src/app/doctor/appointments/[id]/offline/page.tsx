@@ -9,10 +9,12 @@ import {
   Mic, MicOff, Play, Square, Save, Clock, MapPin,
   User, FileText, Activity, Stethoscope, Pill, ClipboardList,
   Sparkles, ChevronLeft, AlertTriangle, FlaskConical,
-  Search, Plus, X, CheckCircle,
+  Search, Plus, X, CheckCircle, PenLine, Loader2,
 } from "lucide-react";
 import { useDeepgram } from "@/hooks/useDeepgram";
 import AIConsultationReview from "@/app/video-call/doctor/components/AIConsultationReview";
+import { SignatureModal } from "@/components/shared/SignatureModal";
+import { generateMedicalPdf } from "@/lib/generateMedicalPdf";
 
 interface ClinicAppointment {
   id: number;
@@ -169,6 +171,11 @@ export default function OfflineConsultationPage() {
   const pendingNavUrl = useRef<string | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number | null>(null);
+
+  // Signed PDF report — same flow as the video-call consultation page.
+  const [showSignatureModal, setShowSignatureModal] = useState(false);
+  const [signatureData, setSignatureData] = useState<string | null>(null);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
 
   // Diagnostics referrals state
   const [clinicServices, setClinicServices] = useState<DiagnosticServiceItem[]>([]);
@@ -412,6 +419,59 @@ export default function OfflineConsultationPage() {
     }
   }, [id, formData]);
 
+  const generateAndUploadPdf = async (signature: string) => {
+    if (!appointment) return;
+    setGeneratingPdf(true);
+    try {
+      const { blob, filename } = await generateMedicalPdf({
+        documentTitle: "Консультационный лист",
+        patientName: appointment.patient_name,
+        doctorName: appointment.doctor_name,
+        sections: [
+          { label: "Жалобы пациента", content: formData.complaints },
+          { label: "Анамнез заболевания", content: formData.anamnesis },
+          { label: "Обследование и диагностика", content: formData.diagnostics },
+          { label: "Диагноз", content: formData.diagnosis },
+          { label: "Назначенное лечение", content: formData.treatment },
+        ],
+        signature,
+        filenamePrefix: "consultation",
+      });
+
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl; a.download = filename; a.click();
+      URL.revokeObjectURL(blobUrl);
+
+      const uploadData = new FormData();
+      uploadData.append("file", new File([blob], filename, { type: "application/pdf" }));
+      uploadData.append("clinic_appointment_id", String(id));
+      uploadData.append("description", `Консультационный лист — ${appointment.patient_name}`);
+      await api.post("/medical-documents/doctor-upload/", uploadData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      toast.success("PDF сформирован и сохранён в документы пациента");
+    } catch {
+      toast.error("Не удалось сформировать PDF");
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
+  const handleGeneratePdfClick = () => {
+    if (signatureData) {
+      generateAndUploadPdf(signatureData);
+    } else {
+      setShowSignatureModal(true);
+    }
+  };
+
+  const handleSignatureSaved = (dataUrl: string) => {
+    setSignatureData(dataUrl);
+    setShowSignatureModal(false);
+    generateAndUploadPdf(dataUrl);
+  };
+
   const handleStart = async () => {
     try {
       const { data } = await api.post<ClinicAppointment>(`/clinic-appointments/${id}/start-consultation/`);
@@ -527,6 +587,18 @@ export default function OfflineConsultationPage() {
             >
               <Save className="w-3.5 h-3.5" />
               {saving ? "Сохранение..." : "Сохранить"}
+            </button>
+
+            <button
+              onClick={handleGeneratePdfClick}
+              disabled={generatingPdf || !Object.entries(formData).some(([k, v]) => k !== "referrals" && typeof v === "string" && v.trim())}
+              title={signatureData ? "Сформировать подписанный PDF" : "Подписать и сформировать PDF"}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded-lg shadow-sm shadow-blue-200 disabled:opacity-40 disabled:shadow-none transition-all"
+            >
+              {generatingPdf
+                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                : <PenLine className="w-3.5 h-3.5" />}
+              {generatingPdf ? "Формируется..." : "Сформировать PDF"}
             </button>
 
             {isPending && (
@@ -1004,6 +1076,12 @@ export default function OfflineConsultationPage() {
           </div>
         </div>
       )}
+
+      <SignatureModal
+        isOpen={showSignatureModal}
+        onClose={() => setShowSignatureModal(false)}
+        onSave={handleSignatureSaved}
+      />
     </div>
   );
 }

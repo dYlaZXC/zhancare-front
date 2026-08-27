@@ -7,13 +7,14 @@ import { Users, UserPlus, Loader2, AlertCircle } from "lucide-react";
 import PatientDocumentsDrawer from "./PatientDocumentsDrawer";
 import { api } from "@/utils/api";
 
-import type { Patient, Clinic } from "./patient-management/types/patientTypes";
+import type { Patient, Clinic, FoundPatient } from "./patient-management/types/patientTypes";
 import { PAGE_SIZE } from "./patient-management/types/patientTypes";
 import { StatsCards } from "./patient-management/components/StatsCards";
 import { PatientToolbar } from "./patient-management/components/PatientToolbar";
 import { PatientCard } from "./patient-management/components/PatientCard";
 import { PatientFormModal } from "./patient-management/modals/PatientFormModal";
 import { DeletePatientModal } from "./patient-management/modals/DeletePatientModal";
+import { PatientClinicLinkModal } from "./patient-management/modals/PatientClinicLinkModal";
 
 interface PatientManagementProps {
   user: any;
@@ -35,6 +36,7 @@ export default function PatientManagement({ user }: PatientManagementProps) {
   const [deletingPatient, setDeletingPatient] = useState<Patient | null>(null);
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [isGlobalAdmin, setIsGlobalAdmin] = useState(false);
+  const [linkCandidate, setLinkCandidate] = useState<FoundPatient | null>(null);
 
   useEffect(() => {
     fetchPatients();
@@ -271,6 +273,21 @@ export default function PatientManagement({ user }: PatientManagementProps) {
               setPatients(prev => [newPatient, ...prev]);
               setShowAddModal(false);
             }}
+            onExistingPatientFound={(found) => setLinkCandidate(found)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Existing-patient clinic-link modal (opened when Add Patient finds a match elsewhere) */}
+      <AnimatePresence>
+        {linkCandidate && (
+          <PatientClinicLinkModal
+            patient={linkCandidate}
+            onClose={() => setLinkCandidate(null)}
+            onLinked={() => {
+              setLinkCandidate(null);
+              fetchPatients();
+            }}
           />
         )}
       </AnimatePresence>
@@ -289,6 +306,7 @@ export default function PatientManagement({ user }: PatientManagementProps) {
               setPatients(prev => prev.map(p => p.id === updatedPatient.id ? updatedPatient : p));
               closeEditModal();
             }}
+            onExistingPatientFound={(found) => { closeEditModal(); setLinkCandidate(found); }}
           />
         )}
       </AnimatePresence>

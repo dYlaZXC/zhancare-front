@@ -8,7 +8,7 @@ import { Users, UserPlus, Loader2, AlertCircle } from "lucide-react";
 
 import StaffScheduleModal from "./StaffScheduleModal";
 
-import type { StaffMember, Clinic } from "./staff-management/types/staffTypes";
+import type { StaffMember, Clinic, TodayActivity } from "./staff-management/types/staffTypes";
 import { PAGE_SIZE } from "./staff-management/types/staffTypes";
 import { StatsCards } from "./staff-management/components/StatsCards";
 import { StaffToolbar } from "./staff-management/components/StaffToolbar";
@@ -41,6 +41,8 @@ export default function StaffManagement({ user }: StaffManagementProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [clinicCurrency, setClinicCurrency] = useState<string>('KZT');
   const [diagServices, setDiagServices] = useState<{ id: number; name: string; price: number | null }[]>([]);
+  const [activityById, setActivityById] = useState<Record<number, TodayActivity>>({});
+  const [onlyOngoing, setOnlyOngoing] = useState(false);
 
   useEffect(() => {
     api.get('/clinic-stats/').then(res => {
@@ -57,6 +59,21 @@ export default function StaffManagement({ user }: StaffManagementProps) {
   useEffect(() => {
     fetchStaff();
     checkAdminType();
+  }, []);
+
+  useEffect(() => {
+    const fetchActivity = () => {
+      api.get('/staff/today-activity/').then(res => {
+        const byId: Record<number, TodayActivity> = {};
+        for (const row of res.data as TodayActivity[]) byId[row.id] = row;
+        setActivityById(byId);
+      }).catch(() => {});
+    };
+    fetchActivity();
+    // Ongoing/free-slot state can change any minute — refresh periodically
+    // rather than only on mount, so the panel doesn't go stale mid-session.
+    const interval = setInterval(fetchActivity, 60_000);
+    return () => clearInterval(interval);
   }, []);
 
   const checkAdminType = async () => {
@@ -238,7 +255,9 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       // Filter by deleted status
       const matchesDeleted = showDeleted ? member.is_deleted === true : !member.is_deleted;
 
-      return matchesSearch && matchesRole && matchesStatus && matchesDeleted;
+      const matchesOngoing = !onlyOngoing || activityById[member.id]?.state === 'ongoing';
+
+      return matchesSearch && matchesRole && matchesStatus && matchesDeleted && matchesOngoing;
     })
     .sort((a, b) => {
       // Sort by created_at descending (newest first)
@@ -249,7 +268,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
   const paginatedStaff = filteredStaff.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   // Reset to first page when filters or search change
-  useEffect(() => { setCurrentPage(1); }, [searchQuery, filterRole, filterStatus, showDeleted]);
+  useEffect(() => { setCurrentPage(1); }, [searchQuery, filterRole, filterStatus, showDeleted, onlyOngoing]);
 
   const stats = {
     total: staff.filter(s => !s.is_deleted).length,
@@ -298,6 +317,8 @@ export default function StaffManagement({ user }: StaffManagementProps) {
           onPageChange={setCurrentPage}
           showDeleted={showDeleted}
           onToggleShowDeleted={() => { const next = !showDeleted; setShowDeleted(next); fetchStaff(next); }}
+          onlyOngoing={onlyOngoing}
+          onToggleOnlyOngoing={() => setOnlyOngoing(v => !v)}
         />
       </div>
 
@@ -353,6 +374,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
                   initial={initialLoad}
                   index={index}
                   showDeleted={showDeleted}
+                  activity={activityById[member.id]}
                   onEdit={handleEditClick}
                   onToggleStatus={handleToggleStatus}
                   onSchedule={openScheduleModal}

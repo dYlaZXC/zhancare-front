@@ -1,28 +1,74 @@
-import { ClipboardList } from "lucide-react";
+"use client";
 
-export function ServicesHeader({ totalActive }: { totalActive: number }) {
+import { motion } from "framer-motion";
+import { ClipboardList, Plus } from "lucide-react";
+
+export function ServicesHeader({
+  onOpenCreate,
+}: {
+  onOpenCreate: () => void;
+}) {
   return (
-    <div className="relative rounded-3xl overflow-hidden" style={{ background: "linear-gradient(135deg, #12263a 0%, #1e263e 25%, #29358f 75%, #3772ff 100%)" }}>
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-16 -left-16 w-72 h-72 rounded-full blur-3xl opacity-20" style={{ background: "radial-gradient(circle, #3772ff, transparent)" }} />
+    <div className="flex items-center justify-between mb-6">
+      <div>
+        <h1 className="text-3xl font-bold mb-2" style={{ color: '#1e263e' }}>
+          Услуги Клиники
+        </h1>
+        <p className="text-gray-600">
+          Управление диагностическими услугами клиники
+        </p>
       </div>
-      <div className="relative px-8 py-7 flex flex-col sm:flex-row sm:items-center gap-5">
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "rgba(255,255,255,0.15)" }}>
-              <ClipboardList className="w-5 h-5 text-white" />
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={onOpenCreate}
+        className="flex items-center gap-2 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+        style={{ background: 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%)' }}
+      >
+        <Plus className="w-5 h-5" />
+        Добавить услугу
+      </motion.button>
+    </div>
+  );
+}
+
+export function ServicesStatsCards({
+  total,
+  active,
+  inactive,
+}: {
+  total: number;
+  active: number;
+  inactive: number;
+}) {
+  const stats = [
+    { label: "Всего услуг", value: total, icon: ClipboardList, color: "#0ea5e9", bg: "#e0f2fe" },
+    { label: "Активных", value: active, icon: ClipboardList, color: "#059669", bg: "#a7f3d0" },
+    { label: "Неактивных", value: inactive, icon: ClipboardList, color: "#6b7280", bg: "#e5e7eb" },
+  ];
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      {stats.map((stat, index) => (
+        <motion.div
+          key={stat.label}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.1 }}
+          className="rounded-2xl p-4 border border-gray-100 shadow-sm"
+          style={{ backgroundColor: stat.bg }}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 mb-1">{stat.label}</p>
+              <p className="text-2xl font-bold" style={{ color: stat.color }}>
+                {stat.value}
+              </p>
             </div>
-            <h1 className="text-2xl font-black text-white">Услуги клиники</h1>
+            <stat.icon className="w-8 h-8" style={{ color: stat.color }} />
           </div>
-          <p className="text-[#c1d3ff] text-sm">Управление диагностическими услугами клиники</p>
-        </div>
-        <div className="flex gap-3 flex-shrink-0">
-          <div className="text-center px-5 py-3 rounded-2xl" style={{ background: "rgba(255,255,255,0.1)" }}>
-            <p className="text-2xl font-black text-white">{totalActive}</p>
-            <p className="text-[#c1d3ff] text-xs mt-0.5">Активных услуг</p>
-          </div>
-        </div>
-      </div>
+        </motion.div>
+      ))}
     </div>
   );
 }

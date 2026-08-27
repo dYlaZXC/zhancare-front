@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/api";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  LineChart, Line,
+  LineChart, Line, LabelList,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import {
@@ -234,25 +234,17 @@ export default function ReportsView({ user }: { user: any }) {
   return (
     <div className="space-y-6 pb-12">
 
-      {/* Header */}
-      <div className="rounded-2xl p-6 text-white" style={{ background: BRAND }}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-black">Аналитика</h1>
-            <p className="text-blue-200 text-sm mt-0.5">Реальные данные · Математически точные метрики</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-              className="px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm focus:outline-none focus:border-white/50" />
-            <span className="text-blue-300 text-sm">—</span>
-            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-              className="px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm focus:outline-none focus:border-white/50" />
-            <button onClick={() => fetchAll(true)}
-              className="p-2.5 rounded-xl bg-white/10 border border-white/20 hover:bg-white/20 transition-colors" title="Обновить">
-              <RefreshCw className={`w-4 h-4 text-white ${refreshing ? "animate-spin" : ""}`} />
-            </button>
-          </div>
-        </div>
+      {/* Date range + refresh */}
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+          className="px-3 py-2.5 rounded-xl border-2 border-gray-200 text-sm focus:border-blue-500 focus:outline-none transition-colors" />
+        <span className="text-gray-300 text-sm">—</span>
+        <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+          className="px-3 py-2.5 rounded-xl border-2 border-gray-200 text-sm focus:border-blue-500 focus:outline-none transition-colors" />
+        <button onClick={() => fetchAll(true)}
+          className="p-2.5 rounded-xl border-2 border-gray-200 hover:bg-gray-50 transition-colors" title="Обновить">
+          <RefreshCw className={`w-4 h-4 text-gray-600 ${refreshing ? "animate-spin" : ""}`} />
+        </button>
       </div>
 
       {/* KPI Cards */}
@@ -295,23 +287,24 @@ export default function ReportsView({ user }: { user: any }) {
 
       {/* Revenue + Daily Trend */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="bg-white rounded-3xl border-2 border-gray-100 shadow-sm hover:shadow-md transition-shadow p-6">
           <SectionTitle>Выручка по месяцам</SectionTitle>
           {data.revenue_report.monthly_revenue.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
               <AreaChart data={data.revenue_report.monthly_revenue}>
                 <defs>
                   <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={BLUE} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={BLUE} stopOpacity={0} />
+                    <stop offset="5%" stopColor={BLUE} stopOpacity={0.35} />
+                    <stop offset="95%" stopColor={BLUE} stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} tickFormatter={v => fmtKZT(v)} width={70} />
+                <CartesianGrid strokeDasharray="4 8" stroke="#eef1f6" vertical={false} />
+                <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} tickFormatter={v => fmtKZT(v)} width={70} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTip />} formatter={(v: any) => fmtKZT(Number(v))} />
-                <Area type="monotone" dataKey="revenue" name="Выручка" stroke={BLUE} strokeWidth={2.5}
-                  fill="url(#revGrad)" dot={{ r: 3, fill: BLUE }} />
+                <Area type="monotone" dataKey="revenue" name="Выручка" stroke={BLUE} strokeWidth={3}
+                  fill="url(#revGrad)" dot={{ r: 4, fill: "#fff", stroke: BLUE, strokeWidth: 2.5 }}
+                  activeDot={{ r: 6, fill: BLUE, stroke: "#fff", strokeWidth: 2 }} />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
@@ -319,23 +312,23 @@ export default function ReportsView({ user }: { user: any }) {
           )}
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="bg-white rounded-3xl border-2 border-gray-100 shadow-sm hover:shadow-md transition-shadow p-6">
           <SectionTitle>Консультации по дням</SectionTitle>
           {data.daily_trend.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
               <AreaChart data={data.daily_trend}>
                 <defs>
                   <linearGradient id="dayGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                <XAxis dataKey="date" tick={{ fontSize: 9 }} tickFormatter={v => v.slice(5)} interval="preserveStartEnd" />
-                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                <CartesianGrid strokeDasharray="4 8" stroke="#eef1f6" vertical={false} />
+                <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#9ca3af' }} tickFormatter={v => v.slice(5)} interval="preserveStartEnd" axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} allowDecimals={false} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTip />} />
-                <Area type="monotone" dataKey="count" name="Консультаций" stroke="#8b5cf6" strokeWidth={2}
-                  fill="url(#dayGrad)" dot={false} />
+                <Area type="monotone" dataKey="count" name="Консультаций" stroke="#8b5cf6" strokeWidth={2.5}
+                  fill="url(#dayGrad)" dot={false} activeDot={{ r: 5, fill: "#8b5cf6", stroke: "#fff", strokeWidth: 2 }} />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
@@ -345,7 +338,7 @@ export default function ReportsView({ user }: { user: any }) {
       </div>
 
       {/* Money flow: clinic vs doctor split, broken down by revenue source */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+      <div className="bg-white rounded-3xl border-2 border-gray-100 shadow-sm hover:shadow-md transition-shadow p-6">
         <SectionTitle>Структура доходов</SectionTitle>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
           <div className="flex items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50/60 px-4 py-3">
@@ -403,7 +396,7 @@ export default function ReportsView({ user }: { user: any }) {
 
       {/* Funnel + Weekday */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="bg-white rounded-3xl border-2 border-gray-100 shadow-sm hover:shadow-md transition-shadow p-6">
           <div className="flex items-start justify-between mb-4">
             <SectionTitle>Воронка консультаций</SectionTitle>
             <div className="text-right">
@@ -414,19 +407,30 @@ export default function ReportsView({ user }: { user: any }) {
           <Funnel funnel={data.funnel} />
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="bg-white rounded-3xl border-2 border-gray-100 shadow-sm hover:shadow-md transition-shadow p-6">
           <SectionTitle>Нагрузка по дням недели</SectionTitle>
           {data.weekday_distribution.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={data.weekday_distribution} barSize={28}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                <XAxis dataKey="day" tick={{ fontSize: 12, fontWeight: 600 }} />
-                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                <Tooltip content={<ChartTip />} />
-                <Bar dataKey="count" name="Консультаций" radius={[6, 6, 0, 0]}>
+                <defs>
+                  <linearGradient id="weekdayGradBlue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#5b8bff" />
+                    <stop offset="100%" stopColor={BLUE} />
+                  </linearGradient>
+                  <linearGradient id="weekdayGradAmber" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#fbbf24" />
+                    <stop offset="100%" stopColor="#f59e0b" />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="4 8" stroke="#eef1f6" vertical={false} />
+                <XAxis dataKey="day" tick={{ fontSize: 12, fontWeight: 600, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} allowDecimals={false} axisLine={false} tickLine={false} />
+                <Tooltip content={<ChartTip />} cursor={{ fill: '#f8fafc' }} />
+                <Bar dataKey="count" name="Консультаций" radius={[8, 8, 0, 0]}>
                   {data.weekday_distribution.map((_, i) => (
-                    <Cell key={i} fill={i >= 5 ? "#f59e0b" : BLUE} fillOpacity={0.85} />
+                    <Cell key={i} fill={i >= 5 ? "url(#weekdayGradAmber)" : "url(#weekdayGradBlue)"} />
                   ))}
+                  <LabelList dataKey="count" position="top" style={{ fontSize: 11, fontWeight: 700, fill: '#6b7280' }} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -437,7 +441,7 @@ export default function ReportsView({ user }: { user: any }) {
       </div>
 
       {/* Peak Hours */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+      <div className="bg-white rounded-3xl border-2 border-gray-100 shadow-sm hover:shadow-md transition-shadow p-6">
         <div className="flex items-center justify-between mb-4">
           <SectionTitle>Тепловая карта активности (часы)</SectionTitle>
           {data.peak_hours.length > 0 && (
@@ -454,7 +458,7 @@ export default function ReportsView({ user }: { user: any }) {
 
       {/* Doctor Leaderboard + Specializations */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="bg-white rounded-3xl border-2 border-gray-100 shadow-sm hover:shadow-md transition-shadow p-6">
           <SectionTitle>Рейтинг врачей</SectionTitle>
           {data.doctor_performance.length > 0
             ? <DoctorBoard doctors={data.doctor_performance} />
@@ -462,17 +466,25 @@ export default function ReportsView({ user }: { user: any }) {
           }
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="bg-white rounded-3xl border-2 border-gray-100 shadow-sm hover:shadow-md transition-shadow p-6">
           <SectionTitle>По специализациям</SectionTitle>
           {data.consultation_report.by_specialization.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={data.consultation_report.by_specialization.slice(0, 8)}
-                layout="vertical" barSize={14} margin={{ left: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
-                <YAxis type="category" dataKey="specialization" tick={{ fontSize: 10 }} width={110} />
-                <Tooltip content={<ChartTip />} />
-                <Bar dataKey="count" name="Консультаций" fill={BLUE} fillOpacity={0.85} radius={[0, 6, 6, 0]} />
+                layout="vertical" barSize={16} margin={{ left: 10, right: 24 }}>
+                <defs>
+                  <linearGradient id="specGrad" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#5b8bff" />
+                    <stop offset="100%" stopColor={BLUE} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="4 8" stroke="#eef1f6" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 10, fill: '#9ca3af' }} allowDecimals={false} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="specialization" tick={{ fontSize: 11, fill: '#4b5563', fontWeight: 500 }} width={110} axisLine={false} tickLine={false} />
+                <Tooltip content={<ChartTip />} cursor={{ fill: '#f8fafc' }} />
+                <Bar dataKey="count" name="Консультаций" fill="url(#specGrad)" radius={[0, 8, 8, 0]}>
+                  <LabelList dataKey="count" position="right" style={{ fontSize: 11, fontWeight: 700, fill: '#374151' }} />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -483,20 +495,29 @@ export default function ReportsView({ user }: { user: any }) {
 
       {/* Patient Retention + Age */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="bg-white rounded-3xl border-2 border-gray-100 shadow-sm hover:shadow-md transition-shadow p-6">
           <SectionTitle>Удержание пациентов</SectionTitle>
           <div className="flex items-center gap-6">
             <div className="relative w-36 h-36 flex-shrink-0">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
+                  <defs>
+                    <linearGradient id="retentionGrad" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#5b8bff" />
+                      <stop offset="100%" stopColor={BLUE} />
+                    </linearGradient>
+                  </defs>
                   <Pie data={[
                     { name: "Повторные", value: data.patient_retention.repeat },
                     { name: "Разовые", value: data.patient_retention.one_time },
                   ]} cx="50%" cy="50%" innerRadius={44} outerRadius={62}
-                    dataKey="value" startAngle={90} endAngle={-270}>
-                    <Cell fill={BLUE} />
-                    <Cell fill="#e5e7eb" />
+                    dataKey="value" startAngle={90} endAngle={-270}
+                    paddingAngle={data.patient_retention.one_time > 0 ? 3 : 0} cornerRadius={8}
+                    stroke="#fff" strokeWidth={2}>
+                    <Cell fill="url(#retentionGrad)" />
+                    <Cell fill="#eef1f6" />
                   </Pie>
+                  <Tooltip content={<ChartTip />} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
@@ -522,18 +543,19 @@ export default function ReportsView({ user }: { user: any }) {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="bg-white rounded-3xl border-2 border-gray-100 shadow-sm hover:shadow-md transition-shadow p-6">
           <SectionTitle>Возрастные группы пациентов</SectionTitle>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={data.patient_report.by_age_group} barSize={32}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-              <XAxis dataKey="age_group" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-              <Tooltip content={<ChartTip />} />
-              <Bar dataKey="count" name="Пациентов" radius={[6, 6, 0, 0]}>
+              <CartesianGrid strokeDasharray="4 8" stroke="#eef1f6" vertical={false} />
+              <XAxis dataKey="age_group" tick={{ fontSize: 12, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} allowDecimals={false} axisLine={false} tickLine={false} />
+              <Tooltip content={<ChartTip />} cursor={{ fill: '#f8fafc' }} />
+              <Bar dataKey="count" name="Пациентов" radius={[8, 8, 0, 0]}>
                 {data.patient_report.by_age_group.map((_, i) => (
-                  <Cell key={i} fill={COLORS[i % COLORS.length]} fillOpacity={0.85} />
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
+                <LabelList dataKey="count" position="top" style={{ fontSize: 11, fontWeight: 700, fill: '#6b7280' }} />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -546,16 +568,17 @@ export default function ReportsView({ user }: { user: any }) {
           { title: "Статусы консультаций", data: data.consultation_report.by_status },
           { title: "Статусы выездов", data: data.appointment_report.by_status },
         ].map(section => (
-          <div key={section.title} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <div key={section.title} className="bg-white rounded-3xl border-2 border-gray-100 shadow-sm hover:shadow-md transition-shadow p-6">
             <SectionTitle>{section.title}</SectionTitle>
             <div className="flex items-center gap-4">
               <div className="w-36 h-36 flex-shrink-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={section.data} cx="50%" cy="50%" innerRadius={38} outerRadius={58} dataKey="count">
+                    <Pie data={section.data} cx="50%" cy="50%" innerRadius={38} outerRadius={58} dataKey="count"
+                      paddingAngle={section.data.length > 1 ? 3 : 0} cornerRadius={6} stroke="#fff" strokeWidth={2}>
                       {section.data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip content={<ChartTip />} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -577,16 +600,17 @@ export default function ReportsView({ user }: { user: any }) {
 
       {/* New Patients Trend */}
       {data.patient_report.new_patients_monthly.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="bg-white rounded-3xl border-2 border-gray-100 shadow-sm hover:shadow-md transition-shadow p-6">
           <SectionTitle>Прирост пациентов по месяцам</SectionTitle>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={data.patient_report.new_patients_monthly}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+              <CartesianGrid strokeDasharray="4 8" stroke="#eef1f6" vertical={false} />
+              <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} allowDecimals={false} axisLine={false} tickLine={false} />
               <Tooltip content={<ChartTip />} />
               <Line type="monotone" dataKey="count" name="Новых пациентов" stroke="#10b981"
-                strokeWidth={2.5} dot={{ r: 4, fill: "#10b981" }} activeDot={{ r: 6 }} />
+                strokeWidth={3} dot={{ r: 4, fill: "#fff", stroke: "#10b981", strokeWidth: 2.5 }}
+                activeDot={{ r: 6, fill: "#10b981", stroke: "#fff", strokeWidth: 2 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>

@@ -3,13 +3,15 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, ChevronDown, Phone } from "lucide-react";
+import { toast } from "react-toastify";
+import { MessageCircle, ChevronDown, Phone, Copy } from "lucide-react";
 import type { Patient } from "../types/patientTypes";
 
 // ─── ContactMenu ────────────────────────────────────────────────────────────
 
 export function ContactMenu({ patient }: { patient: Patient }) {
   const [open, setOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -20,6 +22,19 @@ export function ContactMenu({ patient }: { patient: Patient }) {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  useEffect(() => {
+    // A phone can actually place a call from a tel: link; a desktop browser
+    // usually can't, so there we copy the number instead of dialing nothing.
+    setIsMobile(/Mobile|Android|iPhone|iPad/i.test(navigator.userAgent));
+  }, []);
+
+  const copyPhone = () => {
+    if (!patient.phone) return;
+    navigator.clipboard.writeText(patient.phone);
+    toast.success("Номер скопирован");
+    setOpen(false);
+  };
 
   const phone = patient.phone?.replace(/\D/g, "") ?? "";
   const hasPhone = !!phone;
@@ -96,8 +111,9 @@ export function ContactMenu({ patient }: { patient: Patient }) {
             {/* Divider */}
             {hasPhone && <div className="my-1 border-t border-gray-100" />}
 
-            {/* Phone call */}
-            {hasPhone && (
+            {/* Phone — dials on a phone, copies the number on desktop
+                (a tel: link on desktop usually just does nothing useful) */}
+            {hasPhone && (isMobile ? (
               <a href={`tel:${patient.phone}`} onClick={() => setOpen(false)}
                 className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors">
                 <span className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
@@ -108,7 +124,18 @@ export function ContactMenu({ patient }: { patient: Patient }) {
                   <p className="text-[10px] text-gray-400">{patient.phone}</p>
                 </div>
               </a>
-            )}
+            ) : (
+              <button onClick={copyPhone}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors text-left">
+                <span className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                  <Copy className="w-4 h-4 text-gray-500" />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">{patient.phone}</p>
+                  <p className="text-[10px] text-gray-400">Скопировать номер</p>
+                </div>
+              </button>
+            ))}
           </motion.div>
         )}
       </AnimatePresence>

@@ -9,6 +9,8 @@ import {
   ClipboardList, Stethoscope, Plus,
 } from "lucide-react";
 import AssignDiagnosticsModal from "../modals/AssignDiagnosticsModal";
+import { ServiceScheduleModal } from "../../services/modals/ServiceScheduleModal";
+import type { Service } from "../../services/types/serviceTypes";
 
 interface ServiceDay {
   id: number;
@@ -83,6 +85,23 @@ export function ServicesScheduleContent({
     slot: { start: string; end: string } | null;
     allSlots: { start: string; end: string }[];
   } | null>(null);
+
+  // Schedule-edit modal state — same "Расписание" quick-config affordance
+  // DoctorsScheduleContent offers for staff without a schedule this day.
+  const [scheduleEditService, setScheduleEditService] = useState<Service | null>(null);
+  const [loadingScheduleFor, setLoadingScheduleFor] = useState<number | null>(null);
+
+  const openScheduleModal = async (serviceId: number) => {
+    setLoadingScheduleFor(serviceId);
+    try {
+      const res = await api.get(`/diagnostics/services/${serviceId}/`);
+      setScheduleEditService(res.data);
+    } catch {
+      // no-op — the button just stops spinning if the fetch fails
+    } finally {
+      setLoadingScheduleFor(null);
+    }
+  };
 
   const fetchServices = useCallback(async () => {
     setLoading(true);
@@ -297,7 +316,7 @@ export function ServicesScheduleContent({
                 {withoutSchedule.map(s => {
                   const Icon = getCategoryIcon(s.icon);
                   return (
-                    <div key={s.id} className="flex items-center gap-2.5 px-3 py-2.5 bg-white border border-gray-200 rounded-xl">
+                    <div key={s.id} className="flex items-center gap-2.5 px-3 py-2.5 bg-white border border-gray-200 rounded-xl hover:border-indigo-300 hover:shadow-sm transition-all">
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
                         style={{ background: `${s.color}20` }}>
                         <Icon className="w-4 h-4" style={{ color: s.color }} />
@@ -306,6 +325,16 @@ export function ServicesScheduleContent({
                         <p className="text-xs font-semibold text-gray-800 truncate">{s.name}</p>
                         <p className="text-[10px] text-gray-400">{s.category_label}</p>
                       </div>
+                      <button
+                        onClick={() => openScheduleModal(s.id)}
+                        disabled={loadingScheduleFor === s.id}
+                        className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all disabled:opacity-50"
+                      >
+                        {loadingScheduleFor === s.id
+                          ? <Loader2 className="w-3 h-3 animate-spin" />
+                          : <CalendarDays className="w-3 h-3" />}
+                        Расписание
+                      </button>
                     </div>
                   );
                 })}
@@ -521,6 +550,15 @@ export function ServicesScheduleContent({
           }}
         />
       )}
+
+      <ServiceScheduleModal
+        service={scheduleEditService}
+        onClose={() => setScheduleEditService(null)}
+        onSaved={() => {
+          setScheduleEditService(null);
+          fetchServices();
+        }}
+      />
     </div>
   );
 }

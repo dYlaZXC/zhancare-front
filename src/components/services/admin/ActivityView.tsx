@@ -33,8 +33,6 @@ interface ActivityResponse {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const BRAND = "linear-gradient(135deg, #12263a 0%, #1e263e 40%, #3772ff 100%)";
-
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const m = Math.floor(diff / 60000);
@@ -162,55 +160,42 @@ export default function ActivityView({ user }: { user: any }) {
   return (
     <div className="space-y-6 pb-12">
 
-      {/* Header */}
-      <div className="rounded-2xl p-6 text-white" style={{ background: BRAND }}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-black flex items-center gap-2">
-              <Activity className="w-6 h-6 text-blue-300" />
-              Журнал активности
-            </h1>
-            <p className="text-blue-200 text-sm mt-0.5">Реальные события из базы данных</p>
-          </div>
-          <button onClick={() => { setPage(1); fetchEvents(1, true); }}
-            className="self-start sm:self-auto p-2.5 rounded-xl bg-white/10 border border-white/20 hover:bg-white/20 transition-colors" title="Обновить">
-            <RefreshCw className={`w-4 h-4 text-white ${refreshing ? "animate-spin" : ""}`} />
-          </button>
-        </div>
-
-        {/* Date range */}
-        <div className="flex flex-wrap items-center gap-2 mt-4">
-          <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-            className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white text-sm focus:outline-none" />
-          <span className="text-blue-300 text-sm">—</span>
-          <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-            className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white text-sm focus:outline-none" />
-        </div>
+      {/* Date range + refresh */}
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+          className="px-3 py-2.5 rounded-xl border-2 border-gray-200 text-sm focus:border-blue-500 focus:outline-none transition-colors" />
+        <span className="text-gray-300 text-sm">—</span>
+        <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+          className="px-3 py-2.5 rounded-xl border-2 border-gray-200 text-sm focus:border-blue-500 focus:outline-none transition-colors" />
+        <button onClick={() => { setPage(1); fetchEvents(1, true); }}
+          className="p-2.5 rounded-xl border-2 border-gray-200 hover:bg-gray-50 transition-colors" title="Обновить">
+          <RefreshCw className={`w-4 h-4 text-gray-600 ${refreshing ? "animate-spin" : ""}`} />
+        </button>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Всего событий", value: total, color: "text-blue-600", bg: "bg-blue-50" },
-          { label: "Сегодня",       value: todayCount, color: "text-purple-600", bg: "bg-purple-50" },
-          { label: "Успешных",      value: successCount, color: "text-emerald-600", bg: "bg-emerald-50" },
-          { label: "Предупреждений", value: warningCount, color: "text-amber-600", bg: "bg-amber-50" },
+          { label: "Всего событий", value: total, color: "#3772ff", bg: "#ebf1ff" },
+          { label: "Сегодня",       value: todayCount, color: "#8b5cf6", bg: "#f3e8ff" },
+          { label: "Успешных",      value: successCount, color: "#10b981", bg: "#d1fae5" },
+          { label: "Предупреждений", value: warningCount, color: "#f59e0b", bg: "#fef3c7" },
         ].map(s => (
-          <div key={s.label} className={`${s.bg} rounded-2xl p-4 border border-white`}>
-            <p className="text-xs font-semibold text-gray-500 mb-1">{s.label}</p>
-            <p className={`text-3xl font-black ${s.color}`}>{s.value}</p>
+          <div key={s.label} className="rounded-2xl p-4 border border-gray-100 shadow-sm" style={{ backgroundColor: s.bg }}>
+            <p className="text-sm text-gray-600 mb-1">{s.label}</p>
+            <p className="text-2xl font-bold" style={{ color: s.color }}>{s.value}</p>
           </div>
         ))}
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-wrap gap-3">
+      <div className="bg-white rounded-3xl border-2 border-gray-100 shadow-sm p-4 flex flex-wrap gap-3">
         {/* Search */}
         <div className="relative flex-1 min-w-48">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Поиск по описанию или имени..."
-            className="w-full pl-9 pr-8 py-2 text-sm rounded-xl border border-gray-200 focus:border-blue-400 focus:outline-none transition-colors" />
+            className="w-full pl-11 pr-8 py-2.5 text-sm rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors" />
           {search && (
             <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
               <X className="w-3.5 h-3.5" />
@@ -220,7 +205,7 @@ export default function ActivityView({ user }: { user: any }) {
 
         {/* Category */}
         <select value={category} onChange={e => setCategory(e.target.value)}
-          className="px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-blue-400 focus:outline-none bg-white">
+          className="px-4 py-2.5 text-sm rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-white">
           <option value="all">Все категории</option>
           <option value="consultation">Консультации</option>
           <option value="appointment">Выезды</option>
@@ -230,7 +215,7 @@ export default function ActivityView({ user }: { user: any }) {
 
         {/* Action type */}
         <select value={actionType} onChange={e => setActionType(e.target.value)}
-          className="px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-blue-400 focus:outline-none bg-white">
+          className="px-4 py-2.5 text-sm rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-white">
           <option value="all">Все действия</option>
           <option value="create">Создание</option>
           <option value="update">Обновление</option>
@@ -263,7 +248,7 @@ export default function ActivityView({ user }: { user: any }) {
             <p className="text-gray-500 text-sm">Загрузка журнала...</p>
           </div>
         ) : displayed.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-3 bg-white rounded-2xl border border-gray-100">
+          <div className="flex flex-col items-center justify-center py-20 gap-3 bg-white rounded-3xl border-2 border-gray-100">
             <Activity className="w-12 h-12 text-gray-200" />
             <p className="text-gray-500 font-semibold">Нет событий</p>
             <p className="text-gray-400 text-sm">Попробуйте изменить фильтры или диапазон дат</p>
@@ -278,7 +263,7 @@ export default function ActivityView({ user }: { user: any }) {
 
             return (
               <div key={event.id}
-                className="bg-white border border-gray-100 rounded-xl px-4 py-3.5 flex items-start gap-3 shadow-sm hover:shadow-md transition-shadow group">
+                className="bg-white border-2 border-gray-100 hover:border-blue-200 rounded-3xl px-5 py-4 flex items-start gap-3 shadow-sm hover:shadow-md transition-all group">
                 {/* Category icon */}
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
                   style={{ background: catMeta.bg }}>

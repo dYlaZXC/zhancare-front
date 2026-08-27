@@ -9,13 +9,15 @@ import {
   Mic, MicOff, Play, Square, Save, Clock, MapPin,
   User, FileText, Activity, Stethoscope, Pill, ClipboardList,
   Sparkles, ChevronLeft, AlertTriangle, Plus, X, CheckCircle,
-  Search, CalendarCheck, ChevronUp,
+  Search, CalendarCheck, ChevronUp, PenLine, Loader2,
 } from "lucide-react";
 import { useDeepgram } from "@/hooks/useDeepgram";
 import { useAuth } from "@/context/AuthContext";
 import { aiService } from "@/lib/ai/aiService";
 import { DiagnosticsServiceItem } from "@/lib/ai/types";
 import AIConsultationReview from "@/app/video-call/doctor/components/AIConsultationReview";
+import { SignatureModal } from "@/components/shared/SignatureModal";
+import { generateMedicalPdf } from "@/lib/generateMedicalPdf";
 
 interface OfflineConsultation {
   id: number;
@@ -149,6 +151,11 @@ export default function OfflineConsultationByMeetingPage() {
   const [showAI, setShowAI] = useState(false);
   const [showNavGuard, setShowNavGuard] = useState(false);
   const [manualReferral, setManualReferral] = useState("");
+
+  // Signed PDF report — same flow as the video-call consultation page.
+  const [showSignatureModal, setShowSignatureModal] = useState(false);
+  const [signatureData, setSignatureData] = useState<string | null>(null);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
 
   // Diagnostics catalog + inline booking
   const [showServicePanel, setShowServicePanel] = useState(false);
@@ -415,6 +422,61 @@ export default function OfflineConsultationByMeetingPage() {
     }
   }, [meetingId, formData]);
 
+  const generateAndUploadPdf = async (signature: string) => {
+    if (!consultation) return;
+    setGeneratingPdf(true);
+    try {
+      const patientName = `${consultation.patient_first_name} ${consultation.patient_last_name}`.trim();
+      const doctorName = user ? `${user.first_name} ${user.last_name}`.trim() || "Врач" : "Врач";
+      const { blob, filename } = await generateMedicalPdf({
+        documentTitle: "Консультационный лист",
+        patientName,
+        doctorName,
+        sections: [
+          { label: "Жалобы пациента", content: formData.complaints },
+          { label: "Анамнез заболевания", content: formData.anamnesis },
+          { label: "Обследование и диагностика", content: formData.diagnostics },
+          { label: "Диагноз", content: formData.diagnosis },
+          { label: "Назначенное лечение", content: formData.treatment },
+        ],
+        signature,
+        filenamePrefix: "consultation",
+      });
+
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl; a.download = filename; a.click();
+      URL.revokeObjectURL(blobUrl);
+
+      const uploadData = new FormData();
+      uploadData.append("file", new File([blob], filename, { type: "application/pdf" }));
+      uploadData.append("consultation_id", String(consultation.id));
+      uploadData.append("description", `Консультационный лист — ${patientName}`);
+      await api.post("/medical-documents/doctor-upload/", uploadData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      toast.success("PDF сформирован и сохранён в документы пациента");
+    } catch {
+      toast.error("Не удалось сформировать PDF");
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
+  const handleGeneratePdfClick = () => {
+    if (signatureData) {
+      generateAndUploadPdf(signatureData);
+    } else {
+      setShowSignatureModal(true);
+    }
+  };
+
+  const handleSignatureSaved = (dataUrl: string) => {
+    setSignatureData(dataUrl);
+    setShowSignatureModal(false);
+    generateAndUploadPdf(dataUrl);
+  };
+
   const handleStart = async () => {
     try {
       await api.post(`/consultations/${meetingId}/status/`, { status: "ongoing" });
@@ -527,6 +589,18 @@ export default function OfflineConsultationByMeetingPage() {
             >
               <Save className="w-3.5 h-3.5" />
               {saving ? "Сохранение..." : "Сохранить"}
+            </button>
+
+            <button
+              onClick={handleGeneratePdfClick}
+              disabled={generatingPdf || !Object.entries(formData).some(([k, v]) => k !== "referrals" && typeof v === "string" && v.trim())}
+              title={signatureData ? "Сформировать подписанный PDF" : "Подписать и сформировать PDF"}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded-lg shadow-sm shadow-blue-200 disabled:opacity-40 disabled:shadow-none transition-all"
+            >
+              {generatingPdf
+                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                : <PenLine className="w-3.5 h-3.5" />}
+              {generatingPdf ? "Формируется..." : "Сформировать PDF"}
             </button>
 
             {isPending && (
@@ -943,6 +1017,12 @@ export default function OfflineConsultationByMeetingPage() {
           </div>
         </div>
       )}
+
+      <SignatureModal
+        isOpen={showSignatureModal}
+        onClose={() => setShowSignatureModal(false)}
+        onSave={handleSignatureSaved}
+      />
     </div>
   );
 }

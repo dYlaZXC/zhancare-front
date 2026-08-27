@@ -166,6 +166,34 @@ export function FinanceTab({
               value={form.offline_payment_preference}
               onChange={(v) => set('offline_payment_preference', v)}
             />
+            {form.offline_payment_preference === 'partial_prepay' && (
+              <div className="mt-2">
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="1"
+                    max="99"
+                    step="1"
+                    value={form.offline_prepay_percent}
+                    onChange={(e) => set('offline_prepay_percent', e.target.value)}
+                    className="w-full pl-4 pr-12 py-2.5 rounded-xl border-2 border-amber-200 focus:border-amber-500 focus:outline-none transition-colors"
+                    placeholder="30"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-md pointer-events-none">%</span>
+                </div>
+                {(() => {
+                  const price = Number(form.offline_consultation_price) || 0;
+                  const pct = Number(form.offline_prepay_percent) || 0;
+                  const depositAmt = Math.round(price * pct / 100);
+                  const sym = getCurrencySymbol(clinicCurrency);
+                  return (
+                    <p className="text-xs text-gray-400 mt-1">
+                      Депозит заранее: {depositAmt.toLocaleString('ru-RU')} {sym} из {price.toLocaleString('ru-RU')} {sym}
+                    </p>
+                  );
+                })()}
+              </div>
+            )}
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1.5">Видеоконсультация</label>
@@ -173,6 +201,34 @@ export function FinanceTab({
               value={form.online_payment_preference}
               onChange={(v) => set('online_payment_preference', v)}
             />
+            {form.online_payment_preference === 'partial_prepay' && (
+              <div className="mt-2">
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="1"
+                    max="99"
+                    step="1"
+                    value={form.online_prepay_percent}
+                    onChange={(e) => set('online_prepay_percent', e.target.value)}
+                    className="w-full pl-4 pr-12 py-2.5 rounded-xl border-2 border-amber-200 focus:border-amber-500 focus:outline-none transition-colors"
+                    placeholder="30"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-md pointer-events-none">%</span>
+                </div>
+                {(() => {
+                  const price = Number(form.online_consultation_price) || 0;
+                  const pct = Number(form.online_prepay_percent) || 0;
+                  const depositAmt = Math.round(price * pct / 100);
+                  const sym = getCurrencySymbol(clinicCurrency);
+                  return (
+                    <p className="text-xs text-gray-400 mt-1">
+                      Депозит заранее: {depositAmt.toLocaleString('ru-RU')} {sym} из {price.toLocaleString('ru-RU')} {sym}
+                    </p>
+                  );
+                })()}
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -74,7 +74,7 @@ export const AdminBreadcrumb = ({
     },
     reports: {
       key: "reports",
-      title: "Отчёты",
+      title: "Аналитика",
       icon: <FontAwesomeIcon icon={faChartLine} className="w-4 h-4" />,
       href: "/admin/reports",
     },

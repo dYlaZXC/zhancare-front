@@ -6,8 +6,11 @@ import { api } from "@/utils/api";
 import { toast } from "react-toastify";
 import {
   ChevronLeft, User, MapPin, Clock, Save, Play, CheckCircle2,
-  FlaskConical, Upload, FileText, Download, Loader2,
+  FlaskConical, Upload, FileText, Download, Loader2, PenLine,
 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { SignatureModal } from "@/components/shared/SignatureModal";
+import { generateMedicalPdf } from "@/lib/generateMedicalPdf";
 
 interface DiagnosticsDocument {
   id: number;
@@ -58,6 +61,7 @@ function formatFileSize(bytes?: number | null) {
 export default function DiagnosticsAppointmentPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { user } = useAuth();
 
   const [appointment, setAppointment] = useState<DiagnosticsAppointmentDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,6 +71,16 @@ export default function DiagnosticsAppointmentPage() {
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Signed PDF report — same flow as the video/offline consultation pages:
+  // draw a signature once, then every "Сформировать PDF" generates a new
+  // report with it, downloads it locally, and uploads it to the patient's
+  // documents.
+  const [showSignatureModal, setShowSignatureModal] = useState(false);
+  const [signatureData, setSignatureData] = useState<string | null>(null);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+
+  const doctorName = user ? `${user.first_name} ${user.last_name}`.trim() || "Врач" : "Врач";
 
   const fetchAppointment = useCallback(async () => {
     try {
@@ -93,6 +107,58 @@ export default function DiagnosticsAppointmentPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const generateAndUploadPdf = async (signature: string) => {
+    if (!appointment) return;
+    setGeneratingPdf(true);
+    try {
+      const { blob, filename } = await generateMedicalPdf({
+        documentTitle: "Заключение по диагностике",
+        patientName: appointment.patient_name,
+        doctorName,
+        sections: [
+          { label: "Описание", content: description },
+          { label: "Заключение", content: conclusion },
+        ],
+        signature,
+        filenamePrefix: "diagnostics",
+      });
+
+      // Save locally, same as the video/offline consultation pages.
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl; a.download = filename; a.click();
+      URL.revokeObjectURL(blobUrl);
+
+      const formData = new FormData();
+      formData.append("file", new File([blob], filename, { type: "application/pdf" }));
+      formData.append("diagnostics_appointment_id", String(id));
+      formData.append("description", `Заключение по диагностике — ${appointment.patient_name}`);
+      const { data } = await api.post<DiagnosticsDocument>("/medical-documents/doctor-upload/", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setAppointment((prev) => (prev ? { ...prev, documents: [data, ...prev.documents] } : prev));
+      toast.success("PDF сформирован и сохранён в документы пациента");
+    } catch {
+      toast.error("Не удалось сформировать PDF");
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
+  const handleGeneratePdfClick = () => {
+    if (signatureData) {
+      generateAndUploadPdf(signatureData);
+    } else {
+      setShowSignatureModal(true);
+    }
+  };
+
+  const handleSignatureSaved = (dataUrl: string) => {
+    setSignatureData(dataUrl);
+    setShowSignatureModal(false);
+    generateAndUploadPdf(dataUrl);
   };
 
   const changeStatus = async (newStatus: string) => {
@@ -195,6 +261,18 @@ export default function DiagnosticsAppointmentPage() {
             >
               <Save className="w-3.5 h-3.5" />
               {saving ? "Сохранение..." : "Сохранить"}
+            </button>
+
+            <button
+              onClick={handleGeneratePdfClick}
+              disabled={generatingPdf || (!description.trim() && !conclusion.trim())}
+              title={signatureData ? "Сформировать подписанный PDF" : "Подписать и сформировать PDF"}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded-lg shadow-sm shadow-blue-200 disabled:opacity-40 disabled:shadow-none transition-all"
+            >
+              {generatingPdf
+                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                : <PenLine className="w-3.5 h-3.5" />}
+              {generatingPdf ? "Формируется..." : "Сформировать PDF"}
             </button>
 
             {isPending && (
@@ -328,6 +406,12 @@ export default function DiagnosticsAppointmentPage() {
           )}
         </div>
       </div>
+
+      <SignatureModal
+        isOpen={showSignatureModal}
+        onClose={() => setShowSignatureModal(false)}
+        onSave={handleSignatureSaved}
+      />
     </div>
   );
 }

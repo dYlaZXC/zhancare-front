@@ -46,18 +46,17 @@ export function KPICard({ label, value, sub, icon: Icon, change, color = BLUE }:
   icon: any; change?: number | null; color?: string;
 }) {
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-3">
+    <div className="rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow"
+      style={{ backgroundColor: `${color}15` }}>
       <div className="flex items-start justify-between">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${color}22` }}>
-          <Icon className="w-5 h-5" style={{ color }} />
+        <div>
+          <p className="text-sm text-gray-600 mb-1">{label}</p>
+          <p className="text-2xl font-bold leading-tight" style={{ color }}>{value}</p>
+          {sub && <p className="text-xs text-gray-500 mt-1">{sub}</p>}
         </div>
-        {change !== undefined && <Delta val={change} />}
+        <Icon className="w-8 h-8 flex-shrink-0" style={{ color }} />
       </div>
-      <div>
-        <p className="text-2xl font-black text-gray-900 leading-tight">{value}</p>
-        {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
-        <p className="text-xs font-semibold text-gray-500 mt-1.5">{label}</p>
-      </div>
+      {change !== undefined && <div className="mt-2"><Delta val={change} /></div>}
     </div>
   );
 }

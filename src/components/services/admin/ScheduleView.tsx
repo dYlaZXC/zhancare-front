@@ -55,7 +55,7 @@ interface ScheduleViewProps {
 
 export default function ScheduleView({ user }: ScheduleViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<'week' | 'month' | 'doctors' | 'referrals'>('month');
+  const [viewMode, setViewMode] = useState<'week' | 'month' | 'doctors' | 'services' | 'referrals'>('month');
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -530,7 +530,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             {/* View mode selector */}
             <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl overflow-x-auto scrollbar-hide flex-shrink-0">
-              {(['week', 'month', 'doctors', 'referrals'] as const).map((mode) => (
+              {(['week', 'month', 'doctors', 'services', 'referrals'] as const).map((mode) => (
                 <button
                   key={mode}
                   onClick={() => setViewMode(mode)}
@@ -549,11 +549,18 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
                       <span className="md:hidden">Врачи</span>
                     </>
                   )}
-                  {mode === 'referrals' && (
+                  {mode === 'services' && (
                     <>
                       <FlaskConical className="w-3 h-3 md:w-3.5 md:h-3.5 flex-shrink-0" />
                       <span className="hidden md:inline">График услуг</span>
                       <span className="md:hidden">Услуги</span>
+                    </>
+                  )}
+                  {mode === 'referrals' && (
+                    <>
+                      <FlaskConical className="w-3 h-3 md:w-3.5 md:h-3.5 flex-shrink-0" />
+                      <span className="hidden md:inline">Направления</span>
+                      <span className="md:hidden">Направления</span>
                     </>
                   )}
                 </button>
@@ -561,7 +568,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
             </div>
 
             {/* Navigation */}
-            {viewMode !== 'referrals' && (
+            {viewMode !== 'referrals' && viewMode !== 'services' && (
               <div className="flex items-center gap-2 min-w-0">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -609,7 +616,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
           </div>
 
           {/* Search and Filters */}
-          {viewMode !== 'referrals' && (
+          {viewMode !== 'referrals' && viewMode !== 'services' && (
             <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
               {/* Search */}
               <div className="relative flex-1">
@@ -692,7 +699,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
           {viewMode === 'week' && renderWeekView()}
           {viewMode === 'month' && renderMonthView()}
           {viewMode === 'doctors' && renderDoctorsView()}
-          {viewMode === 'referrals' && (
+          {viewMode === 'services' && (
             <ServicesScheduleContent
               selectedDate={doctorsViewDate}
               onDateChange={setDoctorsViewDate}
@@ -700,6 +707,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
               onAddClick={() => setShowAddModal(true)}
             />
           )}
+          {viewMode === 'referrals' && <ReferralsContent />}
         </div>
       )}
 

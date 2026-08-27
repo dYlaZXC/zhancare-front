@@ -1,20 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
+import { isValidPhoneNumber } from "libphonenumber-js";
 import {
-  Mail, Lock, Calendar, Building, XCircle, RefreshCw,
-  Eye, EyeOff, Copy, Loader2, UserPlus, CheckCircle,
+  Mail, Lock, Calendar, Building, X, RefreshCw,
+  Eye, EyeOff, Copy, Loader2, UserPlus, CheckCircle, Search, Link2, AlertTriangle,
 } from "lucide-react";
 import { api } from "@/utils/api";
 import PhoneInput from "@/components/ui/PhoneInput";
-import type { Patient, Clinic, PatientFormData } from "../types/patientTypes";
-import { EMPTY_PATIENT_FORM } from "../types/patientTypes";
-
-import bnClinicLogo from "@/assets/clinics_logos/bn-clinica.png";
-import ayalaClinicLogo from "@/assets/clinics_logos/ayala_clinic.png";
+import SearchSelect from "../../schedule/components/SearchSelect";
+import type { Patient, Clinic, PatientFormData, FoundPatient, PatientLookupResponse } from "../types/patientTypes";
+import { EMPTY_PATIENT_FORM, REFERRAL_SOURCE_OPTIONS } from "../types/patientTypes";
 
 // ─── Patient Form Modal ─────────────────────────────────────────────────────
 
@@ -26,6 +24,7 @@ export function PatientFormModal({
   user,
   onClose,
   onSaved,
+  onExistingPatientFound,
 }: {
   mode: "create" | "edit";
   initial: Patient | null;
@@ -34,6 +33,7 @@ export function PatientFormModal({
   user: any;
   onClose: () => void;
   onSaved: (patient: Patient) => void;
+  onExistingPatientFound?: (patient: FoundPatient) => void;
 }) {
   const [form, setForm] = useState<PatientFormData>(() => {
     if (mode === "edit" && initial) {
@@ -48,6 +48,7 @@ export function PatientFormModal({
         address: initial.address || "",
         city: initial.city || "",
         clinic_id: initial.clinic?.id?.toString() || "",
+        referral_source: initial.referral_source || "",
       };
     }
     return { ...EMPTY_PATIENT_FORM };
@@ -57,8 +58,46 @@ export function PatientFormModal({
   const [showPassword, setShowPassword] = useState(false);
   const [requirePasswordChange, setRequirePasswordChange] = useState(true);
 
+  // Live "does this patient already exist?" check — fires while filling out
+  // phone/email, well before submit, so the admin doesn't fill out the whole
+  // form (name, password, address...) only to be told at the end it's a dupe.
+  const [existingMatch, setExistingMatch] = useState<FoundPatient | null>(null);
+  const [alreadyInClinic, setAlreadyInClinic] = useState(false);
+  const [checkingExisting, setCheckingExisting] = useState(false);
+  const checkSeq = useRef(0);
+
   const set = (k: keyof PatientFormData, v: any) =>
     setForm((prev) => ({ ...prev, [k]: v }));
+
+  const targetClinicId = isGlobalAdmin ? form.clinic_id : (user.clinic?.id ?? user.clinic_id);
+
+  useEffect(() => {
+    if (mode !== "create" || !targetClinicId) { setExistingMatch(null); return; }
+    if (!isValidPhoneNumber(form.phone || "")) { setExistingMatch(null); return; }
+
+    const seq = ++checkSeq.current;
+    setCheckingExisting(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await api.get<PatientLookupResponse>('/patients/lookup/', {
+          params: { phone: form.phone, email: form.email || undefined, clinic_id: targetClinicId },
+        });
+        if (checkSeq.current !== seq) return; // a newer check superseded this one
+        if (res.data.found) {
+          setExistingMatch(res.data.patient!);
+          setAlreadyInClinic(res.data.already_in_clinic ?? false);
+        } else {
+          setExistingMatch(null);
+        }
+      } catch {
+        if (checkSeq.current === seq) setExistingMatch(null);
+      } finally {
+        if (checkSeq.current === seq) setCheckingExisting(false);
+      }
+    }, 600);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.phone, form.email, targetClinicId, mode]);
 
   const focusColor = mode === "create" ? "focus:border-green-500" : "focus:border-blue-500";
   const accentText = mode === "create" ? "text-green-600 hover:text-green-700" : "text-blue-600 hover:text-blue-700";
@@ -115,6 +154,30 @@ export function PatientFormModal({
     setSaving(true);
     try {
       if (mode === "create") {
+        // If we can resolve a target clinic, check whether this phone/email
+        // already belongs to a patient somewhere else first — offer to link
+        // them instead of letting create() hard-block with "already exists".
+        // Global admins with "Без клиники" selected have nothing to link
+        // to, so they keep the old direct-create behavior. Re-checked here
+        // (not just relying on the live inline check above) since the admin
+        // may have ignored the inline banner and kept editing the fields.
+        if (targetClinicId && onExistingPatientFound) {
+          const lookupRes = await api.get<PatientLookupResponse>('/patients/lookup/', {
+            params: { phone: form.phone, email: form.email || undefined, clinic_id: targetClinicId },
+          });
+          if (lookupRes.data.found) {
+            if (lookupRes.data.already_in_clinic) {
+              toast.info('Этот пациент уже привязан к вашей клинике');
+              setSaving(false);
+              return;
+            }
+            onExistingPatientFound(lookupRes.data.patient!);
+            setSaving(false);
+            onClose();
+            return;
+          }
+        }
+
         const response = await api.post('/patients/', { ...form, require_password_change: requirePasswordChange });
         toast.success("Пациент успешно добавлен!");
         onSaved(response.data);
@@ -146,10 +209,10 @@ export function PatientFormModal({
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
         onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto scrollbar-hide"
       >
         {/* Modal Header */}
-        <div className="sticky top-0 bg-white border-b-2 border-gray-100 px-8 py-6 rounded-t-3xl flex items-center justify-between">
+        <div className="sticky top-0 bg-white border-b-2 border-gray-100 px-8 py-6 rounded-t-3xl flex items-center justify-between z-10">
           <div>
             <h2 className="text-2xl font-bold" style={{ color: '#1e263e' }}>
               {mode === "create" ? "Добавить Пациента" : "Редактировать Пациента"}
@@ -162,14 +225,14 @@ export function PatientFormModal({
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+            className="p-2 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-xl transition-colors"
           >
-            <XCircle className="w-6 h-6 text-gray-600" />
+            <X className="w-6 h-6 text-gray-700" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <form onSubmit={handleSubmit} className="p-8">
+        <form onSubmit={handleSubmit} className="px-8 pt-8">
           <div className="space-y-6">
             {/* Name Fields */}
             <div className="grid grid-cols-2 gap-4">
@@ -229,6 +292,45 @@ export function PatientFormModal({
                 required
                 defaultCountry="KZ"
               />
+              {checkingExisting && (
+                <p className="flex items-center gap-1.5 text-xs text-gray-400 mt-2">
+                  <Search className="w-3.5 h-3.5 animate-pulse" />
+                  Проверяем, нет ли уже такого пациента...
+                </p>
+              )}
+              {!checkingExisting && existingMatch && (
+                <div className={`mt-2 rounded-2xl p-4 border-2 ${alreadyInClinic ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'}`}>
+                  <div className="flex items-start gap-2.5">
+                    {alreadyInClinic ? (
+                      <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    ) : (
+                      <Link2 className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                    )}
+                    <div className="flex-1">
+                      <p className={`text-sm font-semibold ${alreadyInClinic ? 'text-amber-800' : 'text-blue-800'}`}>
+                        Пациент с таким телефоном{form.email && '/email'} уже существует: {existingMatch.first_name} {existingMatch.last_name}
+                      </p>
+                      <p className={`text-xs mt-0.5 ${alreadyInClinic ? 'text-amber-700' : 'text-blue-700'}`}>
+                        {alreadyInClinic
+                          ? 'Уже привязан к вашей клинике — создавать заново не нужно.'
+                          : existingMatch.clinic
+                            ? `Сейчас числится в клинике «${existingMatch.clinic.name}».`
+                            : 'Пока не привязан ни к одной клинике.'}
+                      </p>
+                      {!alreadyInClinic && onExistingPatientFound && (
+                        <button
+                          type="button"
+                          onClick={() => { onExistingPatientFound(existingMatch); onClose(); }}
+                          className="mt-2.5 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors"
+                        >
+                          <Link2 className="w-3.5 h-3.5" />
+                          Привязать вместо создания
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Password */}
@@ -325,15 +427,16 @@ export function PatientFormModal({
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Пол
                 </label>
-                <select
+                <SearchSelect
+                  options={[
+                    { id: 'male', label: 'Мужской' },
+                    { id: 'female', label: 'Женский' },
+                    { id: 'other', label: 'Другое' },
+                  ]}
                   value={form.gender}
-                  onChange={(e) => set('gender', e.target.value as any)}
-                  className={`w-full px-4 py-3 rounded-xl border-2 border-gray-200 ${focusColor} focus:outline-none transition-colors`}
-                >
-                  <option value="male">Мужской</option>
-                  <option value="female">Женский</option>
-                  <option value="other">Другое</option>
-                </select>
+                  onChange={(v) => { if (v) set('gender', v as any); }}
+                  placeholder="Выберите пол"
+                />
               </div>
             </div>
 
@@ -365,24 +468,31 @@ export function PatientFormModal({
               </div>
             </div>
 
+            {/* Referral Source */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Откуда узнал о клинике
+              </label>
+              <SearchSelect
+                options={REFERRAL_SOURCE_OPTIONS.map((opt) => ({ id: opt.value, label: opt.label }))}
+                value={form.referral_source}
+                onChange={(v) => set('referral_source', v)}
+                placeholder="Не указано"
+              />
+            </div>
+
             {/* Clinic Selection/Display (create only) */}
             {mode === "create" && (isGlobalAdmin ? (
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Клиника <span className="text-gray-500 text-xs">(опционально)</span>
                 </label>
-                <select
+                <SearchSelect
+                  options={clinics.map((clinic) => ({ id: clinic.id, label: clinic.name }))}
                   value={form.clinic_id}
-                  onChange={(e) => set('clinic_id', e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:outline-none transition-colors"
-                >
-                  <option value="">Без клиники</option>
-                  {clinics.map((clinic) => (
-                    <option key={clinic.id} value={clinic.id}>
-                      {clinic.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(v) => set('clinic_id', v)}
+                  placeholder="Без клиники"
+                />
                 <p className="text-sm text-gray-500 mt-2">
                   💡 Глобальные администраторы могут назначить пациента в любую клинику или оставить без клиники
                 </p>
@@ -393,19 +503,9 @@ export function PatientFormModal({
                   Клиника <span className="text-red-500">*</span>
                 </label>
                 <div className="flex items-center gap-3">
-                  {(user.clinic?.id === 913 || user.clinic?.name?.toLowerCase().includes('ayala')) ? (
-                    <div className="flex-shrink-0 bg-white p-2 rounded-xl border-2 border-green-200 shadow-md">
-                      <Image src={ayalaClinicLogo} alt="Ayala Clinic" width={80} height={28} className="object-contain" priority={false} />
-                    </div>
-                  ) : (user.clinic?.name?.toLowerCase().includes('bn') || user.clinic?.name?.toLowerCase().includes('бн')) ? (
-                    <div className="flex-shrink-0 bg-white p-2 rounded-xl border-2 border-green-200 shadow-md">
-                      <Image src={bnClinicLogo} alt="BN Clinic" width={80} height={28} className="object-contain" priority={false} />
-                    </div>
-                  ) : (
-                    <div className="w-10 h-10 rounded-xl bg-green-500 flex items-center justify-center">
-                      <Building className="w-6 h-6 text-white" />
-                    </div>
-                  )}
+                  <div className="w-10 h-10 rounded-xl bg-green-500 flex items-center justify-center flex-shrink-0">
+                    <Building className="w-6 h-6 text-white" />
+                  </div>
                   <div>
                     <p className="text-base font-bold text-gray-800">{user.clinic?.name || 'Ваша клиника'}</p>
                     <p className="text-sm text-gray-600">Администратор клиники</p>
@@ -418,10 +518,49 @@ export function PatientFormModal({
                 </div>
               </div>
             ))}
+
+            {/* Offer to link this patient to the admin's clinic when editing
+                someone not yet claimed by (or linked to) it — e.g. a patient
+                visible only because of booking history at this clinic. Goes
+                through the same code-confirmation flow as the create-time
+                "existing patient found" path. */}
+            {mode === "edit" && initial && targetClinicId && onExistingPatientFound && !(
+              String(initial.clinic?.id ?? '') === String(targetClinicId) ||
+              (initial.additional_clinics ?? []).some(c => String(c.id) === String(targetClinicId))
+            ) && (
+              <div className="rounded-2xl p-4 border-2 border-blue-100 bg-blue-50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center flex-shrink-0">
+                    <Link2 className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-gray-800">Пациент не привязан к вашей клинике</p>
+                    <p className="text-xs text-gray-600">Отправьте код подтверждения, чтобы добавить его как пациента вашей клиники</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onExistingPatientFound({
+                      id: initial.id,
+                      first_name: initial.first_name,
+                      last_name: initial.last_name,
+                      email: initial.email,
+                      phone: initial.phone,
+                      has_email: !!initial.email,
+                      clinic: initial.clinic ?? null,
+                      additional_clinics: initial.additional_clinics ?? [],
+                    })}
+                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors flex items-center gap-1.5 flex-shrink-0"
+                  >
+                    <Link2 className="w-4 h-4" />
+                    Привязать
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Modal Footer */}
-          <div className="flex gap-4 mt-8 pt-6 border-t-2 border-gray-100">
+          <div className="sticky bottom-0 z-10 -mx-8 mt-8 flex gap-4 rounded-b-3xl border-t-2 border-gray-100 bg-white px-8 pt-6 pb-8">
             <button
               type="button"
               onClick={onClose}

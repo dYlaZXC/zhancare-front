@@ -16,6 +16,8 @@ export interface StaffMember {
   last_name: string | null;
   email: string | null;
   phone: string;
+  avatar?: string | null;
+  last_seen?: string | null;
   role: 'doctor' | 'nurse';
   gender?: 'male' | 'female' | 'other' | null;
   birth_date?: string | null;
@@ -43,6 +45,8 @@ export interface StaffMember {
   online_doctor_share_percent?: number;
   offline_payment_preference?: 'pay_at_clinic' | 'full_prepay' | 'partial_prepay';
   online_payment_preference?: 'pay_at_clinic' | 'full_prepay' | 'partial_prepay';
+  offline_prepay_percent?: number;
+  online_prepay_percent?: number;
   diagnostics_commissions?: { id: number; service_id: number; service_name: string; doctor_share_percent: number }[];
   preferred_consultation_duration?: number; // in minutes
   room_number?: string | null;
@@ -93,12 +97,27 @@ export interface StaffMember {
     end_time: string;
     is_active: boolean;
   }>;
+  // Date-specific "По датам" availability for the CURRENT calendar week,
+  // separate from the recurring template above — a doctor can have a
+  // template for one consultation type and only date-specific availability
+  // for the other, so these need to be checked independently, not collapsed.
+  has_online_availability?: boolean;
+  has_offline_availability?: boolean;
+  has_availability?: boolean;
 }
 
 export interface Clinic {
   id: number;
   name: string;
 }
+
+// Response shape of GET /staff/today-activity/ — one entry per staff id,
+// fetched once for the whole visible list rather than per-card.
+export type TodayActivity =
+  | { id: number; state: 'ongoing'; type: 'online' | 'offline'; started_at: string; estimated_end_at: string }
+  | { id: number; state: 'has_free_slots'; free_count: number; next_free_slot: { time: string; type: 'online' | 'offline'; room_number: string | null } }
+  | { id: number; state: 'fully_booked'; free_count: 0 }
+  | { id: number; state: 'not_working_today'; last_seen: string | null };
 
 export interface StaffFormData {
   first_name: string;
@@ -120,6 +139,8 @@ export interface StaffFormData {
   online_doctor_share_percent: string;
   offline_payment_preference: string;
   online_payment_preference: string;
+  offline_prepay_percent: string;
+  online_prepay_percent: string;
   preferred_consultation_duration: string;
   room_number: string;
 }
@@ -144,6 +165,8 @@ export const EMPTY_STAFF_FORM: StaffFormData = {
   online_doctor_share_percent: '50',
   offline_payment_preference: 'pay_at_clinic',
   online_payment_preference: 'pay_at_clinic',
+  offline_prepay_percent: '50',
+  online_prepay_percent: '50',
   preferred_consultation_duration: '',
   room_number: '',
 };

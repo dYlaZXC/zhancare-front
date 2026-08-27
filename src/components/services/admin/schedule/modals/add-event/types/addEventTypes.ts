@@ -25,6 +25,10 @@ export interface StaffMember {
   preferred_consultation_duration?: number;
   online_consultation_price?: string | null;
   offline_consultation_price?: string | null;
+  online_payment_preference?: 'pay_at_clinic' | 'full_prepay' | 'partial_prepay';
+  offline_payment_preference?: 'pay_at_clinic' | 'full_prepay' | 'partial_prepay';
+  online_prepay_percent?: number;
+  offline_prepay_percent?: number;
   online_work_schedule?: any;
   offline_work_schedule?: any;
   has_availability?: boolean;

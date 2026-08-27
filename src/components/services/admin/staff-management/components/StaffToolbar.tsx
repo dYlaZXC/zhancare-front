@@ -1,12 +1,63 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Search, Trash2 } from "lucide-react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useRef } from "react";
+import { ChevronLeft, ChevronRight, Search, Trash2, SlidersHorizontal } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import SearchSelect from "../../schedule/components/SearchSelect";
 import { PAGE_SIZE } from "../types/staffTypes";
 
 type FilterRole = 'all' | 'doctor' | 'nurse';
 type FilterStatus = 'all' | 'available' | 'busy' | 'offline' | 'break';
+
+function FiltersPopover({ onlyOngoing, onToggleOnlyOngoing }: { onlyOngoing: boolean; onToggleOnlyOngoing: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div className="relative flex-shrink-0" ref={ref}>
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => setOpen(v => !v)}
+        className={`flex items-center gap-2 px-4 py-3 rounded-2xl font-semibold text-sm transition-all border-2 ${
+          onlyOngoing ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-white text-gray-700 border-gray-200'
+        }`}
+      >
+        <SlidersHorizontal className="w-4 h-4" />
+        <span className="hidden lg:inline">Фильтры</span>
+      </motion.button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: -4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -4 }}
+            transition={{ duration: 0.12 }}
+            className="absolute right-0 top-full mt-1.5 z-30 bg-white border border-gray-100 rounded-2xl shadow-xl p-3 min-w-[220px]"
+          >
+            <label className="flex items-center gap-2.5 px-1 py-1.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={onlyOngoing}
+                onChange={onToggleOnlyOngoing}
+                className="w-4 h-4 rounded accent-blue-600"
+              />
+              <span className="text-sm font-medium text-gray-700">Сейчас на приёме</span>
+            </label>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 export function StaffToolbar({
   searchQuery,
@@ -21,6 +72,8 @@ export function StaffToolbar({
   onPageChange,
   showDeleted,
   onToggleShowDeleted,
+  onlyOngoing,
+  onToggleOnlyOngoing,
 }: {
   searchQuery: string;
   onSearchChange: (v: string) => void;
@@ -34,6 +87,8 @@ export function StaffToolbar({
   onPageChange: (updater: (p: number) => number) => void;
   showDeleted: boolean;
   onToggleShowDeleted: () => void;
+  onlyOngoing: boolean;
+  onToggleOnlyOngoing: () => void;
 }) {
   return (
     <div className="flex flex-col md:flex-row gap-4">
@@ -121,6 +176,8 @@ export function StaffToolbar({
           {showDeleted ? 'Удаленные' : 'Активные'}
         </span>
       </motion.button>
+
+      <FiltersPopover onlyOngoing={onlyOngoing} onToggleOnlyOngoing={onToggleOnlyOngoing} />
     </div>
   );
 }
