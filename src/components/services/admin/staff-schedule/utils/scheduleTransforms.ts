@@ -1,6 +1,6 @@
 import { getCurrentMondayStr } from "./dateHelpers";
 import type { StaffMemberMin, WeeklySchedules, DaySchedule } from "../types/scheduleTypes";
-import { WEEKDAY_TO_NAME, emptyWeek } from "../types/scheduleTypes";
+import { WEEKDAY_TO_NAME, emptyWeek, CONSULTATION_TYPES } from "../types/scheduleTypes";
 
 export const buildWeeklySchedulesFromMember = (member: StaffMemberMin): WeeklySchedules => {
   const weekStartDate = getCurrentMondayStr();
@@ -8,7 +8,7 @@ export const buildWeeklySchedulesFromMember = (member: StaffMemberMin): WeeklySc
   const rows = member.schedules || [];
   for (const row of rows) {
     const dayName = WEEKDAY_TO_NAME[row.weekday];
-    if (dayName && (row.consultation_type === "online" || row.consultation_type === "offline")) {
+    if (dayName && (CONSULTATION_TYPES as readonly string[]).includes(row.consultation_type)) {
       (week[row.consultation_type] as Record<string, DaySchedule>)[dayName] = {
         start: row.start_time.slice(0, 5),
         end: row.end_time.slice(0, 5),
@@ -44,7 +44,7 @@ export const buildSchedulesArray = (
   >();
   const sortedEntries = Object.entries(weeklySchedules).sort(([a], [b]) => a.localeCompare(b));
   for (const [, weekEntry] of sortedEntries) {
-    for (const type of ["online", "offline"] as const) {
+    for (const type of CONSULTATION_TYPES) {
       const dayMap = weekEntry[type];
       if (!dayMap) continue;
       for (const [day, cfg] of Object.entries(dayMap)) {

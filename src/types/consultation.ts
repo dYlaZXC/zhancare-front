@@ -54,4 +54,40 @@ export interface Consultation {
   nurse_name?: string;
   nurse_photo?: string;
   nurse_phone?: string;
+  // Universal consultation form constructor — fixed on first form fetch (see
+  // consultations/template_utils.py), legacy-compatible via form_data fallback.
+  template_snapshot?: { id: number | null; name: string; document_type: string; sections: ConsultationFormSection[] };
+  // Keyed by section — a "text" section's value is a string, a
+  // "diagnostics_referral" section's value is a DiagnosticsReferralValue.
+  form_data?: Record<string, string | DiagnosticsReferralValue>;
+}
+
+export type ConsultationSectionType = "text" | "diagnostics_referral";
+
+export interface ConsultationFormSection {
+  key: string;
+  label: string;
+  type?: ConsultationSectionType;
+  ai_hint?: string;
+  required?: boolean;
+  placeholder?: string;
+}
+
+// Wire shape for a type="diagnostics_referral" section's value — the doctor
+// picks these from the clinic's own DiagnosticsService catalog; the backend
+// validates every service_id belongs to that clinic (see
+// consultations/template_utils.py::validate_diagnostics_referral_value).
+export interface DiagnosticsReferralEntry {
+  service_id: number;
+  name: string;
+  category_label?: string;
+  price?: string | number | null;
+  currency?: string | null;
+  booked_at?: string;
+  appointment_id?: number;
+}
+
+export interface DiagnosticsReferralValue {
+  referrals: DiagnosticsReferralEntry[];
+  comment: string;
 }

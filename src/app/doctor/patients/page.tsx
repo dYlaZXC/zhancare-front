@@ -3,9 +3,12 @@
 export default function DoctorPatientsPage() {
   return (
     <div className="p-4 sm:p-6">
-      <h1 className="text-2xl font-semibold text-[#001E80]">
+      <h1 className="text-3xl font-bold mb-2" style={{ color: '#1e263e' }}>
         История пациентов
       </h1>
+      <p className="text-gray-600">
+        Консультации и медицинская история ваших пациентов
+      </p>
       <div className="mt-6 rounded-2xl bg-white p-8 shadow-sm border border-gray-100">
         <div className="text-center py-20">
           <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-blue-50 flex items-center justify-center">

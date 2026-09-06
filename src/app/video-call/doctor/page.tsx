@@ -328,19 +328,14 @@ const DoctorVideoCallPage: React.FC = () => {
     }
 
     try {
+      // `data` is keyed by the clinic's own template sections (see
+      // FloatingConsultationButton's sectionValues) plus `transcription` —
+      // pass everything through as-is, the backend validates keys against
+      // this consultation's own template_snapshot.
+      const { transcription, ...structured_data } = data;
       const response = await api.patch(
         `/consultations/${meetingId}/save-consultation-form/`,
-        {
-          complaints: data.complaints,
-          anamnesis: data.anamnesis,
-          diagnostics: data.diagnostics,
-          treatment: data.treatment,
-          diagnosis: data.diagnosis,
-          session_notes: data.sessionNotes,
-          prescription: data.prescription,
-          recommendations: data.recommendations,
-          transcription: data.transcription,
-        }
+        { structured_data, transcription }
       );
 
       console.log("Consultation form saved successfully:", response.data);

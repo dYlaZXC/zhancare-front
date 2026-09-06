@@ -8,19 +8,18 @@ import {
   Calendar,
   RotateCcw,
   History,
-  Video,
-  Home,
   CheckCircle,
   Loader2,
-  CalendarDays,
   ChevronLeft,
   ChevronRight,
   AlertTriangle,
 } from "lucide-react";
+import { CONSULTATION_TYPES } from "./services/admin/staff-schedule/types/scheduleTypes";
+import type { ConsultationType } from "./services/admin/staff-schedule/types/scheduleTypes";
+import { TYPE_META } from "./services/admin/staff-schedule/utils/typeDisplay";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type ConsultationType = "online" | "offline";
 type Tab = "schedule" | "template" | "history";
 
 interface PlannerDay {
@@ -138,7 +137,8 @@ export default function DoctorSchedule() {
   );
   const [plannerType, setPlannerType] = useState<ConsultationType>("online");
   const [plannerDays, setPlannerDays] = useState<PlannerDay[]>([]);
-  const [plannerDaysOther, setPlannerDaysOther] = useState<PlannerDay[]>([]);
+  // Keyed by the OTHER two types (not the currently-selected one).
+  const [plannerDaysOtherByType, setPlannerDaysOtherByType] = useState<Partial<Record<ConsultationType, PlannerDay[]>>>({});
   const [plannerLoading, setPlannerLoading] = useState(false);
   const [plannerSaving, setPlannerSaving] = useState(false);
   const [plannerDirty, setPlannerDirty] = useState(false);
@@ -150,34 +150,62 @@ export default function DoctorSchedule() {
   const [templateSaving, setTemplateSaving] = useState(false);
 
   // ── Conflict detection ─────────────────────────────────────────────────────
+  // Checks plannerType's day against BOTH other types — a doctor with e.g.
+  // online and mixed overlapping on the same day/time is just as much a
+  // conflict as online vs offline was before mixed existed.
+  const otherPlannerTypes = useMemo(
+    () => CONSULTATION_TYPES.filter((t) => t !== plannerType),
+    [plannerType]
+  );
+
   const plannerConflictDates = useMemo(() => {
-    const otherType: ConsultationType = plannerType === "online" ? "offline" : "online";
     const conflicting = new Set<string>();
     plannerDays.forEach((day) => {
       if (day.is_day_off || !day.start_time || !day.end_time) return;
 
-      // 1. Check explicit availability for the other type on this date
-      const other = plannerDaysOther.find((o) => o.date === day.date);
-      if (other && !other.is_day_off && other.start_time && other.end_time) {
-        if (timesOverlap(day.start_time, day.end_time, other.start_time, other.end_time)) {
-          conflicting.add(day.date);
-          return;
+      for (const otherType of otherPlannerTypes) {
+        // 1. Check explicit availability for the other type on this date
+        const otherDays = plannerDaysOtherByType[otherType] ?? [];
+        const other = otherDays.find((o) => o.date === day.date);
+        if (other && !other.is_day_off && other.start_time && other.end_time) {
+          if (timesOverlap(day.start_time, day.end_time, other.start_time, other.end_time)) {
+            conflicting.add(day.date);
+            continue;
+          }
         }
-      }
 
-      // 2. Fallback: check recurring template for the other type on the same weekday
-      const weekday = new Date(day.date + "T00:00:00").getDay(); // JS: 0=Sun,1=Mon…
-      const tpl = templateData.find(
-        (t) => t.consultation_type === otherType && t.weekday === weekday && t.is_active
-      );
-      if (tpl && tpl.start_time && tpl.end_time) {
-        if (timesOverlap(day.start_time, day.end_time, tpl.start_time, tpl.end_time)) {
-          conflicting.add(day.date);
+        // 2. Fallback: check recurring template for the other type on the same weekday
+        const weekday = new Date(day.date + "T00:00:00").getDay(); // JS: 0=Sun,1=Mon…
+        const tpl = templateData.find(
+          (t) => t.consultation_type === otherType && t.weekday === weekday && t.is_active
+        );
+        if (tpl && tpl.start_time && tpl.end_time) {
+          if (timesOverlap(day.start_time, day.end_time, tpl.start_time, tpl.end_time)) {
+            conflicting.add(day.date);
+          }
         }
       }
     });
     return conflicting;
-  }, [plannerDays, plannerDaysOther, templateData, plannerType]);
+  }, [plannerDays, plannerDaysOtherByType, templateData, otherPlannerTypes]);
+
+  // Weekdays where any TWO active template types overlap in time — generalizes
+  // the old online-vs-offline-only check to all pairs among up to 3 types.
+  const getTemplateConflictWeekdays = useCallback((): number[] => {
+    return [1, 2, 3, 4, 5, 6, 0].filter((wd) => {
+      const active = CONSULTATION_TYPES
+        .map((t) => templateData.find((row) => row.weekday === wd && row.consultation_type === t))
+        .filter((row): row is TemplateEntry => !!row?.is_active && !!row.start_time && !!row.end_time);
+      for (let i = 0; i < active.length; i++) {
+        for (let j = i + 1; j < active.length; j++) {
+          if (timesOverlap(active[i].start_time!, active[i].end_time!, active[j].start_time!, active[j].end_time!)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    });
+  }, [templateData]);
 
   // ── "История" tab state ──
   const [historyData, setHistoryData] = useState<HistoryEntry[]>([]);
@@ -189,26 +217,33 @@ export default function DoctorSchedule() {
   const fetchWeek = useCallback(
     async (weekStart: string, cType: ConsultationType) => {
       setPlannerLoading(true);
-      const otherType: ConsultationType = cType === "online" ? "offline" : "online";
+      const otherTypes = CONSULTATION_TYPES.filter((t) => t !== cType);
       try {
-        const [{ data }, { data: dataOther }] = await Promise.all([
+        const [{ data }, ...otherResults] = await Promise.all([
           api.get("/user-profile/availability/", {
             params: { week_start: weekStart, consultation_type: cType },
           }),
-          api.get("/user-profile/availability/", {
-            params: { week_start: weekStart, consultation_type: otherType },
-          }).catch(() => ({ data: [] })),
+          ...otherTypes.map((t) =>
+            api
+              .get("/user-profile/availability/", {
+                params: { week_start: weekStart, consultation_type: t },
+              })
+              .catch(() => ({ data: [] }))
+          ),
         ]);
         setPlannerDays(
           Array.isArray(data) && data.length > 0 ? data : buildDefaultWeek(weekStart)
         );
-        setPlannerDaysOther(
-          Array.isArray(dataOther) && dataOther.length > 0 ? dataOther : buildDefaultWeek(weekStart)
-        );
+        const otherByType: Partial<Record<ConsultationType, PlannerDay[]>> = {};
+        otherTypes.forEach((t, i) => {
+          const dataOther = otherResults[i].data;
+          otherByType[t] = Array.isArray(dataOther) && dataOther.length > 0 ? dataOther : buildDefaultWeek(weekStart);
+        });
+        setPlannerDaysOtherByType(otherByType);
         setPlannerDirty(false);
       } catch {
         setPlannerDays(buildDefaultWeek(weekStart));
-        setPlannerDaysOther(buildDefaultWeek(weekStart));
+        setPlannerDaysOtherByType({});
         setPlannerDirty(false);
       } finally {
         setPlannerLoading(false);
@@ -333,9 +368,15 @@ export default function DoctorSchedule() {
 
   const handleSaveDay = async (day: PlannerDay) => {
     if (plannerConflictDates.has(day.date)) {
-      const other = plannerDaysOther.find((o) => o.date === day.date);
-      const otherLabel = plannerType === "online" ? "в клинике" : "видео";
-      toast.error(`Время пересекается с ${otherLabel} расписанием (${other?.start_time}–${other?.end_time}). Измените время.`);
+      const conflictingType = otherPlannerTypes.find((t) => {
+        const other = plannerDaysOtherByType[t]?.find((o) => o.date === day.date);
+        return other && !other.is_day_off && other.start_time && other.end_time
+          && day.start_time && day.end_time
+          && timesOverlap(day.start_time, day.end_time, other.start_time, other.end_time);
+      });
+      const other = conflictingType ? plannerDaysOtherByType[conflictingType]?.find((o) => o.date === day.date) : undefined;
+      const otherLabel = conflictingType ? TYPE_META[conflictingType].shortLabel : "другим форматом";
+      toast.error(`Время пересекается с расписанием «${otherLabel}» (${other?.start_time}–${other?.end_time}). Измените время.`);
       return;
     }
     try {
@@ -464,16 +505,10 @@ export default function DoctorSchedule() {
   };
 
   const handleSaveTemplate = async () => {
-    const conflictDays = [1, 2, 3, 4, 5, 6, 0].filter((wd) => {
-      const online = templateData.find((t) => t.weekday === wd && t.consultation_type === "online");
-      const offline = templateData.find((t) => t.weekday === wd && t.consultation_type === "offline");
-      if (!online?.is_active || !offline?.is_active) return false;
-      if (!online.start_time || !online.end_time || !offline.start_time || !offline.end_time) return false;
-      return timesOverlap(online.start_time, online.end_time, offline.start_time, offline.end_time);
-    });
+    const conflictDays = getTemplateConflictWeekdays();
     if (conflictDays.length > 0) {
       const names = conflictDays.map((wd) => WEEKDAY_LABELS[wd]).join(", ");
-      toast.error(`Видео и в клинике пересекаются: ${names}. Измените время.`, { autoClose: 6000 });
+      toast.error(`Форматы пересекаются: ${names}. Измените время.`, { autoClose: 6000 });
       return;
     }
     setTemplateSaving(true);
@@ -491,38 +526,18 @@ export default function DoctorSchedule() {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="w-full space-y-6 p-4 sm:p-6 lg:p-8">
-      {/* Header Banner */}
-      <div
-        className="relative rounded-3xl shadow-2xl p-8 text-white overflow-hidden"
-        style={{
-          background: "linear-gradient(135deg, #3772ff 0%, #29358f 100%)",
-        }}
-      >
-        <div className="absolute inset-0 opacity-10">
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle at 2px 2px, white 1px, transparent 0)",
-              backgroundSize: "40px 40px",
-            }}
-          />
-        </div>
-        <div className="relative flex items-center gap-4 mb-2">
-          <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-            <CalendarDays className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold">Мое расписание</h1>
-            <p className="text-blue-100">
-              Управление расписанием и просмотр истории изменений
-            </p>
-          </div>
-        </div>
+      {/* Header Section */}
+      <div>
+        <h1 className="text-3xl font-bold mb-2" style={{ color: '#1e263e' }}>
+          Мое расписание
+        </h1>
+        <p className="text-gray-600">
+          Управление расписанием и просмотр истории изменений
+        </p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-white rounded-2xl shadow-sm border border-gray-100 p-1.5">
+      <div className="flex bg-white rounded-2xl shadow-sm border border-gray-100">
         {(
           [
             { key: "schedule", label: "По датам", Icon: Calendar },
@@ -533,19 +548,11 @@ export default function DoctorSchedule() {
           <button
             key={key}
             onClick={() => setActiveTab(key)}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all duration-200 ${
+            className={`flex items-center gap-2 px-5 py-4 text-sm font-semibold border-b-2 transition-all ${
               activeTab === key
-                ? "text-white shadow-md"
-                : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                ? "border-indigo-600 text-indigo-600"
+                : "border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300"
             }`}
-            style={
-              activeTab === key
-                ? {
-                    background:
-                      "linear-gradient(135deg, #3772ff 0%, #29358f 100%)",
-                  }
-                : {}
-            }
           >
             <Icon className="w-4 h-4" />
             {label}
@@ -556,42 +563,33 @@ export default function DoctorSchedule() {
       {/* ═══════════════════ TAB: По датам ═══════════════════ */}
       {activeTab === "schedule" && (
         <div className="space-y-4">
-          {/* Online / Offline toggle */}
+          {/* Consultation type toggle */}
           <div className={`flex rounded-2xl overflow-hidden border-2 bg-white transition-colors ${plannerConflictDates.size > 0 ? "border-red-200" : "border-gray-200"}`}>
-            <button
-              onClick={() => handleTypeChange("online")}
-              title={plannerConflictDates.size > 0 && plannerType !== "online" ? "Исправьте конфликты перед переключением" : undefined}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 font-semibold text-sm transition-all ${
-                plannerType === "online" ? "bg-blue-500 text-white" :
-                plannerConflictDates.size > 0 ? "text-red-400 bg-red-50 cursor-not-allowed" :
-                "text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              <Video className="w-4 h-4" />
-              Видеоконсультация
-              {plannerConflictDates.size > 0 && (
-                <span className="px-2 py-0.5 rounded-full text-xs bg-red-500 text-white font-bold">
-                  ⚠ {plannerConflictDates.size}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => handleTypeChange("offline")}
-              title={plannerConflictDates.size > 0 && plannerType !== "offline" ? "Исправьте конфликты перед переключением" : undefined}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 font-semibold text-sm transition-all ${
-                plannerType === "offline" ? "bg-purple-500 text-white" :
-                plannerConflictDates.size > 0 ? "text-red-400 bg-red-50 cursor-not-allowed" :
-                "text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              <Home className="w-4 h-4" />
-              Приём в клинике
-              {plannerConflictDates.size > 0 && (
-                <span className="px-2 py-0.5 rounded-full text-xs bg-red-500 text-white font-bold">
-                  ⚠ {plannerConflictDates.size}
-                </span>
-              )}
-            </button>
+            {CONSULTATION_TYPES.map((type) => {
+              const meta = TYPE_META[type];
+              const Icon = meta.icon;
+              const isSelected = plannerType === type;
+              return (
+                <button
+                  key={type}
+                  onClick={() => handleTypeChange(type)}
+                  title={plannerConflictDates.size > 0 && !isSelected ? "Исправьте конфликты перед переключением" : undefined}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 font-semibold text-sm transition-all ${
+                    isSelected ? meta.active :
+                    plannerConflictDates.size > 0 ? "text-red-400 bg-red-50 cursor-not-allowed" :
+                    "text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {meta.shortLabel}
+                  {plannerConflictDates.size > 0 && (
+                    <span className="px-2 py-0.5 rounded-full text-xs bg-red-500 text-white font-bold">
+                      ⚠ {plannerConflictDates.size}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           {/* Global conflict banner */}
@@ -655,20 +653,28 @@ export default function DoctorSchedule() {
                 const isFromAvail = day.source === "availability";
                 const isOff = day.is_day_off;
                 const hasConflict = plannerConflictDates.has(day.date);
-                const otherDay = plannerDaysOther.find((o) => o.date === day.date);
-                const otherTypeLabel = plannerType === "online" ? "Приём в клинике" : "Видеоконсультация";
-                const otherTypeKey: ConsultationType = plannerType === "online" ? "offline" : "online";
-                // Fallback to template hours if no explicit availability for other type
+                // For each OTHER type, resolve its hours on this day — explicit
+                // date override first, falling back to its weekly template.
                 const weekdayJs = new Date(day.date + "T00:00:00").getDay();
-                const otherTpl = templateData.find(
-                  (t) => t.consultation_type === otherTypeKey && t.weekday === weekdayJs && t.is_active
-                );
-                const conflictSource =
-                  otherDay && !otherDay.is_day_off && otherDay.start_time
-                    ? { start: otherDay.start_time, end: otherDay.end_time, fromTemplate: false }
-                    : otherTpl
-                    ? { start: otherTpl.start_time, end: otherTpl.end_time, fromTemplate: true }
-                    : null;
+                const otherSources = otherPlannerTypes
+                  .map((t) => {
+                    const otherDay = plannerDaysOtherByType[t]?.find((o) => o.date === day.date);
+                    const tpl = templateData.find(
+                      (tp) => tp.consultation_type === t && tp.weekday === weekdayJs && tp.is_active
+                    );
+                    const source =
+                      otherDay && !otherDay.is_day_off && otherDay.start_time && otherDay.end_time
+                        ? { start: otherDay.start_time, end: otherDay.end_time, fromTemplate: false }
+                        : tpl && tpl.start_time && tpl.end_time
+                        ? { start: tpl.start_time, end: tpl.end_time, fromTemplate: true }
+                        : null;
+                    return { type: t, source };
+                  })
+                  .filter((o): o is { type: ConsultationType; source: { start: string; end: string; fromTemplate: boolean } } => !!o.source);
+                const conflictingOther =
+                  hasConflict && day.start_time && day.end_time
+                    ? otherSources.find((o) => timesOverlap(day.start_time!, day.end_time!, o.source.start, o.source.end))
+                    : undefined;
 
                 return (
                   <div
@@ -678,9 +684,7 @@ export default function DoctorSchedule() {
                         ? "border-red-500 bg-red-50"
                         : isOff
                         ? "border-gray-200 bg-gray-50"
-                        : plannerType === "online"
-                        ? "border-blue-300 bg-blue-50"
-                        : "border-purple-300 bg-purple-50"
+                        : `${TYPE_META[plannerType].border} ${TYPE_META[plannerType].bg}`
                     }`}
                   >
                     <div className="flex items-center gap-3 flex-wrap">
@@ -701,9 +705,7 @@ export default function DoctorSchedule() {
                           isOff
                             ? "border-gray-300 bg-white text-gray-400"
                             : isFromAvail
-                            ? plannerType === "online"
-                              ? "border-blue-500 bg-blue-500 text-white"
-                              : "border-purple-500 bg-purple-500 text-white"
+                            ? `${TYPE_META[plannerType].border} ${TYPE_META[plannerType].active}`
                             : "border-gray-300 bg-white text-gray-500"
                         }`}
                       >
@@ -795,23 +797,23 @@ export default function DoctorSchedule() {
                     </div>
 
                     {/* Inline conflict warning block */}
-                    {hasConflict && conflictSource && (
+                    {hasConflict && conflictingOther && (
                       <div className="mt-2 p-3 bg-red-100 border-l-4 border-red-500 rounded">
                         <p className="text-xs text-red-800 font-semibold">
-                          ⚠️ Конфликт времени! {otherTypeLabel} расписание: {conflictSource.start} — {conflictSource.end}
-                          {conflictSource.fromTemplate && " (шаблон)"}
+                          ⚠️ Конфликт времени! {TYPE_META[conflictingOther.type].fullLabel} расписание: {conflictingOther.source.start} — {conflictingOther.source.end}
+                          {conflictingOther.source.fromTemplate && " (шаблон)"}
                         </p>
                         <p className="text-xs text-red-700 mt-1">Измените время или отключите один из графиков</p>
                       </div>
                     )}
 
-                    {/* Show other type's hours as info on non-conflicting active days */}
-                    {!hasConflict && !isOff && conflictSource && (
-                      <p className={`text-xs mt-1 ${plannerType === "online" ? "text-purple-600" : "text-blue-600"}`}>
-                        {plannerType === "online" ? "🏠 Оффлайн:" : "📱 Онлайн:"} {conflictSource.start} — {conflictSource.end}
-                        {conflictSource.fromTemplate && " (шаблон)"}
+                    {/* Show other types' hours as info on non-conflicting active days */}
+                    {!hasConflict && !isOff && otherSources.map(({ type, source }) => (
+                      <p key={type} className={`text-xs mt-1 ${TYPE_META[type].text}`}>
+                        {TYPE_META[type].emoji} {TYPE_META[type].fullLabel}: {source.start} — {source.end}
+                        {source.fromTemplate && " (шаблон)"}
                       </p>
-                    )}
+                    ))}
                   </div>
                 );
               })}
@@ -835,11 +837,8 @@ export default function DoctorSchedule() {
                 className={`flex items-center gap-2 px-8 py-2.5 rounded-xl text-white text-sm font-semibold shadow-lg transition-all ${
                   plannerConflictDates.size > 0
                     ? "bg-red-400 cursor-not-allowed opacity-70"
-                    : "hover:shadow-xl active:scale-95"
+                    : "bg-indigo-600 hover:bg-indigo-700 hover:shadow-xl active:scale-95"
                 }`}
-                style={plannerConflictDates.size > 0 ? {} : {
-                  background: "linear-gradient(135deg, #3772ff 0%, #29358f 100%)",
-                }}
               >
                 {plannerSaving ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -857,45 +856,35 @@ export default function DoctorSchedule() {
       {/* ═══════════════════ TAB: Постоянное ═══════════════════ */}
       {activeTab === "template" && (
         <div className="space-y-4">
-          {/* Online / Offline toggle with conflict badges */}
+          {/* Consultation type toggle with conflict badges */}
           {(() => {
-            const tplConflictCount = [1,2,3,4,5,6,0].filter(wd => {
-              const on = templateData.find(t => t.weekday === wd && t.consultation_type === "online");
-              const off = templateData.find(t => t.weekday === wd && t.consultation_type === "offline");
-              return on?.is_active && off?.is_active && on.start_time && on.end_time && off.start_time && off.end_time
-                && timesOverlap(on.start_time, on.end_time, off.start_time, off.end_time);
-            }).length;
+            const tplConflictCount = getTemplateConflictWeekdays().length;
             return (
               <div className="flex rounded-2xl overflow-hidden border-2 border-gray-200 bg-white">
-                <button
-                  onClick={() => setTemplateType("online")}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 font-semibold text-sm transition-all ${
-                    templateType === "online" ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  <Video className="w-4 h-4" />
-                  Видеоконсультация
-                  {tplConflictCount > 0 && (
-                    <span className="px-2 py-0.5 rounded-full text-xs bg-red-500 text-white font-bold">⚠ {tplConflictCount}</span>
-                  )}
-                </button>
-                <button
-                  onClick={() => setTemplateType("offline")}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 font-semibold text-sm transition-all ${
-                    templateType === "offline" ? "bg-purple-500 text-white" : "text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  <Home className="w-4 h-4" />
-                  Приём в клинике
-                  {tplConflictCount > 0 && (
-                    <span className="px-2 py-0.5 rounded-full text-xs bg-red-500 text-white font-bold">⚠ {tplConflictCount}</span>
-                  )}
-                </button>
+                {CONSULTATION_TYPES.map((type) => {
+                  const meta = TYPE_META[type];
+                  const Icon = meta.icon;
+                  return (
+                    <button
+                      key={type}
+                      onClick={() => setTemplateType(type)}
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 font-semibold text-sm transition-all ${
+                        templateType === type ? meta.active : "text-gray-600 hover:bg-gray-50"
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {meta.fullLabel}
+                      {tplConflictCount > 0 && (
+                        <span className="px-2 py-0.5 rounded-full text-xs bg-red-500 text-white font-bold">⚠ {tplConflictCount}</span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             );
           })()}
 
-          <p className={`text-sm font-medium ${templateType === "online" ? "text-blue-600" : "text-purple-600"}`}>
+          <p className={`text-sm font-medium ${TYPE_META[templateType].text}`}>
             Шаблон повторяется каждую неделю. Конкретные даты из вкладки «По датам» имеют приоритет.
           </p>
 
@@ -908,16 +897,16 @@ export default function DoctorSchedule() {
               {[1, 2, 3, 4, 5, 6, 0].map((weekday) => {
                 const cell = getTemplateCell(weekday);
                 const isActive = cell.is_active;
-                const otherType: ConsultationType = templateType === "online" ? "offline" : "online";
-                const otherCell = templateData.find(
-                  (t) => t.weekday === weekday && t.consultation_type === otherType
-                );
-                const templateConflict =
-                  isActive &&
-                  !!otherCell?.is_active &&
-                  !!cell.start_time && !!cell.end_time &&
-                  !!otherCell.start_time && !!otherCell.end_time &&
-                  timesOverlap(cell.start_time, cell.end_time, otherCell.start_time, otherCell.end_time);
+                const otherTemplateTypes = CONSULTATION_TYPES.filter((t) => t !== templateType);
+                const conflictingOtherCell = isActive && cell.start_time && cell.end_time
+                  ? otherTemplateTypes
+                      .map((t) => ({ type: t, cell: templateData.find((row) => row.weekday === weekday && row.consultation_type === t) }))
+                      .find(({ cell: otherCell }) =>
+                        !!otherCell?.is_active && !!otherCell.start_time && !!otherCell.end_time &&
+                        timesOverlap(cell.start_time!, cell.end_time!, otherCell.start_time, otherCell.end_time)
+                      )
+                  : undefined;
+                const templateConflict = !!conflictingOtherCell;
                 return (
                   <div
                     key={weekday}
@@ -925,9 +914,7 @@ export default function DoctorSchedule() {
                       templateConflict
                         ? "border-red-500 bg-red-50"
                         : isActive
-                        ? templateType === "online"
-                          ? "border-blue-300 bg-blue-50"
-                          : "border-purple-300 bg-purple-50"
+                        ? `${TYPE_META[templateType].border} ${TYPE_META[templateType].bg}`
                         : "border-gray-200 bg-gray-50"
                     }`}
                   >
@@ -938,9 +925,7 @@ export default function DoctorSchedule() {
                         }
                         className={`flex-shrink-0 w-11 h-11 rounded-xl border-2 font-semibold text-xs transition-all ${
                           isActive
-                            ? templateType === "online"
-                              ? "border-blue-500 bg-blue-500 text-white"
-                              : "border-purple-500 bg-purple-500 text-white"
+                            ? `${TYPE_META[templateType].border} ${TYPE_META[templateType].active}`
                             : "border-gray-300 bg-white text-gray-400"
                         }`}
                       >
@@ -1002,10 +987,10 @@ export default function DoctorSchedule() {
                     </div>
 
                     {/* Inline conflict block for template */}
-                    {templateConflict && otherCell && (
+                    {conflictingOtherCell?.cell && (
                       <div className="mt-2 p-3 bg-red-100 border-l-4 border-red-500 rounded">
                         <p className="text-xs text-red-800 font-semibold">
-                          ⚠️ Конфликт времени! {templateType === "online" ? "Приём в клинике" : "Видеоконсультация"} расписание: {otherCell.start_time} — {otherCell.end_time}
+                          ⚠️ Конфликт времени! {TYPE_META[conflictingOtherCell.type].fullLabel} расписание: {conflictingOtherCell.cell.start_time} — {conflictingOtherCell.cell.end_time}
                         </p>
                         <p className="text-xs text-red-700 mt-1">Измените время или отключите один из графиков</p>
                       </div>
@@ -1018,12 +1003,7 @@ export default function DoctorSchedule() {
 
           {/* Template global conflict banner */}
           {!templateLoading && (() => {
-            const tplConflictCount = [1,2,3,4,5,6,0].filter(wd => {
-              const on = templateData.find(t => t.weekday === wd && t.consultation_type === "online");
-              const off = templateData.find(t => t.weekday === wd && t.consultation_type === "offline");
-              return on?.is_active && off?.is_active && on.start_time && on.end_time && off.start_time && off.end_time
-                && timesOverlap(on.start_time, on.end_time, off.start_time, off.end_time);
-            }).length;
+            const tplConflictCount = getTemplateConflictWeekdays().length;
             return tplConflictCount > 0 ? (
               <div className="p-4 bg-red-50 border-2 border-red-200 rounded-2xl">
                 <p className="text-sm text-red-800 font-bold">⛔ Обнаружены конфликты расписания! ({tplConflictCount} дней)</p>
@@ -1037,11 +1017,7 @@ export default function DoctorSchedule() {
               <button
                 onClick={handleSaveTemplate}
                 disabled={templateSaving}
-                className="flex items-center gap-2 px-8 py-3 rounded-xl text-white font-semibold shadow-lg hover:shadow-xl active:scale-95 transition-all disabled:opacity-60"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #3772ff 0%, #29358f 100%)",
-                }}
+                className="flex items-center gap-2 px-8 py-3 rounded-xl text-white font-semibold bg-indigo-600 hover:bg-indigo-700 shadow-lg hover:shadow-xl active:scale-95 transition-all disabled:opacity-60"
               >
                 {templateSaving ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -1058,7 +1034,7 @@ export default function DoctorSchedule() {
       {/* ═══════════════════ TAB: История ═══════════════════ */}
       {activeTab === "history" && (() => {
           const WEEKDAYS_RU = ["Воскресенье","Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"];
-          const CONS_TYPE_RU: Record<string, string> = { online: "Видеоконсультация", offline: "Приём в клинике" };
+          const CONS_TYPE_RU: Record<string, string> = { online: "Видеоконсультация", offline: "Приём в клинике", mixed: "Гибкий формат" };
 
           const formatFieldValue = (key: string, val: unknown): string => {
             if (val === null || val === undefined) return "—";
@@ -1262,10 +1238,9 @@ export default function DoctorSchedule() {
                             onClick={() => setHistoryPage(page)}
                             className={`w-8 h-8 rounded-xl text-xs font-semibold transition-all border ${
                               page === historyPage
-                                ? "text-white border-blue-600 shadow-md"
+                                ? "text-white border-indigo-600 bg-indigo-600 shadow-md"
                                 : "border-gray-200 text-gray-500 hover:bg-gray-100"
                             }`}
-                            style={page === historyPage ? { background: "linear-gradient(135deg, #3772ff 0%, #29358f 100%)" } : {}}
                           >
                             {page}
                           </button>

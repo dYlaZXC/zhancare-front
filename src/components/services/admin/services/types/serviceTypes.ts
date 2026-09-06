@@ -68,6 +68,8 @@ export interface StaffMember {
   role: string;
 }
 
+export type ScheduleSource = "own" | "doctor";
+
 export interface Service {
   id: number;
   name: string;
@@ -78,10 +80,11 @@ export interface Service {
   category_label: string;
   is_active: boolean;
   schedules?: Array<{ id: number; weekday: number; start_time: string; end_time: string; is_active: boolean }>;
-  capacity_per_slot?: number;
+  capacity_per_slot?: number | null;
   currency?: string;
-  doctor_id?: number | null;
-  doctor_name?: string | null;
+  schedule_source: ScheduleSource;
+  doctor_ids: number[];
+  doctor_names: string[];
 }
 
 export interface ServiceFormData {
@@ -91,13 +94,14 @@ export interface ServiceFormData {
   duration_minutes: number;
   category: string;
   currency: string;
-  doctor_id: number | null;
+  schedule_source: ScheduleSource;
+  doctor_ids: number[];
   capacity_per_slot: number | null;
 }
 
 export const EMPTY_SERVICE_FORM: ServiceFormData = {
   name: "", description: "", price: "", duration_minutes: 30, category: "",
-  currency: "", doctor_id: null, capacity_per_slot: null,
+  currency: "", schedule_source: "own", doctor_ids: [], capacity_per_slot: null,
 };
 
 export interface CategoryFormData {

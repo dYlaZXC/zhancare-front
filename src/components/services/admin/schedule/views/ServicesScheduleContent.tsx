@@ -22,10 +22,15 @@ interface ServiceDay {
   icon: string;
   color: string;
   schedule: { start_time: string; end_time: string } | null;
+  // schedule_source='doctor' services have no single window (assigned
+  // doctors can have disjoint hours) — real per-slot availability instead,
+  // already accounting for each doctor's own AppointmentSlot conflicts.
+  schedule_source: "own" | "doctor";
+  doctor_slots: { start: string; end: string; available: number }[] | null;
   appointment_count: number;
-  // The service's own responsible/performing doctor.
-  doctor_id?: number | null;
-  doctor_name?: string | null;
+  // The service's own responsible/performing doctors.
+  doctor_ids: number[];
+  doctor_names: string[];
 }
 
 interface DiagnosticsEvent {
@@ -113,6 +118,10 @@ export function ServicesScheduleContent({
         duration_minutes: number; capacity_per_slot: number | null;
         icon: string; color: string;
         schedule: { start_time: string; end_time: string; source: string } | null;
+        schedule_source: "own" | "doctor";
+        doctor_slots: { start: string; end: string; available: number }[] | null;
+        doctor_ids: number[];
+        doctor_names: string[];
       }> = res.data.results ?? res.data;
 
       const mapped: ServiceDay[] = svcs.map(s => ({
@@ -125,7 +134,11 @@ export function ServicesScheduleContent({
         icon: s.icon,
         color: s.color,
         schedule: s.schedule ? { start_time: s.schedule.start_time, end_time: s.schedule.end_time } : null,
+        schedule_source: s.schedule_source,
+        doctor_slots: s.doctor_slots,
         appointment_count: 0,
+        doctor_ids: s.doctor_ids ?? [],
+        doctor_names: s.doctor_names ?? [],
       }));
 
       setServices(mapped);
@@ -178,8 +191,12 @@ export function ServicesScheduleContent({
     s.category_label.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const withSchedule = filtered.filter(s => s.schedule !== null);
-  const withoutSchedule = filtered.filter(s => s.schedule === null);
+  // A doctor-mode service "works" this day if at least one generated slot
+  // is available — it never has a single `schedule` window to check.
+  const worksToday = (s: ServiceDay) =>
+    s.schedule_source === "doctor" ? !!s.doctor_slots?.some(sl => sl.available) : s.schedule !== null;
+  const withSchedule = filtered.filter(worksToday);
+  const withoutSchedule = filtered.filter(s => !worksToday(s));
 
   const bookedEventsForService = (name: string): DiagnosticsEvent[] =>
     events.filter(e => e.type === 'diagnostics' && e.service_name === name && e.date === selectedDate);
@@ -188,6 +205,12 @@ export function ServicesScheduleContent({
   // mirrors the "current <= now" cutoff in diagnostics/views.py's available_slots,
   // so admins see the same "nothing left today" state patients get when booking.
   const generateSlots = (s: ServiceDay) => {
+    if (s.schedule_source === "doctor") {
+      // Already-computed real slots — per-doctor conflicts and the
+      // now-cutoff are handled backend-side, unlike the local arithmetic
+      // below (which only ever applied to a single own-schedule window).
+      return (s.doctor_slots ?? []).filter(sl => sl.available).map(sl => ({ start: sl.start, end: sl.end }));
+    }
     if (!s.schedule) return [];
     const { start_time, end_time } = s.schedule;
     const dur = s.duration_minutes;
@@ -323,18 +346,22 @@ export function ServicesScheduleContent({
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-semibold text-gray-800 truncate">{s.name}</p>
-                        <p className="text-[10px] text-gray-400">{s.category_label}</p>
+                        <p className="text-[10px] text-gray-400">
+                          {s.schedule_source === "doctor" ? "Врач не работает в этот день" : s.category_label}
+                        </p>
                       </div>
-                      <button
-                        onClick={() => openScheduleModal(s.id)}
-                        disabled={loadingScheduleFor === s.id}
-                        className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all disabled:opacity-50"
-                      >
-                        {loadingScheduleFor === s.id
-                          ? <Loader2 className="w-3 h-3 animate-spin" />
-                          : <CalendarDays className="w-3 h-3" />}
-                        Расписание
-                      </button>
+                      {s.schedule_source !== "doctor" && (
+                        <button
+                          onClick={() => openScheduleModal(s.id)}
+                          disabled={loadingScheduleFor === s.id}
+                          className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all disabled:opacity-50"
+                        >
+                          {loadingScheduleFor === s.id
+                            ? <Loader2 className="w-3 h-3 animate-spin" />
+                            : <CalendarDays className="w-3 h-3" />}
+                          Расписание
+                        </button>
+                      )}
                     </div>
                   );
                 })}
@@ -540,7 +567,7 @@ export function ServicesScheduleContent({
           serviceCategoryLabel={assignModal.service.category_label}
           serviceColor={assignModal.service.color}
           serviceIcon={assignModal.service.icon}
-          serviceDoctorName={assignModal.service.doctor_name ?? null}
+          serviceDoctorName={assignModal.service.doctor_names.length > 0 ? assignModal.service.doctor_names.join(", ") : null}
           slot={assignModal.slot}
           allSlots={assignModal.allSlots}
           date={selectedDate}

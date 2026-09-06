@@ -8,13 +8,13 @@ import Link from "next/link";
 import {
   Mic, MicOff, Play, Square, Save, Clock, MapPin,
   User, FileText, Activity, Stethoscope, Pill, ClipboardList,
-  Sparkles, ChevronLeft, AlertTriangle, FlaskConical,
+  Sparkles, ChevronLeft, AlertTriangle,
   Search, Plus, X, CheckCircle, PenLine, Loader2,
 } from "lucide-react";
 import { useDeepgram } from "@/hooks/useDeepgram";
 import AIConsultationReview from "@/app/video-call/doctor/components/AIConsultationReview";
 import { SignatureModal } from "@/components/shared/SignatureModal";
-import { generateMedicalPdf } from "@/lib/generateMedicalPdf";
+import type { ConsultationFormSection } from "@/types/consultation";
 
 interface ClinicAppointment {
   id: number;
@@ -31,6 +31,8 @@ interface ClinicAppointment {
   consultation_started_at: string | null;
   consultation_ended_at: string | null;
   duration_seconds: number | null;
+  template_snapshot?: { sections: ConsultationFormSection[] } | null;
+  form_data?: Record<string, unknown>;
 }
 
 interface DiagnosticReferral {
@@ -55,24 +57,6 @@ interface DiagnosticServiceItem {
   duration_minutes?: number;
 }
 
-interface ConsultationFormData {
-  complaints: string;
-  anamnesis: string;
-  diagnostics: string;
-  treatment: string;
-  diagnosis: string;
-  referrals: DiagnosticReferral[];
-}
-
-const EMPTY_FORM: ConsultationFormData = {
-  complaints: "",
-  anamnesis: "",
-  diagnostics: "",
-  treatment: "",
-  diagnosis: "",
-  referrals: [],
-};
-
 function formatDuration(seconds: number) {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
@@ -81,81 +65,18 @@ function formatDuration(seconds: number) {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-function parseNotes(raw: string | null): ConsultationFormData {
-  if (!raw) return EMPTY_FORM;
-  try {
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === "object" && "complaints" in parsed) {
-      return {
-        ...EMPTY_FORM,
-        ...parsed,
-        referrals: Array.isArray(parsed.referrals) ? parsed.referrals : [],
-      };
-    }
-  } catch {
-    return { ...EMPTY_FORM, complaints: raw };
-  }
-  return EMPTY_FORM;
-}
-
-type ConsultationTextField = "complaints" | "anamnesis" | "diagnostics" | "treatment" | "diagnosis";
-
-type FieldDef = {
-  key: ConsultationTextField;
-  label: string;
-  placeholder: string;
-  icon: React.ComponentType<{ className?: string }>;
-  color: string;
-  bg: string;
-  border: string;
-  rows: number;
+// Icon/color per well-known legacy key, purely cosmetic — anything else (a
+// clinic's custom section) falls back to the generic style below. `diagnostics`
+// isn't listed: it always gets the special combined block with the referral
+// catalog, never this generic textarea rendering.
+const SECTION_STYLE: Record<string, { icon: React.ComponentType<{ className?: string }>; color: string; bg: string; border: string }> = {
+  complaints: { icon: ClipboardList, color: "text-rose-500", bg: "bg-rose-50", border: "focus:border-rose-400 focus:ring-rose-100" },
+  anamnesis: { icon: FileText, color: "text-amber-500", bg: "bg-amber-50", border: "focus:border-amber-400 focus:ring-amber-100" },
+  treatment: { icon: Pill, color: "text-blue-500", bg: "bg-blue-50", border: "focus:border-blue-400 focus:ring-blue-100" },
+  diagnosis: { icon: Stethoscope, color: "text-emerald-500", bg: "bg-emerald-50", border: "focus:border-emerald-400 focus:ring-emerald-100" },
 };
-
-const FIELDS_BEFORE: FieldDef[] = [
-  {
-    key: "complaints",
-    label: "Жалобы пациента",
-    placeholder: "Боли, симптомы, длительность...",
-    icon: ClipboardList,
-    color: "text-rose-500",
-    bg: "bg-rose-50",
-    border: "focus:border-rose-400 focus:ring-rose-100",
-    rows: 3,
-  },
-  {
-    key: "anamnesis",
-    label: "Анамнез",
-    placeholder: "История заболевания, перенесённые болезни, аллергии...",
-    icon: FileText,
-    color: "text-amber-500",
-    bg: "bg-amber-50",
-    border: "focus:border-amber-400 focus:ring-amber-100",
-    rows: 3,
-  },
-];
-
-const FIELDS_AFTER: FieldDef[] = [
-  {
-    key: "treatment",
-    label: "Лечение и рекомендации",
-    placeholder: "Препараты, дозировки, режим приёма, рекомендации...",
-    icon: Pill,
-    color: "text-blue-500",
-    bg: "bg-blue-50",
-    border: "focus:border-blue-400 focus:ring-blue-100",
-    rows: 4,
-  },
-  {
-    key: "diagnosis",
-    label: "Диагноз",
-    placeholder: "Окончательный или предварительный диагноз по МКБ-10...",
-    icon: Stethoscope,
-    color: "text-emerald-500",
-    bg: "bg-emerald-50",
-    border: "focus:border-emerald-400 focus:ring-emerald-100",
-    rows: 2,
-  },
-];
+const DEFAULT_SECTION_STYLE = { icon: FileText, color: "text-gray-500", bg: "bg-gray-50", border: "focus:border-gray-400 focus:ring-gray-100" };
+const getSectionStyle = (key: string) => SECTION_STYLE[key] || DEFAULT_SECTION_STYLE;
 
 export default function OfflineConsultationPage() {
   const { id } = useParams<{ id: string }>();
@@ -164,7 +85,17 @@ export default function OfflineConsultationPage() {
   const [appointment, setAppointment] = useState<ClinicAppointment | null>(null);
   const [loading, setLoading] = useState(true);
   const [elapsed, setElapsed] = useState(0);
-  const [formData, setFormData] = useState<ConsultationFormData>(EMPTY_FORM);
+  // Which sections render at all, and in what order — the clinic's active
+  // template, fixed on this appointment at first fetch (see backend
+  // ensure_clinic_appointment_template_snapshot). `diagnostics` is special:
+  // it always gets the combined textarea + referral-catalog block below,
+  // whatever the clinic named it.
+  const [templateSections, setTemplateSections] = useState<ConsultationFormSection[]>([]);
+  const [sectionValues, setSectionValues] = useState<Record<string, string>>({});
+  const [referrals, setReferrals] = useState<DiagnosticReferral[]>([]);
+  // At most one section is type="diagnostics_referral" in v1 (whatever the
+  // clinic named it, or the legacy "diagnostics" fallback key).
+  const diagnosticsSection = templateSections.find(s => (s.type || "text") === "diagnostics_referral");
   const [saving, setSaving] = useState(false);
   const [showAI, setShowAI] = useState(false);
   const [showNavGuard, setShowNavGuard] = useState(false);
@@ -206,7 +137,34 @@ export default function OfflineConsultationPage() {
     try {
       const { data } = await api.get<ClinicAppointment>(`/clinic-appointments/${id}/`);
       setAppointment(data);
-      setFormData(parseNotes(data.notes));
+      const sections = data.template_snapshot?.sections || [];
+      setTemplateSections(sections);
+
+      const formData = data.form_data || {};
+      const diagKey = sections.find(s => (s.type || "text") === "diagnostics_referral")?.key;
+      const textValues: Record<string, string> = {};
+      for (const [key, value] of Object.entries(formData)) {
+        if (key === diagKey) continue;
+        textValues[key] = typeof value === "string" ? value : "";
+      }
+      if (diagKey) {
+        const diagValue = formData[diagKey] as any;
+        if (diagValue && typeof diagValue === "object" && Array.isArray(diagValue.referrals)) {
+          textValues[diagKey] = diagValue.comment || "";
+          setReferrals(diagValue.referrals.map((r: any) => ({
+            id: r.service_id,
+            name: r.name,
+            category_label: r.category_label,
+            price: r.price ?? null,
+            booked_at: r.booked_at,
+            appointment_id: r.appointment_id,
+          })));
+        } else {
+          textValues[diagKey] = "";
+          setReferrals([]);
+        }
+      }
+      setSectionValues(textValues);
       if (data.consultation_started_at && !data.consultation_ended_at) {
         startTimeRef.current = new Date(data.consultation_started_at).getTime();
       }
@@ -289,29 +247,26 @@ export default function OfflineConsultationPage() {
   });
 
   const handleAddReferral = (service: DiagnosticServiceItem) => {
-    if (formData.referrals.some(r => r.id === service.id)) return;
-    setFormData(prev => ({
-      ...prev,
-      referrals: [...prev.referrals, {
-        id: service.id,
-        name: service.name,
-        category: service.category,
-        category_label: service.category_label,
-        price: service.price != null ? Number(service.price) : undefined,
-        currency: service.currency ?? undefined,
-      }],
-    }));
+    if (referrals.some(r => r.id === service.id)) return;
+    setReferrals(prev => [...prev, {
+      id: service.id,
+      name: service.name,
+      category: service.category,
+      category_label: service.category_label,
+      price: service.price != null ? Number(service.price) : undefined,
+      currency: service.currency ?? undefined,
+    }]);
   };
 
   const handleAddManualReferral = () => {
     const name = manualReferral.trim();
     if (!name) return;
-    setFormData(prev => ({ ...prev, referrals: [...prev.referrals, { name }] }));
+    setReferrals(prev => [...prev, { name }]);
     setManualReferral("");
   };
 
   const handleRemoveReferral = (index: number) => {
-    setFormData(prev => ({ ...prev, referrals: prev.referrals.filter((_, i) => i !== index) }));
+    setReferrals(prev => prev.filter((_, i) => i !== index));
   };
 
   const uniqueCategories = Array.from(
@@ -372,22 +327,19 @@ export default function OfflineConsultationPage() {
       });
       const appointmentId = data?.appointment?.id;
       const slotObj = bookingSlots.find(s => s.start === selectedSlot);
-      setFormData(prev => ({
-        ...prev,
-        referrals: [
-          ...prev.referrals.filter(r => r.id !== service.id),
-          {
-            id: service.id,
-            name: service.name,
-            category: service.category,
-            category_label: service.category_label,
-            price: service.price != null ? Number(service.price) : undefined,
-            currency: service.currency ?? undefined,
-            booked_at: selectedSlot,
-            appointment_id: appointmentId,
-          },
-        ],
-      }));
+      setReferrals(prev => [
+        ...prev.filter(r => r.id !== service.id),
+        {
+          id: service.id,
+          name: service.name,
+          category: service.category,
+          category_label: service.category_label,
+          price: service.price != null ? Number(service.price) : undefined,
+          currency: service.currency ?? undefined,
+          booked_at: selectedSlot,
+          appointment_id: appointmentId,
+        },
+      ]);
       toast.success(`Записано: ${service.name} — ${slotObj?.label ?? ""} ${bookingDate}`);
       setBookingServiceId(null);
     } catch (err: any) {
@@ -397,59 +349,77 @@ export default function OfflineConsultationPage() {
     }
   };
 
-  const handleUpdate = (field: keyof ConsultationFormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleUpdate = (key: string, value: string) => {
+    setSectionValues(prev => ({ ...prev, [key]: value }));
   };
 
+  // AI result keys are already restricted server-side to this appointment's
+  // template_snapshot sections — merge any non-empty value in, leave
+  // doctor-filled fields alone when AI returns "".
   const handleAIApply = (fields: Record<string, string>) => {
-    Object.entries(fields).forEach(([k, v]) => {
-      if (v && k in formData) handleUpdate(k as keyof ConsultationFormData, v);
+    setSectionValues(prev => {
+      const next = { ...prev };
+      for (const [key, value] of Object.entries(fields)) {
+        if (value && value.trim()) next[key] = value;
+      }
+      return next;
     });
   };
 
   const handleSave = useCallback(async () => {
     setSaving(true);
     try {
-      await api.patch(`/clinic-appointments/${id}/`, { notes: JSON.stringify(formData) });
+      // Diagnostics referrals nest under their own section key as
+      // {referrals, comment} — matching the wire shape the backend validates
+      // per-section (see consultations/template_utils.py::validate_structured_data),
+      // so this now goes through the same validated endpoint as the video-call flow.
+      const structuredData: Record<string, unknown> = { ...sectionValues };
+      if (diagnosticsSection) {
+        structuredData[diagnosticsSection.key] = {
+          comment: sectionValues[diagnosticsSection.key] || "",
+          referrals: referrals.map(r => ({
+            service_id: r.id,
+            name: r.name,
+            category_label: r.category_label,
+            price: r.price ?? null,
+            booked_at: r.booked_at,
+            appointment_id: r.appointment_id,
+          })),
+        };
+      }
+      await api.post(`/clinic-appointments/${id}/save-consultation-form/`, { structured_data: structuredData });
       toast.success("Сохранено");
     } catch {
       toast.error("Ошибка при сохранении");
     } finally {
       setSaving(false);
     }
-  }, [id, formData]);
+  }, [id, sectionValues, referrals, diagnosticsSection]);
 
+  // Server renders the PDF from the record's own saved structured_data (and
+  // archives it to the patient's documents in the same request), so the form
+  // is saved first via the same handleSave the Save button uses — otherwise
+  // the doctor would download a document missing whatever they just typed.
   const generateAndUploadPdf = async (signature: string) => {
     if (!appointment) return;
     setGeneratingPdf(true);
     try {
-      const { blob, filename } = await generateMedicalPdf({
-        documentTitle: "Консультационный лист",
-        patientName: appointment.patient_name,
-        doctorName: appointment.doctor_name,
-        sections: [
-          { label: "Жалобы пациента", content: formData.complaints },
-          { label: "Анамнез заболевания", content: formData.anamnesis },
-          { label: "Обследование и диагностика", content: formData.diagnostics },
-          { label: "Диагноз", content: formData.diagnosis },
-          { label: "Назначенное лечение", content: formData.treatment },
-        ],
-        signature,
-        filenamePrefix: "consultation",
-      });
+      await handleSave();
+
+      const response = await api.post(
+        `/clinic-appointments/${id}/generate-pdf/`,
+        { signature },
+        { responseType: "blob" }
+      );
+      const blob = response.data as Blob;
+      const disposition = response.headers["content-disposition"] as string | undefined;
+      const filenameMatch = disposition?.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+      const filename = filenameMatch ? decodeURIComponent(filenameMatch[1]) : "consultation.pdf";
 
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = blobUrl; a.download = filename; a.click();
       URL.revokeObjectURL(blobUrl);
-
-      const uploadData = new FormData();
-      uploadData.append("file", new File([blob], filename, { type: "application/pdf" }));
-      uploadData.append("clinic_appointment_id", String(id));
-      uploadData.append("description", `Консультационный лист — ${appointment.patient_name}`);
-      await api.post("/medical-documents/doctor-upload/", uploadData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
       toast.success("PDF сформирован и сохранён в документы пациента");
     } catch {
       toast.error("Не удалось сформировать PDF");
@@ -591,7 +561,7 @@ export default function OfflineConsultationPage() {
 
             <button
               onClick={handleGeneratePdfClick}
-              disabled={generatingPdf || !Object.entries(formData).some(([k, v]) => k !== "referrals" && typeof v === "string" && v.trim())}
+              disabled={generatingPdf || !Object.values(sectionValues).some(v => v && v.trim())}
               title={signatureData ? "Сформировать подписанный PDF" : "Подписать и сформировать PDF"}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded-lg shadow-sm shadow-blue-200 disabled:opacity-40 disabled:shadow-none transition-all"
             >
@@ -730,33 +700,17 @@ export default function OfflineConsultationPage() {
         {/* ── Main form area ── */}
         <main className="flex-1">
           <div className="flex flex-col divide-y divide-gray-200">
-            {/* Жалобы + Анамнез */}
-            {FIELDS_BEFORE.map(({ key, label, placeholder, icon: Icon, color, bg, border, rows }) => (
-              <div key={key} className="bg-white overflow-hidden">
-                <div className={`flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 ${bg}`}>
-                  <Icon className={`w-4 h-4 ${color}`} />
-                  <span className="text-sm font-semibold text-gray-800">{label}</span>
-                </div>
-                <textarea
-                  value={formData[key]}
-                  onChange={e => handleUpdate(key, e.target.value)}
-                  placeholder={placeholder}
-                  rows={rows}
-                  className={`w-full px-4 py-3 text-sm text-gray-800 placeholder-gray-400 resize-none border border-transparent focus:outline-none focus:ring-2 transition-all ${border}`}
-                />
-              </div>
-            ))}
-
-            {/* ── Диагностика + Направления (combined) ── */}
-            <div className="bg-white overflow-hidden">
+            {templateSections.map(section => section.key === diagnosticsSection?.key ? (
+            /* ── Диагностика + Направления (combined) — the type="diagnostics_referral" section, whatever the clinic named it ── */
+            <div key={section.key} className="bg-white overflow-hidden">
               {/* Header */}
               <div className="flex items-center justify-between gap-2.5 px-4 py-3 border-b border-gray-100 bg-cyan-50">
                 <div className="flex items-center gap-2.5">
                   <Activity className="w-4 h-4 text-cyan-500" />
-                  <span className="text-sm font-semibold text-gray-800">Диагностика и направления</span>
-                  {formData.referrals.length > 0 && (
+                  <span className="text-sm font-semibold text-gray-800">{section.label}</span>
+                  {referrals.length > 0 && (
                     <span className="text-xs bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded-full font-medium">
-                      {formData.referrals.length} направл.
+                      {referrals.length} направл.
                     </span>
                   )}
                 </div>
@@ -771,17 +725,17 @@ export default function OfflineConsultationPage() {
 
               {/* Free-text diagnostics textarea */}
               <textarea
-                value={formData.diagnostics}
-                onChange={e => handleUpdate("diagnostics", e.target.value)}
-                placeholder="Обследования, анализы, результаты..."
+                value={sectionValues[section.key] || ""}
+                onChange={e => handleUpdate(section.key, e.target.value)}
+                placeholder={section.placeholder || "Обследования, анализы, результаты..."}
                 rows={3}
                 className="w-full px-4 py-3 text-sm text-gray-800 placeholder-gray-400 resize-none border border-transparent focus:outline-none focus:ring-2 focus:border-cyan-400 focus:ring-cyan-100 transition-all"
               />
 
               {/* Selected referral chips */}
-              {formData.referrals.length > 0 && (
+              {referrals.length > 0 && (
                 <div className="px-4 pb-3 flex flex-wrap gap-2 border-t border-gray-50 pt-2">
-                  {formData.referrals.map((ref, i) => (
+                  {referrals.map((ref, i) => (
                     <div
                       key={i}
                       className="flex items-center gap-1.5 bg-cyan-50 border border-cyan-200 text-cyan-800 text-xs rounded-xl px-3 py-1.5"
@@ -861,7 +815,7 @@ export default function OfflineConsultationPage() {
                   ) : filteredServices.length > 0 ? (
                     <div className="rounded-xl border border-gray-200 divide-y divide-gray-100 bg-white overflow-hidden">
                       {filteredServices.map(service => {
-                        const referral = formData.referrals.find(r => r.id === service.id);
+                        const referral = referrals.find(r => r.id === service.id);
                         const added = !!referral;
                         const isOpen = bookingServiceId === service.id;
                         return (
@@ -1007,22 +961,26 @@ export default function OfflineConsultationPage() {
                 </div>
               )}
             </div>
-
-            {/* Лечение + Диагноз */}
-            {FIELDS_AFTER.map(({ key, label, placeholder, icon: Icon, color, bg, border, rows }) => (
-              <div key={key} className="bg-white overflow-hidden">
-                <div className={`flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 ${bg}`}>
-                  <Icon className={`w-4 h-4 ${color}`} />
-                  <span className="text-sm font-semibold text-gray-800">{label}</span>
-                </div>
-                <textarea
-                  value={formData[key]}
-                  onChange={e => handleUpdate(key, e.target.value)}
-                  placeholder={placeholder}
-                  rows={rows}
-                  className={`w-full px-4 py-3 text-sm text-gray-800 placeholder-gray-400 resize-none border border-transparent focus:outline-none focus:ring-2 transition-all ${border}`}
-                />
-              </div>
+            ) : (
+              /* Any other section (legacy complaints/anamnesis/treatment/diagnosis, or a clinic's custom key) */
+              (() => {
+                const { icon: Icon, color, bg, border } = getSectionStyle(section.key);
+                return (
+                  <div key={section.key} className="bg-white overflow-hidden">
+                    <div className={`flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 ${bg}`}>
+                      <Icon className={`w-4 h-4 ${color}`} />
+                      <span className="text-sm font-semibold text-gray-800">{section.label}</span>
+                    </div>
+                    <textarea
+                      value={sectionValues[section.key] || ""}
+                      onChange={e => handleUpdate(section.key, e.target.value)}
+                      placeholder={section.placeholder || `${section.label}...`}
+                      rows={3}
+                      className={`w-full px-4 py-3 text-sm text-gray-800 placeholder-gray-400 resize-none border border-transparent focus:outline-none focus:ring-2 transition-all ${border}`}
+                    />
+                  </div>
+                );
+              })()
             ))}
           </div>
 
@@ -1035,6 +993,9 @@ export default function OfflineConsultationPage() {
       {/* AI Review Modal */}
       {showAI && (
         <AIConsultationReview
+          sourceType="clinic_appointment"
+          sourceId={Number(id)}
+          templateSections={templateSections}
           patientName={appointment.patient_name}
           initialDescription={transcript ?? ""}
           onApply={handleAIApply}

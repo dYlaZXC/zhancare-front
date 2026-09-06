@@ -1,12 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ClipboardList, Plus } from "lucide-react";
+import { ClipboardList, Plus, FileSpreadsheet } from "lucide-react";
 
 export function ServicesHeader({
   onOpenCreate,
+  onOpenBulkUpload,
 }: {
   onOpenCreate: () => void;
+  onOpenBulkUpload: () => void;
 }) {
   return (
     <div className="flex items-center justify-between mb-6">
@@ -18,16 +20,27 @@ export function ServicesHeader({
           Управление диагностическими услугами клиники
         </p>
       </div>
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={onOpenCreate}
-        className="flex items-center gap-2 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all"
-        style={{ background: 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%)' }}
-      >
-        <Plus className="w-5 h-5" />
-        Добавить услугу
-      </motion.button>
+      <div className="flex items-center gap-2">
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={onOpenBulkUpload}
+          className="flex items-center gap-2 px-5 py-3 rounded-2xl text-sky-700 font-semibold border-2 border-sky-200 bg-white hover:bg-sky-50 shadow-sm transition-all"
+        >
+          <FileSpreadsheet className="w-5 h-5" />
+          Загрузить из Excel
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={onOpenCreate}
+          className="flex items-center gap-2 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+          style={{ background: 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%)' }}
+        >
+          <Plus className="w-5 h-5" />
+          Добавить услугу
+        </motion.button>
+      </div>
     </div>
   );
 }

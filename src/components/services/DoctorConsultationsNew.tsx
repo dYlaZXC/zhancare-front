@@ -5,7 +5,6 @@ import { toast } from "react-toastify";
 import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
-  Stethoscope,
   Settings,
   Search,
   RefreshCw
@@ -178,11 +177,26 @@ const DoctorConsultationsNew: React.FC = () => {
   }, [consultations, activeTab, searchTerm]);
 
   const acceptConsultationInTable = async (meeting_id: string) => {
+    // The row being accepted may be an offline (in-clinic) booking, not a
+    // video consultation — route to the matching documentation page instead
+    // of always jumping into the video-call screen. Looked up from local
+    // state before the API call since the accept response only echoes back
+    // meeting_id, not type/clinic_appointment_id.
+    const source = consultations.find(c => c.meeting_id === meeting_id);
+
     try {
       const { data } = await api.post<{ meeting_id: string }>(`/consultations/${meeting_id}/accept/`, {});
       toast.success("Консультация принята");
 
-      router.push(`/video-call/doctor?meetingId=${data.meeting_id}`);
+      if (source?.type === "offline") {
+        if (source.clinic_appointment_id) {
+          router.push(`/doctor/appointments/${source.clinic_appointment_id}/offline/`);
+        } else {
+          router.push(`/doctor/consultations/${data.meeting_id}/offline/`);
+        }
+      } else {
+        router.push(`/video-call/doctor?meetingId=${data.meeting_id}`);
+      }
     } catch {
       toast.error("Ошибка при принятии консультации");
     }
@@ -262,21 +276,15 @@ const DoctorConsultationsNew: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white/95 backdrop-blur-sm rounded-xl sm:rounded-2xl border border-white/50 shadow-xl p-3 sm:p-4 md:p-5 lg:p-6 overflow-hidden"
           >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="p-2.5 sm:p-3 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl shadow-lg flex-shrink-0">
-                  <Stethoscope className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-white" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 truncate">
-                    Панель врача
-                  </h1>
-                  <p className="text-sm sm:text-base text-gray-600 mt-0.5 truncate">
-                    Добро пожаловать, {user?.first_name} {user?.last_name}
-                  </p>
-                </div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-5">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-3xl font-bold mb-2 truncate" style={{ color: '#1e263e' }}>
+                  Панель врача
+                </h1>
+                <p className="text-gray-600 truncate">
+                  Добро пожаловать, {user?.first_name} {user?.last_name}
+                </p>
               </div>
 
               <div className="flex items-center gap-2 self-end sm:self-auto flex-shrink-0">
@@ -302,9 +310,7 @@ const DoctorConsultationsNew: React.FC = () => {
             </div>
 
             {/* Statistics Cards */}
-            <div className="mt-4 sm:mt-5">
-              <StatsCards stats={stats} />
-            </div>
+            <StatsCards stats={stats} />
           </motion.div>
 
           {/* Controls Section */}

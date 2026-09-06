@@ -8,7 +8,6 @@ import {
   faXmark,
   faSave,
   faDownload,
-  faChevronLeft,
   faChevronRight,
   faNotesMedical,
   faPrescriptionBottle,
@@ -23,20 +22,34 @@ import {
   faHistory,
   faFlask,
   faPrescription,
-  faDiagnoses
+  faDiagnoses,
+  faFileLines
 } from "@fortawesome/free-solid-svg-icons";
-import ConsultationForm, { ConsultationFormData } from "./ConsultationForm";
-import PatientComplaintsForm from "./forms/PatientComplaintsForm";
-import AnamnesisForm from "./forms/AnamnesisForm";
 import DiagnosticsForm, { DiagnosticReferral } from "./forms/DiagnosticsForm";
+import GenericSectionForm from "./forms/GenericSectionForm";
 import AudioWaveform from "./AudioWaveform";
-import TreatmentRecommendationsForm from "./forms/TreatmentRecommendationsForm";
-import DiagnosisForm from "./forms/DiagnosisForm";
 import { Sparkles } from "lucide-react";
 import AIConsultationReview from "./AIConsultationReview";
-import { Consultation } from "@/types/consultation";
+import { Consultation, ConsultationFormSection, DiagnosticsReferralValue } from "@/types/consultation";
 import { api } from "@/utils/api";
 import { isInjectionAttempt, CHAT_ENDPOINT } from "@/lib/ai";
+
+type SectionValues = Record<string, string>;
+
+// Icon per well-known legacy section key — anything else (a clinic's custom
+// section) falls back to a generic document icon (getSectionIcon below).
+const SECTION_ICONS: Record<string, any> = {
+  complaints: faCommentMedical,
+  anamnesis: faHistory,
+  diagnostics: faFlask,
+  treatment: faPrescription,
+  diagnosis: faDiagnoses,
+  session_notes: faNotesMedical,
+  prescription: faPrescriptionBottle,
+  recommendations: faClipboardList,
+};
+const getSectionIcon = (section: ConsultationFormSection) =>
+  section.type === 'diagnostics_referral' ? faFlask : (SECTION_ICONS[section.key] || faFileLines);
 
 const formatRecordingDuration = (totalSeconds: number): string => {
   const minutes = Math.floor(totalSeconds / 60);
@@ -46,16 +59,8 @@ const formatRecordingDuration = (totalSeconds: number): string => {
 
 interface FloatingConsultationButtonProps {
   consultation: Consultation;
-  onSave?: (data: ConsultationFormData & {
-    sessionNotes: string;
-    prescription: string;
-    recommendations: string;
-  }) => void;
-  onGenerateReport?: (data: ConsultationFormData & {
-    sessionNotes: string;
-    prescription: string;
-    recommendations: string;
-  }) => void;
+  onSave?: (data: Record<string, string | DiagnosticsReferralValue> & { transcription: string }) => void | Promise<void>;
+  onGenerateReport?: (data: Record<string, string | DiagnosticsReferralValue>) => void;
   transcript?: string;
   isTranscribing?: boolean;
   micStream?: MediaStream | null;
@@ -86,7 +91,25 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
   patientId
 }, ref) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'complaints' | 'anamnesis' | 'diagnostics' | 'treatment' | 'diagnosis' | 'notes' | 'prescription' | 'recommendations' | 'ai-chat' | 'transcription' | null>(null);
+  const [activeTab, setActiveTab] = useState<string | null>(null);
+
+  // The clinic's active template, fixed on this consultation at first fetch —
+  // this is the entire source of truth for which tabs/sections render. No
+  // fixed 8-field list any more: whatever the clinic configured is what the
+  // doctor sees, in that order.
+  const [templateSections, setTemplateSections] = useState<ConsultationFormSection[]>([]);
+  // Text-section values only — the diagnostics_referral section's free-text
+  // "comment" also lives here (keyed by its own section key), its referral
+  // list lives separately in diagnosticsReferrals below.
+  const [sectionValues, setSectionValues] = useState<SectionValues>({});
+
+  const updateSection = (key: string, value: string) => {
+    setSectionValues(prev => ({ ...prev, [key]: value }));
+  };
+
+  // At most one section is type="diagnostics_referral" in v1 (whatever the
+  // clinic named it, or the legacy "diagnostics" fallback key).
+  const diagnosticsSection = templateSections.find(s => (s.type || 'text') === 'diagnostics_referral');
 
   // Lifted (not local to DiagnosticsForm) so the referral chips survive
   // switching away from and back to the Диагностика tab — DiagnosticsForm
@@ -106,41 +129,23 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
   React.useImperativeHandle(ref, () => ({
     openSheet: () => {
       setIsOpen(true);
-      setActiveTab('complaints'); // Open with complaints tab by default
+      setActiveTab(templateSections[0]?.key ?? null);
     }
   }));
 
-  const [consultationFormData, setConsultationFormData] = useState<ConsultationFormData>({
-    complaints: '',
-    anamnesis: '',
-    diagnostics: '',
-    treatment: '',
-    diagnosis: ''
-  });
-
-  // Additional notes sections
-  const [sessionNotes, setSessionNotes] = useState("");
-  const [prescription, setPrescription] = useState("");
-  const [recommendations, setRecommendations] = useState("");
-
   const [showAIReview, setShowAIReview] = useState(false);
 
+  // AI result keys are already restricted server-side to this consultation's
+  // template_snapshot sections (see analyze_consultation) — merge any
+  // non-empty value in, leave doctor-filled fields alone when AI returns "".
   const handleAIApply = (aiFields: Record<string, string>) => {
-    const formKeys = ['complaints', 'anamnesis', 'diagnostics', 'diagnosis', 'treatment'] as const;
-    const formUpdates: Partial<ConsultationFormData> = {};
-    formKeys.forEach(key => {
-      if (aiFields[key]) formUpdates[key] = aiFields[key];
+    setSectionValues(prev => {
+      const next = { ...prev };
+      for (const [key, value] of Object.entries(aiFields)) {
+        if (value && value.trim()) next[key] = value;
+      }
+      return next;
     });
-    if (Object.keys(formUpdates).length > 0) {
-      setConsultationFormData(prev => ({ ...prev, ...formUpdates }));
-    }
-    if (aiFields.prescription) {
-      setPrescription(aiFields.prescription);
-    } else if (aiFields.treatment) {
-      setPrescription(aiFields.treatment);
-    }
-    if (aiFields.recommendations) setRecommendations(aiFields.recommendations);
-    if (aiFields.session_notes) setSessionNotes(aiFields.session_notes);
   };
 
   // Loading state for data fetch
@@ -153,41 +158,39 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
 
       setIsLoadingData(true);
       try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/consultations/?meeting_id=${consultation.meeting_id}`,
-          {
-            headers: {
-              'Content-Type': 'application/json',
-            },
+        const { data } = await api.get(`/consultations/?meeting_id=${consultation.meeting_id}`);
+        // API returns array, get first result
+        const consultationData = Array.isArray(data) ? data[0] : data.results?.[0] || data;
+
+        if (consultationData) {
+          const sections: ConsultationFormSection[] = consultationData.template_snapshot?.sections || [];
+          setTemplateSections(sections);
+
+          const formData: Record<string, any> = consultationData.form_data || {};
+          const diagSection = sections.find(s => (s.type || 'text') === 'diagnostics_referral');
+          const textValues: SectionValues = {};
+          for (const [key, value] of Object.entries(formData)) {
+            if (diagSection && key === diagSection.key) continue;
+            textValues[key] = typeof value === 'string' ? value : '';
           }
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          // API returns array, get first result
-          const consultationData = Array.isArray(data) ? data[0] : data.results?.[0] || data;
-
-          if (consultationData) {
-            // Populate form fields from API data
-            setConsultationFormData({
-              complaints: consultationData.complaints || '',
-              anamnesis: consultationData.anamnesis || '',
-              diagnostics: consultationData.diagnostics || '',
-              treatment: consultationData.treatment || '',
-              diagnosis: consultationData.diagnosis || ''
-            });
-
-            // Populate additional fields
-            if (consultationData.session_notes) {
-              setSessionNotes(consultationData.session_notes);
-            }
-            if (consultationData.prescription) {
-              setPrescription(consultationData.prescription);
-            }
-            if (consultationData.recommendations) {
-              setRecommendations(consultationData.recommendations);
+          if (diagSection) {
+            const diagValue = formData[diagSection.key];
+            if (diagValue && typeof diagValue === 'object' && Array.isArray(diagValue.referrals)) {
+              textValues[diagSection.key] = diagValue.comment || '';
+              setDiagnosticsReferrals(diagValue.referrals.map((r: any) => ({
+                serviceId: r.service_id,
+                name: r.name,
+                categoryLabel: r.category_label,
+                price: r.price ?? null,
+                bookedAt: r.booked_at,
+                appointmentId: r.appointment_id,
+              })));
+            } else {
+              textValues[diagSection.key] = '';
+              setDiagnosticsReferrals([]);
             }
           }
+          setSectionValues(textValues);
         }
       } catch (error) {
         console.error('Error loading consultation data:', error);
@@ -227,11 +230,7 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
     try {
       const consultationContext = [
         `Пациент: ${consultation.patient_name}`,
-        consultationFormData.complaints ? `Жалобы: ${consultationFormData.complaints}` : '',
-        consultationFormData.anamnesis ? `Анамнез: ${consultationFormData.anamnesis}` : '',
-        consultationFormData.diagnostics ? `Диагностика: ${consultationFormData.diagnostics}` : '',
-        consultationFormData.treatment ? `Лечение: ${consultationFormData.treatment}` : '',
-        consultationFormData.diagnosis ? `Диагноз: ${consultationFormData.diagnosis}` : '',
+        ...templateSections.map(s => sectionValues[s.key] ? `${s.label}: ${sectionValues[s.key]}` : ''),
       ].filter(Boolean).join('\n');
 
       const history = newMessages.slice(0, -1).map(msg => ({
@@ -318,21 +317,38 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
     }
   }, [aiMessages, aiLoading]);
 
-  const handleFormUpdate = (field: keyof ConsultationFormData, value: string) => {
-    setConsultationFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+  const isSectionTab = (tab: string | null): tab is string =>
+    !!tab && templateSections.some(s => s.key === tab);
+
+  const handleClearActiveTab = () => {
+    if (!isSectionTab(activeTab)) return;
+    updateSection(activeTab, '');
+    if (diagnosticsSection && activeTab === diagnosticsSection.key) setDiagnosticsReferrals([]);
+  };
+
+  // Converts local UI state into the wire shape: plain strings for text
+  // sections, {referrals, comment} (snake_case, matching the backend) for
+  // the diagnostics_referral section.
+  const buildStructuredData = (): Record<string, string | DiagnosticsReferralValue> => {
+    const out: Record<string, string | DiagnosticsReferralValue> = { ...sectionValues };
+    if (diagnosticsSection) {
+      out[diagnosticsSection.key] = {
+        comment: sectionValues[diagnosticsSection.key] || '',
+        referrals: diagnosticsReferrals.map(r => ({
+          service_id: r.serviceId,
+          name: r.name,
+          category_label: r.categoryLabel,
+          price: r.price ?? null,
+          booked_at: r.bookedAt,
+          appointment_id: r.appointmentId,
+        })),
+      };
+    }
+    return out;
   };
 
   const handleSave = () => {
-    const allData = {
-      ...consultationFormData,
-      sessionNotes,
-      prescription,
-      recommendations,
-      transcription: transcript || ""
-    };
+    const allData = { ...buildStructuredData(), transcription: transcript || "" };
     if (onSave) {
       onSave(allData);
     }
@@ -431,204 +447,53 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
     }
   };
 
-  // Generate PDF with a specific signature (used when signature is just created)
-  const generatePdfWithSignature = async (signature: string) => {
-    const allData = {
-      ...consultationFormData,
-      sessionNotes,
-      prescription,
-      recommendations
-    };
+  const [pdfUploadStatus, setPdfUploadStatus] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
+
+  // Server renders the PDF from the record's own saved structured_data, so
+  // the form must be saved (via the same onSave path the Save button uses)
+  // before generate-pdf is called — otherwise the doctor would download a
+  // document missing whatever they just typed. The backend also archives the
+  // PDF to the patient's documents in this same request, so there's no
+  // separate upload step anymore.
+  const runPdfGeneration = async (signature: string) => {
     if (onGenerateReport) {
-      onGenerateReport(allData);
+      onGenerateReport(buildStructuredData());
     }
-
-    // Dynamic import of html2pdf.js (client-side only)
-    const html2pdf = (await import('html2pdf.js')).default;
-
-    // Generate PDF report
-    const currentDate = new Date();
-    const formattedDate = currentDate.toLocaleDateString('ru-RU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-    const formattedTime = currentDate.toLocaleTimeString('ru-RU', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-
-    // Doctor name
-    const doctorName = consultation.doctor_first_name
-      ? `${consultation.doctor_first_name} ${consultation.doctor_last_name || ''}`.trim()
-      : 'Врач';
-
-    // Create HTML content for PDF with Times New Roman font
-    const pdfContent = `
-      <div style="font-family: 'Times New Roman', Times, serif; padding: 30px 40px; max-width: 800px; margin: 0 auto; color: #000; font-size: 14px; line-height: 1.5;">
-        <!-- Header with logo -->
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #1e3a5f;">
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <img src="/logosaas_new2.png" alt="ZhanCare Logo" style="height: 45px; width: auto;" />
-          </div>
-          <div style="text-align: right; font-size: 12px; color: #333;">
-            <p style="margin: 0;">Дата: <strong>${formattedDate}</strong></p>
-            <p style="margin: 3px 0 0;">Время: <strong>${formattedTime}</strong></p>
-          </div>
-        </div>
-
-        <!-- Title -->
-        <div style="text-align: center; margin-bottom: 25px;">
-          <h2 style="margin: 0; font-size: 18px; color: #000; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Консультационный лист</h2>
-          <p style="margin: 5px 0 0; font-size: 12px; color: #555;">Медицинское заключение</p>
-        </div>
-
-        <!-- Patient & Doctor Info -->
-        <table style="width: 100%; margin-bottom: 20px; border-collapse: collapse;">
-          <tr>
-            <td style="width: 50%; padding: 10px; border: 1px solid #ccc; background: #f8f9fa;">
-              <strong style="font-size: 12px; color: #1e3a5f;">ПАЦИЕНТ:</strong><br/>
-              <span style="font-size: 14px;">${consultation.patient_name}</span>
-            </td>
-            <td style="width: 50%; padding: 10px; border: 1px solid #ccc; background: #f8f9fa;">
-              <strong style="font-size: 12px; color: #1e3a5f;">ЛЕЧАЩИЙ ВРАЧ:</strong><br/>
-              <span style="font-size: 14px;">${doctorName}</span>
-            </td>
-          </tr>
-        </table>
-
-        <!-- Consultation sections -->
-        ${consultationFormData.complaints ? `
-        <div style="margin-bottom: 15px; page-break-inside: avoid;">
-          <h3 style="margin: 0 0 8px; font-size: 13px; color: #1e3a5f; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #1e3a5f; padding-bottom: 3px;">Жалобы пациента</h3>
-          <p style="margin: 0; font-size: 14px; color: #000; text-align: justify; white-space: pre-wrap;">${consultationFormData.complaints}</p>
-        </div>
-        ` : ''}
-
-        ${consultationFormData.anamnesis ? `
-        <div style="margin-bottom: 15px; page-break-inside: avoid;">
-          <h3 style="margin: 0 0 8px; font-size: 13px; color: #1e3a5f; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #1e3a5f; padding-bottom: 3px;">Анамнез заболевания</h3>
-          <p style="margin: 0; font-size: 14px; color: #000; text-align: justify; white-space: pre-wrap;">${consultationFormData.anamnesis}</p>
-        </div>
-        ` : ''}
-
-        ${consultationFormData.diagnostics ? `
-        <div style="margin-bottom: 15px; page-break-inside: avoid;">
-          <h3 style="margin: 0 0 8px; font-size: 13px; color: #1e3a5f; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #1e3a5f; padding-bottom: 3px;">Обследование и диагностика</h3>
-          <p style="margin: 0; font-size: 14px; color: #000; text-align: justify; white-space: pre-wrap;">${consultationFormData.diagnostics}</p>
-        </div>
-        ` : ''}
-
-        ${consultationFormData.diagnosis ? `
-        <div style="margin-bottom: 15px; page-break-inside: avoid; background: #f0f7ff; padding: 12px; border-left: 3px solid #1e3a5f;">
-          <h3 style="margin: 0 0 8px; font-size: 13px; color: #1e3a5f; font-weight: bold; text-transform: uppercase;">Диагноз</h3>
-          <p style="margin: 0; font-size: 14px; color: #000; font-weight: bold; white-space: pre-wrap;">${consultationFormData.diagnosis}</p>
-        </div>
-        ` : ''}
-
-        ${consultationFormData.treatment ? `
-        <div style="margin-bottom: 15px; page-break-inside: avoid;">
-          <h3 style="margin: 0 0 8px; font-size: 13px; color: #1e3a5f; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #1e3a5f; padding-bottom: 3px;">Назначенное лечение</h3>
-          <p style="margin: 0; font-size: 14px; color: #000; text-align: justify; white-space: pre-wrap;">${consultationFormData.treatment}</p>
-        </div>
-        ` : ''}
-
-        ${prescription ? `
-        <div style="margin-bottom: 15px; page-break-inside: avoid; background: #fff8e6; padding: 12px; border: 1px dashed #d4a000;">
-          <h3 style="margin: 0 0 8px; font-size: 13px; color: #8b6914; font-weight: bold; text-transform: uppercase;">Рецепт</h3>
-          <p style="margin: 0; font-size: 14px; color: #000; white-space: pre-wrap;">${prescription}</p>
-        </div>
-        ` : ''}
-
-        ${recommendations ? `
-        <div style="margin-bottom: 15px; page-break-inside: avoid;">
-          <h3 style="margin: 0 0 8px; font-size: 13px; color: #1e3a5f; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #1e3a5f; padding-bottom: 3px;">Рекомендации</h3>
-          <p style="margin: 0; font-size: 14px; color: #000; text-align: justify; white-space: pre-wrap;">${recommendations}</p>
-        </div>
-        ` : ''}
-
-        ${sessionNotes ? `
-        <div style="margin-bottom: 15px; page-break-inside: avoid;">
-          <h3 style="margin: 0 0 8px; font-size: 13px; color: #666; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #ccc; padding-bottom: 3px;">Примечания</h3>
-          <p style="margin: 0; font-size: 13px; color: #555; font-style: italic; text-align: justify; white-space: pre-wrap;">${sessionNotes}</p>
-        </div>
-        ` : ''}
-
-        <!-- Footer with signature -->
-        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ccc;">
-          <table style="width: 100%; border-collapse: collapse;">
-            <tr>
-              <td style="width: 50%; vertical-align: bottom; padding: 10px 0;">
-                <p style="margin: 0; font-size: 11px; color: #777;">Документ сформирован: ${formattedDate} ${formattedTime}</p>
-                <p style="margin: 3px 0 0; font-size: 11px; color: #777;">© ZhanCare ${currentDate.getFullYear()}</p>
-              </td>
-              <td style="width: 50%; text-align: right; vertical-align: bottom; padding: 10px 0;">
-                <div style="display: inline-block; text-align: left;">
-                  <p style="margin: 0 0 5px; font-size: 12px; color: #333;">Лечащий врач: <strong>${doctorName}</strong></p>
-                  <img src="${signature}" style="height: 50px; width: auto; margin: 5px 0;" alt="Подпись врача" />
-                  <p style="margin: 5px 0 0; font-size: 11px; color: #555;">Подпись / М.П.</p>
-                </div>
-              </td>
-            </tr>
-          </table>
-        </div>
-      </div>
-    `;
-
-    // Create a temporary container
-    const container = document.createElement('div');
-    container.innerHTML = pdfContent;
-    document.body.appendChild(container);
-
-    // Generate PDF
-    const opt = {
-      margin: 10,
-      filename: `consultation_${(consultation.patient_name ?? 'patient').replace(/\s+/g, '_')}_${formattedDate.replace(/\./g, '-')}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
-    };
-
-    const pdfFilename = opt.filename;
+    setPdfUploadStatus('uploading');
     try {
-      const pdfBlob: Blob = await html2pdf().set(opt).from(container).output('blob');
-      // Save locally
-      const blobUrl = URL.createObjectURL(pdfBlob);
-      const a = globalThis.document.createElement('a');
-      a.href = blobUrl; a.download = pdfFilename; a.click();
+      if (onSave) {
+        await onSave({ ...buildStructuredData(), transcription: transcript || "" });
+      }
+
+      const response = await api.post(
+        `/consultations/${consultation.meeting_id}/generate-pdf/`,
+        { signature },
+        { responseType: 'blob' }
+      );
+      const blob = response.data as Blob;
+      const disposition = response.headers['content-disposition'] as string | undefined;
+      const filenameMatch = disposition?.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+      const filename = filenameMatch ? decodeURIComponent(filenameMatch[1]) : 'consultation.pdf';
+
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl; a.download = filename; a.click();
       URL.revokeObjectURL(blobUrl);
-      // Upload to patient's documents
-      await uploadPdfToPatient(pdfBlob, pdfFilename);
-    } catch (error) {
-      console.error('Error generating PDF:', error);
+      setPdfUploadStatus('done');
+    } catch (err) {
+      setPdfUploadStatus('error');
+      throw err;
     } finally {
-      document.body.removeChild(container);
+      setTimeout(() => setPdfUploadStatus('idle'), 4000);
     }
   };
 
-  const [uploadingPdf, setUploadingPdf] = useState(false);
-  const [pdfUploadStatus, setPdfUploadStatus] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
-
-  const uploadPdfToPatient = async (blob: Blob, filename: string) => {
-    setUploadingPdf(true);
-    setPdfUploadStatus('uploading');
+  // Generate PDF with a specific signature (used when signature is just created)
+  const generatePdfWithSignature = async (signature: string) => {
     try {
-      const formData = new FormData();
-      formData.append('file', new File([blob], filename, { type: 'application/pdf' }));
-      formData.append('consultation_id', String(consultation.id));
-      formData.append('description', `Консультационный лист — ${consultation.patient_name}`);
-
-      await api.post('/medical-documents/doctor-upload/', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-
-      setPdfUploadStatus('done');
-    } catch (err) {
-      console.error('Upload error:', err);
-      setPdfUploadStatus('error');
-    } finally {
-      setUploadingPdf(false);
-      setTimeout(() => setPdfUploadStatus('idle'), 4000);
+      await runPdfGeneration(signature);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
     }
   };
 
@@ -644,242 +509,27 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
   };
 
   const generatePdf = async () => {
-    const allData = {
-      ...consultationFormData,
-      sessionNotes,
-      prescription,
-      recommendations
-    };
-    if (onGenerateReport) {
-      onGenerateReport(allData);
-    }
-
-    // Dynamic import of html2pdf.js (client-side only)
-    const html2pdf = (await import('html2pdf.js')).default;
-
-    // Generate PDF report
-    const currentDate = new Date();
-    const formattedDate = currentDate.toLocaleDateString('ru-RU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-    const formattedTime = currentDate.toLocaleTimeString('ru-RU', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-
-    // Doctor name
-    const doctorName = consultation.doctor_first_name
-      ? `${consultation.doctor_first_name} ${consultation.doctor_last_name || ''}`.trim()
-      : 'Врач';
-
-    // Create HTML content for PDF with Times New Roman font
-    const pdfContent = `
-      <div style="font-family: 'Times New Roman', Times, serif; padding: 30px 40px; max-width: 800px; margin: 0 auto; color: #000; font-size: 14px; line-height: 1.5;">
-        <!-- Header with logo -->
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #1e3a5f;">
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <img src="/logosaas_new2.png" alt="ZhanCare Logo" style="height: 45px; width: auto;" />
-          </div>
-          <div style="text-align: right; font-size: 12px; color: #333;">
-            <p style="margin: 0;">Дата: <strong>${formattedDate}</strong></p>
-            <p style="margin: 3px 0 0;">Время: <strong>${formattedTime}</strong></p>
-          </div>
-        </div>
-
-        <!-- Title -->
-        <div style="text-align: center; margin-bottom: 25px;">
-          <h2 style="margin: 0; font-size: 18px; color: #000; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Консультационный лист</h2>
-          <p style="margin: 5px 0 0; font-size: 12px; color: #555;">Медицинское заключение</p>
-        </div>
-
-        <!-- Patient & Doctor Info -->
-        <table style="width: 100%; margin-bottom: 20px; border-collapse: collapse;">
-          <tr>
-            <td style="width: 50%; padding: 10px; border: 1px solid #ccc; background: #f8f9fa;">
-              <strong style="font-size: 12px; color: #1e3a5f;">ПАЦИЕНТ:</strong><br/>
-              <span style="font-size: 14px;">${consultation.patient_name}</span>
-            </td>
-            <td style="width: 50%; padding: 10px; border: 1px solid #ccc; background: #f8f9fa;">
-              <strong style="font-size: 12px; color: #1e3a5f;">ЛЕЧАЩИЙ ВРАЧ:</strong><br/>
-              <span style="font-size: 14px;">${doctorName}</span>
-            </td>
-          </tr>
-        </table>
-
-        <!-- Consultation sections -->
-        ${consultationFormData.complaints ? `
-        <div style="margin-bottom: 15px; page-break-inside: avoid;">
-          <h3 style="margin: 0 0 8px; font-size: 13px; color: #1e3a5f; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #1e3a5f; padding-bottom: 3px;">Жалобы пациента</h3>
-          <p style="margin: 0; font-size: 14px; color: #000; text-align: justify; white-space: pre-wrap;">${consultationFormData.complaints}</p>
-        </div>
-        ` : ''}
-
-        ${consultationFormData.anamnesis ? `
-        <div style="margin-bottom: 15px; page-break-inside: avoid;">
-          <h3 style="margin: 0 0 8px; font-size: 13px; color: #1e3a5f; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #1e3a5f; padding-bottom: 3px;">Анамнез заболевания</h3>
-          <p style="margin: 0; font-size: 14px; color: #000; text-align: justify; white-space: pre-wrap;">${consultationFormData.anamnesis}</p>
-        </div>
-        ` : ''}
-
-        ${consultationFormData.diagnostics ? `
-        <div style="margin-bottom: 15px; page-break-inside: avoid;">
-          <h3 style="margin: 0 0 8px; font-size: 13px; color: #1e3a5f; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #1e3a5f; padding-bottom: 3px;">Обследование и диагностика</h3>
-          <p style="margin: 0; font-size: 14px; color: #000; text-align: justify; white-space: pre-wrap;">${consultationFormData.diagnostics}</p>
-        </div>
-        ` : ''}
-
-        ${consultationFormData.diagnosis ? `
-        <div style="margin-bottom: 15px; page-break-inside: avoid; background: #f0f7ff; padding: 12px; border-left: 3px solid #1e3a5f;">
-          <h3 style="margin: 0 0 8px; font-size: 13px; color: #1e3a5f; font-weight: bold; text-transform: uppercase;">Диагноз</h3>
-          <p style="margin: 0; font-size: 14px; color: #000; font-weight: bold; white-space: pre-wrap;">${consultationFormData.diagnosis}</p>
-        </div>
-        ` : ''}
-
-        ${consultationFormData.treatment ? `
-        <div style="margin-bottom: 15px; page-break-inside: avoid;">
-          <h3 style="margin: 0 0 8px; font-size: 13px; color: #1e3a5f; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #1e3a5f; padding-bottom: 3px;">Назначенное лечение</h3>
-          <p style="margin: 0; font-size: 14px; color: #000; text-align: justify; white-space: pre-wrap;">${consultationFormData.treatment}</p>
-        </div>
-        ` : ''}
-
-        ${prescription ? `
-        <div style="margin-bottom: 15px; page-break-inside: avoid; background: #fff8e6; padding: 12px; border: 1px dashed #d4a000;">
-          <h3 style="margin: 0 0 8px; font-size: 13px; color: #8b6914; font-weight: bold; text-transform: uppercase;">Рецепт</h3>
-          <p style="margin: 0; font-size: 14px; color: #000; white-space: pre-wrap;">${prescription}</p>
-        </div>
-        ` : ''}
-
-        ${recommendations ? `
-        <div style="margin-bottom: 15px; page-break-inside: avoid;">
-          <h3 style="margin: 0 0 8px; font-size: 13px; color: #1e3a5f; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #1e3a5f; padding-bottom: 3px;">Рекомендации</h3>
-          <p style="margin: 0; font-size: 14px; color: #000; text-align: justify; white-space: pre-wrap;">${recommendations}</p>
-        </div>
-        ` : ''}
-
-        ${sessionNotes ? `
-        <div style="margin-bottom: 15px; page-break-inside: avoid;">
-          <h3 style="margin: 0 0 8px; font-size: 13px; color: #666; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #ccc; padding-bottom: 3px;">Примечания</h3>
-          <p style="margin: 0; font-size: 13px; color: #555; font-style: italic; text-align: justify; white-space: pre-wrap;">${sessionNotes}</p>
-        </div>
-        ` : ''}
-
-        <!-- Footer with signature -->
-        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ccc;">
-          <table style="width: 100%; border-collapse: collapse;">
-            <tr>
-              <td style="width: 50%; vertical-align: bottom; padding: 10px 0;">
-                <p style="margin: 0; font-size: 11px; color: #777;">Документ сформирован: ${formattedDate} ${formattedTime}</p>
-                <p style="margin: 3px 0 0; font-size: 11px; color: #777;">© ZhanCare ${currentDate.getFullYear()}</p>
-              </td>
-              <td style="width: 50%; text-align: right; vertical-align: bottom; padding: 10px 0;">
-                <div style="display: inline-block; text-align: left;">
-                  <p style="margin: 0 0 5px; font-size: 12px; color: #333;">Лечащий врач: <strong>${doctorName}</strong></p>
-                  ${signatureData
-                    ? `<img src="${signatureData}" style="height: 50px; width: auto; margin: 5px 0;" alt="Подпись врача" />`
-                    : `<div style="border-bottom: 1px solid #000; width: 150px; height: 30px; margin: 5px 0;"></div>`
-                  }
-                  <p style="margin: 5px 0 0; font-size: 11px; color: #555;">Подпись / М.П.</p>
-                </div>
-              </td>
-            </tr>
-          </table>
-        </div>
-      </div>
-    `;
-
-    // Create a temporary container
-    const container = document.createElement('div');
-    container.innerHTML = pdfContent;
-    document.body.appendChild(container);
-
-    // Generate PDF
-    const opt = {
-      margin: 10,
-      filename: `consultation_${(consultation.patient_name ?? 'patient').replace(/\s+/g, '_')}_${formattedDate.replace(/\./g, '-')}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
-    };
-
-    const pdfFilename2 = opt.filename;
+    // Only called via handleGenerateReport, which returns early until
+    // signatureData is set — always non-null here.
     try {
-      const pdfBlob2: Blob = await html2pdf().set(opt).from(container).output('blob');
-      const blobUrl2 = URL.createObjectURL(pdfBlob2);
-      const a2 = globalThis.document.createElement('a');
-      a2.href = blobUrl2; a2.download = pdfFilename2; a2.click();
-      URL.revokeObjectURL(blobUrl2);
-      await uploadPdfToPatient(pdfBlob2, pdfFilename2);
+      await runPdfGeneration(signatureData!);
     } catch (error) {
       console.error('Error generating PDF:', error);
-    } finally {
-      document.body.removeChild(container);
     }
   };
 
-  // Check if any field has content
-  const hasContent = Object.values(consultationFormData).some(value => value.trim() !== '') ||
-                     sessionNotes.trim() !== '' ||
-                     prescription.trim() !== '' ||
-                     recommendations.trim() !== '';
+  const tabs = templateSections.map(section => ({
+    id: section.key,
+    label: section.label,
+    icon: getSectionIcon(section),
+    hasFilled: section.key === diagnosticsSection?.key
+      ? diagnosticsReferrals.length > 0 || !!(sectionValues[section.key] && sectionValues[section.key].trim())
+      : !!(sectionValues[section.key] && sectionValues[section.key].trim()),
+  }));
 
-  // Check content for each tab
-  const hasConsultationContent = Object.values(consultationFormData).some(value => value.trim() !== '');
-  const hasNotesContent = sessionNotes.trim() !== '';
-  const hasPrescriptionContent = prescription.trim() !== '';
-  const hasRecommendationsContent = recommendations.trim() !== '';
-
-  const tabs = [
-    {
-      id: 'complaints' as const,
-      label: 'Жалобы пациента',
-      icon: faCommentMedical,
-      hasFilled: !!consultationFormData.complaints
-    },
-    {
-      id: 'anamnesis' as const,
-      label: 'Анамнез',
-      icon: faHistory,
-      hasFilled: !!consultationFormData.anamnesis
-    },
-    {
-      id: 'diagnostics' as const,
-      label: 'Диагностика',
-      icon: faFlask,
-      hasFilled: !!consultationFormData.diagnostics
-    },
-    {
-      id: 'treatment' as const,
-      label: 'Лечение и рекомендации',
-      icon: faPrescription,
-      hasFilled: !!consultationFormData.treatment
-    },
-    {
-      id: 'diagnosis' as const,
-      label: 'Диагноз',
-      icon: faDiagnoses,
-      hasFilled: !!consultationFormData.diagnosis
-    },
-    {
-      id: 'notes' as const,
-      label: 'Заметки',
-      icon: faNotesMedical,
-      hasFilled: hasNotesContent
-    },
-    {
-      id: 'prescription' as const,
-      label: 'Рецепт',
-      icon: faPrescriptionBottle,
-      hasFilled: hasPrescriptionContent
-    },
-    {
-      id: 'recommendations' as const,
-      label: 'Рекомендации',
-      icon: faClipboardList,
-      hasFilled: hasRecommendationsContent
-    }
-  ];
+  const activeSection = isSectionTab(activeTab) ? templateSections.find(s => s.key === activeTab) : undefined;
+  const formPanelIcon = activeTab === 'ai-chat' ? faRobot : activeTab === 'transcription' ? faMicrophone : activeSection ? getSectionIcon(activeSection) : faFileWaveform;
+  const formPanelTitle = activeTab === 'ai-chat' ? 'ИИ Ассистент' : activeTab === 'transcription' ? 'Транскрипция' : activeSection?.label ?? '';
 
   return (
     <>
@@ -898,7 +548,7 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
 
             {/* Vertical Button List */}
             <div className="flex-1 flex flex-col gap-3 py-4 px-2 overflow-y-auto custom-scrollbar">
-              {/* 4 Main Form Buttons */}
+              {/* One button per section of the clinic's active template */}
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
@@ -1045,41 +695,32 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#2956bf' }}>
                     <FontAwesomeIcon
-                      icon={
-                        activeTab === 'complaints' ? faCommentMedical :
-                        activeTab === 'anamnesis' ? faHistory :
-                        activeTab === 'diagnostics' ? faFlask :
-                        activeTab === 'treatment' ? faPrescription :
-                        activeTab === 'diagnosis' ? faDiagnoses :
-                        activeTab === 'notes' ? faNotesMedical :
-                        activeTab === 'prescription' ? faPrescriptionBottle :
-                        activeTab === 'recommendations' ? faClipboardList :
-                        activeTab === 'ai-chat' ? faRobot :
-                        faMicrophone
-                      }
+                      icon={formPanelIcon}
                       className="text-lg"
                       style={{ color: '#ebf1ff' }}
                     />
                   </div>
                   <div>
                     <h2 className="font-bold text-lg" style={{ color: '#ebf1ff' }}>
-                      {
-                        activeTab === 'complaints' ? 'Жалобы пациента' :
-                        activeTab === 'anamnesis' ? 'Анамнез' :
-                        activeTab === 'diagnostics' ? 'Диагностика' :
-                        activeTab === 'treatment' ? 'Лечение и рекомендации' :
-                        activeTab === 'diagnosis' ? 'Диагноз' :
-                        activeTab === 'notes' ? 'Заметки' :
-                        activeTab === 'prescription' ? 'Рецепт' :
-                        activeTab === 'recommendations' ? 'Рекомендации' :
-                        activeTab === 'ai-chat' ? 'ИИ Ассистент' :
-                        'Транскрипция'
-                      }
+                      {formPanelTitle}
                     </h2>
                     <p className="text-xs" style={{ color: '#bcc0ca' }}>{consultation.patient_name}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {isSectionTab(activeTab) && (
+                    <button
+                      onClick={handleClearActiveTab}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                      style={{ backgroundColor: '#202942', color: '#bcc0ca' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#374151'; e.currentTarget.style.color = '#ebf1ff'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#202942'; e.currentTarget.style.color = '#bcc0ca'; }}
+                      title="Очистить эту секцию"
+                    >
+                      <FontAwesomeIcon icon={faEraser} className="text-xs" />
+                      Очистить
+                    </button>
+                  )}
                   <button
                     onClick={() => setShowAIReview(true)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
@@ -1104,25 +745,10 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
 
               {/* Form Panel Content */}
               <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-                {/* 5 Consultation Form Sections */}
-                {activeTab === 'complaints' && (
-                  <PatientComplaintsForm
-                    value={consultationFormData.complaints}
-                    onChange={(value) => handleFormUpdate('complaints', value)}
-                  />
-                )}
-
-                {activeTab === 'anamnesis' && (
-                  <AnamnesisForm
-                    value={consultationFormData.anamnesis}
-                    onChange={(value) => handleFormUpdate('anamnesis', value)}
-                  />
-                )}
-
-                {activeTab === 'diagnostics' && (
+                {activeSection && activeSection.key === diagnosticsSection?.key && (
                   <DiagnosticsForm
-                    value={consultationFormData.diagnostics}
-                    onChange={(value) => handleFormUpdate('diagnostics', value)}
+                    comment={sectionValues[activeSection.key] || ''}
+                    onCommentChange={(value) => updateSection(activeSection.key, value)}
                     clinicId={doctorClinicId}
                     patientId={patientId}
                     doctorId={doctorId}
@@ -1131,93 +757,13 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
                   />
                 )}
 
-                {activeTab === 'treatment' && (
-                  <TreatmentRecommendationsForm
-                    value={consultationFormData.treatment}
-                    onChange={(value) => handleFormUpdate('treatment', value)}
+                {activeSection && activeSection.key !== diagnosticsSection?.key && (
+                  <GenericSectionForm
+                    sectionKey={activeSection.key}
+                    value={sectionValues[activeSection.key] || ''}
+                    onChange={(value) => updateSection(activeSection.key, value)}
+                    placeholder={activeSection.placeholder}
                   />
-                )}
-
-                {activeTab === 'diagnosis' && (
-                  <DiagnosisForm
-                    value={consultationFormData.diagnosis}
-                    onChange={(value) => handleFormUpdate('diagnosis', value)}
-                  />
-                )}
-
-                {activeTab === 'notes' && (
-                  <div className="backdrop-blur-sm rounded-xl p-4 border h-full flex flex-col" style={{ backgroundColor: '#202942', borderColor: '#283353' }}>
-                    <textarea
-                      value={sessionNotes}
-                      onChange={(e) => setSessionNotes(e.target.value)}
-                      placeholder="Записывайте важные моменты консультации, симптомы пациента..."
-                      className="flex-1 w-full border rounded-lg px-4 py-3 text-sm transition-all resize-none focus:outline-none focus:ring-2"
-                      style={{
-                        backgroundColor: '#1e263e',
-                        borderColor: '#283353',
-                        color: '#ebf1ff',
-                        caretColor: '#3772ff'
-                      }}
-                      onFocus={(e) => {
-                        e.currentTarget.style.borderColor = '#3772ff';
-                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(55, 114, 255, 0.2)';
-                      }}
-                      onBlur={(e) => {
-                        e.currentTarget.style.borderColor = '#283353';
-                        e.currentTarget.style.boxShadow = 'none';
-                      }}
-                    />
-                  </div>
-                )}
-
-                {activeTab === 'prescription' && (
-                  <div className="backdrop-blur-sm rounded-xl p-4 border h-full flex flex-col" style={{ backgroundColor: '#202942', borderColor: '#283353' }}>
-                    <textarea
-                      value={prescription}
-                      onChange={(e) => setPrescription(e.target.value)}
-                      placeholder="Например: Парацетамол 500мг - по 1 таблетке 3 раза в день..."
-                      className="flex-1 w-full border rounded-lg px-4 py-3 text-sm transition-all resize-none focus:outline-none focus:ring-2"
-                      style={{
-                        backgroundColor: '#1e263e',
-                        borderColor: '#283353',
-                        color: '#ebf1ff',
-                        caretColor: '#3772ff'
-                      }}
-                      onFocus={(e) => {
-                        e.currentTarget.style.borderColor = '#3772ff';
-                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(55, 114, 255, 0.2)';
-                      }}
-                      onBlur={(e) => {
-                        e.currentTarget.style.borderColor = '#283353';
-                        e.currentTarget.style.boxShadow = 'none';
-                      }}
-                    />
-                  </div>
-                )}
-
-                {activeTab === 'recommendations' && (
-                  <div className="backdrop-blur-sm rounded-xl p-4 border h-full flex flex-col" style={{ backgroundColor: '#202942', borderColor: '#283353' }}>
-                    <textarea
-                      value={recommendations}
-                      onChange={(e) => setRecommendations(e.target.value)}
-                      placeholder="Рекомендации по режиму, диете, дополнительным обследованиям..."
-                      className="flex-1 w-full border rounded-lg px-4 py-3 text-sm transition-all resize-none focus:outline-none focus:ring-2"
-                      style={{
-                        backgroundColor: '#1e263e',
-                        borderColor: '#283353',
-                        color: '#ebf1ff',
-                        caretColor: '#3772ff'
-                      }}
-                      onFocus={(e) => {
-                        e.currentTarget.style.borderColor = '#3772ff';
-                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(55, 114, 255, 0.2)';
-                      }}
-                      onBlur={(e) => {
-                        e.currentTarget.style.borderColor = '#283353';
-                        e.currentTarget.style.boxShadow = 'none';
-                      }}
-                    />
-                  </div>
                 )}
 
                 {/* AI Chat Tab */}
@@ -1297,7 +843,7 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
                       </div>
 
                       {/* Chat Input */}
-                      <div className="flex gap-2 items-end">
+                      <div className="flex gap-2 items-end flex-shrink-0">
                         <textarea
                           ref={aiInputRef}
                           value={aiInput}
@@ -1354,7 +900,7 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
                   {activeTab === 'transcription' && (
                     <div className="backdrop-blur-sm rounded-xl p-4 border h-full flex flex-col" style={{ backgroundColor: '#202942', borderColor: '#283353' }}>
                       {isTranscribing && (
-                        <div className="flex justify-end mb-3">
+                        <div className="flex justify-end mb-3 flex-shrink-0">
                           <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{ backgroundColor: '#1e263e' }}>
                             <FontAwesomeIcon icon={faCircle} className="text-[6px] text-red-500 animate-pulse" />
                             <span className="text-xs font-medium tabular-nums" style={{ color: '#ef4444' }}>
@@ -1365,7 +911,7 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
                       )}
 
                       {/* Recording Control Button */}
-                      <div className="mb-3">
+                      <div className="mb-3 flex-shrink-0">
                         <button
                           onClick={isTranscribing ? onStopRecording : onStartRecording}
                           className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg ${
@@ -1382,7 +928,7 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
 
                       {/* Live mic level — animates with the actual audio input while recording */}
                       {isTranscribing && (
-                        <div className="mb-3 rounded-lg border overflow-hidden px-2" style={{ backgroundColor: '#1e263e', borderColor: '#283353' }}>
+                        <div className="mb-3 rounded-lg border overflow-hidden px-2 flex-shrink-0" style={{ backgroundColor: '#1e263e', borderColor: '#283353' }}>
                           <AudioWaveform stream={micStream} active={isTranscribing} barColor="#10b981" />
                         </div>
                       )}
@@ -1413,7 +959,7 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
                       </div>
 
                       {/* Info Footer */}
-                      <div className="mt-3 p-2 rounded-lg flex items-start gap-2 text-xs" style={{ backgroundColor: '#1e263e', color: '#bcc0ca' }}>
+                      <div className="mt-3 p-2 rounded-lg flex items-start gap-2 text-xs flex-shrink-0" style={{ backgroundColor: '#1e263e', color: '#bcc0ca' }}>
                         <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                         </svg>
@@ -1492,6 +1038,9 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
       {/* AI Consultation Review Modal */}
       {showAIReview && (
         <AIConsultationReview
+          sourceType="consultation"
+          sourceId={consultation.id}
+          templateSections={templateSections}
           patientName={consultation.patient_name}
           initialDescription={transcript ?? ""}
           onApply={handleAIApply}

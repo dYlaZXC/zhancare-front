@@ -1,7 +1,10 @@
 "use client";
 
-import { CheckCircle, Home, Loader2, RotateCcw, Video } from "lucide-react";
+import { CheckCircle, Loader2, RotateCcw } from "lucide-react";
 import { formatWeekLabel, isCurrentWeekPlanner } from "../utils/dateHelpers";
+import { TYPE_META } from "../utils/typeDisplay";
+import { CONSULTATION_TYPES } from "../types/scheduleTypes";
+import type { ConsultationType } from "../types/scheduleTypes";
 
 // ── DateScheduleTab ("По датам") — reads/writes DoctorAvailability rows ────────
 // Date-specific entries always take priority over the weekly template; this
@@ -11,7 +14,7 @@ export function DateScheduleTab({
   plannerWeekStart,
   plannerConsultationType,
   plannerDays,
-  plannerOtherDays,
+  plannerOtherDaysByType,
   plannerLoading,
   plannerConflictCount,
   getPlannerDayConflict,
@@ -22,64 +25,54 @@ export function DateScheduleTab({
   onDeleteDay,
 }: {
   plannerWeekStart: string;
-  plannerConsultationType: "online" | "offline";
+  plannerConsultationType: ConsultationType;
   plannerDays: any[];
-  plannerOtherDays: any[];
+  plannerOtherDaysByType: Partial<Record<ConsultationType, any[]>>;
   plannerLoading: boolean;
   plannerConflictCount: number;
-  getPlannerDayConflict: (index: number) => { hasConflict: boolean; otherTime: string };
-  onTypeChange: (cType: "online" | "offline") => void;
+  getPlannerDayConflict: (index: number) => { hasConflict: boolean; otherType?: ConsultationType; otherTime: string };
+  onTypeChange: (cType: ConsultationType) => void;
   onWeekNav: (offset: number) => void;
   onUpdateDay: (index: number, changes: Partial<any>) => void;
   onSaveDay: (day: any) => void;
   onDeleteDay: (day: any) => void;
 }) {
+  const current = TYPE_META[plannerConsultationType];
+
   return (
     <div className="space-y-4">
       {/* Consultation type toggle */}
       <div
         className={`flex rounded-2xl overflow-hidden border-2 transition-colors ${
-          plannerConflictCount > 0 && plannerConsultationType !== "online"
-            ? "border-red-200"
-            : "border-gray-200"
+          plannerConflictCount > 0 ? "border-red-200" : "border-gray-200"
         }`}
       >
-        <button
-          type="button"
-          onClick={() => onTypeChange("online")}
-          title={
-            plannerConflictCount > 0 && plannerConsultationType !== "online"
-              ? "Исправьте конфликты перед переключением"
-              : undefined
-          }
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 font-semibold text-sm transition-all ${
-            plannerConsultationType === "online"
-              ? "bg-blue-500 text-white"
-              : plannerConflictCount > 0
-              ? "text-red-400 bg-red-50 cursor-not-allowed"
-              : "text-gray-600 hover:bg-gray-50"
-          }`}
-        >
-          <Video className="w-4 h-4" /> Онлайн
-        </button>
-        <button
-          type="button"
-          onClick={() => onTypeChange("offline")}
-          title={
-            plannerConflictCount > 0 && plannerConsultationType !== "offline"
-              ? "Исправьте конфликты перед переключением"
-              : undefined
-          }
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 font-semibold text-sm transition-all ${
-            plannerConsultationType === "offline"
-              ? "bg-purple-500 text-white"
-              : plannerConflictCount > 0
-              ? "text-red-400 bg-red-50 cursor-not-allowed"
-              : "text-gray-600 hover:bg-gray-50"
-          }`}
-        >
-          <Home className="w-4 h-4" /> Оффлайн
-        </button>
+        {CONSULTATION_TYPES.map((type) => {
+          const meta = TYPE_META[type];
+          const Icon = meta.icon;
+          const isSelected = plannerConsultationType === type;
+          return (
+            <button
+              key={type}
+              type="button"
+              onClick={() => onTypeChange(type)}
+              title={
+                plannerConflictCount > 0 && !isSelected
+                  ? "Исправьте конфликты перед переключением"
+                  : undefined
+              }
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 font-semibold text-sm transition-all ${
+                isSelected
+                  ? meta.active
+                  : plannerConflictCount > 0
+                  ? "text-red-400 bg-red-50 cursor-not-allowed"
+                  : "text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              <Icon className="w-4 h-4" /> {meta.shortLabel}
+            </button>
+          );
+        })}
       </div>
 
       {/* Week nav */}
@@ -175,8 +168,8 @@ export function DateScheduleTab({
                 : `${plannerConflictCount} конфликта расписания`}
             </p>
             <p className="text-xs text-red-600 mt-0.5">
-              Онлайн и оффлайн расписание пересекаются по времени. Исправьте конфликты
-              — переключение вкладок и сохранение заблокированы.
+              Расписания разных форматов (онлайн / оффлайн / смешанный) пересекаются по
+              времени. Исправьте конфликты — переключение вкладок и сохранение заблокированы.
             </p>
           </div>
         </div>
@@ -207,9 +200,17 @@ export function DateScheduleTab({
             });
             const isFromAvail = day.source === "availability";
             const isOff = day.is_day_off;
-            const { hasConflict, otherTime } = getPlannerDayConflict(i);
-            const otherTypeName =
-              plannerConsultationType === "online" ? "Приём в клинике" : "Видеоконсультация";
+            const { hasConflict, otherType, otherTime } = getPlannerDayConflict(i);
+            const conflictMeta = otherType ? TYPE_META[otherType] : null;
+
+            // When there's no conflict, show an FYI line for each other type
+            // that has hours set on this day — useful context, not a warning.
+            const otherInfoLines = !isOff && !hasConflict
+              ? CONSULTATION_TYPES.filter((t) => t !== plannerConsultationType)
+                  .map((t) => ({ type: t, day: plannerOtherDaysByType[t]?.[i] }))
+                  .filter((o) => o.day && !o.day.is_day_off && o.day.start_time)
+              : [];
+
             return (
               <div
                 key={day.date}
@@ -218,9 +219,7 @@ export function DateScheduleTab({
                     ? "border-red-400 bg-red-50"
                     : isOff
                     ? "border-gray-200 bg-gray-50"
-                    : plannerConsultationType === "online"
-                    ? "border-blue-400 bg-blue-50"
-                    : "border-purple-400 bg-purple-50"
+                    : `${current.border} ${current.bg}`
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -245,9 +244,7 @@ export function DateScheduleTab({
                         : isOff
                         ? "border-gray-300 bg-white text-gray-400"
                         : isFromAvail
-                        ? plannerConsultationType === "online"
-                          ? "border-blue-500 bg-blue-500 text-white"
-                          : "border-purple-500 bg-purple-500 text-white"
+                        ? `${current.border} ${current.active}`
                         : "border-gray-300 bg-white text-gray-500"
                     }`}
                   >
@@ -273,27 +270,17 @@ export function DateScheduleTab({
                     {isOff && (
                       <p className="text-xs text-gray-400 mt-0.5">Выходной</p>
                     )}
-                    {hasConflict && (
+                    {hasConflict && conflictMeta && (
                       <p className="text-xs text-red-600 mt-0.5 font-medium">
-                        {otherTypeName}: {otherTime} — пересечение времени
+                        {conflictMeta.fullLabel}: {otherTime} — пересечение времени
                       </p>
                     )}
-                    {!isOff &&
-                      !hasConflict &&
-                      plannerOtherDays[i] &&
-                      !plannerOtherDays[i].is_day_off &&
-                      plannerOtherDays[i].start_time && (
-                        <p
-                          className={`text-xs mt-0.5 ${
-                            plannerConsultationType === "online"
-                              ? "text-purple-500"
-                              : "text-blue-500"
-                          }`}
-                        >
-                          {otherTypeName}: {plannerOtherDays[i].start_time} –{" "}
-                          {plannerOtherDays[i].end_time}
-                        </p>
-                      )}
+                    {otherInfoLines.map(({ type, day: otherDay }) => (
+                      <p key={type} className={`text-xs mt-0.5 ${TYPE_META[type].text}`}>
+                        {TYPE_META[type].emoji} {TYPE_META[type].fullLabel}: {otherDay.start_time} –{" "}
+                        {otherDay.end_time}
+                      </p>
+                    ))}
                   </div>
                   {!isOff && (
                     <div className="flex items-center gap-2">

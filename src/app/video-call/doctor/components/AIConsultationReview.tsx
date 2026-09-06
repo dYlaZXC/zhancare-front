@@ -5,55 +5,57 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles, X, Loader2, ChevronRight, CheckCircle2,
   MessageSquare, History, FlaskConical, Pill, Stethoscope,
-  ClipboardList, BookOpen, StickyNote, AlertCircle,
+  ClipboardList, BookOpen, StickyNote, AlertCircle, FileText,
   Maximize2, Minimize2,
 } from "lucide-react";
+import type { ConsultationFormSection } from "@/types/consultation";
 
-interface AIFields {
-  complaints: string;
-  anamnesis: string;
-  diagnostics: string;
-  diagnosis: string;
-  treatment: string;
-  prescription: string;
-  recommendations: string;
-  session_notes: string;
-}
+// Icon per well-known legacy key — anything else (a clinic's custom section)
+// falls back to a generic document icon.
+const SECTION_ICONS: Record<string, any> = {
+  complaints: MessageSquare,
+  anamnesis: History,
+  diagnostics: FlaskConical,
+  diagnosis: Stethoscope,
+  treatment: Pill,
+  prescription: ClipboardList,
+  recommendations: BookOpen,
+  session_notes: StickyNote,
+};
 
 interface AIConsultationReviewProps {
+  // Real doctor flow: resolves sections + patient facts server-side from the
+  // saved source record — required unless previewMode is set.
+  sourceType?: "consultation" | "clinic_appointment";
+  sourceId?: number;
+  // Admin template-constructor flow: no saved source exists yet, so sections
+  // are sent directly to the admin-only preview endpoint instead (see
+  // analyze_consultation_preview on the backend — safe there specifically
+  // because it's the admin's own template and no real patient is involved).
+  previewMode?: boolean;
+  templateSections: ConsultationFormSection[];
   patientName?: string;
   initialDescription?: string;
-  onApply: (fields: Partial<AIFields>) => void;
+  onApply: (fields: Record<string, string>) => void;
   onClose: () => void;
 }
 
-const FIELD_META: { key: keyof AIFields; label: string; icon: any; placeholder: string }[] = [
-  { key: "complaints",     label: "Жалобы",             icon: MessageSquare,  placeholder: "Жалобы пациента..." },
-  { key: "anamnesis",      label: "Анамнез",             icon: History,        placeholder: "История болезни..." },
-  { key: "diagnostics",    label: "Диагностика",         icon: FlaskConical,   placeholder: "Обследования и анализы..." },
-  { key: "diagnosis",      label: "Диагноз (МКБ-10)",   icon: Stethoscope,    placeholder: "Диагноз..." },
-  { key: "treatment",      label: "Лечение",             icon: Pill,           placeholder: "Назначения..." },
-  { key: "prescription",   label: "Рецепт",              icon: ClipboardList,  placeholder: "Препараты для выписки..." },
-  { key: "recommendations",label: "Рекомендации",        icon: BookOpen,       placeholder: "Рекомендации пациенту..." },
-  { key: "session_notes",  label: "Заметки врача",       icon: StickyNote,     placeholder: "Заметки для следующего приёма..." },
-];
-
-const empty: AIFields = {
-  complaints: "", anamnesis: "", diagnostics: "", diagnosis: "",
-  treatment: "", prescription: "", recommendations: "", session_notes: "",
-};
-
 export default function AIConsultationReview({
-  patientName, initialDescription = "", onApply, onClose,
+  sourceType, sourceId, previewMode = false, templateSections: allTemplateSections, patientName, initialDescription = "", onApply, onClose,
 }: AIConsultationReviewProps) {
+  // The AI never fills diagnostics_referral sections (no grounded knowledge
+  // of the clinic's real service catalog — see analyze_consultation on the
+  // backend, which excludes them from the prompt the same way) — so this
+  // checklist only ever shows the text sections it can actually fill.
+  const templateSections = allTemplateSections.filter(s => (s.type || "text") === "text");
   const [step, setStep] = useState<"input" | "review">("input");
   const [description, setDescription] = useState(initialDescription);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fields, setFields] = useState<AIFields>(empty);
+  const [fields, setFields] = useState<Record<string, string>>({});
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const filledCount = Object.values(fields).filter(v => typeof v === 'string' && v.trim()).length;
+  const filledCount = Object.values(fields).filter(v => v && v.trim()).length;
 
   const handleAnalyze = async () => {
     if (!description.trim()) return;
@@ -61,16 +63,25 @@ export default function AIConsultationReview({
     setError(null);
     try {
       const { api } = await import("@/utils/api");
-      const res = await api.post("/chat/analyze-consultation/", { description, patientName });
+      const res = previewMode
+        ? await api.post("/chat/analyze-consultation-preview/", {
+            sections: templateSections,
+            description,
+          })
+        : await api.post("/chat/analyze-consultation/", {
+            source_type: sourceType,
+            source_id: sourceId,
+            description,
+          });
       const data = res.data;
       if (data.error) throw new Error(data.error);
       const normalized = Object.fromEntries(
         Object.entries(data.result).map(([k, v]) => [k, typeof v === 'string' ? v : ''])
       );
-      setFields({ ...empty, ...normalized });
+      setFields(normalized);
       setStep("review");
     } catch (err: any) {
-      setError(err.message || "Не удалось проанализировать");
+      setError(err.response?.data?.error || err.message || "Не удалось проанализировать");
     } finally {
       setLoading(false);
     }
@@ -78,8 +89,8 @@ export default function AIConsultationReview({
 
   const handleApply = () => {
     const nonEmpty = Object.fromEntries(
-      Object.entries(fields).filter(([, v]) => typeof v === 'string' && v.trim())
-    ) as Partial<AIFields>;
+      Object.entries(fields).filter(([, v]) => v && v.trim())
+    );
     onApply(nonEmpty);
     onClose();
   };
@@ -121,7 +132,7 @@ export default function AIConsultationReview({
               <div>
                 <p className="text-white font-bold text-sm">ИИ Анализ консультации</p>
                 <p className="text-blue-300 text-[11px]">
-                  {step === "input" ? "Опишите ситуацию — ИИ заполнит карту" : `${filledCount} из ${FIELD_META.length} полей заполнено`}
+                  {step === "input" ? "Опишите ситуацию — ИИ заполнит карту" : `${filledCount} из ${templateSections.length} полей заполнено`}
                 </p>
               </div>
             </div>
@@ -194,27 +205,30 @@ export default function AIConsultationReview({
             ) : (
               <div className="p-5 space-y-3">
                 <p className="text-white/40 text-xs mb-1">Проверьте и отредактируйте поля при необходимости</p>
-                {FIELD_META.map(({ key, label, icon: Icon, placeholder }) => (
-                  <div key={key} className="rounded-xl overflow-hidden" style={{ border: "1px solid #283353" }}>
-                    <div className="flex items-center gap-2 px-3 py-2" style={{ background: "#202942" }}>
-                      <Icon className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
-                      <span className="text-xs font-semibold text-white/60 uppercase tracking-wide">{label}</span>
-                      {fields[key] && (
-                        <span className="ml-auto">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                        </span>
-                      )}
+                {templateSections.map(({ key, label, placeholder }) => {
+                  const Icon = SECTION_ICONS[key] || FileText;
+                  return (
+                    <div key={key} className="rounded-xl overflow-hidden" style={{ border: "1px solid #283353" }}>
+                      <div className="flex items-center gap-2 px-3 py-2" style={{ background: "#202942" }}>
+                        <Icon className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
+                        <span className="text-xs font-semibold text-white/60 uppercase tracking-wide">{label}</span>
+                        {fields[key] && (
+                          <span className="ml-auto">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                          </span>
+                        )}
+                      </div>
+                      <textarea
+                        value={fields[key] ?? ""}
+                        onChange={e => setFields(f => ({ ...f, [key]: e.target.value }))}
+                        placeholder={placeholder || `${label}...`}
+                        rows={3}
+                        className="w-full px-3 py-2.5 text-sm text-white/90 placeholder-white/20 resize-none focus:outline-none"
+                        style={{ background: "#1a2035", borderTop: "1px solid #283353" }}
+                      />
                     </div>
-                    <textarea
-                      value={fields[key]}
-                      onChange={e => setFields(f => ({ ...f, [key]: e.target.value }))}
-                      placeholder={placeholder}
-                      rows={key === "diagnosis" ? 2 : 3}
-                      className="w-full px-3 py-2.5 text-sm text-white/90 placeholder-white/20 resize-none focus:outline-none"
-                      style={{ background: "#1a2035", borderTop: "1px solid #283353" }}
-                    />
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

@@ -13,6 +13,7 @@ import { ServiceCard } from "./services/components/ServiceCard";
 import { ServiceFormModal } from "./services/modals/ServiceFormModal";
 import { CategoryFormModal } from "./services/modals/CategoryFormModal";
 import { ServiceScheduleModal } from "./services/modals/ServiceScheduleModal";
+import { BulkUploadServicesModal } from "./services/modals/BulkUploadServicesModal";
 
 export function ServicesView({ user }: { user: any }) {
   const [catFilter, setCatFilter] = useState("all");
@@ -26,6 +27,7 @@ export function ServicesView({ user }: { user: any }) {
   const [scheduleService, setScheduleService] = useState<Service | null>(null);
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -106,7 +108,7 @@ export function ServicesView({ user }: { user: any }) {
   return (
     <div className="w-full">
       <div className="mb-8">
-        <ServicesHeader onOpenCreate={openCreate} />
+        <ServicesHeader onOpenCreate={openCreate} onOpenBulkUpload={() => setShowBulkUploadModal(true)} />
 
         <ServicesStatsCards total={services.length} active={totalActive} inactive={totalInactive} />
 
@@ -194,6 +196,18 @@ export function ServicesView({ user }: { user: any }) {
           setScheduleService(null);
         }}
       />
+
+      {/* BULK UPLOAD MODAL */}
+      <AnimatePresence>
+        {showBulkUploadModal && (
+          <BulkUploadServicesModal
+            categories={categories}
+            clinicCurrency={clinicCurrency}
+            onClose={() => setShowBulkUploadModal(false)}
+            onUploaded={fetchServices}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

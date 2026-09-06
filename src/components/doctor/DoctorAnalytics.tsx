@@ -8,7 +8,6 @@ import {
   faVideo,
   faCalendar,
   faStar,
-  faChartLine,
   faArrowUp,
   faArrowDown,
   faClock,
@@ -44,30 +43,15 @@ export default function DoctorAnalytics() {
 
   return (
     <div className="w-full space-y-6 p-4 sm:p-6 lg:p-8">
-      {/* Header */}
+      {/* Header Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative rounded-3xl shadow-2xl p-8 text-white overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, #3772ff 0%, #2956bf 100%)' }}
       >
-        {/* Decorative Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 0)`,
-            backgroundSize: '40px 40px'
-          }} />
-        </div>
-
-        <div className="relative flex items-center gap-4 mb-2">
-          <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-            <FontAwesomeIcon icon={faChartLine} className="text-2xl" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold">Аналитика</h1>
-            <p className="text-blue-100">Обзор вашей деятельности</p>
-          </div>
-        </div>
+        <h1 className="text-3xl font-bold mb-2" style={{ color: '#1e263e' }}>
+          Аналитика
+        </h1>
+        <p className="text-gray-600">Обзор вашей деятельности</p>
       </motion.div>
 
       {/* Main Stats Grid */}

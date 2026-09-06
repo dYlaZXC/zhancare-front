@@ -11,8 +11,9 @@ import type {
   StaffMemberMin,
   DaySchedule,
   WeeklySchedules,
+  ConsultationType,
 } from "./staff-schedule/types/scheduleTypes";
-import { DEFAULT_WEEKDAYS, emptyWeek } from "./staff-schedule/types/scheduleTypes";
+import { DEFAULT_WEEKDAYS, emptyWeek, CONSULTATION_TYPES } from "./staff-schedule/types/scheduleTypes";
 import { getCurrentMondayStr, addDays, formatWeekLabel } from "./staff-schedule/utils/dateHelpers";
 import { buildDefaultWeek } from "./staff-schedule/utils/dateHelpers";
 import {
@@ -42,15 +43,17 @@ export default function StaffScheduleModal({
   const [mouseDownTarget, setMouseDownTarget] = useState<EventTarget | null>(null);
 
   // Template-tab weekday pattern state
-  const [scheduleType, setScheduleType] = useState<"online" | "offline">("online");
+  const [scheduleType, setScheduleType] = useState<ConsultationType>("online");
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
   const [weeklySchedules, setWeeklySchedules] = useState<WeeklySchedules>({});
 
   // Planner (schedule-by-date) state
   const [plannerWeekStart, setPlannerWeekStart] = useState<string>("");
-  const [plannerConsultationType, setPlannerConsultationType] = useState<"online" | "offline">("online");
+  const [plannerConsultationType, setPlannerConsultationType] = useState<ConsultationType>("online");
   const [plannerDays, setPlannerDays] = useState<any[]>([]);
-  const [plannerOtherDays, setPlannerOtherDays] = useState<any[]>([]);
+  // Keyed by the OTHER two types (not the currently-selected one) — used to
+  // detect/display conflicts against whichever of them has hours set.
+  const [plannerOtherDaysByType, setPlannerOtherDaysByType] = useState<Partial<Record<ConsultationType, any[]>>>({});
   const [plannerLoading, setPlannerLoading] = useState(false);
   const [plannerSaving, setPlannerSaving] = useState(false);
   const [plannerDirty, setPlannerDirty] = useState(false);
@@ -67,26 +70,32 @@ export default function StaffScheduleModal({
   }, []);
 
   const fetchPlannerWeek = useCallback(
-    async (memberId: number, weekStart: string, cType: string) => {
+    async (memberId: number, weekStart: string, cType: ConsultationType) => {
       setPlannerLoading(true);
-      const otherType = cType === "online" ? "offline" : "online";
+      const otherTypes = CONSULTATION_TYPES.filter((t) => t !== cType);
       try {
-        const [mainRes, otherRes] = await Promise.allSettled([
+        const [mainRes, ...otherRes] = await Promise.allSettled([
           api.get(`/staff/${memberId}/availability/`, {
             params: { week_start: weekStart, consultation_type: cType },
           }),
-          api.get(`/staff/${memberId}/availability/`, {
-            params: { week_start: weekStart, consultation_type: otherType },
-          }),
+          ...otherTypes.map((t) =>
+            api.get(`/staff/${memberId}/availability/`, {
+              params: { week_start: weekStart, consultation_type: t },
+            })
+          ),
         ]);
         const mainData = mainRes.status === "fulfilled" ? mainRes.value.data : [];
-        const otherData = otherRes.status === "fulfilled" ? otherRes.value.data : [];
+        const otherByType: Partial<Record<ConsultationType, any[]>> = {};
+        otherTypes.forEach((t, i) => {
+          const r = otherRes[i];
+          otherByType[t] = r.status === "fulfilled" ? r.value.data : [];
+        });
         setPlannerDays(mainData.length > 0 ? mainData : buildDefaultWeek(weekStart));
-        setPlannerOtherDays(otherData);
+        setPlannerOtherDaysByType(otherByType);
         setPlannerDirty(false);
       } catch {
         setPlannerDays(buildDefaultWeek(weekStart));
-        setPlannerOtherDays([]);
+        setPlannerOtherDaysByType({});
         setPlannerDirty(false);
       } finally {
         setPlannerLoading(false);
@@ -132,20 +141,26 @@ export default function StaffScheduleModal({
   // ── Conflict detection helpers ────────────────────────────────────────────────
 
   const getPlannerDayConflict = useCallback(
-    (dayIndex: number): { hasConflict: boolean; otherTime: string } => {
+    (dayIndex: number): { hasConflict: boolean; otherType?: ConsultationType; otherTime: string } => {
       const current = plannerDays[dayIndex];
-      const other = plannerOtherDays[dayIndex];
-      if (!current || !other) return { hasConflict: false, otherTime: "" };
-      if (current.is_day_off || other.is_day_off) return { hasConflict: false, otherTime: "" };
+      if (!current || current.is_day_off) return { hasConflict: false, otherTime: "" };
       const cs = current.start_time,
         ce = current.end_time;
-      const os = other.start_time,
-        oe = other.end_time;
-      if (!cs || !ce || !os || !oe) return { hasConflict: false, otherTime: "" };
-      const overlap = timeRangesOverlap(cs, ce, os, oe);
-      return { hasConflict: overlap, otherTime: `${os} – ${oe}` };
+      if (!cs || !ce) return { hasConflict: false, otherTime: "" };
+
+      for (const [type, days] of Object.entries(plannerOtherDaysByType) as [ConsultationType, any[]][]) {
+        const other = days?.[dayIndex];
+        if (!other || other.is_day_off) continue;
+        const os = other.start_time,
+          oe = other.end_time;
+        if (!os || !oe) continue;
+        if (timeRangesOverlap(cs, ce, os, oe)) {
+          return { hasConflict: true, otherType: type, otherTime: `${os} – ${oe}` };
+        }
+      }
+      return { hasConflict: false, otherTime: "" };
     },
-    [plannerDays, plannerOtherDays]
+    [plannerDays, plannerOtherDaysByType]
   );
 
   const plannerConflictCount = useMemo(
@@ -167,39 +182,43 @@ export default function StaffScheduleModal({
     []
   );
 
-  const getCurrentOnlineSchedule = useCallback((): Record<string, DaySchedule> => {
-    const weekStartDate = getWeekStartDate(currentWeekIndex);
-    return weeklySchedules[weekStartDate]?.online ?? emptyWeek().online;
-  }, [weeklySchedules, currentWeekIndex, getWeekStartDate]);
-
-  const getCurrentOfflineSchedule = useCallback((): Record<string, DaySchedule> => {
-    const weekStartDate = getWeekStartDate(currentWeekIndex);
-    return weeklySchedules[weekStartDate]?.offline ?? emptyWeek().offline;
-  }, [weeklySchedules, currentWeekIndex, getWeekStartDate]);
-
-  const getScheduleConflict = useCallback(
-    (day: string): boolean => {
+  const getCurrentSchedule = useCallback(
+    (type: ConsultationType): Record<string, DaySchedule> => {
       const weekStartDate = getWeekStartDate(currentWeekIndex);
-      const weekSchedule = weeklySchedules[weekStartDate];
-      if (!weekSchedule) return false;
-      const on = weekSchedule.online[day];
-      const off = weekSchedule.offline[day];
-      if (on?.enabled && off?.enabled) {
-        return timeRangesOverlap(on.start, on.end, off.start, off.end);
-      }
-      return false;
+      return weeklySchedules[weekStartDate]?.[type] ?? emptyWeek()[type];
     },
     [weeklySchedules, currentWeekIndex, getWeekStartDate]
   );
 
-  const getConflictDays = useCallback((): string[] => {
-    return DEFAULT_WEEKDAYS.filter((d) => getScheduleConflict(d.value)).map((d) => d.value);
-  }, [getScheduleConflict]);
+  // Checks `type`'s day against BOTH other types — a doctor with e.g. online
+  // and mixed overlapping on the same day/time is just as much a conflict as
+  // online vs offline was before mixed existed.
+  const getScheduleConflict = useCallback(
+    (type: ConsultationType, day: string): boolean => {
+      const weekStartDate = getWeekStartDate(currentWeekIndex);
+      const weekSchedule = weeklySchedules[weekStartDate];
+      if (!weekSchedule) return false;
+      const current = weekSchedule[type][day];
+      if (!current?.enabled) return false;
+      return CONSULTATION_TYPES.filter((t) => t !== type).some((otherType) => {
+        const other = weekSchedule[otherType][day];
+        return other?.enabled && timeRangesOverlap(current.start, current.end, other.start, other.end);
+      });
+    },
+    [weeklySchedules, currentWeekIndex, getWeekStartDate]
+  );
+
+  const getConflictDays = useCallback(
+    (type: ConsultationType): string[] => {
+      return DEFAULT_WEEKDAYS.filter((d) => getScheduleConflict(type, d.value)).map((d) => d.value);
+    },
+    [getScheduleConflict]
+  );
 
   // ── Template-tab: toggle/update helpers ──────────────────────────────────────
 
-  const toggleOnlineDay = useCallback(
-    (day: string) => {
+  const toggleScheduleDay = useCallback(
+    (type: ConsultationType, day: string) => {
       const weekStartDate = getWeekStartDate(currentWeekIndex);
       setWeeklySchedules((prev) => {
         const cur = prev[weekStartDate] ?? emptyWeek();
@@ -207,29 +226,9 @@ export default function StaffScheduleModal({
           ...prev,
           [weekStartDate]: {
             ...cur,
-            online: {
-              ...cur.online,
-              [day]: { ...cur.online[day], enabled: !cur.online[day]?.enabled },
-            },
-          },
-        };
-      });
-    },
-    [currentWeekIndex, getWeekStartDate]
-  );
-
-  const toggleOfflineDay = useCallback(
-    (day: string) => {
-      const weekStartDate = getWeekStartDate(currentWeekIndex);
-      setWeeklySchedules((prev) => {
-        const cur = prev[weekStartDate] ?? emptyWeek();
-        return {
-          ...prev,
-          [weekStartDate]: {
-            ...cur,
-            offline: {
-              ...cur.offline,
-              [day]: { ...cur.offline[day], enabled: !cur.offline[day]?.enabled },
+            [type]: {
+              ...cur[type],
+              [day]: { ...cur[type][day], enabled: !cur[type][day]?.enabled },
             },
           },
         };
@@ -266,38 +265,18 @@ export default function StaffScheduleModal({
       return { start: newStart, end: newEnd };
     };
 
-  const updateOnlineDayTime = useCallback(
-    (day: string, field: "start" | "end", value: string) => {
+  const updateScheduleDayTime = useCallback(
+    (type: ConsultationType, day: string, field: "start" | "end", value: string) => {
       const adjust = makeAdjustTime(field);
       const weekStartDate = getWeekStartDate(currentWeekIndex);
       setWeeklySchedules((prev) => {
         const cur = prev[weekStartDate] ?? emptyWeek();
-        const adjusted = adjust(cur.online[day], value);
+        const adjusted = adjust(cur[type][day], value);
         return {
           ...prev,
           [weekStartDate]: {
             ...cur,
-            online: { ...cur.online, [day]: { ...cur.online[day], ...adjusted } },
-          },
-        };
-      });
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [currentWeekIndex, getWeekStartDate]
-  );
-
-  const updateOfflineDayTime = useCallback(
-    (day: string, field: "start" | "end", value: string) => {
-      const adjust = makeAdjustTime(field);
-      const weekStartDate = getWeekStartDate(currentWeekIndex);
-      setWeeklySchedules((prev) => {
-        const cur = prev[weekStartDate] ?? emptyWeek();
-        const adjusted = adjust(cur.offline[day], value);
-        return {
-          ...prev,
-          [weekStartDate]: {
-            ...cur,
-            offline: { ...cur.offline, [day]: { ...cur.offline[day], ...adjusted } },
+            [type]: { ...cur[type], [day]: { ...cur[type][day], ...adjusted } },
           },
         };
       });
@@ -310,7 +289,9 @@ export default function StaffScheduleModal({
 
   const handleSaveSchedule = async () => {
     if (!member) return;
-    const conflictDays = getConflictDays();
+    // Saving writes all three types at once (buildSchedulesArray), so check
+    // conflicts across all of them, not just whichever tab is active.
+    const conflictDays = Array.from(new Set(CONSULTATION_TYPES.flatMap((t) => getConflictDays(t))));
     if (conflictDays.length > 0) {
       toast.error(
         `⛔ Обнаружены конфликты расписания на ${conflictDays.length} ${
@@ -380,7 +361,7 @@ export default function StaffScheduleModal({
     fetchPlannerWeek(member.id, newWeek, plannerConsultationType);
   };
 
-  const handlePlannerTypeChange = async (cType: "online" | "offline") => {
+  const handlePlannerTypeChange = async (cType: ConsultationType) => {
     if (!member || cType === plannerConsultationType) return;
     if (plannerConflictCount > 0) {
       toast.error(
@@ -604,7 +585,7 @@ export default function StaffScheduleModal({
                   plannerWeekStart={plannerWeekStart}
                   plannerConsultationType={plannerConsultationType}
                   plannerDays={plannerDays}
-                  plannerOtherDays={plannerOtherDays}
+                  plannerOtherDaysByType={plannerOtherDaysByType}
                   plannerLoading={plannerLoading}
                   plannerConflictCount={plannerConflictCount}
                   getPlannerDayConflict={getPlannerDayConflict}
@@ -625,14 +606,11 @@ export default function StaffScheduleModal({
                 <TemplateScheduleTab
                   scheduleType={scheduleType}
                   onScheduleTypeChange={setScheduleType}
-                  getCurrentOnlineSchedule={getCurrentOnlineSchedule}
-                  getCurrentOfflineSchedule={getCurrentOfflineSchedule}
+                  getCurrentSchedule={getCurrentSchedule}
                   getScheduleConflict={getScheduleConflict}
                   getConflictDays={getConflictDays}
-                  onToggleOnlineDay={toggleOnlineDay}
-                  onToggleOfflineDay={toggleOfflineDay}
-                  onUpdateOnlineDayTime={updateOnlineDayTime}
-                  onUpdateOfflineDayTime={updateOfflineDayTime}
+                  onToggleDay={toggleScheduleDay}
+                  onUpdateDayTime={updateScheduleDayTime}
                 />
               )}
 
@@ -655,7 +633,7 @@ export default function StaffScheduleModal({
                 <button
                   type="button"
                   onClick={handleSaveSchedule}
-                  disabled={scheduleLoading || getConflictDays().length > 0}
+                  disabled={scheduleLoading || CONSULTATION_TYPES.some((t) => getConflictDays(t).length > 0)}
                   className="flex-1 px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {scheduleLoading ? (

@@ -38,29 +38,41 @@ export function ServiceFormModal({
       return {
         name: initial.name, description: initial.description || "", price: initial.price || "",
         duration_minutes: initial.duration_minutes, category: initial.category,
-        currency: initial.currency || "", doctor_id: initial.doctor_id ?? null,
+        currency: initial.currency || "", schedule_source: initial.schedule_source ?? "own",
+        doctor_ids: initial.doctor_ids ?? [],
         capacity_per_slot: initial.capacity_per_slot ?? null,
       };
     }
     return { ...EMPTY_SERVICE_FORM, category: categories[0]?.slug ?? "" };
   });
   const [saving, setSaving] = useState(false);
-  const [doctorDropdown, setDoctorDropdown] = useState(false);
   const [modalMouseDownTarget, setModalMouseDownTarget] = useState<EventTarget | null>(null);
   const [catDropdownOpen, setCatDropdownOpen] = useState(false);
   const [catDropdownRect, setCatDropdownRect] = useState({ top: 0, left: 0, width: 0 });
   const catBtnRef = useRef<HTMLButtonElement>(null);
+  const [doctorDropdown, setDoctorDropdown] = useState(false);
+  const [doctorSearch, setDoctorSearch] = useState("");
+  const doctorSearchRef = useRef<HTMLInputElement>(null);
+  const filteredStaff = staff.filter(d => {
+    const q = doctorSearch.trim().toLowerCase();
+    if (!q) return true;
+    return `${d.last_name} ${d.first_name} ${d.specialization ?? ""}`.toLowerCase().includes(q);
+  });
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error("Введите название услуги"); return; }
+    if (form.schedule_source === "doctor" && form.doctor_ids.length === 0) {
+      toast.error("Выберите хотя бы одного ответственного врача для расписания по графику врача");
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
         ...form,
         price: form.price || null,
         currency: form.currency || clinicCurrency,
-        doctor_id: form.doctor_id ?? null,
-        capacity_per_slot: form.capacity_per_slot,
+        doctor_ids: form.doctor_ids,
+        capacity_per_slot: form.schedule_source === "doctor" ? null : form.capacity_per_slot,
       };
       let res;
       if (mode === "edit") {
@@ -224,94 +236,135 @@ export function ServiceFormModal({
               </div>
             </div>
 
-            {/* Doctor picker */}
+            {/* Schedule source toggle */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Ответственный врач</label>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setDoctorDropdown(v => !v)}
-                  className="w-full flex items-center gap-2.5 px-4 py-3 rounded-xl border-2 border-gray-200 text-sm text-gray-800 bg-white hover:border-blue-300 focus:border-blue-500 transition-colors text-left"
-                >
-                  <Stethoscope size={14} className="text-gray-400 flex-shrink-0" />
-                  <span className="flex-1 truncate">
-                    {form.doctor_id
-                      ? (() => {
-                          const d = staff.find(s => s.id === form.doctor_id);
-                          return d ? `${d.last_name} ${d.first_name}` : 'Врач не найден';
-                        })()
-                      : <span className="text-gray-400">Не назначен</span>
-                    }
-                  </span>
-                  {form.doctor_id && (
-                    <button
-                      type="button"
-                      onClick={e => { e.stopPropagation(); setForm(f => ({ ...f, doctor_id: null })); }}
-                      className="w-5 h-5 rounded-full flex items-center justify-center hover:bg-gray-100"
-                    >
-                      <X size={11} className="text-gray-400" />
-                    </button>
-                  )}
-                  <ChevronDown size={13} className={`text-gray-400 transition-transform flex-shrink-0 ${doctorDropdown ? 'rotate-180' : ''}`} />
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Расписание услуги</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button"
+                  onClick={() => setForm(f => ({ ...f, schedule_source: "own" }))}
+                  className={`px-4 py-3 rounded-xl border-2 text-sm font-semibold text-left transition-all ${
+                    form.schedule_source === "own" ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                  }`}>
+                  Своё расписание
+                  <span className="block text-xs font-normal mt-0.5 opacity-70">Настраивается отдельно для услуги</span>
                 </button>
-                {doctorDropdown && (
-                  <div className="absolute left-0 right-0 top-full mt-1 z-[200] bg-white border border-gray-100 rounded-xl shadow-xl py-1 max-h-52 overflow-y-auto">
-                    <button
-                      type="button"
-                      onClick={() => { setForm(f => ({ ...f, doctor_id: null })); setDoctorDropdown(false); }}
-                      className={`w-full text-left px-4 py-2 text-sm transition-colors hover:bg-gray-50 ${!form.doctor_id ? 'font-semibold text-blue-600' : 'text-gray-500'}`}
-                    >
-                      Не назначен
-                    </button>
-                    {staff.map(d => (
-                      <button
-                        key={d.id}
-                        type="button"
-                        onClick={() => { setForm(f => ({ ...f, doctor_id: d.id })); setDoctorDropdown(false); }}
-                        className={`w-full text-left px-4 py-2 transition-colors hover:bg-gray-50 ${form.doctor_id === d.id ? 'bg-blue-50' : ''}`}
-                      >
-                        <p className={`text-sm font-semibold ${form.doctor_id === d.id ? 'text-blue-700' : 'text-gray-800'}`}>
-                          {d.last_name} {d.first_name}
-                        </p>
-                        {d.specialization && (
-                          <p className="text-xs text-gray-400 mt-0.5">{d.specialization}</p>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <button type="button"
+                  onClick={() => setForm(f => ({ ...f, schedule_source: "doctor" }))}
+                  className={`px-4 py-3 rounded-xl border-2 text-sm font-semibold text-left transition-all ${
+                    form.schedule_source === "doctor" ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                  }`}>
+                  По графику врача
+                  <span className="block text-xs font-normal mt-0.5 opacity-70">Следует расписанию назначенных врачей</span>
+                </button>
               </div>
             </div>
 
-            {/* Slot limit */}
-            <div className={`p-4 rounded-2xl border-2 transition-all ${form.capacity_per_slot !== null ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}>
-              <div className="flex items-center gap-3">
-                <div className="flex-1">
-                  <p className={`text-sm font-semibold mb-0.5 ${form.capacity_per_slot !== null ? 'text-blue-700' : 'text-gray-700'}`}>
-                    Лимит пациентов на слот
-                  </p>
-                  <p className={`text-xs ${form.capacity_per_slot !== null ? 'text-blue-500' : 'text-gray-400'}`}>
-                    {form.capacity_per_slot !== null ? 'Ограничено' : 'Без ограничений'}
-                  </p>
+            {/* Doctor picker — searchable multi-select with removable tags */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Ответственные врачи {form.schedule_source === "doctor" && <span className="text-red-500">*</span>}
+              </label>
+              <div className="relative">
+                <div
+                  onClick={() => { setDoctorDropdown(true); doctorSearchRef.current?.focus(); }}
+                  className="relative z-[151] w-full min-h-[48px] px-3 py-2 rounded-xl border-2 border-gray-200 bg-white focus-within:border-blue-500 transition-colors flex flex-wrap items-center gap-1.5 cursor-text"
+                >
+                  {form.doctor_ids.map(id => {
+                    const d = staff.find(s => s.id === id);
+                    if (!d) return null;
+                    return (
+                      <span key={id}
+                        className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-semibold text-blue-700 whitespace-nowrap">
+                        <Stethoscope size={11} className="text-blue-400 flex-shrink-0" />
+                        {d.last_name} {d.first_name}
+                        <button type="button"
+                          onClick={e => { e.stopPropagation(); setForm(f => ({ ...f, doctor_ids: f.doctor_ids.filter(x => x !== id) })); }}
+                          className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-blue-200 transition-colors">
+                          <X size={10} />
+                        </button>
+                      </span>
+                    );
+                  })}
+                  <input
+                    ref={doctorSearchRef}
+                    value={doctorSearch}
+                    onChange={e => { setDoctorSearch(e.target.value); setDoctorDropdown(true); }}
+                    onFocus={() => setDoctorDropdown(true)}
+                    placeholder={form.doctor_ids.length === 0 ? "Начните вводить имя врача..." : ""}
+                    className="flex-1 min-w-[140px] outline-none text-sm bg-transparent py-1"
+                  />
                 </div>
-                <button type="button"
-                  onClick={() => setForm(f => ({ ...f, capacity_per_slot: f.capacity_per_slot !== null ? null : 1 }))}
-                  className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${form.capacity_per_slot !== null ? 'bg-blue-600' : 'bg-gray-300'}`}>
-                  <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${form.capacity_per_slot !== null ? 'left-5' : 'left-0.5'}`} />
-                </button>
+                {doctorDropdown && (
+                  <>
+                    <div className="fixed inset-0 z-[150]" onClick={() => { setDoctorDropdown(false); setDoctorSearch(""); }} />
+                    <div className="absolute left-0 right-0 top-full mt-1 z-[151] bg-white border border-gray-100 rounded-xl shadow-xl py-1 max-h-56 overflow-y-auto">
+                      {filteredStaff.length === 0 ? (
+                        <p className="text-sm text-gray-400 px-4 py-3">Врачи не найдены</p>
+                      ) : filteredStaff.map(d => {
+                        const checked = form.doctor_ids.includes(d.id);
+                        return (
+                          <button key={d.id} type="button"
+                            onClick={() => {
+                              setForm(f => ({
+                                ...f,
+                                doctor_ids: checked ? f.doctor_ids.filter(id => id !== d.id) : [...f.doctor_ids, d.id],
+                              }));
+                              setDoctorSearch("");
+                              doctorSearchRef.current?.focus();
+                            }}
+                            className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-gray-50 ${checked ? 'bg-blue-50' : ''}`}
+                          >
+                            <Stethoscope size={14} className="text-gray-400 flex-shrink-0" />
+                            <span className="flex-1 min-w-0">
+                              <p className={`text-sm font-semibold truncate ${checked ? 'text-blue-700' : 'text-gray-800'}`}>
+                                {d.last_name} {d.first_name}
+                              </p>
+                              {d.specialization && <p className="text-xs text-gray-400 mt-0.5 truncate">{d.specialization}</p>}
+                            </span>
+                            {checked && <CheckCircle2 size={14} className="text-blue-600 flex-shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
               </div>
-              {form.capacity_per_slot !== null && (
-                <div className="flex items-center gap-2 mt-3">
-                  <span className="text-sm text-blue-700 font-semibold">Количество:</span>
-                  <input type="number" min="1" max="999" value={form.capacity_per_slot}
-                    onChange={e => setForm(f => ({ ...f, capacity_per_slot: Math.max(1, Number(e.target.value)) }))}
-                    className="w-20 text-center px-2 py-1.5 rounded-lg border-2 border-blue-300 text-sm font-bold text-blue-700 outline-none focus:border-blue-500 transition-colors bg-white" />
-                  <span className="text-sm text-blue-500">
-                    {form.capacity_per_slot === 1 ? 'пациент' : form.capacity_per_slot < 5 ? 'пациента' : 'пациентов'} на слот
-                  </span>
-                </div>
+              {form.schedule_source === "doctor" && (
+                <p className="text-xs text-gray-400 mt-1.5">Расписание услуги = объединённые графики выбранных врачей.</p>
               )}
             </div>
+
+            {/* Slot limit — meaningless in doctor-mode, capacity is decided by which assigned doctors are free */}
+            {form.schedule_source === "own" && (
+              <div className={`p-4 rounded-2xl border-2 transition-all ${form.capacity_per_slot !== null ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <p className={`text-sm font-semibold mb-0.5 ${form.capacity_per_slot !== null ? 'text-blue-700' : 'text-gray-700'}`}>
+                      Лимит пациентов на слот
+                    </p>
+                    <p className={`text-xs ${form.capacity_per_slot !== null ? 'text-blue-500' : 'text-gray-400'}`}>
+                      {form.capacity_per_slot !== null ? 'Ограничено' : 'Без ограничений'}
+                    </p>
+                  </div>
+                  <button type="button"
+                    onClick={() => setForm(f => ({ ...f, capacity_per_slot: f.capacity_per_slot !== null ? null : 1 }))}
+                    className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${form.capacity_per_slot !== null ? 'bg-blue-600' : 'bg-gray-300'}`}>
+                    <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${form.capacity_per_slot !== null ? 'left-5' : 'left-0.5'}`} />
+                  </button>
+                </div>
+                {form.capacity_per_slot !== null && (
+                  <div className="flex items-center gap-2 mt-3">
+                    <span className="text-sm text-blue-700 font-semibold">Количество:</span>
+                    <input type="number" min="1" max="999" value={form.capacity_per_slot}
+                      onChange={e => setForm(f => ({ ...f, capacity_per_slot: Math.max(1, Number(e.target.value)) }))}
+                      className="w-20 text-center px-2 py-1.5 rounded-lg border-2 border-blue-300 text-sm font-bold text-blue-700 outline-none focus:border-blue-500 transition-colors bg-white" />
+                    <span className="text-sm text-blue-500">
+                      {form.capacity_per_slot === 1 ? 'пациент' : form.capacity_per_slot < 5 ? 'пациента' : 'пациентов'} на слот
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Clinic binding */}
             <div className="rounded-2xl p-4 border-2 border-blue-100 bg-blue-50">

@@ -18,25 +18,22 @@ import { api } from "@/utils/api";
 import { aiService } from "@/lib/ai/aiService";
 import { DiagnosticsServiceItem } from "@/lib/ai/types";
 
-// `diagnostics` (the plain-string field this form edits) is the persisted
-// source of truth — it's the only thing saved to the consultation record.
-// `referrals` is ephemeral UI state for this tab's lifetime: it lets the
-// doctor see/remove what they've added as chips, but is NOT reconstructed
-// from `value` on reload — reopening a consultation shows the text lines
-// without their structured chips.
+// The persisted source of truth for this section (type="diagnostics_referral")
+// is {referrals, comment} — see consultations/template_utils.py::validate_diagnostics_referral_value.
+// Referrals are real structured data now (not text lines embedded in a string),
+// so they survive a reload like everything else.
 export interface DiagnosticReferral {
   serviceId: number;
   name: string;
   categoryLabel?: string;
   price?: string | null;
-  lineText: string;
   bookedAt?: string;
   appointmentId?: number;
 }
 
 interface DiagnosticsFormProps {
-  value: string;
-  onChange: (value: string) => void;
+  comment: string;
+  onCommentChange: (value: string) => void;
   clinicId?: number;
   patientId?: number;
   doctorId?: number;
@@ -58,41 +55,9 @@ const formatPrice = (price?: string | null): string | null => {
   return `${num.toLocaleString("ru-RU")} ₸`;
 };
 
-const formatReferralLine = (
-  service: Pick<DiagnosticsServiceItem, "name" | "category_label" | "price">,
-  booking?: { dateLabel: string; timeLabel: string }
-): string => {
-  if (booking) {
-    return `• ${service.name} (${service.category_label}) — запись: ${booking.dateLabel}, ${booking.timeLabel}`;
-  }
-  const priceLabel = formatPrice(service.price);
-  return `• ${service.name} (${service.category_label}${priceLabel ? `, ${priceLabel}` : ""})`;
-};
-
-const appendLine = (text: string, line: string): string => (text ? `${text}\n${line}` : line);
-
-// Line-array based (not substring/newline-guessing) so an exact-match line is
-// found correctly regardless of whether it's the first, middle, last, or only
-// line in the text.
-const replaceLine = (text: string, oldLine: string, newLine: string): string => {
-  const lines = text.split("\n");
-  const idx = lines.indexOf(oldLine);
-  if (idx === -1) return appendLine(text, newLine); // doctor hand-edited it — just append the new one
-  lines[idx] = newLine;
-  return lines.join("\n");
-};
-
-const removeLine = (text: string, line: string): string => {
-  const lines = text.split("\n");
-  const idx = lines.indexOf(line);
-  if (idx === -1) return text; // not found verbatim — leave the text untouched
-  lines.splice(idx, 1);
-  return lines.join("\n");
-};
-
 const DiagnosticsForm: React.FC<DiagnosticsFormProps> = ({
-  value,
-  onChange,
+  comment,
+  onCommentChange,
   clinicId,
   patientId,
   doctorId,
@@ -181,17 +146,9 @@ const DiagnosticsForm: React.FC<DiagnosticsFormProps> = ({
 
   const handleAddReferral = (service: DiagnosticsServiceItem) => {
     if (referrals.some((r) => r.serviceId === service.id)) return;
-    const lineText = formatReferralLine(service);
-    onChange(appendLine(value, lineText));
     onReferralsChange([
       ...referrals,
-      {
-        serviceId: service.id,
-        name: service.name,
-        categoryLabel: service.category_label,
-        price: service.price,
-        lineText,
-      },
+      { serviceId: service.id, name: service.name, categoryLabel: service.category_label, price: service.price },
     ]);
   };
 
@@ -211,32 +168,21 @@ const DiagnosticsForm: React.FC<DiagnosticsFormProps> = ({
       const slotObj = bookingSlots.find((s) => s.start === selectedSlot);
       const dateLabel = nextDays.find((d) => d.iso === bookingDate)?.label ?? bookingDate;
       const timeLabel = slotObj?.label ?? selectedSlot;
-      const lineText = formatReferralLine(service, { dateLabel, timeLabel });
+      const updated: DiagnosticReferral = {
+        serviceId: service.id,
+        name: service.name,
+        categoryLabel: service.category_label,
+        price: service.price,
+        bookedAt: selectedSlot,
+        appointmentId,
+      };
 
-      const existing = referrals.find((r) => r.serviceId === service.id);
-      if (existing) {
-        // Already added without a booking — upgrade it in place instead of duplicating.
-        onChange(replaceLine(value, existing.lineText, lineText));
-        onReferralsChange(
-          referrals.map((r) =>
-            r.serviceId === service.id ? { ...r, lineText, bookedAt: selectedSlot, appointmentId } : r
-          )
-        );
-      } else {
-        onChange(appendLine(value, lineText));
-        onReferralsChange([
-          ...referrals,
-          {
-            serviceId: service.id,
-            name: service.name,
-            categoryLabel: service.category_label,
-            price: service.price,
-            lineText,
-            bookedAt: selectedSlot,
-            appointmentId,
-          },
-        ]);
-      }
+      const existing = referrals.some((r) => r.serviceId === service.id);
+      onReferralsChange(
+        existing
+          ? referrals.map((r) => (r.serviceId === service.id ? updated : r))
+          : [...referrals, updated]
+      );
 
       toast.success(`Записано: ${service.name} — ${dateLabel}, ${timeLabel}`);
       setBookingServiceId(null);
@@ -250,18 +196,17 @@ const DiagnosticsForm: React.FC<DiagnosticsFormProps> = ({
   const handleRemoveReferral = (referral: DiagnosticReferral) => {
     if (referral.appointmentId) {
       const confirmed = window.confirm(
-        "Приём уже создан в системе. Удаление уберёт запись только из этого списка и текста консультации — сама запись на приём останется активной. Продолжить?"
+        "Приём уже создан в системе. Удаление уберёт направление из этого списка — сама запись на приём останется активной. Продолжить?"
       );
       if (!confirmed) return;
     }
-    onChange(removeLine(value, referral.lineText));
     onReferralsChange(referrals.filter((r) => r.serviceId !== referral.serviceId));
   };
 
   return (
     <div className="h-full flex flex-col">
       {clinicId && (
-        <div className="mb-4 rounded-xl border overflow-hidden" style={{ borderColor: '#283353' }}>
+        <div className="mb-4 rounded-xl border overflow-hidden flex-shrink-0" style={{ borderColor: '#283353' }}>
           <button
             type="button"
             onClick={() => setShowServicePanel((v) => !v)}
@@ -454,7 +399,7 @@ const DiagnosticsForm: React.FC<DiagnosticsFormProps> = ({
       )}
 
       {referrals.length > 0 && (
-        <div className="mb-4">
+        <div className="mb-4 flex-shrink-0">
           <div className="flex flex-wrap gap-2">
             {referrals.map((r) => (
               <div
@@ -471,22 +416,19 @@ const DiagnosticsForm: React.FC<DiagnosticsFormProps> = ({
                   onClick={() => handleRemoveReferral(r)}
                   className="w-4 h-4 rounded-full flex items-center justify-center transition-colors"
                   style={{ backgroundColor: '#283353', color: '#bcc0ca' }}
-                  title={r.appointmentId ? "Убрать из текста (запись останется активной)" : "Удалить"}
+                  title={r.appointmentId ? "Убрать из списка (запись останется активной)" : "Удалить"}
                 >
                   <FontAwesomeIcon icon={r.appointmentId ? faTriangleExclamation : faXmark} className="text-[9px]" />
                 </button>
               </div>
             ))}
           </div>
-          <p className="text-[11px] mt-1.5" style={{ color: '#bcc0ca' }}>
-            Удаление из списка не отменяет уже созданную запись на приём.
-          </p>
         </div>
       )}
 
       <textarea
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+        value={comment}
+        onChange={(e) => onCommentChange(e.target.value)}
         placeholder="Проведённые обследования, анализы, результаты..."
         className="flex-1 w-full border rounded-xl px-4 py-3 text-sm transition-all resize-none focus:outline-none focus:ring-2"
         style={{
@@ -506,7 +448,7 @@ const DiagnosticsForm: React.FC<DiagnosticsFormProps> = ({
         }}
       />
 
-      <div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: '#1e263e' }}>
+      <div className="mt-4 p-3 rounded-lg flex-shrink-0" style={{ backgroundColor: '#1e263e' }}>
         <p className="text-xs" style={{ color: '#bcc0ca' }}>
           💡 Совет: Укажите результаты анализов, инструментальных исследований, заключения специалистов
         </p>

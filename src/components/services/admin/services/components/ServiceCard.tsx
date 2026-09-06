@@ -25,7 +25,10 @@ export function ServiceCard({
 }) {
   const Icon = getCategoryIcon(category?.icon ?? "clipboard-list");
   const catColor = category?.color ?? "#6366f1";
-  const hasSchedule = !!(service.schedules && service.schedules.some(sc => sc.is_active));
+  const isDoctorMode = service.schedule_source === "doctor";
+  const hasSchedule = isDoctorMode
+    ? service.doctor_ids.length > 0
+    : !!(service.schedules && service.schedules.some(sc => sc.is_active));
 
   return (
     <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
@@ -49,10 +52,10 @@ export function ServiceCard({
               </span>
             </div>
 
-            {service.doctor_name && (
+            {service.doctor_names.length > 0 && (
               <p className="text-sm font-medium text-indigo-600 mb-2 flex items-center gap-2">
                 <Stethoscope className="w-4 h-4" />
-                {service.doctor_name}
+                {service.doctor_names.join(", ")}
               </p>
             )}
 
@@ -83,7 +86,11 @@ export function ServiceCard({
               }`}>
                 {service.is_active ? '✓ Активна' : 'Неактивна'}
               </span>
-              {!hasSchedule && (
+              {isDoctorMode ? (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-600 border border-indigo-100">
+                  По графику врача
+                </span>
+              ) : !hasSchedule && (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-100">
                   Нет расписания
                 </span>
@@ -115,11 +122,12 @@ export function ServiceCard({
               <Pencil className="w-5 h-5 text-gray-500 group-hover:text-blue-600 transition-colors" />
             </motion.button>
             <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => onSchedule(service)}
-              className="p-2.5 rounded-lg hover:bg-white transition-all group"
-              title="Расписание"
+              whileHover={isDoctorMode ? undefined : { scale: 1.1 }}
+              whileTap={isDoctorMode ? undefined : { scale: 0.9 }}
+              onClick={() => !isDoctorMode && onSchedule(service)}
+              disabled={isDoctorMode}
+              className={`p-2.5 rounded-lg transition-all group ${isDoctorMode ? 'opacity-30 cursor-not-allowed' : 'hover:bg-white'}`}
+              title={isDoctorMode ? "Расписание определяется врачом" : "Расписание"}
             >
               <CalendarDays className="w-5 h-5 text-gray-500 group-hover:text-sky-600 transition-colors" />
             </motion.button>

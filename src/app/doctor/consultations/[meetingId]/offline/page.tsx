@@ -17,7 +17,6 @@ import { aiService } from "@/lib/ai/aiService";
 import { DiagnosticsServiceItem } from "@/lib/ai/types";
 import AIConsultationReview from "@/app/video-call/doctor/components/AIConsultationReview";
 import { SignatureModal } from "@/components/shared/SignatureModal";
-import { generateMedicalPdf } from "@/lib/generateMedicalPdf";
 
 interface OfflineConsultation {
   id: number;
@@ -37,6 +36,7 @@ interface OfflineConsultation {
   diagnosis: string;
   session_notes: string | null;
   appointment_slot?: { consultation_type?: string; clinic?: number } | null;
+  template_snapshot?: { sections: { key: string; label: string; ai_hint?: string; required?: boolean; placeholder?: string }[] } | null;
 }
 
 // Catalog-sourced referrals carry `serviceId` (used for dedup and to upgrade
@@ -422,39 +422,31 @@ export default function OfflineConsultationByMeetingPage() {
     }
   }, [meetingId, formData]);
 
+  // Server renders the PDF from the record's own saved fields (and archives
+  // it to the patient's documents in the same request) via the same
+  // generate-pdf endpoint the dynamic-template video-call flow uses — the
+  // backend falls back to these legacy columns when structured_data is
+  // empty, so this page's fixed 5-field form still works unchanged.
   const generateAndUploadPdf = async (signature: string) => {
     if (!consultation) return;
     setGeneratingPdf(true);
     try {
-      const patientName = `${consultation.patient_first_name} ${consultation.patient_last_name}`.trim();
-      const doctorName = user ? `${user.first_name} ${user.last_name}`.trim() || "Врач" : "Врач";
-      const { blob, filename } = await generateMedicalPdf({
-        documentTitle: "Консультационный лист",
-        patientName,
-        doctorName,
-        sections: [
-          { label: "Жалобы пациента", content: formData.complaints },
-          { label: "Анамнез заболевания", content: formData.anamnesis },
-          { label: "Обследование и диагностика", content: formData.diagnostics },
-          { label: "Диагноз", content: formData.diagnosis },
-          { label: "Назначенное лечение", content: formData.treatment },
-        ],
-        signature,
-        filenamePrefix: "consultation",
-      });
+      await handleSave();
+
+      const response = await api.post(
+        `/consultations/${meetingId}/generate-pdf/`,
+        { signature },
+        { responseType: "blob" }
+      );
+      const blob = response.data as Blob;
+      const disposition = response.headers["content-disposition"] as string | undefined;
+      const filenameMatch = disposition?.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+      const filename = filenameMatch ? decodeURIComponent(filenameMatch[1]) : "consultation.pdf";
 
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = blobUrl; a.download = filename; a.click();
       URL.revokeObjectURL(blobUrl);
-
-      const uploadData = new FormData();
-      uploadData.append("file", new File([blob], filename, { type: "application/pdf" }));
-      uploadData.append("consultation_id", String(consultation.id));
-      uploadData.append("description", `Консультационный лист — ${patientName}`);
-      await api.post("/medical-documents/doctor-upload/", uploadData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
       toast.success("PDF сформирован и сохранён в документы пациента");
     } catch {
       toast.error("Не удалось сформировать PDF");
@@ -981,6 +973,9 @@ export default function OfflineConsultationByMeetingPage() {
 
       {showAI && (
         <AIConsultationReview
+          sourceType="consultation"
+          sourceId={consultation?.id ?? 0}
+          templateSections={consultation?.template_snapshot?.sections || []}
           patientName={patientName}
           initialDescription={transcript ?? ""}
           onApply={handleAIApply}

@@ -4,7 +4,7 @@ export interface StaffMemberMin {
   last_name: string;
   schedules?: Array<{
     id?: number;
-    consultation_type: "online" | "offline";
+    consultation_type: "online" | "offline" | "mixed";
     weekday: number;
     start_time: string;
     end_time: string;
@@ -19,10 +19,14 @@ export interface StaffScheduleModalProps {
   onSaved?: () => void;
 }
 
+export type ConsultationType = "online" | "offline" | "mixed";
+export const CONSULTATION_TYPES: readonly ConsultationType[] = ["online", "offline", "mixed"];
+
 export type DaySchedule = { start: string; end: string; enabled: boolean };
 export type WeekSchedule = {
   online: Record<string, DaySchedule>;
   offline: Record<string, DaySchedule>;
+  mixed: Record<string, DaySchedule>;
 };
 export type WeeklySchedules = Record<string, WeekSchedule>;
 
@@ -52,23 +56,18 @@ export const makeDay = (start: string, end: string, enabled = false): DaySchedul
   enabled,
 });
 
+const defaultDayMap = (): Record<string, DaySchedule> => ({
+  monday: makeDay("09:00", "18:00"),
+  tuesday: makeDay("09:00", "18:00"),
+  wednesday: makeDay("09:00", "18:00"),
+  thursday: makeDay("09:00", "18:00"),
+  friday: makeDay("09:00", "18:00"),
+  saturday: makeDay("10:00", "14:00"),
+  sunday: makeDay("10:00", "14:00"),
+});
+
 export const emptyWeek = (): WeekSchedule => ({
-  online: {
-    monday: makeDay("09:00", "18:00"),
-    tuesday: makeDay("09:00", "18:00"),
-    wednesday: makeDay("09:00", "18:00"),
-    thursday: makeDay("09:00", "18:00"),
-    friday: makeDay("09:00", "18:00"),
-    saturday: makeDay("10:00", "14:00"),
-    sunday: makeDay("10:00", "14:00"),
-  },
-  offline: {
-    monday: makeDay("09:00", "18:00"),
-    tuesday: makeDay("09:00", "18:00"),
-    wednesday: makeDay("09:00", "18:00"),
-    thursday: makeDay("09:00", "18:00"),
-    friday: makeDay("09:00", "18:00"),
-    saturday: makeDay("10:00", "14:00"),
-    sunday: makeDay("10:00", "14:00"),
-  },
+  online: defaultDayMap(),
+  offline: defaultDayMap(),
+  mixed: defaultDayMap(),
 });

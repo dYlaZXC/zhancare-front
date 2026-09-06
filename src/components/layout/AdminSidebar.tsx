@@ -25,6 +25,7 @@ import {
   faPaperPlane,
   faGaugeHigh,
   faWarehouse,
+  faLayerGroup,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useState, useEffect, useRef, type CSSProperties } from "react";
@@ -82,6 +83,7 @@ const adminMenu: MenuItem[] = [
     children: [
       { id: "staff", icon: faUsers, title: "Персонал", color: "#8b5cf6", href: "/admin/staff" },
       { id: "services", icon: faClipboardList, title: "Услуги", color: "#0ea5e9", href: "/admin/services" },
+      { id: "consultation-templates", icon: faLayerGroup, title: "Шаблоны листов", color: "#a855f7", href: "/admin/consultation-templates" },
       { id: "patients", icon: faUserMd, title: "Пациенты", color: "#10b981", href: "/admin/patients" },
       { id: "schedule", icon: faCalendarCheck, title: "Расписание", color: "#295bbf", href: "/admin/schedule" },
       { id: "warehouse", icon: faWarehouse, title: "Склад", color: "#78716c", href: "/admin/warehouse" },
