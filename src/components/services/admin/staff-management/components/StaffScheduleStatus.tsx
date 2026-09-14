@@ -2,6 +2,7 @@
 
 import { CalendarCheck2, AlertCircle, Check, X } from "lucide-react";
 import type { StaffMember } from "../types/staffTypes";
+import { TYPE_META } from "../../staff-schedule/utils/typeDisplay";
 
 type Dimension = { key: string; label: string; ok: boolean };
 
@@ -35,12 +36,32 @@ function MarkedPill({ dim }: { dim: Dimension }) {
   );
 }
 
+// Онлайн/Оффлайн above can both read "configured" purely because a doctor
+// set up a single flexible 'mixed' schedule (not two separate ones) — this
+// badge makes that distinction visible instead of leaving it implicit,
+// reusing the same teal/Shuffle styling 'mixed' gets everywhere else
+// (StaffScheduleModal, DoctorSchedule) so it reads as the same concept.
+function MixedPill() {
+  const meta = TYPE_META.mixed;
+  const Icon = meta.icon;
+  return (
+    <span className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-white border border-teal-300 ${meta.text}`}>
+      <Icon className="w-3 h-3" />
+      {meta.shortLabel}
+    </span>
+  );
+}
+
 export function StaffScheduleStatus({ member }: { member: StaffMember }) {
   if (member.role !== 'doctor' && member.role !== 'nurse') return null;
 
   const activeSchedules = member.schedules || [];
-  const hasOnline = activeSchedules.some((s) => s.is_active && s.consultation_type === 'online') || !!member.has_online_availability;
-  const hasOffline = activeSchedules.some((s) => s.is_active && s.consultation_type === 'offline') || !!member.has_offline_availability;
+  // 'mixed' means the doctor is flexible for either type — it satisfies
+  // both the Онлайн and Оффлайн dimensions, same as the backend treats it
+  // as a stand-in for whichever exact type is requested (pick_exact_over_mixed).
+  const hasMixed = activeSchedules.some((s) => s.is_active && s.consultation_type === 'mixed') || !!member.has_mixed_availability;
+  const hasOnline = hasMixed || activeSchedules.some((s) => s.is_active && s.consultation_type === 'online') || !!member.has_online_availability;
+  const hasOffline = hasMixed || activeSchedules.some((s) => s.is_active && s.consultation_type === 'offline') || !!member.has_offline_availability;
   const hasRecurring = activeSchedules.some((s) => s.is_active);
 
   const dims: Dimension[] = [
@@ -62,6 +83,7 @@ export function StaffScheduleStatus({ member }: { member: StaffMember }) {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {dims.map((d) => <ConfiguredPill key={d.key} label={d.label} />)}
+          {hasMixed && <MixedPill />}
         </div>
       </div>
     );
@@ -95,6 +117,7 @@ export function StaffScheduleStatus({ member }: { member: StaffMember }) {
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {dims.map((d) => <MarkedPill key={d.key} dim={d} />)}
+        {hasMixed && <MixedPill />}
       </div>
       <p className={`text-xs font-medium ${noteColor}`}>
         Не настроено: {missing.map((d) => d.label).join(', ')}

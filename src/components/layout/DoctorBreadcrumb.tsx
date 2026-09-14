@@ -14,7 +14,8 @@ import {
   faStethoscope,
   faClipboardList,
   faUser,
-  faChartLine
+  faChartLine,
+  faFileLines
 } from "@fortawesome/free-solid-svg-icons";
 
 interface DoctorBreadcrumbItem {
@@ -82,6 +83,12 @@ export const DoctorBreadcrumb = ({
       title: "История Пациентов",
       icon: <FontAwesomeIcon icon={faNotesMedical} className="w-4 h-4" />,
       href: "/doctor/patients",
+    },
+    "consultation-templates": {
+      key: "consultation-templates",
+      title: "Мои шаблоны",
+      icon: <FontAwesomeIcon icon={faFileLines} className="w-4 h-4" />,
+      href: "/doctor/consultation-templates",
     },
   };
 

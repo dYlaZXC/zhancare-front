@@ -8,7 +8,17 @@ import { Loader2, ClipboardType, Plus, Pencil, Trash2, Star, CheckCircle2 } from
 
 import type { ConsultationFormTemplate } from "./consultationTemplates/types";
 
-export function ConsultationTemplatesView() {
+export function ConsultationTemplatesView({
+  basePath = "/admin/consultation-templates",
+  title = "Шаблоны консультационных листов",
+  subtitle = "Конструктор секций для видеоконсультаций и приёма в клинике",
+  emptyStateHint = "Без своего шаблона используется стандартный набор секций",
+}: {
+  basePath?: string;
+  title?: string;
+  subtitle?: string;
+  emptyStateHint?: string;
+} = {}) {
   const router = useRouter();
   const [templates, setTemplates] = useState<ConsultationFormTemplate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,8 +39,8 @@ export function ConsultationTemplatesView() {
 
   useEffect(() => { fetchTemplates(); }, [fetchTemplates]);
 
-  const openCreate = () => router.push("/admin/consultation-templates/new");
-  const openEdit = (t: ConsultationFormTemplate) => router.push(`/admin/consultation-templates/${t.id}/edit`);
+  const openCreate = () => router.push(`${basePath}/new`);
+  const openEdit = (t: ConsultationFormTemplate) => router.push(`${basePath}/${t.id}/edit`);
 
   const handleSetDefault = async (t: ConsultationFormTemplate) => {
     if (t.is_default) return;
@@ -61,8 +71,8 @@ export function ConsultationTemplatesView() {
     <div className="w-full">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: "#1e263e" }}>Шаблоны консультационных листов</h1>
-          <p className="text-gray-600 mt-1">Конструктор секций для видеоконсультаций и приёма в клинике</p>
+          <h1 className="text-2xl font-bold" style={{ color: "#1e263e" }}>{title}</h1>
+          <p className="text-gray-600 mt-1">{subtitle}</p>
         </div>
         <button
           onClick={openCreate}
@@ -79,7 +89,7 @@ export function ConsultationTemplatesView() {
         <div className="text-center py-16 text-gray-400">
           <ClipboardType className="w-12 h-12 mx-auto mb-3 opacity-30" />
           <p className="font-semibold">Шаблонов пока нет</p>
-          <p className="text-sm mt-1">Без своего шаблона используется стандартный набор секций</p>
+          <p className="text-sm mt-1">{emptyStateHint}</p>
         </div>
       ) : (
         <div className="space-y-3">

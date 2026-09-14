@@ -89,17 +89,19 @@ export function DiagnosticsSection({
           );
         })()}
 
-        {/* Исполнитель услуги — who actually carries this out, fixed by
-            the service itself (DiagnosticsService.doctor). Read-only here:
-            it's set on the service, not chosen per booking — distinct from
-            "Назначивший врач" below, which is who referred the patient. */}
+        {/* Исполнитель услуги — who actually carries this out, set on the
+            service itself (DiagnosticsService.doctors — can be several).
+            Read-only here: for schedule_source='doctor' the actual performer
+            is auto-picked among these at booking time, not chosen per
+            booking — distinct from "Назначивший врач" below, which is who
+            referred the patient. */}
         {selectedDiagService && (
           <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-xl bg-violet-50/60 border border-violet-100">
             <Stethoscope className="w-3.5 h-3.5 text-violet-500 flex-shrink-0" />
             <span className="text-xs text-gray-500">
               Исполнитель услуги:{' '}
               <span className="font-semibold text-gray-700">
-                {selectedDiagService.doctor_name || 'Не назначен'}
+                {selectedDiagService.doctor_names?.length ? selectedDiagService.doctor_names.join(', ') : 'Не назначен'}
               </span>
             </span>
           </div>

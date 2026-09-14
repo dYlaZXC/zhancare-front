@@ -200,13 +200,17 @@ export default function AddEventModal({
     const monday = d.toLocaleDateString('sv-SE');
 
     const scheduleType = (consultationType === 'home' || consultationType === 'diagnostics') ? 'offline' : consultationType;
-    // Only the matching consultation_type — no cross-type fallback. A doctor working
-    // online doesn't imply they see patients in-clinic; no explicit offline schedule
-    // means no offline availability, same "no record = not bookable" rule as diagnostics.
-    api.get(`/staff/${formData.doctor_id}/availability/`, { params: { week_start: monday, consultation_type: scheduleType } })
-      .then(res => {
-        const data = res.data as any[];
-        const entry = data.find(e => e.date === formData.date && !e.is_day_off && e.start_time);
+    // Still no online<->offline cross-fallback — a doctor working online doesn't
+    // imply they see patients in-clinic. But 'mixed' means flexible for either,
+    // so it must also be checked (exact type wins if both exist for the same
+    // day), or a doctor whose entire schedule is 'mixed' looks unbookable here.
+    Promise.all([
+      api.get(`/staff/${formData.doctor_id}/availability/`, { params: { week_start: monday, consultation_type: scheduleType } }),
+      api.get(`/staff/${formData.doctor_id}/availability/`, { params: { week_start: monday, consultation_type: 'mixed' } }),
+    ])
+      .then(([exactRes, mixedRes]) => {
+        const findEntry = (data: any[]) => data.find(e => e.date === formData.date && !e.is_day_off && e.start_time);
+        const entry = findEntry(exactRes.data as any[]) ?? findEntry(mixedRes.data as any[]);
         setAvailabilityEntry(entry ? { start_time: entry.start_time, end_time: entry.end_time } : null);
       })
       .catch(() => setAvailabilityEntry(null))

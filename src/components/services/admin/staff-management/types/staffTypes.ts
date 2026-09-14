@@ -91,7 +91,7 @@ export interface StaffMember {
   };
   schedules?: Array<{
     id?: number;
-    consultation_type: 'online' | 'offline';
+    consultation_type: 'online' | 'offline' | 'mixed';
     weekday: number;
     start_time: string;
     end_time: string;
@@ -104,6 +104,7 @@ export interface StaffMember {
   has_online_availability?: boolean;
   has_offline_availability?: boolean;
   has_availability?: boolean;
+  has_mixed_availability?: boolean;
 }
 
 export interface Clinic {

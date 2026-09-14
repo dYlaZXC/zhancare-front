@@ -95,8 +95,8 @@ export function EventSuccessScreen({
     // Performing doctor only — this text goes to the patient, and the
     // referring doctor (who ordered the test) is an internal/billing
     // concept, not something relevant to share with them.
-    if (consultationType === 'diagnostics' && diagService?.doctor_name) {
-      lines.push(`👨‍⚕️ Исполнитель: ${diagService.doctor_name}`);
+    if (consultationType === 'diagnostics' && diagService?.doctor_names?.length) {
+      lines.push(`👨‍⚕️ Исполнитель: ${diagService.doctor_names.join(', ')}`);
     }
     if (patient) {
       lines.push('');
@@ -207,13 +207,13 @@ export function EventSuccessScreen({
               </div>
             )}
             {/* Diagnostics: two distinct, independent roles — never just "Доктор" */}
-            {consultationType === 'diagnostics' && diagService?.doctor_name && (
+            {consultationType === 'diagnostics' && diagService?.doctor_names?.length ? (
               <div className="flex items-center gap-2.5">
                 <Stethoscope className="w-4 h-4 text-violet-500 flex-shrink-0" />
                 <span className="text-gray-500 w-24 flex-shrink-0">Исполнитель</span>
-                <span className="font-semibold text-gray-800">{diagService.doctor_name}</span>
+                <span className="font-semibold text-gray-800">{diagService.doctor_names.join(', ')}</span>
               </div>
-            )}
+            ) : null}
             {consultationType === 'diagnostics' && referringDoctor && (
               <div className="flex items-center gap-2.5">
                 <User className="w-4 h-4 text-blue-500 flex-shrink-0" />

@@ -18,6 +18,7 @@ import {
   faChevronDown,
   faChevronRight,
   faBriefcaseMedical,
+  faFileLines,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useState, useEffect, useRef } from "react";
@@ -45,6 +46,7 @@ const doctorMenu: MenuItem[] = [
     children: [
       { id: "consultations", icon: faVideo, title: "Консультации", color: "#295bbf", href: "/doctor/consultations" },
       { id: "patients", icon: faNotesMedical, title: "История пациентов", color: "#3267e6", href: "/doctor/patients" },
+      { id: "consultation-templates", icon: faFileLines, title: "Мои шаблоны", color: "#3267e6", href: "/doctor/consultation-templates" },
     ],
   },
   { id: "schedule", icon: faCalendarAlt, title: "Расписание", color: "#059669", href: "/doctor/schedule" },

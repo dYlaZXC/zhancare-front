@@ -17,6 +17,7 @@ export const SECTION_TYPE_LABELS: Record<SectionType, string> = {
 export type ConsultationFormTemplate = {
   id: number;
   clinic: number | null;
+  doctor: number | null;
   document_type: string;
   name: string;
   is_default: boolean;
