@@ -1,18 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "react-toastify";
 import { api } from "@/utils/api";
-import { Users, UserPlus, Loader2, AlertCircle } from "lucide-react";
+import { UserPlus, Loader2, AlertCircle } from "lucide-react";
 
 import StaffScheduleModal from "./StaffScheduleModal";
 
-import type { StaffMember, Clinic, TodayActivity } from "./staff-management/types/staffTypes";
-import { PAGE_SIZE } from "./staff-management/types/staffTypes";
+import type { StaffMember, Clinic } from "./staff-management/types/staffTypes";
 import { StatsCards } from "./staff-management/components/StatsCards";
 import { StaffToolbar } from "./staff-management/components/StaffToolbar";
-import { StaffCard } from "./staff-management/components/StaffCard";
+import { StaffActivityGrid } from "./staff-management/components/StaffActivityGrid";
+import { StaffPaginationControls } from "./staff-management/components/StaffPaginationControls";
+import { StaffActivityProvider } from "./staff-management/context/StaffActivityContext";
 import { StaffFormModal } from "./staff-management/modals/StaffFormModal";
 import { DeleteStaffModal } from "./staff-management/modals/DeleteStaffModal";
 
@@ -33,6 +34,21 @@ export default function StaffManagement({ user }: StaffManagementProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [scheduleMember, setScheduleMember] = useState<StaffMember | null>(null);
+  // Memoized so StaffScheduleModal's `member` prop keeps a stable reference
+  // across unrelated re-renders of this component — an effect in that modal
+  // keys off member?.id already, but there's no reason to hand it a fresh
+  // object identity every render regardless. (Live staff-activity updates
+  // no longer even reach this component at all — see StaffActivityGrid,
+  // which owns that subscription — so this is now purely defensive.)
+  const scheduleModalMember = useMemo(
+    () =>
+      scheduleMember && {
+        ...scheduleMember,
+        first_name: scheduleMember.first_name ?? '',
+        last_name: scheduleMember.last_name ?? '',
+      },
+    [scheduleMember]
+  );
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [isGlobalAdmin, setIsGlobalAdmin] = useState(false);
   const [editingMember, setEditingMember] = useState<StaffMember | null>(null);
@@ -41,7 +57,6 @@ export default function StaffManagement({ user }: StaffManagementProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [clinicCurrency, setClinicCurrency] = useState<string>('KZT');
   const [diagServices, setDiagServices] = useState<{ id: number; name: string; price: number | null }[]>([]);
-  const [activityById, setActivityById] = useState<Record<number, TodayActivity>>({});
   const [onlyOngoing, setOnlyOngoing] = useState(false);
 
   useEffect(() => {
@@ -59,21 +74,6 @@ export default function StaffManagement({ user }: StaffManagementProps) {
   useEffect(() => {
     fetchStaff();
     checkAdminType();
-  }, []);
-
-  useEffect(() => {
-    const fetchActivity = () => {
-      api.get('/staff/today-activity/').then(res => {
-        const byId: Record<number, TodayActivity> = {};
-        for (const row of res.data as TodayActivity[]) byId[row.id] = row;
-        setActivityById(byId);
-      }).catch(() => {});
-    };
-    fetchActivity();
-    // Ongoing/free-slot state can change any minute — refresh periodically
-    // rather than only on mount, so the panel doesn't go stale mid-session.
-    const interval = setInterval(fetchActivity, 60_000);
-    return () => clearInterval(interval);
   }, []);
 
   const checkAdminType = async () => {
@@ -94,7 +94,7 @@ export default function StaffManagement({ user }: StaffManagementProps) {
     }
   };
 
-  const fetchStaff = async (deleted = false) => {
+  const fetchStaff = useCallback(async (deleted = false) => {
     setLoading(true);
     setError(null);
 
@@ -174,18 +174,21 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       setLoading(false);
       setInitialLoad(false);
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const handleToggleStatus = async (memberId: number, currentStatus: string | undefined) => {
+  // These 5 handlers are passed down through StaffActivityGrid into every
+  // StaffCard, which is now React.memo'd — useCallback with stable deps
+  // (functional setState updates instead of closing over `staff`) keeps
+  // their identity stable across renders, so a live activity update for
+  // ONE card doesn't invalidate memo for the other 30.
+  const handleToggleStatus = useCallback(async (memberId: number, currentStatus: string | undefined) => {
     try {
-      // Toggle between 'available' and 'offline'
       const newStatus = currentStatus === 'available' ? 'offline' : 'available';
-
       const response = await api.patch(`/staff/${memberId}/`, { availability_status: newStatus });
       const updatedStaff = response.data;
 
-      // Update staff in the list
-      setStaff(staff.map(member =>
+      setStaff(prev => prev.map(member =>
         member.id === memberId ? { ...member, availability_status: updatedStaff.availability_status } : member
       ));
 
@@ -196,29 +199,29 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       const errorMessage = err.response?.data?.error || err.response?.data?.detail || err.message || "Не удалось изменить статус сотрудника";
       toast.error(errorMessage);
     }
-  };
+  }, []);
 
-  const handleEditClick = (member: StaffMember) => {
+  const handleEditClick = useCallback((member: StaffMember) => {
     setEditingMember(member);
     setShowEditModal(true);
-  };
+  }, []);
 
   const closeEditModal = () => {
     setShowEditModal(false);
     setEditingMember(null);
   };
 
-  const handleDeleteClick = (member: StaffMember) => {
+  const handleDeleteClick = useCallback((member: StaffMember) => {
     setDeletingMember(member);
     setShowDeleteModal(true);
-  };
+  }, []);
 
   const closeDeleteModal = () => {
     setShowDeleteModal(false);
     setDeletingMember(null);
   };
 
-  const handleRestore = async (member: StaffMember) => {
+  const handleRestore = useCallback(async (member: StaffMember) => {
     try {
       await api.patch(`/staff/${member.id}/`, { is_deleted: false });
       await fetchStaff(true);
@@ -228,15 +231,22 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       const errorMessage = err.response?.data?.error || err.response?.data?.detail || err.message || "Не удалось восстановить сотрудника";
       toast.error(errorMessage);
     }
-  };
+  }, [fetchStaff]);
 
-  const openScheduleModal = (member: StaffMember) => {
+  const openScheduleModal = useCallback((member: StaffMember) => {
     setScheduleMember(member);
     setShowScheduleModal(true);
-  };
+  }, []);
 
-  // Filter and sort staff based on search and filters
-  const filteredStaff = staff
+  // Filter and sort staff based on search and filters — everything here is
+  // activity-INDEPENDENT (no read of live activity state), so this doesn't
+  // change when a WS event comes in. The one activity-dependent filter
+  // (onlyOngoing) is applied inside StaffActivityGrid/StaffPaginationControls
+  // instead — both read activityById via StaffActivityContext, not through
+  // any state routed back through this component, so a live update never
+  // causes StaffManagement itself (and therefore never the modals it also
+  // renders) to re-render.
+  const visibleStaff = staff
     .filter((member) => {
       // Typed as required strings, but not guaranteed null-safe at runtime
       // — same crash class fixed in PatientManagement.tsx's search filter
@@ -255,17 +265,12 @@ export default function StaffManagement({ user }: StaffManagementProps) {
       // Filter by deleted status
       const matchesDeleted = showDeleted ? member.is_deleted === true : !member.is_deleted;
 
-      const matchesOngoing = !onlyOngoing || activityById[member.id]?.state === 'ongoing';
-
-      return matchesSearch && matchesRole && matchesStatus && matchesDeleted && matchesOngoing;
+      return matchesSearch && matchesRole && matchesStatus && matchesDeleted;
     })
     .sort((a, b) => {
       // Sort by created_at descending (newest first)
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
-
-  const totalPages = Math.max(1, Math.ceil(filteredStaff.length / PAGE_SIZE));
-  const paginatedStaff = filteredStaff.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   // Reset to first page when filters or search change
   useEffect(() => { setCurrentPage(1); }, [searchQuery, filterRole, filterStatus, showDeleted, onlyOngoing]);
@@ -278,6 +283,14 @@ export default function StaffManagement({ user }: StaffManagementProps) {
   };
 
   return (
+    // StaffActivityProvider owns the ONE live-activity WS subscription for
+    // this whole page. Only StaffActivityGrid and StaffPaginationControls
+    // (via useStaffActivityContext) actually consume it — everything else
+    // below, including StaffManagement's own render and both CRUD modals,
+    // is unaffected by a context value change: React only re-renders
+    // context CONSUMERS when the value changes, never a provider's other
+    // children just because they're nested inside it.
+    <StaffActivityProvider>
     <div className="w-full">
       {/* Header Section */}
       <div className="mb-8">
@@ -311,10 +324,14 @@ export default function StaffManagement({ user }: StaffManagementProps) {
           onFilterRoleChange={setFilterRole}
           filterStatus={filterStatus}
           onFilterStatusChange={setFilterStatus}
-          filteredCount={filteredStaff.length}
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
+          paginationSlot={
+            <StaffPaginationControls
+              members={visibleStaff}
+              onlyOngoing={onlyOngoing}
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+            />
+          }
           showDeleted={showDeleted}
           onToggleShowDeleted={() => { const next = !showDeleted; setShowDeleted(next); fetchStaff(next); }}
           onlyOngoing={onlyOngoing}
@@ -352,38 +369,25 @@ export default function StaffManagement({ user }: StaffManagementProps) {
         </motion.div>
       )}
 
-      {/* Staff List */}
+      {/* Staff List — StaffActivityGrid reads live activity via
+          StaffActivityContext, not through anything routed back into
+          StaffManagement's own state. StaffManagement itself never
+          re-renders on a live update (and therefore neither do the modals
+          below), only on real staff/filter/pagination changes. */}
       {!loading && (
         <div className="space-y-4">
-          {filteredStaff.length === 0 ? (
-            <div className="text-center py-20">
-              <Users className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-              <p className="text-xl font-semibold text-gray-600 mb-2">
-                Персонал не найден
-              </p>
-              <p className="text-gray-500">
-                Попробуйте изменить параметры поиска или фильтры
-              </p>
-            </div>
-          ) : (
-            <AnimatePresence mode="popLayout">
-              {paginatedStaff.map((member, index) => (
-                <StaffCard
-                  key={member.id}
-                  member={member}
-                  initial={initialLoad}
-                  index={index}
-                  showDeleted={showDeleted}
-                  activity={activityById[member.id]}
-                  onEdit={handleEditClick}
-                  onToggleStatus={handleToggleStatus}
-                  onSchedule={openScheduleModal}
-                  onDelete={handleDeleteClick}
-                  onRestore={handleRestore}
-                />
-              ))}
-            </AnimatePresence>
-          )}
+          <StaffActivityGrid
+            members={visibleStaff}
+            onlyOngoing={onlyOngoing}
+            initialLoad={initialLoad}
+            showDeleted={showDeleted}
+            currentPage={currentPage}
+            onEdit={handleEditClick}
+            onToggleStatus={handleToggleStatus}
+            onSchedule={openScheduleModal}
+            onDelete={handleDeleteClick}
+            onRestore={handleRestore}
+          />
         </div>
       )}
 
@@ -447,16 +451,11 @@ export default function StaffManagement({ user }: StaffManagementProps) {
           is simpler than threading nullability through that file too. */}
       <StaffScheduleModal
         isOpen={showScheduleModal}
-        member={
-          scheduleMember && {
-            ...scheduleMember,
-            first_name: scheduleMember.first_name ?? '',
-            last_name: scheduleMember.last_name ?? '',
-          }
-        }
+        member={scheduleModalMember}
         onClose={() => { setShowScheduleModal(false); setScheduleMember(null); }}
         onSaved={() => { fetchStaff(showDeleted); }}
       />
     </div>
+    </StaffActivityProvider>
   );
 }

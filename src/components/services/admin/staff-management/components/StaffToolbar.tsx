@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { ChevronLeft, ChevronRight, Search, Trash2, SlidersHorizontal } from "lucide-react";
+import type { ReactNode } from "react";
+import { Search, Trash2, SlidersHorizontal } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SearchSelect from "../../schedule/components/SearchSelect";
-import { PAGE_SIZE } from "../types/staffTypes";
 
 type FilterRole = 'all' | 'doctor' | 'nurse';
 type FilterStatus = 'all' | 'available' | 'busy' | 'offline' | 'break';
@@ -66,10 +66,7 @@ export function StaffToolbar({
   onFilterRoleChange,
   filterStatus,
   onFilterStatusChange,
-  filteredCount,
-  currentPage,
-  totalPages,
-  onPageChange,
+  paginationSlot,
   showDeleted,
   onToggleShowDeleted,
   onlyOngoing,
@@ -81,10 +78,11 @@ export function StaffToolbar({
   onFilterRoleChange: (v: FilterRole) => void;
   filterStatus: FilterStatus;
   onFilterStatusChange: (v: FilterStatus) => void;
-  filteredCount: number;
-  currentPage: number;
-  totalPages: number;
-  onPageChange: (updater: (p: number) => number) => void;
+  /** Rendered where the pagination controls used to be inlined here —
+   * passed in from outside because it needs live-activity-filtered counts
+   * (see StaffPaginationControls) that this component deliberately has no
+   * access to, so StaffToolbar itself never re-renders on activity changes. */
+  paginationSlot?: ReactNode;
   showDeleted: boolean;
   onToggleShowDeleted: () => void;
   onlyOngoing: boolean;
@@ -105,27 +103,7 @@ export function StaffToolbar({
       </div>
 
       {/* Compact pagination in toolbar */}
-      {filteredCount > PAGE_SIZE && (
-        <div className="flex items-center gap-1 flex-shrink-0">
-          <button
-            onClick={() => onPageChange(p => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-            className="p-2.5 rounded-2xl border-2 border-gray-200 text-gray-600 hover:border-blue-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors bg-white"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <span className="text-sm font-medium text-gray-600 px-3 py-2.5 rounded-2xl border-2 border-gray-200 bg-white min-w-[72px] text-center tabular-nums">
-            {currentPage} / {totalPages}
-          </span>
-          <button
-            onClick={() => onPageChange(p => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-            className="p-2.5 rounded-2xl border-2 border-gray-200 text-gray-600 hover:border-blue-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors bg-white"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-      )}
+      {paginationSlot}
 
       {/* Role Filter */}
       <div className="w-full md:w-48">

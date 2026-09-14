@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { motion } from "framer-motion";
 import { Briefcase, Mail, Phone, Calendar, Pencil } from "lucide-react";
 import type { StaffMember, TodayActivity } from "../types/staffTypes";
@@ -22,7 +23,13 @@ const STATUS_LABEL: Record<string, string> = {
   offline: 'Не работает',
 };
 
-export function StaffCard({
+// memo'd — a live staff-activity WS event only changes `activity` for ONE
+// staff_id. StaffActivityGrid re-renders on every such event (it owns the
+// realtime subscription), but as long as the other props here stay
+// referentially stable (member/index/showDeleted from a stable filtered
+// array, callbacks from useCallback in the parent), only the one card whose
+// `activity` prop actually changed re-renders — not the other 30 on screen.
+export const StaffCard = memo(function StaffCard({
   member,
   initial,
   index,
@@ -136,4 +143,4 @@ export function StaffCard({
       </div>
     </motion.div>
   );
-}
+});

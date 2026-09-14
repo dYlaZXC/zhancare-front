@@ -136,7 +136,17 @@ export default function StaffScheduleModal({
         fetchPlannerWeek(member.id, monday, "online");
         fetchScheduleHistory(member.id);
       });
-  }, [isOpen, member, fetchPlannerWeek, fetchScheduleHistory]);
+    // Deliberately keyed on member?.id, not the `member` object itself — the
+    // caller (StaffManagement.tsx) rebuilds `member` as a new object on every
+    // render (an inline `{...scheduleMember, ...}` spread), including on its
+    // own unrelated 60s activity-poll re-renders. Depending on the object
+    // reference made this effect re-fire mid-edit while the modal was still
+    // open for the SAME doctor — silently resetting the active tab back to
+    // "online", clearing plannerDirty, and refetching over whatever the
+    // admin was mid-typing. Re-run only when the modal opens or a genuinely
+    // different doctor is selected.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, member?.id, fetchPlannerWeek, fetchScheduleHistory]);
 
   // ── Conflict detection helpers ────────────────────────────────────────────────
 

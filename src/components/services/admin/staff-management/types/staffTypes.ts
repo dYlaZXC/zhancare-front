@@ -112,13 +112,44 @@ export interface Clinic {
   name: string;
 }
 
-// Response shape of GET /staff/today-activity/ — one entry per staff id,
-// fetched once for the whole visible list rather than per-card.
+// Per-staff-member entry from GET /staff/today-activity/'s `staff` array, and
+// from the `activity` field of a `staff_activity.update` WS event — both come
+// from the exact same backend computation (StaffActivityService), so this one
+// type covers both. `version` is the epoch-scoped ordering number used by the
+// live-update resync protocol in StaffManagement.tsx; `work_end` (present only
+// on the two clock-bounded states) is the ISO instant after which this state
+// locally becomes 'not_working_today' — `ongoing` is deliberately never given
+// a locally-actionable end boundary, see StaffManagement.tsx for why.
 export type TodayActivity =
-  | { id: number; state: 'ongoing'; type: 'online' | 'offline'; started_at: string; estimated_end_at: string }
-  | { id: number; state: 'has_free_slots'; free_count: number; next_free_slot: { time: string; type: 'online' | 'offline'; room_number: string | null } }
-  | { id: number; state: 'fully_booked'; free_count: 0 }
-  | { id: number; state: 'not_working_today'; last_seen: string | null };
+  | { id: number; state: 'ongoing'; type: 'online' | 'offline'; started_at: string; estimated_end_at: string; server_time: string; version: number }
+  | { id: number; state: 'has_free_slots'; free_count: number; next_free_slot: { time: string; type: 'online' | 'offline'; room_number: string | null }; server_time: string; work_end: string; version: number }
+  | { id: number; state: 'fully_booked'; free_count: 0; server_time: string; work_end: string; version: number }
+  | { id: number; state: 'not_working_today'; last_seen: string | null; server_time: string; version: number };
+
+// Envelope returned by GET /staff/today-activity/ — a deliberate breaking
+// change from the old bare-array response (see the "Live staff-activity
+// updates" plan). `epoch`/`realtime_available` drive the WS-event ordering
+// protocol: `epoch` is null when realtime metadata couldn't be computed
+// (e.g. Redis down) — the `staff` data itself is still a correct, live
+// DB computation in that case, just without version-ordering guarantees.
+export interface TodayActivityResponse {
+  epoch: string | null;
+  realtime_available: boolean;
+  as_of: string;
+  target_date: string;
+  next_rollover_at: string;
+  staff: TodayActivity[];
+}
+
+// A single staff_activity.update WebSocket event, as pushed by
+// common/websockets/staff_activity_consumer.py.
+export interface StaffActivityWsEvent {
+  type: 'staff_activity.update';
+  staff_id: number;
+  activity: TodayActivity;
+  version: number;
+  epoch: string;
+}
 
 export interface StaffFormData {
   first_name: string;
