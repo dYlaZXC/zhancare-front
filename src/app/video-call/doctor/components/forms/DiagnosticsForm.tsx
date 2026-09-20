@@ -12,23 +12,33 @@ import {
   faChevronDown,
   faChevronUp,
   faTriangleExclamation,
+  faWandMagicSparkles,
 } from "@fortawesome/free-solid-svg-icons";
 import { toast } from "react-toastify";
 import { api } from "@/utils/api";
 import { aiService } from "@/lib/ai/aiService";
 import { DiagnosticsServiceItem } from "@/lib/ai/types";
+import DiagnosticsReferralExtractModal, { ExtractedReferralResult } from "@/components/diagnostics/DiagnosticsReferralExtractModal";
 
 // The persisted source of truth for this section (type="diagnostics_referral")
 // is {referrals, comment} — see consultations/template_utils.py::validate_diagnostics_referral_value.
 // Referrals are real structured data now (not text lines embedded in a string),
 // so they survive a reload like everything else.
+//
+// Every referral here is now backed by a real DiagnosticsAppointment row
+// (appointmentId) the moment it's added — a clinical decision recorded
+// immediately, independent of whether/when it gets scheduled (bookedAt).
+// See diagnostics/services.py::book_diagnostics_appointment's
+// scheduled_time=None mode.
 export interface DiagnosticReferral {
-  serviceId: number;
+  serviceId?: number;
   name: string;
   categoryLabel?: string;
   price?: string | null;
   bookedAt?: string;
   appointmentId?: number;
+  originalText?: string | null;
+  source?: "manual" | "ai";
 }
 
 interface DiagnosticsFormProps {
@@ -37,6 +47,10 @@ interface DiagnosticsFormProps {
   clinicId?: number;
   patientId?: number;
   doctorId?: number;
+  // Consultation PK — resolves patient/doctor/clinic for a referral
+  // server-side (see diagnostics/views.py::_create_referral); never send
+  // patient_id/doctor_id directly once this is set.
+  consultationId?: number;
   referrals: DiagnosticReferral[];
   onReferralsChange: (referrals: DiagnosticReferral[]) => void;
 }
@@ -61,6 +75,7 @@ const DiagnosticsForm: React.FC<DiagnosticsFormProps> = ({
   clinicId,
   patientId,
   doctorId,
+  consultationId,
   referrals,
   onReferralsChange,
 }) => {
@@ -76,6 +91,15 @@ const DiagnosticsForm: React.FC<DiagnosticsFormProps> = ({
   const [bookingSlotsLoading, setBookingSlotsLoading] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [bookingSubmitting, setBookingSubmitting] = useState(false);
+
+  const [addingServiceId, setAddingServiceId] = useState<number | null>(null);
+  const [manualReferral, setManualReferral] = useState("");
+  const [addingManual, setAddingManual] = useState(false);
+  const [showAIExtract, setShowAIExtract] = useState(false);
+
+  // A referral needs somewhere to resolve patient/doctor/clinic from —
+  // without a saved consultation there's nowhere for it to belong yet.
+  const canRefer = Boolean(consultationId);
 
   // Booking requires both a patient to book for and a referring doctor to
   // attribute the referral to — without either, only the plain "add without
@@ -144,11 +168,61 @@ const DiagnosticsForm: React.FC<DiagnosticsFormProps> = ({
     }
   };
 
-  const handleAddReferral = (service: DiagnosticsServiceItem) => {
-    if (referrals.some((r) => r.serviceId === service.id)) return;
+  const handleAddReferral = async (service: DiagnosticsServiceItem) => {
+    if (referrals.some((r) => r.serviceId === service.id) || !consultationId) return;
+    setAddingServiceId(service.id);
+    try {
+      const { data } = await api.post<{ appointment: { id: number } }>("/diagnostics/appointments/", {
+        service_id: service.id,
+        source_type: "consultation",
+        source_id: consultationId,
+      });
+      onReferralsChange([
+        ...referrals,
+        {
+          serviceId: service.id,
+          name: service.name,
+          categoryLabel: service.category_label,
+          price: service.price,
+          appointmentId: data?.appointment?.id,
+          source: "manual",
+        },
+      ]);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Не удалось добавить направление");
+    } finally {
+      setAddingServiceId(null);
+    }
+  };
+
+  const handleAddManualReferral = async () => {
+    const name = manualReferral.trim();
+    if (!name || !consultationId) return;
+    setAddingManual(true);
+    try {
+      const { data } = await api.post<{ appointment: { id: number } }>("/diagnostics/appointments/", {
+        service_name: name,
+        source_type: "consultation",
+        source_id: consultationId,
+      });
+      onReferralsChange([...referrals, { name, appointmentId: data?.appointment?.id, source: "manual" }]);
+      setManualReferral("");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Не удалось добавить направление");
+    } finally {
+      setAddingManual(false);
+    }
+  };
+
+  const handleAIExtractConfirm = (created: ExtractedReferralResult[]) => {
     onReferralsChange([
       ...referrals,
-      { serviceId: service.id, name: service.name, categoryLabel: service.category_label, price: service.price },
+      ...created.map((c) => ({
+        name: c.service_name,
+        appointmentId: c.id,
+        originalText: c.original_text ?? null,
+        source: "ai" as const,
+      })),
     ]);
   };
 
@@ -156,14 +230,24 @@ const DiagnosticsForm: React.FC<DiagnosticsFormProps> = ({
     if (!selectedSlot || !canBook) return;
     setBookingSubmitting(true);
     try {
-      const { data } = await api.post<{ appointment: { id: number } }>("/diagnostics/appointments/", {
-        service_id: service.id,
-        patient_id: patientId,
-        // Referring doctor = the doctor running this consultation (drives
-        // commission on the backend) — never an appointment/consultation PK.
-        doctor_id: doctorId,
-        scheduled_time: selectedSlot,
-      });
+      // If this service was already "Добавлено" (a real awaiting_schedule
+      // referral row from handleAddReferral, no time yet), booking a time
+      // now must turn THAT row into a scheduled one — not create a second,
+      // orphaned row for the same service.
+      const existingReferral = referrals.find((r) => r.serviceId === service.id && !r.bookedAt && r.appointmentId);
+      const { data } = existingReferral
+        ? await api.post<{ appointment: { id: number } }>(
+            `/diagnostics/appointments/${existingReferral.appointmentId}/schedule/`,
+            { scheduled_time: selectedSlot }
+          )
+        : await api.post<{ appointment: { id: number } }>("/diagnostics/appointments/", {
+            service_id: service.id,
+            patient_id: patientId,
+            // Referring doctor = the doctor running this consultation (drives
+            // commission on the backend) — never an appointment/consultation PK.
+            doctor_id: doctorId,
+            scheduled_time: selectedSlot,
+          });
       const appointmentId = data?.appointment?.id;
       const slotObj = bookingSlots.find((s) => s.start === selectedSlot);
       const dateLabel = nextDays.find((d) => d.iso === bookingDate)?.label ?? bookingDate;
@@ -193,14 +277,22 @@ const DiagnosticsForm: React.FC<DiagnosticsFormProps> = ({
     }
   };
 
-  const handleRemoveReferral = (referral: DiagnosticReferral) => {
-    if (referral.appointmentId) {
+  const handleRemoveReferral = async (referral: DiagnosticReferral, index: number) => {
+    if (referral.bookedAt) {
       const confirmed = window.confirm(
-        "Приём уже создан в системе. Удаление уберёт направление из этого списка — сама запись на приём останется активной. Продолжить?"
+        "Приём уже записан на конкретное время. Удаление уберёт направление из этого списка — сама запись на приём останется активной. Продолжить?"
       );
       if (!confirmed) return;
     }
-    onReferralsChange(referrals.filter((r) => r.serviceId !== referral.serviceId));
+    if (referral.appointmentId) {
+      try {
+        await api.post(`/diagnostics/appointments/${referral.appointmentId}/cancel/`);
+      } catch (err: any) {
+        toast.error(err?.response?.data?.error || "Не удалось отменить направление");
+        return;
+      }
+    }
+    onReferralsChange(referrals.filter((_, i) => i !== index));
   };
 
   return (
@@ -300,15 +392,15 @@ const DiagnosticsForm: React.FC<DiagnosticsFormProps> = ({
                           <button
                             type="button"
                             onClick={() => handleAddReferral(service)}
-                            disabled={isAdded}
-                            className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1"
+                            disabled={isAdded || !canRefer || addingServiceId === service.id}
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1 disabled:opacity-60"
                             style={
                               isAdded
                                 ? { backgroundColor: '#1e263e', color: '#10b981' }
                                 : { backgroundColor: '#283353', color: '#ebf1ff' }
                             }
                           >
-                            <FontAwesomeIcon icon={isAdded ? faCircleCheck : faPlus} className="text-xs" />
+                            <FontAwesomeIcon icon={isAdded ? faCircleCheck : faPlus} className={`text-xs ${addingServiceId === service.id ? "animate-spin" : ""}`} />
                             {isAdded ? "Добавлено" : "Добавить"}
                           </button>
                           {canBook && (
@@ -393,32 +485,77 @@ const DiagnosticsForm: React.FC<DiagnosticsFormProps> = ({
                   );
                 })}
               </div>
+
+              <div className="flex items-center gap-1.5 pt-2.5 mt-2.5 border-t" style={{ borderColor: '#283353' }}>
+                <input
+                  type="text"
+                  value={manualReferral}
+                  onChange={(e) => setManualReferral(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleAddManualReferral(); }}
+                  placeholder="Добавить вручную..."
+                  disabled={!canRefer}
+                  className="flex-1 min-w-0 px-3 py-2 rounded-lg text-sm border focus:outline-none disabled:opacity-60"
+                  style={{ backgroundColor: '#202942', borderColor: '#283353', color: '#ebf1ff' }}
+                />
+                <button
+                  type="button"
+                  onClick={handleAddManualReferral}
+                  disabled={!manualReferral.trim() || !canRefer || addingManual}
+                  className="px-3 py-2 rounded-lg text-xs font-medium transition-colors flex items-center gap-1 disabled:opacity-40 flex-shrink-0"
+                  style={{ backgroundColor: '#283353', color: '#ebf1ff' }}
+                >
+                  <FontAwesomeIcon icon={faPlus} className="text-xs" />
+                  Добавить
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowAIExtract(true)}
+                disabled={!canRefer}
+                className="w-full mt-2 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-colors disabled:opacity-40"
+                style={{ backgroundColor: 'rgba(6, 182, 212, 0.12)', color: '#06b6d4' }}
+              >
+                <FontAwesomeIcon icon={faWandMagicSparkles} className="text-xs" />
+                Извлечь с помощью AI
+              </button>
             </div>
           )}
         </div>
       )}
 
+      {showAIExtract && consultationId && (
+        <DiagnosticsReferralExtractModal
+          sourceType="consultation"
+          sourceId={consultationId}
+          theme="dark"
+          onConfirm={handleAIExtractConfirm}
+          onClose={() => setShowAIExtract(false)}
+        />
+      )}
+
       {referrals.length > 0 && (
         <div className="mb-4 flex-shrink-0">
           <div className="flex flex-wrap gap-2">
-            {referrals.map((r) => (
+            {referrals.map((r, idx) => (
               <div
-                key={r.serviceId}
+                key={r.appointmentId ?? `${r.name}-${idx}`}
                 className="flex items-center gap-1.5 pl-3 pr-1.5 py-1.5 rounded-full text-xs"
                 style={{ backgroundColor: '#202942', color: '#ebf1ff' }}
+                title={r.source === "ai" && r.originalText && r.originalText !== r.name ? `Из исходного текста: «${r.originalText}»` : undefined}
               >
-                {r.appointmentId && (
+                {r.bookedAt && (
                   <FontAwesomeIcon icon={faCalendarCheck} className="text-[10px]" style={{ color: '#10b981' }} />
                 )}
                 <span>{r.name}</span>
                 <button
                   type="button"
-                  onClick={() => handleRemoveReferral(r)}
+                  onClick={() => handleRemoveReferral(r, idx)}
                   className="w-4 h-4 rounded-full flex items-center justify-center transition-colors"
                   style={{ backgroundColor: '#283353', color: '#bcc0ca' }}
-                  title={r.appointmentId ? "Убрать из списка (запись останется активной)" : "Удалить"}
+                  title={r.bookedAt ? "Убрать из списка (запись останется активной)" : "Отменить направление"}
                 >
-                  <FontAwesomeIcon icon={r.appointmentId ? faTriangleExclamation : faXmark} className="text-[9px]" />
+                  <FontAwesomeIcon icon={r.bookedAt ? faTriangleExclamation : faXmark} className="text-[9px]" />
                 </button>
               </div>
             ))}

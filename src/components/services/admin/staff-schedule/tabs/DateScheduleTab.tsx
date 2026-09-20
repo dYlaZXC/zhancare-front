@@ -1,14 +1,23 @@
 "use client";
 
-import { CheckCircle, Loader2, RotateCcw } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle, Loader2, RotateCcw, Plus } from "lucide-react";
 import { formatWeekLabel, isCurrentWeekPlanner } from "../utils/dateHelpers";
 import { TYPE_META } from "../utils/typeDisplay";
 import { CONSULTATION_TYPES } from "../types/scheduleTypes";
-import type { ConsultationType } from "../types/scheduleTypes";
+import type { ConsultationType, DoctorRoomOverrideRow, AvailableRoom } from "../types/scheduleTypes";
+import { RoomBandRow } from "../components/RoomBandRow";
 
 // ── DateScheduleTab ("По датам") — reads/writes DoctorAvailability rows ────────
 // Date-specific entries always take priority over the weekly template; this
 // tab surfaces that via the "из шаблона" label and the save/reset actions.
+//
+// When a date isn't a day-off and is offline/mixed, it also shows a
+// "Кабинеты" sub-section — that date's DoctorRoomOverride bands, editable
+// inline. Independent of the day's own start/end above (a room override
+// can cover a narrower or entirely different window than the working
+// hours) — this is the genuinely flexible, per-date-per-time layer on top
+// of the recurring weekly template in TemplateScheduleTab.
 
 export function DateScheduleTab({
   plannerWeekStart,
@@ -23,6 +32,11 @@ export function DateScheduleTab({
   onUpdateDay,
   onSaveDay,
   onDeleteDay,
+  roomOverrides,
+  availableRooms,
+  onAddRoomOverride,
+  onUpdateRoomOverride,
+  onDeleteRoomOverride,
 }: {
   plannerWeekStart: string;
   plannerConsultationType: ConsultationType;
@@ -36,8 +50,15 @@ export function DateScheduleTab({
   onUpdateDay: (index: number, changes: Partial<any>) => void;
   onSaveDay: (day: any) => void;
   onDeleteDay: (day: any) => void;
+  roomOverrides: DoctorRoomOverrideRow[];
+  availableRooms: AvailableRoom[];
+  onAddRoomOverride: (date: string, roomId: number | null, startTime: string, endTime: string) => Promise<void>;
+  onUpdateRoomOverride: (id: number, changes: { room_id?: number | null; start_time?: string; end_time?: string }) => Promise<void>;
+  onDeleteRoomOverride: (id: number) => Promise<void>;
 }) {
   const current = TYPE_META[plannerConsultationType];
+  const [newOverrideByDate, setNewOverrideByDate] = useState<Record<string, { roomId: number | null; startTime: string; endTime: string }>>({});
+  const [editsByOverrideId, setEditsByOverrideId] = useState<Record<number, { roomId?: number | null; startTime?: string; endTime?: string }>>({});
 
   return (
     <div className="space-y-4">
@@ -340,6 +361,104 @@ export function DateScheduleTab({
                     )}
                   </div>
                 </div>
+
+                {/* Кабинеты на эту дату — независимо от start/end этого дня выше,
+                    И НЕЗАВИСИМО от is_day_off: DoctorRoomOverride resolves
+                    regardless of what DoctorAvailability says for this date
+                    (the two systems are architecturally separate — see
+                    resolve_room_for_doctor), so a room already assigned
+                    here must stay visible even when the day shows
+                    "Выходной" in the online/offline/mixed sense. Hiding it
+                    behind !isOff previously made already-saved room data
+                    disappear from view entirely with no way to find it. */}
+                {plannerConsultationType !== "online" && (() => {
+                  const bands = roomOverrides.filter((o) => o.date === day.date);
+                  const draft = newOverrideByDate[day.date];
+                  return (
+                    <div className="mt-3 pt-3 border-t border-dashed border-gray-200 space-y-1.5">
+                      <p className="text-[11px] font-bold text-orange-500 uppercase tracking-wide mb-1.5">Кабинеты</p>
+                      {bands.map((o) => {
+                        const edits = editsByOverrideId[o.id];
+                        return (
+                          <RoomBandRow
+                            key={o.id}
+                            roomId={edits?.roomId !== undefined ? edits.roomId : o.room_id}
+                            startTime={edits?.startTime ?? o.start_time.slice(0, 5)}
+                            endTime={edits?.endTime ?? o.end_time.slice(0, 5)}
+                            availableRooms={availableRooms}
+                            onChange={(changes) =>
+                              setEditsByOverrideId((prev) => ({
+                                ...prev,
+                                [o.id]: { ...prev[o.id], ...changes },
+                              }))
+                            }
+                            onCommit={async () => {
+                              if (!edits) return;
+                              const patch: { room_id?: number | null; start_time?: string; end_time?: string } = {};
+                              if (edits.roomId !== undefined) patch.room_id = edits.roomId;
+                              if (edits.startTime !== undefined) patch.start_time = edits.startTime;
+                              if (edits.endTime !== undefined) patch.end_time = edits.endTime;
+                              await onUpdateRoomOverride(o.id, patch);
+                              setEditsByOverrideId((prev) => {
+                                const next = { ...prev };
+                                delete next[o.id];
+                                return next;
+                              });
+                            }}
+                            onDelete={() => onDeleteRoomOverride(o.id)}
+                          />
+                        );
+                      })}
+                      {draft ? (
+                        <RoomBandRow
+                          roomId={draft.roomId}
+                          startTime={draft.startTime}
+                          endTime={draft.endTime}
+                          availableRooms={availableRooms}
+                          isNew
+                          onChange={(changes) =>
+                            setNewOverrideByDate((prev) => ({
+                              ...prev,
+                              [day.date]: {
+                                roomId: changes.roomId !== undefined ? changes.roomId : prev[day.date].roomId,
+                                startTime: changes.startTime ?? prev[day.date].startTime,
+                                endTime: changes.endTime ?? prev[day.date].endTime,
+                              },
+                            }))
+                          }
+                          onCommit={async () => {
+                            await onAddRoomOverride(day.date, draft.roomId, draft.startTime, draft.endTime);
+                            setNewOverrideByDate((prev) => {
+                              const next = { ...prev };
+                              delete next[day.date];
+                              return next;
+                            });
+                          }}
+                          onDelete={() =>
+                            setNewOverrideByDate((prev) => {
+                              const next = { ...prev };
+                              delete next[day.date];
+                              return next;
+                            })
+                          }
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setNewOverrideByDate((prev) => ({
+                              ...prev,
+                              [day.date]: { roomId: null, startTime: "09:00", endTime: "18:00" },
+                            }))
+                          }
+                          className="flex items-center gap-1.5 text-xs font-semibold text-orange-500 hover:text-orange-600 transition-colors px-1 py-1"
+                        >
+                          <Plus size={13} /> Добавить интервал
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             );
           })}

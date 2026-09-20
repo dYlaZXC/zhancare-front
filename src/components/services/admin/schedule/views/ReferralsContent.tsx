@@ -5,25 +5,35 @@ import { api } from "@/utils/api";
 import {
   FlaskConical, Scan, HeartPulse, Brain, Bone, Eye, Baby, Microscope,
   User, Phone, Stethoscope, Building2,
-  Search, ChevronDown, Loader2, CalendarDays, UserCheck,
+  Search, ChevronDown, Loader2, CalendarDays, UserCheck, CalendarPlus,
+  Sparkles, FileText,
 } from "lucide-react";
+import ScheduleReferralModal from "../modals/ScheduleReferralModal";
 
 interface Referral {
   id: number;
+  patient_id: number;
   patient_name: string;
   patient_phone: string;
+  service_id: number | null;
   service_name: string;
   category: string;
+  clinic_id: number | null;
   clinic_name: string;
-  appointment_time: string;
+  appointment_time: string | null;
   status: string;
   notes: string;
   doctor_name: string;
   doctor_specialization: string;
   responsible_doctor_name: string;
+  source: "manual" | "ai";
+  source_type: string | null;
+  source_id: number | null;
+  original_text: string;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; dot: string }> = {
+  awaiting_schedule: { label: 'Ожидает записи',  bg: '#f5f3ff', text: '#7c3aed',  dot: '#a855f7' },
   scheduled:   { label: 'Запланировано', bg: '#eff6ff', text: '#2563eb',  dot: '#3b82f6' },
   confirmed:   { label: 'Подтверждено',  bg: '#f0fdf4', text: '#16a34a',  dot: '#22c55e' },
   in_progress: { label: 'В процессе',    bg: '#fefce8', text: '#ca8a04',  dot: '#eab308' },
@@ -33,6 +43,7 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; d
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Все статусы' },
+  { value: 'awaiting_schedule', label: 'Ожидает записи' },
   { value: 'scheduled',   label: 'Запланировано' },
   { value: 'confirmed',   label: 'Подтверждено'  },
   { value: 'in_progress', label: 'В процессе'    },
@@ -69,6 +80,7 @@ export function ReferralsContent() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [statusDropdown, setStatusDropdown] = useState(false);
+  const [schedulingReferral, setSchedulingReferral] = useState<Referral | null>(null);
 
   const fetchReferrals = useCallback(async () => {
     setLoading(true);
@@ -99,6 +111,17 @@ export function ReferralsContent() {
       year: d.getFullYear(),
       time: d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
     };
+  };
+
+  const handleScheduled = (updated: any) => {
+    setReferrals(prev => prev.map(r => r.id === updated.id ? {
+      ...r,
+      status: updated.status,
+      appointment_time: updated.appointment_time,
+      service_id: updated.service ?? r.service_id,
+      service_name: updated.service_display?.name ?? r.service_name,
+      responsible_doctor_name: updated.performing_doctor_name ?? r.responsible_doctor_name,
+    } : r));
   };
 
   return (
@@ -167,9 +190,13 @@ export function ReferralsContent() {
         <div className="flex flex-col gap-3">
           {referrals.map(r => {
             const sc = STATUS_CONFIG[r.status] ?? { label: r.status, bg: '#f3f4f6', text: '#6b7280', dot: '#9ca3af' };
-            const { day, year, time } = fmt(r.appointment_time);
+            const scheduled = fmt(r.appointment_time || new Date().toISOString());
             const cat = CATEGORY_STYLE[r.category] ?? DEFAULT_CATEGORY_STYLE;
             const CatIcon = cat.icon;
+            // original_text is frozen AI-extraction context, never the primary
+            // label — only shown when it actually adds information beyond
+            // the (possibly doctor-edited) service_name.
+            const showOriginalText = r.source === 'ai' && r.original_text && r.original_text !== r.service_name;
             return (
               <div key={r.id}
                 className="rounded-3xl p-6 border-2 border-gray-100 hover:border-blue-200 transition-all bg-white shadow-sm hover:shadow-md">
@@ -192,7 +219,24 @@ export function ReferralsContent() {
                         <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: sc.dot }} />
                         {sc.label}
                       </span>
+                      {r.source === 'ai' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-600">
+                          <Sparkles className="w-2.5 h-2.5" /> AI
+                        </span>
+                      )}
+                      {!r.service_id && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500">
+                          Услуга клиники: не сопоставлена
+                        </span>
+                      )}
                     </div>
+
+                    {showOriginalText && (
+                      <p className="flex items-start gap-1.5 text-xs text-gray-400 italic -mt-1.5">
+                        <FileText className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                        Из исходного текста: «{r.original_text}»
+                      </p>
+                    )}
 
                     <div className="flex flex-wrap gap-4 text-sm text-gray-600 pt-3 border-t border-gray-100">
                       <span className="flex items-center gap-1.5">
@@ -245,17 +289,46 @@ export function ReferralsContent() {
 
                   <div className="w-px bg-gray-100 flex-shrink-0" />
 
-                  {/* Date/time */}
+                  {/* Date/time — or a "Записать" action when nothing is scheduled yet */}
                   <div className="text-right flex-shrink-0 pl-2 self-center">
-                    <p className="text-xl font-black text-gray-800 leading-tight capitalize">{day}</p>
-                    <p className="text-xs text-gray-400">{year}</p>
-                    <p className="text-sm font-bold text-blue-600 mt-1">{time}</p>
+                    {r.appointment_time ? (
+                      <>
+                        <p className="text-xl font-black text-gray-800 leading-tight capitalize">{scheduled.day}</p>
+                        <p className="text-xs text-gray-400">{scheduled.year}</p>
+                        <p className="text-sm font-bold text-blue-600 mt-1">{scheduled.time}</p>
+                      </>
+                    ) : r.status === 'cancelled' ? (
+                      <p className="text-xs text-gray-300">—</p>
+                    ) : (
+                      <button
+                        onClick={() => setSchedulingReferral(r)}
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-xs font-bold text-white bg-blue-500 hover:bg-blue-600 transition-colors"
+                      >
+                        <CalendarPlus className="w-3.5 h-3.5" />
+                        Записать
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
             );
           })}
         </div>
+      )}
+
+      {schedulingReferral && (
+        <ScheduleReferralModal
+          referral={{
+            id: schedulingReferral.id,
+            service_name: schedulingReferral.service_name,
+            service_id: schedulingReferral.service_id,
+            clinic_id: schedulingReferral.clinic_id,
+            patient_id: schedulingReferral.patient_id,
+            original_text: schedulingReferral.original_text,
+          }}
+          onScheduled={handleScheduled}
+          onClose={() => setSchedulingReferral(null)}
+        />
       )}
     </div>
   );

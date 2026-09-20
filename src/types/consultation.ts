@@ -78,13 +78,18 @@ export interface ConsultationFormSection {
 // validates every service_id belongs to that clinic (see
 // consultations/template_utils.py::validate_diagnostics_referral_value).
 export interface DiagnosticsReferralEntry {
-  service_id: number;
+  // Optional — a doctor can add a referral not in the clinic's catalog by
+  // name alone ("Добавить вручную" / AI extraction), see
+  // validate_diagnostics_referral_value's docstring.
+  service_id?: number;
   name: string;
   category_label?: string;
   price?: string | number | null;
   currency?: string | null;
   booked_at?: string;
   appointment_id?: number;
+  original_text?: string | null;
+  source?: "manual" | "ai";
 }
 
 export interface DiagnosticsReferralValue {

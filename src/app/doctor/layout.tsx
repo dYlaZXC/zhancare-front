@@ -71,7 +71,7 @@ export default function DoctorLayout({
         />
 
         {/* Main Content */}
-        <main className="flex-1 bg-gray-50">
+        <main className="flex-1 bg-[#F6F8FC]">
           {/* Breadcrumb */}
           <DoctorBreadcrumb />
 

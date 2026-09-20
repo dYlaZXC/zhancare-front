@@ -12,9 +12,12 @@ import type {
   DaySchedule,
   WeeklySchedules,
   ConsultationType,
+  DoctorRoomAssignmentRow,
+  DoctorRoomOverrideRow,
+  AvailableRoom,
 } from "./staff-schedule/types/scheduleTypes";
 import { DEFAULT_WEEKDAYS, emptyWeek, CONSULTATION_TYPES } from "./staff-schedule/types/scheduleTypes";
-import { getCurrentMondayStr, addDays, formatWeekLabel } from "./staff-schedule/utils/dateHelpers";
+import { getCurrentMondayStr, getMondayOfWeekContaining, addDays, formatWeekLabel } from "./staff-schedule/utils/dateHelpers";
 import { buildDefaultWeek } from "./staff-schedule/utils/dateHelpers";
 import {
   buildWeeklySchedulesFromMember,
@@ -35,6 +38,8 @@ export default function StaffScheduleModal({
   member,
   onClose,
   onSaved,
+  initialConsultationType,
+  initialDate,
 }: StaffScheduleModalProps) {
   // ── Modal-exclusive state ────────────────────────────────────────────────────
   const [scheduleLoading, setScheduleLoading] = useState(false);
@@ -57,6 +62,16 @@ export default function StaffScheduleModal({
   const [plannerLoading, setPlannerLoading] = useState(false);
   const [plannerSaving, setPlannerSaving] = useState(false);
   const [plannerDirty, setPlannerDirty] = useState(false);
+
+  // Гибкое расписание кабинетов — doctor-centric weekly room assignments
+  // (Постоянное) + date-specific overrides (По датам). roomAssignments/
+  // availableRooms don't depend on which week is showing (fetched once on
+  // open); roomOverrides is inherently week-scoped and refetched whenever
+  // plannerWeekStart changes, mirroring how plannerDays itself already
+  // refetches on week navigation.
+  const [roomAssignments, setRoomAssignments] = useState<DoctorRoomAssignmentRow[]>([]);
+  const [availableRooms, setAvailableRooms] = useState<AvailableRoom[]>([]);
+  const [roomOverrides, setRoomOverrides] = useState<DoctorRoomOverrideRow[]>([]);
 
   // ── Fetch helpers ────────────────────────────────────────────────────────────
 
@@ -90,13 +105,16 @@ export default function StaffScheduleModal({
           const r = otherRes[i];
           otherByType[t] = r.status === "fulfilled" ? r.value.data : [];
         });
-        setPlannerDays(mainData.length > 0 ? mainData : buildDefaultWeek(weekStart));
+        const resolvedMainData = mainData.length > 0 ? mainData : buildDefaultWeek(weekStart);
+        setPlannerDays(resolvedMainData);
         setPlannerOtherDaysByType(otherByType);
         setPlannerDirty(false);
+        return { mainData: resolvedMainData, otherByType };
       } catch {
         setPlannerDays(buildDefaultWeek(weekStart));
         setPlannerOtherDaysByType({});
         setPlannerDirty(false);
+        return { mainData: buildDefaultWeek(weekStart), otherByType: {} as Partial<Record<ConsultationType, any[]>> };
       } finally {
         setPlannerLoading(false);
       }
@@ -104,20 +122,43 @@ export default function StaffScheduleModal({
     []
   );
 
+  const fetchRoomAssignments = useCallback(async (memberId: number) => {
+    try {
+      const { data } = await api.get(`/staff/${memberId}/room-assignments/`);
+      setRoomAssignments(data?.assignments ?? []);
+      setAvailableRooms(data?.available_rooms ?? []);
+    } catch {
+      setRoomAssignments([]);
+      setAvailableRooms([]);
+    }
+  }, []);
+
+  const fetchRoomOverrides = useCallback(async (memberId: number, weekStart: string) => {
+    try {
+      const { data } = await api.get(`/staff/${memberId}/room-overrides/`, {
+        params: { week_start: weekStart },
+      });
+      setRoomOverrides(Array.isArray(data) ? data : []);
+    } catch {
+      setRoomOverrides([]);
+    }
+  }, []);
+
   // ── Initialize on open ───────────────────────────────────────────────────────
 
   useEffect(() => {
     if (!isOpen || !member) return;
 
     // Reset all state
+    const startType = initialConsultationType ?? "online";
     setScheduleModalTab("schedule");
     setScheduleHistory([]);
-    setScheduleType("online");
+    setScheduleType(startType);
     setCurrentWeekIndex(0);
-    setPlannerConsultationType("online");
+    setPlannerConsultationType(startType);
     setPlannerDirty(false);
 
-    const monday = getCurrentMondayStr();
+    const monday = initialDate ? getMondayOfWeekContaining(initialDate) : getCurrentMondayStr();
     setPlannerWeekStart(monday);
 
     setScheduleLoading(true);
@@ -133,8 +174,42 @@ export default function StaffScheduleModal({
       .finally(() => {
         setScheduleLoading(false);
         setScheduleModalTab("schedule");
-        fetchPlannerWeek(member.id, monday, "online");
         fetchScheduleHistory(member.id);
+        fetchRoomAssignments(member.id);
+
+        fetchPlannerWeek(member.id, monday, startType).then(({ mainData, otherByType }) => {
+          if (!initialConsultationType) return;
+          // A caller-supplied hint (e.g. "открой Кабинеты, они точно не на
+          // Онлайн") only knows Кабинеты live on SOME non-online tab — it
+          // can't know whether THIS doctor's real hours are under "offline"
+          // or "mixed" specifically. Checked against the actual per-day
+          // records this exact fetch just returned, NOT a summary flag:
+          // GET /staff/{id}/'s has_offline_availability is TRUE even when a
+          // doctor has ONLY "mixed" hours (mixed satisfies both offline and
+          // online demand by design — see _get_availability_types_this_week),
+          // so it can't tell "does the offline TAB show real hours" from "is
+          // this doctor bookable as offline via mixed" — confirmed with real
+          // data where a doctor has an EXPLICIT day-off record for "offline"
+          // and genuine hours only under "mixed" on the very same dates.
+          const isAllDayOff = (days: any[] | undefined) =>
+            !days || days.length === 0 || days.every((d) => d.is_day_off);
+          if (!isAllDayOff(mainData)) return;
+          const fallback: ConsultationType = startType === "offline" ? "mixed" : "offline";
+          const fallbackDays = otherByType[fallback];
+          if (!fallbackDays || isAllDayOff(fallbackDays)) return;
+          // The fallback type's week was already fetched as part of this
+          // SAME batch (fetchPlannerWeek always fetches all three types
+          // together, for conflict-checking) — swap in place, no extra
+          // request needed.
+          setScheduleType(fallback);
+          setPlannerConsultationType(fallback);
+          setPlannerDays(fallbackDays);
+          setPlannerOtherDaysByType((prev) => {
+            const rest = { ...otherByType };
+            delete rest[fallback];
+            return { ...rest, [startType]: mainData };
+          });
+        });
       });
     // Deliberately keyed on member?.id, not the `member` object itself — the
     // caller (StaffManagement.tsx) rebuilds `member` as a new object on every
@@ -146,7 +221,15 @@ export default function StaffScheduleModal({
     // admin was mid-typing. Re-run only when the modal opens or a genuinely
     // different doctor is selected.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, member?.id, fetchPlannerWeek, fetchScheduleHistory]);
+  }, [isOpen, member?.id, fetchPlannerWeek, fetchScheduleHistory, fetchRoomAssignments]);
+
+  // roomOverrides is inherently week-scoped (GET .../room-overrides/?week_start=)
+  // and the date tab supports navigating weeks (handlePlannerWeekNav) — refetch
+  // whenever plannerWeekStart changes, exactly like plannerDays itself does.
+  useEffect(() => {
+    if (!isOpen || !member || !plannerWeekStart) return;
+    fetchRoomOverrides(member.id, plannerWeekStart);
+  }, [isOpen, member?.id, plannerWeekStart, fetchRoomOverrides]);
 
   // ── Conflict detection helpers ────────────────────────────────────────────────
 
@@ -499,6 +582,90 @@ export default function StaffScheduleModal({
     }
   };
 
+  // ── Гибкое расписание кабинетов handlers ──────────────────────────────────────
+
+  const handleAddRoomBand = async (weekday: number, roomId: number | null, startTime: string, endTime: string) => {
+    if (!member) return;
+    try {
+      const { data } = await api.post(`/staff/${member.id}/room-assignments/`, {
+        room_id: roomId, weekday, start_time: startTime, end_time: endTime,
+      });
+      setRoomAssignments((prev) => [...prev, data]);
+      toast.success("Кабинет назначен");
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || "Не удалось назначить кабинет");
+      throw e;
+    }
+  };
+
+  const handleUpdateRoomBand = async (
+    id: number,
+    changes: { room_id?: number | null; start_time?: string; end_time?: string }
+  ) => {
+    if (!member) return;
+    try {
+      const { data } = await api.patch(`/staff/${member.id}/room-assignments/${id}/`, changes);
+      setRoomAssignments((prev) => prev.map((a) => (a.id === id ? data : a)));
+      toast.success("Сохранено");
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || "Не удалось сохранить");
+      throw e;
+    }
+  };
+
+  const handleDeleteRoomBand = async (id: number) => {
+    if (!member) return;
+    try {
+      await api.delete(`/staff/${member.id}/room-assignments/${id}/`);
+      setRoomAssignments((prev) => prev.filter((a) => a.id !== id));
+      toast.success("Удалено");
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || "Не удалось удалить");
+      throw e;
+    }
+  };
+
+  const handleAddRoomOverride = async (date: string, roomId: number | null, startTime: string, endTime: string) => {
+    if (!member) return;
+    try {
+      const { data } = await api.post(`/staff/${member.id}/room-overrides/`, {
+        date, room_id: roomId, start_time: startTime, end_time: endTime,
+      });
+      setRoomOverrides((prev) => [...prev, data]);
+      toast.success("Переопределение добавлено");
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || "Не удалось добавить переопределение");
+      throw e;
+    }
+  };
+
+  const handleUpdateRoomOverride = async (
+    id: number,
+    changes: { room_id?: number | null; start_time?: string; end_time?: string }
+  ) => {
+    if (!member) return;
+    try {
+      const { data } = await api.patch(`/staff/${member.id}/room-overrides/${id}/`, changes);
+      setRoomOverrides((prev) => prev.map((o) => (o.id === id ? data : o)));
+      toast.success("Сохранено");
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || "Не удалось сохранить");
+      throw e;
+    }
+  };
+
+  const handleDeleteRoomOverride = async (id: number) => {
+    if (!member) return;
+    try {
+      await api.delete(`/staff/${member.id}/room-overrides/${id}/`);
+      setRoomOverrides((prev) => prev.filter((o) => o.id !== id));
+      toast.success("Удалено");
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || "Не удалось удалить");
+      throw e;
+    }
+  };
+
   // ── Render ────────────────────────────────────────────────────────────────────
 
   if (!isOpen || !member) return null;
@@ -604,6 +771,11 @@ export default function StaffScheduleModal({
                   onUpdateDay={updatePlannerDay}
                   onSaveDay={handleSavePlannerDay}
                   onDeleteDay={handleDeletePlannerDay}
+                  roomOverrides={roomOverrides}
+                  availableRooms={availableRooms}
+                  onAddRoomOverride={handleAddRoomOverride}
+                  onUpdateRoomOverride={handleUpdateRoomOverride}
+                  onDeleteRoomOverride={handleDeleteRoomOverride}
                 />
               )}
 
@@ -621,6 +793,11 @@ export default function StaffScheduleModal({
                   getConflictDays={getConflictDays}
                   onToggleDay={toggleScheduleDay}
                   onUpdateDayTime={updateScheduleDayTime}
+                  roomAssignments={roomAssignments}
+                  availableRooms={availableRooms}
+                  onAddRoomBand={handleAddRoomBand}
+                  onUpdateRoomBand={handleUpdateRoomBand}
+                  onDeleteRoomBand={handleDeleteRoomBand}
                 />
               )}
 

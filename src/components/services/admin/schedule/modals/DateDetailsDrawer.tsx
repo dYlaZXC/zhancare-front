@@ -472,8 +472,8 @@ function BookingRow({ event, onChanged }: { event: ScheduleEvent; onChanged?: ()
                   {event.doctor_years_of_experience != null && (
                     <InfoRow icon={<BadgeInfo className="w-3.5 h-3.5" />} value={`${event.doctor_years_of_experience} лет опыта`} />
                   )}
-                  {event.doctor_room_number != null && (
-                    <InfoRow icon={<DoorOpen className="w-3.5 h-3.5" />} value={`Кабинет ${event.doctor_room_number}`} />
+                  {event.consultation_type === 'offline' && (
+                    <InfoRow icon={<DoorOpen className="w-3.5 h-3.5" />} value={event.room_name ?? 'Не назначен'} />
                   )}
                 </div>
               )}

@@ -3,7 +3,7 @@
 import { RefObject } from "react";
 import {
   Mail, Lock, Calendar, MapPin, Globe, Award, ChevronDown, X,
-  RefreshCw, Eye, EyeOff, Copy, Stethoscope, Heart, Plus, CheckCircle,
+  RefreshCw, Eye, EyeOff, Copy, Stethoscope, Heart, Plus, CheckCircle, DoorOpen,
 } from "lucide-react";
 import PhoneInputUI from "@/components/ui/PhoneInput";
 import SearchSelect from "../../schedule/components/SearchSelect";
@@ -442,20 +442,26 @@ export function BasicInfoTab({
         </p>
       </div>
 
-      {/* Room Number */}
-      <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">
-          Номер кабинета
-        </label>
-        <input
-          type="text"
-          value={form.room_number}
-          onChange={(e) => set('room_number', e.target.value)}
-          className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
-          placeholder="Например: 7B, 700, 7F-D"
-          maxLength={20}
-        />
-      </div>
+      {/* Room — moved to the dedicated Кабинеты module: assigning a doctor
+          to a room is now a weekly time-range template (weekday + hours),
+          not a permanent profile field, so it's configured from the room's
+          own "Врачи и расписание" screen instead of here. Doctors only —
+          the new module doesn't cover nurses. */}
+      {form.role === 'doctor' && (
+        <div className="flex items-start gap-3 px-4 py-3.5 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50">
+          <DoorOpen className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-semibold text-gray-700">Кабинет назначается в модуле «Кабинеты»</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Расписание врача по кабинетам (дни недели, часы) настраивается отдельно —{' '}
+              <a href="/admin/rooms" target="_blank" rel="noopener noreferrer"
+                className="text-blue-600 font-semibold hover:underline">
+                перейти в «Кабинеты»
+              </a>.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Specialization - Multiple inputs with + and - buttons */}
       <div>

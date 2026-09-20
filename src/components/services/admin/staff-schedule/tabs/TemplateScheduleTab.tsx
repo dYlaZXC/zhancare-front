@@ -1,13 +1,23 @@
 "use client";
 
-import { DEFAULT_WEEKDAYS, CONSULTATION_TYPES } from "../types/scheduleTypes";
-import type { DaySchedule, ConsultationType } from "../types/scheduleTypes";
+import { useState } from "react";
+import { Plus } from "lucide-react";
+import { DEFAULT_WEEKDAYS, CONSULTATION_TYPES, DAY_TO_WEEKDAY } from "../types/scheduleTypes";
+import type { DaySchedule, ConsultationType, DoctorRoomAssignmentRow, AvailableRoom } from "../types/scheduleTypes";
 import { TYPE_META } from "../utils/typeDisplay";
+import { RoomBandRow } from "../components/RoomBandRow";
 
 // ── TemplateScheduleTab ("Постоянное") — reads/writes the weekly DoctorSchedule
 // pattern. Date-specific DoctorAvailability entries (DateScheduleTab) still
 // take priority over this at display/slot time; this tab only edits the
 // recurring weekday template.
+//
+// When the day is offline/mixed, it also shows a "Кабинеты" sub-section —
+// the doctor's own weekly DoctorRoomAssignment bands for that weekday,
+// editable inline. Rooms are a SEPARATE temporary-schedule resource, not
+// tied 1:1 to the day's overall online/offline hours (a doctor can work
+// 09-18 but only occupy a room 09-14, say) — this section is intentionally
+// independent of the start/end inputs above it.
 
 export function TemplateScheduleTab({
   scheduleType,
@@ -17,6 +27,11 @@ export function TemplateScheduleTab({
   getConflictDays,
   onToggleDay,
   onUpdateDayTime,
+  roomAssignments,
+  availableRooms,
+  onAddRoomBand,
+  onUpdateRoomBand,
+  onDeleteRoomBand,
 }: {
   scheduleType: ConsultationType;
   onScheduleTypeChange: (t: ConsultationType) => void;
@@ -25,9 +40,16 @@ export function TemplateScheduleTab({
   getConflictDays: (type: ConsultationType) => string[];
   onToggleDay: (type: ConsultationType, day: string) => void;
   onUpdateDayTime: (type: ConsultationType, day: string, field: "start" | "end", value: string) => void;
+  roomAssignments: DoctorRoomAssignmentRow[];
+  availableRooms: AvailableRoom[];
+  onAddRoomBand: (weekday: number, roomId: number | null, startTime: string, endTime: string) => Promise<void>;
+  onUpdateRoomBand: (id: number, changes: { room_id?: number | null; start_time?: string; end_time?: string }) => Promise<void>;
+  onDeleteRoomBand: (id: number) => Promise<void>;
 }) {
   const current = TYPE_META[scheduleType];
   const otherTypes = CONSULTATION_TYPES.filter((t) => t !== scheduleType);
+  const [newBandByWeekday, setNewBandByWeekday] = useState<Record<number, { roomId: number | null; startTime: string; endTime: string }>>({});
+  const [editsByBandId, setEditsByBandId] = useState<Record<number, { roomId?: number | null; startTime?: string; endTime?: string }>>({});
 
   return (
     <>
@@ -164,6 +186,105 @@ export function TemplateScheduleTab({
                   </p>
                 </div>
               )}
+
+              {/* Кабинеты — room is a separate temporary-schedule resource,
+                  not tied to the day's own start/end above, and NOT gated
+                  on this weekday being "enabled" for the current type
+                  either: DoctorRoomAssignment resolves independently of
+                  whatever DoctorSchedule says for this weekday (see
+                  resolve_room_for_doctor) — hiding it behind `.enabled`
+                  previously made an already-saved room assignment
+                  disappear from view entirely whenever the weekday showed
+                  as off, with no way to find or edit it. */}
+              {scheduleType !== "online" && (() => {
+                const weekday = DAY_TO_WEEKDAY[day.value];
+                const bands = roomAssignments.filter((a) => a.weekday === weekday);
+                const draft = newBandByWeekday[weekday];
+                return (
+                  <div className="mt-3 pt-3 border-t border-dashed border-gray-200 space-y-1.5">
+                    <p className="text-[11px] font-bold text-orange-500 uppercase tracking-wide mb-1.5">Кабинеты</p>
+                    {bands.map((a) => {
+                      const edits = editsByBandId[a.id];
+                      return (
+                        <RoomBandRow
+                          key={a.id}
+                          roomId={edits?.roomId !== undefined ? edits.roomId : (a.room?.id ?? null)}
+                          startTime={edits?.startTime ?? a.start_time.slice(0, 5)}
+                          endTime={edits?.endTime ?? a.end_time.slice(0, 5)}
+                          availableRooms={availableRooms}
+                          onChange={(changes) =>
+                            setEditsByBandId((prev) => ({
+                              ...prev,
+                              [a.id]: { ...prev[a.id], ...changes },
+                            }))
+                          }
+                          onCommit={async () => {
+                            if (!edits) return;
+                            const patch: { room_id?: number | null; start_time?: string; end_time?: string } = {};
+                            if (edits.roomId !== undefined) patch.room_id = edits.roomId;
+                            if (edits.startTime !== undefined) patch.start_time = edits.startTime;
+                            if (edits.endTime !== undefined) patch.end_time = edits.endTime;
+                            await onUpdateRoomBand(a.id, patch);
+                            setEditsByBandId((prev) => {
+                              const next = { ...prev };
+                              delete next[a.id];
+                              return next;
+                            });
+                          }}
+                          onDelete={() => onDeleteRoomBand(a.id)}
+                        />
+                      );
+                    })}
+                    {draft ? (
+                      <RoomBandRow
+                        roomId={draft.roomId}
+                        startTime={draft.startTime}
+                        endTime={draft.endTime}
+                        availableRooms={availableRooms}
+                        isNew
+                        onChange={(changes) =>
+                          setNewBandByWeekday((prev) => ({
+                            ...prev,
+                            [weekday]: {
+                              roomId: changes.roomId !== undefined ? changes.roomId : prev[weekday].roomId,
+                              startTime: changes.startTime ?? prev[weekday].startTime,
+                              endTime: changes.endTime ?? prev[weekday].endTime,
+                            },
+                          }))
+                        }
+                        onCommit={async () => {
+                          await onAddRoomBand(weekday, draft.roomId, draft.startTime, draft.endTime);
+                          setNewBandByWeekday((prev) => {
+                            const next = { ...prev };
+                            delete next[weekday];
+                            return next;
+                          });
+                        }}
+                        onDelete={() =>
+                          setNewBandByWeekday((prev) => {
+                            const next = { ...prev };
+                            delete next[weekday];
+                            return next;
+                          })
+                        }
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setNewBandByWeekday((prev) => ({
+                            ...prev,
+                            [weekday]: { roomId: null, startTime: "09:00", endTime: "18:00" },
+                          }))
+                        }
+                        className="flex items-center gap-1.5 text-xs font-semibold text-orange-500 hover:text-orange-600 transition-colors px-1 py-1"
+                      >
+                        <Plus size={13} /> Добавить интервал
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           );
         })}

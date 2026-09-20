@@ -184,6 +184,8 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
                 price: r.price ?? null,
                 bookedAt: r.booked_at,
                 appointmentId: r.appointment_id,
+                originalText: r.original_text ?? null,
+                source: r.source,
               })));
             } else {
               textValues[diagSection.key] = '';
@@ -341,6 +343,8 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
           price: r.price ?? null,
           booked_at: r.bookedAt,
           appointment_id: r.appointmentId,
+          original_text: r.originalText ?? undefined,
+          source: r.source,
         })),
       };
     }
@@ -752,6 +756,7 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
                     clinicId={doctorClinicId}
                     patientId={patientId}
                     doctorId={doctorId}
+                    consultationId={consultation.id}
                     referrals={diagnosticsReferrals}
                     onReferralsChange={setDiagnosticsReferrals}
                   />

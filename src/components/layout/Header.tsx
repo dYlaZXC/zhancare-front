@@ -70,7 +70,7 @@ export const Header = ({
   const t = HEADER_TEXT[language as keyof typeof HEADER_TEXT] ?? HEADER_TEXT.ru;
 
   return (
-    <header className="flex justify-between items-center bg-white/95 backdrop-blur-lg p-4 shadow-lg sticky top-0 z-30 transition-all duration-300">
+    <header className="flex justify-between items-center bg-gradient-to-r from-white via-[#F7F9FF] to-white backdrop-blur-lg border-b border-[#E3E9FB] rounded-b-2xl p-4 shadow-[0_4px_24px_-6px_rgba(41,53,143,0.18)] sticky top-0 z-30 transition-all duration-300">
       {/* Left - Mobile Menu Button & Desktop Sidebar Toggle */}
       <div className="flex items-center gap-3">
         {/* Mobile/Tablet/iPad Pro Menu Button - Active up to XL screens */}

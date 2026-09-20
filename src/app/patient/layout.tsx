@@ -88,7 +88,7 @@ export default function PatientLayout({
         />
 
         {/* Main Content */}
-        <main className="flex-1 bg-gray-50 overflow-x-hidden">
+        <main className="flex-1 bg-[#F6F8FC] overflow-x-hidden">
           {/* Breadcrumb */}
           <Breadcrumb />
 

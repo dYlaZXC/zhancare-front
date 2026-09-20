@@ -75,7 +75,7 @@ export default function AdminLayout({
         />
 
         {/* Main Content */}
-        <main className="flex-1 bg-gray-50 overflow-hidden flex flex-col">
+        <main className="flex-1 bg-[#F6F8FC] overflow-hidden flex flex-col">
           {/* Breadcrumb */}
           <AdminBreadcrumb />
 

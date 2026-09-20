@@ -2,8 +2,10 @@
 import { createPortal } from "react-dom";
 
 import Image from "next/image";
+import { motion } from "framer-motion";
 import { useClinicCurrency } from "@/context/BrandContext";
 import LogoIcon from "../../../public/logo_icon.png";
+import { CollapsibleSubmenu } from "./CollapsibleSubmenu";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faUsers,
@@ -16,7 +18,6 @@ import {
   faBolt,
   faUser,
   faRobot,
-  faChevronDown,
   faChevronRight,
   faFunnelDollar,
   faUserShield,
@@ -26,6 +27,7 @@ import {
   faGaugeHigh,
   faWarehouse,
   faLayerGroup,
+  faDoorOpen,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useState, useEffect, useRef, type CSSProperties } from "react";
@@ -83,6 +85,7 @@ const adminMenu: MenuItem[] = [
     children: [
       { id: "staff", icon: faUsers, title: "Персонал", color: "#8b5cf6", href: "/admin/staff" },
       { id: "services", icon: faClipboardList, title: "Услуги", color: "#0ea5e9", href: "/admin/services" },
+      { id: "rooms", icon: faDoorOpen, title: "Кабинеты", color: "#f97316", href: "/admin/rooms" },
       { id: "consultation-templates", icon: faLayerGroup, title: "Шаблоны листов", color: "#a855f7", href: "/admin/consultation-templates" },
       { id: "patients", icon: faUserMd, title: "Пациенты", color: "#10b981", href: "/admin/patients" },
       { id: "schedule", icon: faCalendarCheck, title: "Расписание", color: "#295bbf", href: "/admin/schedule" },
@@ -131,7 +134,7 @@ export const AdminSidebar = ({
   const mobileSidebarRef = useRef<HTMLElement>(null);
   const desktopSidebarRef = useRef<HTMLElement>(null);
   const onSidebarMouseMove = (ref: React.RefObject<HTMLElement>) => (e: React.MouseEvent<HTMLElement>) => {
-    if (ref.current) ref.current.style.background = `radial-gradient(circle at ${e.clientX}px ${e.clientY}px, ${brand.sidebarGlow} 0%, transparent 50%), ${brand.sidebarGradient}`;
+    if (ref.current) ref.current.style.background = `radial-gradient(circle at ${e.clientX}px ${e.clientY}px, ${brand.sidebarGlow} 0%, transparent 50%), url('/zhancare_sidebar_background.svg') center/100% 100% no-repeat, ${brand.sidebarGradient}`;
   };
 
   const enterFlyout = (id: string, e?: React.MouseEvent<HTMLElement>) => {
@@ -302,18 +305,18 @@ export const AdminSidebar = ({
         className={`${
           sidebarOpen || isOpen ? "translate-x-0" : "-translate-x-full"
         } fixed top-0 left-0 h-screen w-72 xs:w-76 text-white flex flex-col transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] transform z-50 shadow-2xl border-r border-white/10 backdrop-blur-xl will-change-transform overflow-x-hidden xl:hidden`}
-        style={{ background: brand.sidebarGradient }}
+        style={{ background: `url('/zhancare_sidebar_background.svg') center/100% 100% no-repeat, ${brand.sidebarGradient}` }}
       >
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-10 left-10 w-24 h-24 xs:w-32 xs:h-32 rounded-full blur-xl animate-pulse" style={{ background: `radial-gradient(circle, ${brand.accentRgba}0.15) 0%, ${brand.accentRgba}0.1) 100%)`, animationDuration: '4s' }}></div>
-          <div className="absolute bottom-20 right-10 w-16 h-16 xs:w-24 xs:h-24 rounded-full blur-lg animate-bounce" style={{ background: 'radial-gradient(circle, rgba(50, 103, 230, 0.2) 0%, rgba(30, 38, 62, 0.1) 100%)', animationDuration: '3s' }}></div>
+          <div className="absolute bottom-20 right-10 w-16 h-16 xs:w-24 xs:h-24 rounded-full blur-lg animate-bounce" style={{ background: 'radial-gradient(circle, rgba(50, 103, 230, 0.16) 0%, rgba(30, 38, 62, 0.08) 100%)', animationDuration: '3s' }}></div>
           <div className="absolute top-1/2 left-1/2 w-12 h-12 xs:w-16 xs:h-16 rounded-full blur-md animate-ping" style={{ background: 'radial-gradient(circle, rgba(67, 126, 255, 0.25) 0%, transparent 70%)', animationDuration: '2s' }}></div>
         </div>
 
         {/* Mobile Header */}
-        <div className="flex justify-between items-center px-3 py-4 xs:px-4 xs:py-5 sm:px-6 sm:py-6 xl:hidden relative z-10 border-b border-white/10">
+        <div className="flex justify-between items-center px-3 py-5 xs:px-4 xs:py-6 sm:px-6 sm:py-7 xl:hidden relative z-10 border-b border-white/10">
           <Link href="/" onClick={() => setSidebarOpen(false)} className="block outline-none focus:outline-none">
-            <Image src={appLogo} alt="Logo" width={220} height={55} priority className="w-full max-w-[160px] h-auto hover:opacity-90 transition-opacity duration-300 drop-shadow-lg" />
+            <Image src={appLogo} alt="Logo" width={220} height={55} priority className="w-full max-w-[144px] h-auto hover:opacity-90 transition-opacity duration-300 drop-shadow-lg" />
           </Link>
           <div className="relative group">
             <button
@@ -333,7 +336,7 @@ export const AdminSidebar = ({
         {/* Mobile User Info */}
         <div className="px-3 py-4 xs:px-4 xs:py-5 sm:px-6 sm:py-6 text-center relative z-10">
           <div className="relative group mb-4 flex justify-center">
-            <div className="relative w-16 h-16 xs:w-18 xs:h-18 sm:w-20 sm:h-20 rounded-xl xs:rounded-2xl flex items-center justify-center text-xl xs:text-2xl sm:text-2xl font-bold shadow-2xl transform group-hover:scale-110 transition-all duration-300 border-2 border-white backdrop-blur-sm"
+            <div className="relative w-14 h-14 xs:w-16 xs:h-16 sm:w-[4.5rem] sm:h-[4.5rem] rounded-xl xs:rounded-2xl flex items-center justify-center text-lg xs:text-xl sm:text-xl font-bold shadow-2xl transform group-hover:scale-110 transition-all duration-300 border-2 border-white backdrop-blur-sm"
                  style={{ background: getRoleGradient(userRole).bg }}>
               <span className="relative z-10 text-white drop-shadow-lg">{user.first_name.charAt(0)}</span>
               <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-2xl"></div>
@@ -356,7 +359,7 @@ export const AdminSidebar = ({
         </div>
 
         {/* Mobile Navigation */}
-        <nav className="mt-2 space-y-2 xs:space-y-2.5 px-3 xs:px-4 sm:px-6 flex-1 overflow-y-auto overflow-x-hidden relative z-10 sidebar-scroll">
+        <nav className="mt-2 space-y-2 xs:space-y-2.5 px-3 xs:px-4 sm:px-6 flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative z-10 sidebar-scroll">
           {visibleMenu.map((item) => {
             if (!item.children) {
               // Standalone item
@@ -380,7 +383,7 @@ export const AdminSidebar = ({
                       onMouseEnter={(e) => { if (activeTab !== item.id) { e.currentTarget.style.background = 'rgba(55,114,255,0.1)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; } }}
                       onMouseLeave={(e) => { if (activeTab !== item.id) { e.currentTarget.style.background = 'rgba(55,114,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; } }}
                     >
-                      {activeTab === item.id && <div className="absolute left-0 top-0 w-1 h-full bg-gradient-to-b from-blue-400 to-blue-600 rounded-r-sm"></div>}
+                      {activeTab === item.id && <div className="absolute left-0 top-0 w-[3px] h-full bg-gradient-to-b from-blue-400 to-blue-600 rounded-r-full shadow-[0_0_6px_rgba(96,165,250,0.5)]"></div>}
                       <div
                         className="relative flex items-center justify-center w-8 h-8 xs:w-10 xs:h-10 rounded-lg xs:rounded-xl transition-all duration-300"
                         style={activeTab === item.id ? { background: 'rgba(255,255,255,0.2)' } : { background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)' }}
@@ -427,7 +430,7 @@ export const AdminSidebar = ({
                     onMouseEnter={(e) => { if (!hasActiveChild) { e.currentTarget.style.background = 'rgba(55,114,255,0.1)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; } }}
                     onMouseLeave={(e) => { if (!hasActiveChild) { e.currentTarget.style.background = 'rgba(55,114,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; } }}
                   >
-                    {hasActiveChild && <div className="absolute left-0 top-0 w-1 h-full bg-gradient-to-b from-blue-400 to-blue-600 rounded-r-sm"></div>}
+                    {hasActiveChild && <div className="absolute left-0 top-0 w-[3px] h-full bg-gradient-to-b from-blue-400 to-blue-600 rounded-r-full shadow-[0_0_6px_rgba(96,165,250,0.5)]"></div>}
                     <div
                       className="relative flex items-center justify-center w-8 h-8 xs:w-10 xs:h-10 rounded-lg xs:rounded-xl transition-all duration-300"
                       style={hasActiveChild ? { background: 'rgba(255,255,255,0.2)' } : { background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)' }}
@@ -438,19 +441,19 @@ export const AdminSidebar = ({
                     <span className={`flex-1 text-left text-sm xs:text-base transition-all duration-300 ${hasActiveChild ? 'font-semibold text-white' : 'font-medium group-hover:text-white'}`}>
                       {item.title}
                     </span>
-                    <FontAwesomeIcon
-                      icon={isExpanded ? faChevronDown : faChevronRight}
-                      className={`text-xs transition-all duration-300 mr-1 ${hasActiveChild ? 'text-white' : 'text-white/40 group-hover:text-white/70'}`}
-                    />
+                    <motion.div animate={{ rotate: isExpanded ? 90 : 0 }} transition={{ duration: 0.2 }}>
+                      <FontAwesomeIcon
+                        icon={faChevronRight}
+                        className={`text-xs mr-1 ${hasActiveChild ? 'text-white' : 'text-white/40 group-hover:text-white/70'}`}
+                      />
+                    </motion.div>
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
                   </div>
                 </button>
 
-                {isExpanded && (
-                  <div className="space-y-1 ml-3 border-l border-white/10 pl-2">
-                    {item.children.map(child => renderSubItem(child, 'mobile'))}
-                  </div>
-                )}
+                <CollapsibleSubmenu isOpen={isExpanded}>
+                  {item.children.map(child => renderSubItem(child, 'mobile'))}
+                </CollapsibleSubmenu>
               </div>
             );
           })}
@@ -481,22 +484,22 @@ export const AdminSidebar = ({
         ref={desktopSidebarRef as any}
         onMouseMove={onSidebarMouseMove(desktopSidebarRef)}
         className={`hidden xl:flex fixed top-0 left-0 h-screen ${isCollapsed ? "w-20" : "w-80"} text-white flex-col justify-between overflow-y-hidden transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] z-40 shadow-2xl border-r border-white/10 backdrop-blur-xl will-change-transform overflow-x-hidden`}
-        style={{ background: brand.sidebarGradient }}
+        style={{ background: `url('/zhancare_sidebar_background.svg') center/100% 100% no-repeat, ${brand.sidebarGradient}` }}
       >
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-10 left-10 w-24 h-24 xs:w-32 xs:h-32 rounded-full blur-xl animate-pulse" style={{ background: `radial-gradient(circle, ${brand.accentRgba}0.15) 0%, ${brand.accentRgba}0.1) 100%)`, animationDuration: '4s' }}></div>
-          <div className="absolute bottom-20 right-10 w-16 h-16 xs:w-24 xs:h-24 rounded-full blur-lg animate-bounce" style={{ background: `radial-gradient(circle, ${brand.accentRgba}0.2) 0%, rgba(30,38,62,0.1) 100%)`, animationDuration: '3s' }}></div>
+          <div className="absolute bottom-20 right-10 w-16 h-16 xs:w-24 xs:h-24 rounded-full blur-lg animate-bounce" style={{ background: `radial-gradient(circle, ${brand.accentRgba}0.16) 0%, rgba(30,38,62,0.08) 100%)`, animationDuration: '3s' }}></div>
           <div className="absolute top-1/2 left-1/2 w-12 h-12 xs:w-16 xs:h-16 rounded-full blur-md animate-ping" style={{ background: `radial-gradient(circle, ${brand.accentRgba}0.25) 0%, transparent 70%)`, animationDuration: '2s' }}></div>
         </div>
 
         {/* Desktop Top: Logo + User Info */}
         <div className="flex flex-col flex-shrink-0 relative z-10">
-          <div className={`flex items-center ${isCollapsed ? 'justify-center px-2 py-4' : 'px-6 py-4'} relative z-10`}>
+          <div className={`flex items-center ${isCollapsed ? 'justify-center px-2 py-5' : 'px-6 py-5'} relative z-10`}>
             <Link href="/" className="outline-none focus:outline-none w-full">
               {isCollapsed ? (
                 <Image src={LogoIcon} alt="ZhanCare" width={40} height={40} priority className="w-10 h-10 object-contain drop-shadow-md mx-auto" />
               ) : (
-                <Image src={appLogo} alt="Logo" width={280} height={55} priority className="w-full h-auto hover:opacity-90 transition-opacity duration-300 drop-shadow-lg" />
+                <Image src={appLogo} alt="Logo" width={280} height={55} priority className="w-full max-w-[88%] mx-auto h-auto hover:opacity-90 transition-opacity duration-300 drop-shadow-lg" />
               )}
             </Link>
           </div>
@@ -516,13 +519,13 @@ export const AdminSidebar = ({
                   </div>
                 </div>
               ) : (
-                <div className="relative mx-auto w-full max-w-[140px] 2xl:max-w-[180px] aspect-square">
+                <div className="relative mx-auto w-full max-w-[120px] 2xl:max-w-[152px] aspect-square">
                   <div className="w-full h-full rounded-2xl overflow-hidden flex items-center justify-center text-4xl font-bold shadow-2xl border-2 border-white"
                        style={{ background: (user.avatar && !avatarBroken) ? 'transparent' : getRoleGradient(userRole).bg }}>
                     {user.avatar && !avatarBroken
                       ? <img src={resolveAvatar(user.avatar)!} alt="" className="w-full h-full object-cover rounded-[inherit]" onError={() => setAvatarBroken(true)} />
                       : <>
-                          <FontAwesomeIcon icon={faUser} className="text-white/90 drop-shadow-lg" style={{ fontSize: '3rem' }} />
+                          <FontAwesomeIcon icon={faUser} className="text-white/90 drop-shadow-lg" style={{ fontSize: '2.6rem' }} />
                           <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent pointer-events-none"></div>
                         </>}
                   </div>
@@ -549,7 +552,7 @@ export const AdminSidebar = ({
         </div>
 
         {/* Desktop Navigation */}
-        <nav className={`flex-1 flex flex-col justify-start gap-2 ${isCollapsed ? 'px-2 py-3' : 'px-6 py-3'} overflow-x-hidden overflow-y-auto relative z-10 sidebar-scroll`}>
+        <nav className={`flex-1 min-h-0 flex flex-col justify-start gap-2 ${isCollapsed ? 'px-2 py-3' : 'px-6 py-3'} overflow-x-hidden overflow-y-auto relative z-10 sidebar-scroll`}>
           {visibleMenu.map((item) => {
             if (!item.children) {
               // Standalone item
@@ -573,7 +576,7 @@ export const AdminSidebar = ({
                       onMouseEnter={(e) => { if (activeTab !== item.id) { e.currentTarget.style.background = 'rgba(55,114,255,0.1)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; } }}
                       onMouseLeave={(e) => { if (activeTab !== item.id) { e.currentTarget.style.background = 'rgba(55,114,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; } }}
                     >
-                      {activeTab === item.id && <div className="absolute left-0 top-0 w-1 h-full bg-gradient-to-b from-blue-400 to-blue-600 rounded-r-sm"></div>}
+                      {activeTab === item.id && <div className="absolute left-0 top-0 w-[3px] h-full bg-gradient-to-b from-blue-400 to-blue-600 rounded-r-full shadow-[0_0_6px_rgba(96,165,250,0.5)]"></div>}
                       <div
                         className={`relative flex items-center justify-center ${isCollapsed ? 'w-6 h-6' : 'w-9 h-9'} rounded-xl transition-all duration-300`}
                         style={activeTab === item.id ? { background: 'rgba(255,255,255,0.2)' } : { background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)' }}
@@ -593,7 +596,7 @@ export const AdminSidebar = ({
                       )}
                       {isCollapsed && activeTab === item.id && (
                         <div className="absolute -right-1 top-1/2 -translate-y-1/2">
-                          <div className="w-1 h-8 bg-gradient-to-b from-blue-400 to-blue-600 rounded-full shadow-lg"></div>
+                          <div className="w-[3px] h-8 bg-gradient-to-b from-blue-400 to-blue-600 rounded-full shadow-[0_0_6px_rgba(96,165,250,0.5)]"></div>
                         </div>
                       )}
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
@@ -640,7 +643,7 @@ export const AdminSidebar = ({
                       </div>
                       {hasActiveChild && (
                         <div className="absolute -right-1 top-1/2 -translate-y-1/2">
-                          <div className="w-1 h-8 bg-gradient-to-b from-blue-400 to-blue-600 rounded-full shadow-lg"></div>
+                          <div className="w-[3px] h-8 bg-gradient-to-b from-blue-400 to-blue-600 rounded-full shadow-[0_0_6px_rgba(96,165,250,0.5)]"></div>
                         </div>
                       )}
                     </div>
@@ -693,7 +696,7 @@ export const AdminSidebar = ({
                     onMouseEnter={(e) => { if (!hasActiveChild) { e.currentTarget.style.background = 'rgba(55,114,255,0.1)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; } }}
                     onMouseLeave={(e) => { if (!hasActiveChild) { e.currentTarget.style.background = 'rgba(55,114,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; } }}
                   >
-                    {hasActiveChild && <div className="absolute left-0 top-0 w-1 h-full bg-gradient-to-b from-blue-400 to-blue-600 rounded-r-sm"></div>}
+                    {hasActiveChild && <div className="absolute left-0 top-0 w-[3px] h-full bg-gradient-to-b from-blue-400 to-blue-600 rounded-r-full shadow-[0_0_6px_rgba(96,165,250,0.5)]"></div>}
                     <div
                       className="relative flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-300"
                       style={hasActiveChild ? { background: 'rgba(255,255,255,0.2)' } : { background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)' }}
@@ -704,19 +707,19 @@ export const AdminSidebar = ({
                     <span className={`flex-1 text-left text-base transition-all duration-300 ${hasActiveChild ? 'font-semibold text-white' : 'font-medium group-hover:text-white'}`}>
                       {item.title}
                     </span>
-                    <FontAwesomeIcon
-                      icon={isExpanded ? faChevronDown : faChevronRight}
-                      className={`text-xs transition-all duration-300 ${hasActiveChild ? 'text-white' : 'text-white/40 group-hover:text-white/70'}`}
-                    />
+                    <motion.div animate={{ rotate: isExpanded ? 90 : 0 }} transition={{ duration: 0.2 }}>
+                      <FontAwesomeIcon
+                        icon={faChevronRight}
+                        className={`text-xs ${hasActiveChild ? 'text-white' : 'text-white/40 group-hover:text-white/70'}`}
+                      />
+                    </motion.div>
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
                   </div>
                 </button>
 
-                {isExpanded && (
-                  <div className="space-y-1 ml-3 border-l border-white/10 pl-2">
-                    {item.children.map(child => renderSubItem(child, 'desktop'))}
-                  </div>
-                )}
+                <CollapsibleSubmenu isOpen={isExpanded}>
+                  {item.children.map(child => renderSubItem(child, 'desktop'))}
+                </CollapsibleSubmenu>
               </div>
             );
           })}

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useDeepgram } from "@/hooks/useDeepgram";
 import AIConsultationReview from "@/app/video-call/doctor/components/AIConsultationReview";
+import DiagnosticsReferralExtractModal, { ExtractedReferralResult } from "@/components/diagnostics/DiagnosticsReferralExtractModal";
 import { SignatureModal } from "@/components/shared/SignatureModal";
 import type { ConsultationFormSection } from "@/types/consultation";
 
@@ -44,6 +45,8 @@ interface DiagnosticReferral {
   currency?: string | null;
   booked_at?: string;
   appointment_id?: number;
+  original_text?: string | null;
+  source?: "manual" | "ai";
 }
 
 interface DiagnosticServiceItem {
@@ -115,6 +118,8 @@ export default function OfflineConsultationPage() {
   const [serviceSearch, setServiceSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
   const [manualReferral, setManualReferral] = useState("");
+  const [addingManualReferral, setAddingManualReferral] = useState(false);
+  const [showAIExtract, setShowAIExtract] = useState(false);
 
   // Inline booking state
   const [bookingServiceId, setBookingServiceId] = useState<number | null>(null);
@@ -158,6 +163,8 @@ export default function OfflineConsultationPage() {
             price: r.price ?? null,
             booked_at: r.booked_at,
             appointment_id: r.appointment_id,
+            original_text: r.original_text ?? null,
+            source: r.source,
           })));
         } else {
           textValues[diagKey] = "";
@@ -258,14 +265,53 @@ export default function OfflineConsultationPage() {
     }]);
   };
 
-  const handleAddManualReferral = () => {
+  const handleAddManualReferral = async () => {
     const name = manualReferral.trim();
     if (!name) return;
-    setReferrals(prev => [...prev, { name }]);
-    setManualReferral("");
+    setAddingManualReferral(true);
+    try {
+      const { data } = await api.post<{ appointment: { id: number } }>("/diagnostics/appointments/", {
+        service_name: name,
+        source_type: "clinic_appointment",
+        source_id: id,
+      });
+      setReferrals(prev => [...prev, { name, appointment_id: data?.appointment?.id, source: "manual" }]);
+      setManualReferral("");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Не удалось добавить направление");
+    } finally {
+      setAddingManualReferral(false);
+    }
   };
 
-  const handleRemoveReferral = (index: number) => {
+  const handleAIExtractConfirm = (created: ExtractedReferralResult[]) => {
+    setReferrals(prev => [
+      ...prev,
+      ...created.map(c => ({
+        name: c.service_name,
+        appointment_id: c.id,
+        original_text: c.original_text ?? null,
+        source: "ai" as const,
+      })),
+    ]);
+  };
+
+  const handleRemoveReferral = async (index: number) => {
+    const referral = referrals[index];
+    if (referral.booked_at) {
+      const confirmed = window.confirm(
+        "Приём уже записан на конкретное время. Удаление уберёт направление из этого списка — сама запись на приём останется активной. Продолжить?"
+      );
+      if (!confirmed) return;
+    }
+    if (referral.appointment_id) {
+      try {
+        await api.post(`/diagnostics/appointments/${referral.appointment_id}/cancel/`);
+      } catch (err: any) {
+        toast.error(err?.response?.data?.error || "Не удалось отменить направление");
+        return;
+      }
+    }
     setReferrals(prev => prev.filter((_, i) => i !== index));
   };
 
@@ -384,6 +430,8 @@ export default function OfflineConsultationPage() {
             price: r.price ?? null,
             booked_at: r.booked_at,
             appointment_id: r.appointment_id,
+            original_text: r.original_text ?? undefined,
+            source: r.source,
           })),
         };
       }
@@ -714,14 +762,33 @@ export default function OfflineConsultationPage() {
                     </span>
                   )}
                 </div>
-                <button
-                  onClick={() => setShowServicePanel(p => !p)}
-                  className="flex items-center gap-1 text-xs text-cyan-600 hover:text-cyan-800 font-semibold transition-colors"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  Направление
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setShowAIExtract(true)}
+                    className="flex items-center gap-1 text-xs text-cyan-600 hover:text-cyan-800 font-semibold transition-colors"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    ИИ-извлечение
+                  </button>
+                  <button
+                    onClick={() => setShowServicePanel(p => !p)}
+                    className="flex items-center gap-1 text-xs text-cyan-600 hover:text-cyan-800 font-semibold transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Направление
+                  </button>
+                </div>
               </div>
+
+              {showAIExtract && (
+                <DiagnosticsReferralExtractModal
+                  sourceType="clinic_appointment"
+                  sourceId={Number(id)}
+                  theme="light"
+                  onConfirm={handleAIExtractConfirm}
+                  onClose={() => setShowAIExtract(false)}
+                />
+              )}
 
               {/* Free-text diagnostics textarea */}
               <textarea
@@ -737,8 +804,9 @@ export default function OfflineConsultationPage() {
                 <div className="px-4 pb-3 flex flex-wrap gap-2 border-t border-gray-50 pt-2">
                   {referrals.map((ref, i) => (
                     <div
-                      key={i}
+                      key={ref.appointment_id ?? i}
                       className="flex items-center gap-1.5 bg-cyan-50 border border-cyan-200 text-cyan-800 text-xs rounded-xl px-3 py-1.5"
+                      title={ref.source === "ai" && ref.original_text && ref.original_text !== ref.name ? `Из исходного текста: «${ref.original_text}»` : undefined}
                     >
                       {ref.category_label && (
                         <span className="text-cyan-400 text-[10px] uppercase tracking-wide font-semibold">
@@ -951,10 +1019,10 @@ export default function OfflineConsultationPage() {
                     />
                     <button
                       onClick={handleAddManualReferral}
-                      disabled={!manualReferral.trim()}
+                      disabled={!manualReferral.trim() || addingManualReferral}
                       className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-white bg-cyan-500 hover:bg-cyan-600 disabled:opacity-40 rounded-xl transition-colors"
                     >
-                      <Plus className="w-4 h-4" />
+                      {addingManualReferral ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                       Добавить
                     </button>
                   </div>

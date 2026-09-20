@@ -1,0 +1,84 @@
+<svg width="724" height="2172" viewBox="0 0 724 2172" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="724" y2="2172" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0B2C73"/>
+      <stop offset="0.22" stop-color="#071E50"/>
+      <stop offset="0.55" stop-color="#061B46"/>
+      <stop offset="0.78" stop-color="#082767"/>
+      <stop offset="1" stop-color="#0D3AB8"/>
+    </linearGradient>
+    <radialGradient id="glowTop" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(126 50) rotate(82) scale(280 380)">
+      <stop stop-color="#1ED8FF" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#1ED8FF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowBottom" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(621 2032) rotate(-128) scale(500 440)">
+      <stop stop-color="#155BFF" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#155BFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="edge" x1="0" y1="0" x2="724" y2="2172" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1FD6FF"/>
+      <stop offset="0.18" stop-color="#2978FF"/>
+      <stop offset="0.75" stop-color="#1B54FF"/>
+      <stop offset="1" stop-color="#48D5FF"/>
+    </linearGradient>
+    <linearGradient id="wave1" x1="680" y1="150" x2="130" y2="1850" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1FB6FF" stop-opacity="0.12"/>
+      <stop offset="0.6" stop-color="#155CFF" stop-opacity="0.20"/>
+      <stop offset="1" stop-color="#0A2D88" stop-opacity="0.02"/>
+    </linearGradient>
+    <linearGradient id="wave2" x1="60" y1="1950" x2="700" y2="1320" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0A2F8A" stop-opacity="0.03"/>
+      <stop offset="0.55" stop-color="#176AFF" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#0FC6FF" stop-opacity="0.08"/>
+    </linearGradient>
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="16"/>
+    </filter>
+    <filter id="tinyGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="5"/>
+    </filter>
+    <clipPath id="panelClip">
+      <rect x="6" y="6" width="712" height="2160" rx="48"/>
+    </clipPath>
+  </defs>
+
+  <rect width="724" height="2172" fill="#06183E"/>
+  <g clip-path="url(#panelClip)">
+    <rect x="6" y="6" width="712" height="2160" rx="48" fill="url(#bg)"/>
+    <rect x="6" y="6" width="712" height="2160" rx="48" fill="url(#glowTop)"/>
+    <rect x="6" y="6" width="712" height="2160" rx="48" fill="url(#glowBottom)"/>
+
+    <!-- top sweeping ribbon -->
+    <path d="M420 -20C553 43 653 128 748 248V-40H420Z" fill="url(#wave1)"/>
+    <path d="M420 -20C553 43 653 128 748 248" stroke="#22CFFF" stroke-opacity="0.55" stroke-width="1.5"/>
+
+    <!-- large lower arcs -->
+    <path d="M-140 1788C126 1918 461 1829 790 1392L790 1605C481 1961 183 2072 -140 1946V1788Z" fill="url(#wave2)"/>
+    <path d="M-120 1810C165 1946 477 1826 787 1443" stroke="#2AA9FF" stroke-opacity="0.42" stroke-width="1.5"/>
+    <path d="M-88 1937C187 2083 487 2034 792 1728" stroke="#1C66FF" stroke-opacity="0.35" stroke-width="1.25"/>
+
+    <!-- bottom glass folds -->
+    <path d="M-5 1880C92 2019 226 2114 366 2178H-5V1880Z" fill="#0B5AF0" fill-opacity="0.16"/>
+    <path d="M-10 1955C96 2052 206 2124 305 2172" stroke="#24B7FF" stroke-opacity="0.4" stroke-width="1.5"/>
+
+    <!-- faint medical crosses -->
+    <g opacity="0.17" fill="#1B63D9">
+      <path d="M588 210H628V250H668V290H628V330H588V290H548V250H588V210Z"/>
+      <path d="M640 367H656V383H672V399H656V415H640V399H624V383H640V367Z"/>
+      <path d="M92 1601H124V1633H156V1665H124V1697H92V1665H60V1633H92V1601Z"/>
+      <path d="M69 1731H83V1745H97V1759H83V1773H69V1759H55V1745H69V1731Z"/>
+    </g>
+
+    <!-- center depth glow -->
+    <ellipse cx="366" cy="1060" rx="260" ry="740" fill="#001C66" fill-opacity="0.18" filter="url(#softGlow)"/>
+    <ellipse cx="660" cy="1660" rx="80" ry="420" fill="#164CFF" fill-opacity="0.16" filter="url(#softGlow)"/>
+  </g>
+
+  <!-- glowing border -->
+  <rect x="7.5" y="7.5" width="709" height="2157" rx="46.5" stroke="url(#edge)" stroke-width="3"/>
+  <rect x="15" y="15" width="694" height="2142" rx="40" stroke="#1C7FFF" stroke-opacity="0.2"/>
+
+  <!-- corner glows -->
+  <circle cx="48" cy="54" r="34" fill="#1FD6FF" fill-opacity="0.28" filter="url(#softGlow)"/>
+  <circle cx="677" cy="2112" r="42" fill="#2C7BFF" fill-opacity="0.36" filter="url(#softGlow)"/>
+</svg>

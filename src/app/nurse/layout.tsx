@@ -67,7 +67,7 @@ export default function NurseLayout({ children }: { children: React.ReactNode })
         />
 
         {/* Main Content */}
-        <main className="flex-1 bg-gray-50">
+        <main className="flex-1 bg-[#F6F8FC]">
           {/* Breadcrumb */}
           <NurseBreadcrumb />
 

@@ -6,6 +6,13 @@ export const getCurrentMondayStr = (): string => {
   return now.toLocaleDateString("sv-SE");
 };
 
+export const getMondayOfWeekContaining = (dateStr: string): string => {
+  const d = new Date(dateStr + "T00:00:00");
+  const dow = d.getDay();
+  d.setDate(d.getDate() + (dow === 0 ? -6 : 1 - dow));
+  return d.toLocaleDateString("sv-SE");
+};
+
 export const addDays = (dateStr: string, n: number): string => {
   const d = new Date(dateStr + "T00:00:00");
   d.setDate(d.getDate() + n);

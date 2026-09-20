@@ -48,6 +48,16 @@ export interface ScheduleEvent {
   doctor_specialization?: string;
   doctor_years_of_experience?: number;
   doctor_room_number?: string | number | null;
+  // Кабинет (clinic room) actually resolved/locked for this specific
+  // offline appointment at booking time — see ClinicRoom/DoctorRoomAssignment.
+  // Distinct from doctor_room_number above (a free-text, permanent label on
+  // the doctor's profile, unrelated to any real booking): null here means
+  // either the event isn't room-eligible (online/home/diagnostics) or it IS
+  // offline but the doctor currently has no DoctorRoomAssignment covering
+  // it — never fall back to doctor_room_number to fill this in, that would
+  // contradict the "Без кабинета" worklist in RoomsScheduleContent.
+  room_id?: number | null;
+  room_name?: string | null;
   // Performing doctor (diagnostics only)
   performing_doctor_id?: number | null;
   performing_doctor_name?: string | null;
