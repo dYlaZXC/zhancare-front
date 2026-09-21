@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Building2, AlertCircle, Loader2, TrendingUp } from "lucide-react";
 import { api } from "@/utils/api";
 import ClinicInfo from "./ClinicInfo";
+import MyTasksWidget from "./MyTasksWidget";
 import StaffOverview from "./StaffOverview";
 import ActivityOverview from "./ActivityOverview";
 import PerformanceMetrics from "./PerformanceMetrics";
@@ -89,6 +90,9 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
 
         {/* Clinic Information */}
         {user.clinic && <ClinicInfo clinic={user.clinic} />}
+
+        {/* My Tasks */}
+        <MyTasksWidget userId={user.id} />
 
         {/* Statistics Section */}
         {loading ? (

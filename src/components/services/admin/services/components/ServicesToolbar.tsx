@@ -2,13 +2,21 @@
 
 import { useRef, useState } from "react";
 import { Search, ChevronDown, ClipboardList, Settings } from "lucide-react";
-import type { ServiceCategory } from "../types/serviceTypes";
+import type { ServiceCategory, StatusFilter } from "../types/serviceTypes";
 import { getCategoryIcon } from "../types/serviceTypes";
+
+const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
+  { value: "all", label: "Все" },
+  { value: "active", label: "Активные" },
+  { value: "inactive", label: "Неактивные" },
+];
 
 export function ServicesToolbar({
   categories,
   catFilter,
   onCatFilterChange,
+  statusFilter,
+  onStatusFilterChange,
   serviceSearch,
   onServiceSearchChange,
   onOpenCategories,
@@ -16,6 +24,8 @@ export function ServicesToolbar({
   categories: ServiceCategory[];
   catFilter: string;
   onCatFilterChange: (slug: string) => void;
+  statusFilter: StatusFilter;
+  onStatusFilterChange: (status: StatusFilter) => void;
   serviceSearch: string;
   onServiceSearchChange: (v: string) => void;
   onOpenCategories: () => void;
@@ -27,9 +37,9 @@ export function ServicesToolbar({
   const SelIcon = selectedCat ? getCategoryIcon(selectedCat.icon) : ClipboardList;
 
   return (
-    <div className="flex flex-col md:flex-row gap-4">
+    <div className="flex flex-col md:flex-row md:flex-wrap gap-4">
       {/* Search */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative min-w-[240px]">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
         <input
           type="text"
@@ -38,6 +48,30 @@ export function ServicesToolbar({
           onChange={(e) => onServiceSearchChange(e.target.value)}
           className="w-full pl-12 pr-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-sky-500 focus:outline-none transition-colors"
         />
+      </div>
+
+      {/* Active / inactive filter */}
+      <div
+        role="group"
+        aria-label="Статус услуг"
+        className="flex items-center p-1 rounded-2xl bg-white border-2 border-gray-200 flex-shrink-0"
+      >
+        {STATUS_OPTIONS.map(opt => {
+          const selected = statusFilter === opt.value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => onStatusFilterChange(opt.value)}
+              className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                selected ? "bg-sky-500 text-white shadow-sm" : "text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Category filter dropdown */}

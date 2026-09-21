@@ -56,7 +56,9 @@ export interface Consultation {
   nurse_phone?: string;
   // Universal consultation form constructor — fixed on first form fetch (see
   // consultations/template_utils.py), legacy-compatible via form_data fallback.
-  template_snapshot?: { id: number | null; name: string; document_type: string; sections: ConsultationFormSection[] };
+  // `selected` = the doctor hand-picked this template for the visit (vs. following
+  // the doctor's/clinic's default) — see ConsultationTemplatePicker.
+  template_snapshot?: { id: number | null; name: string; document_type: string; sections: ConsultationFormSection[]; selected?: boolean };
   // Keyed by section — a "text" section's value is a string, a
   // "diagnostics_referral" section's value is a DiagnosticsReferralValue.
   form_data?: Record<string, string | DiagnosticsReferralValue>;

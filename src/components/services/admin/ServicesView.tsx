@@ -1,23 +1,40 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
 import { api } from "@/utils/api";
 import { toast } from "react-toastify";
 import { Loader2, ClipboardList } from "lucide-react";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
-import type { Service, ServiceCategory, StaffMember } from "./services/types/serviceTypes";
+import type { Service, ServiceCategory, ServiceStats, StaffMember, StatusFilter } from "./services/types/serviceTypes";
 import { ServicesHeader, ServicesStatsCards } from "./services/components/ServicesHeader";
 import { ServicesToolbar } from "./services/components/ServicesToolbar";
 import { ServiceCard } from "./services/components/ServiceCard";
+import { ServicesPagination } from "./services/components/ServicesPagination";
 import { ServiceFormModal } from "./services/modals/ServiceFormModal";
 import { CategoryFormModal } from "./services/modals/CategoryFormModal";
 import { ServiceScheduleModal } from "./services/modals/ServiceScheduleModal";
 import { BulkUploadServicesModal } from "./services/modals/BulkUploadServicesModal";
 
+const PAGE_SIZE = 20;
+
+// Page + filters live in ONE state object so a filter change and its reset to
+// page 1 land in a single render — two separate setStates would fire a wasted
+// request for (new filter, old page), which can even 404.
+interface ListQuery {
+  page: number;
+  category: string;
+  status: StatusFilter;
+  search: string;
+}
+const INITIAL_QUERY: ListQuery = { page: 1, category: "all", status: "all", search: "" };
+
 export function ServicesView({ user }: { user: any }) {
-  const [catFilter, setCatFilter] = useState("all");
+  const [query, setQuery] = useState<ListQuery>(INITIAL_QUERY);
   const [services, setServices] = useState<Service[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [stats, setStats] = useState<ServiceStats>({ total: 0, active: 0, inactive: 0 });
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [serviceSearch, setServiceSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -29,6 +46,16 @@ export function ServicesView({ user }: { user: any }) {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
 
+  const listTopRef = useRef<HTMLDivElement>(null);
+  // Only the newest request may write state — otherwise a slow response for
+  // an old page/search could land after a newer one and overwrite it.
+  const requestSeq = useRef(0);
+
+  const debouncedSearch = useDebouncedValue(serviceSearch.trim(), 300);
+  useEffect(() => {
+    setQuery(q => (q.search === debouncedSearch ? q : { ...q, search: debouncedSearch, page: 1 }));
+  }, [debouncedSearch]);
+
   const fetchCategories = useCallback(async () => {
     try {
       const res = await api.get("/diagnostics/categories/");
@@ -39,17 +66,36 @@ export function ServicesView({ user }: { user: any }) {
     }
   }, []);
 
-  const fetchServices = useCallback(async () => {
-    setLoading(true);
+  // `silent` refetches in place (no spinner / dimming) — used after a
+  // mutation, where the list should just quietly catch up.
+  const fetchServices = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    const seq = ++requestSeq.current;
+    if (!silent) setLoading(true);
     try {
-      const res = await api.get("/diagnostics/services/");
-      setServices(res.data);
-    } catch {
+      const params: Record<string, string | number> = { page: query.page, page_size: PAGE_SIZE };
+      if (query.category !== "all") params.category = query.category;
+      if (query.status !== "all") params.is_active = query.status === "active" ? "true" : "false";
+      if (query.search) params.search = query.search;
+
+      const res = await api.get("/diagnostics/services/", { params });
+      if (seq !== requestSeq.current) return;
+      setServices(res.data.results);
+      setTotalCount(res.data.count);
+      // Absent only when the backend can't resolve a clinic for this admin.
+      setStats(res.data.stats ?? { total: res.data.count, active: res.data.count, inactive: 0 });
+    } catch (err: any) {
+      if (seq !== requestSeq.current) return;
+      // The page we were on no longer exists (its last row was deactivated
+      // out of the current filter) — step back one page.
+      if (err?.response?.status === 404 && query.page > 1) {
+        setQuery(q => ({ ...q, page: Math.max(1, q.page - 1) }));
+        return;
+      }
       toast.error("Не удалось загрузить услуги");
     } finally {
-      setLoading(false);
+      if (seq === requestSeq.current) setLoading(false);
     }
-  }, []);
+  }, [query]);
 
   useEffect(() => {
     api.get('/clinic-stats/').then(res => {
@@ -67,6 +113,13 @@ export function ServicesView({ user }: { user: any }) {
     }).catch(() => {});
   }, []);
 
+  const changeCategory = (category: string) => setQuery(q => ({ ...q, category, page: 1 }));
+  const changeStatus = (status: StatusFilter) => setQuery(q => ({ ...q, status, page: 1 }));
+  const changePage = (page: number) => {
+    setQuery(q => ({ ...q, page }));
+    listTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   const openCreate = () => {
     setEditing(null);
     setShowModal(true);
@@ -76,10 +129,14 @@ export function ServicesView({ user }: { user: any }) {
     setShowModal(true);
   };
 
+  // Toggle / deactivate change counts, and may move the row out of the
+  // current status filter or shift the page boundary — so after the instant
+  // in-place update, quietly refetch to let the server decide.
   const handleToggle = async (s: Service) => {
     try {
       const res = await api.patch(`/diagnostics/services/${s.id}/toggle-active/`);
       setServices(prev => prev.map(x => x.id === s.id ? res.data : x));
+      fetchServices({ silent: true });
     } catch {
       toast.error("Не удалось изменить статус");
     }
@@ -91,31 +148,28 @@ export function ServicesView({ user }: { user: any }) {
       await api.delete(`/diagnostics/services/${s.id}/`);
       setServices(prev => prev.map(x => x.id === s.id ? { ...x, is_active: false } : x));
       toast.success("Услуга деактивирована");
+      fetchServices({ silent: true });
     } catch {
       toast.error("Не удалось удалить услугу");
     }
   };
 
-  const serviceSearchLower = serviceSearch.trim().toLowerCase();
-  const filtered = services.filter(s => {
-    if (catFilter !== "all" && s.category !== catFilter) return false;
-    if (!serviceSearchLower) return true;
-    return s.name.toLowerCase().includes(serviceSearchLower);
-  });
-  const totalActive = services.filter(s => s.is_active).length;
-  const totalInactive = services.filter(s => !s.is_active).length;
+  const hasFilters = query.category !== "all" || query.status !== "all" || query.search !== "";
+  const showInitialSpinner = loading && services.length === 0;
 
   return (
     <div className="w-full">
       <div className="mb-8">
         <ServicesHeader onOpenCreate={openCreate} onOpenBulkUpload={() => setShowBulkUploadModal(true)} />
 
-        <ServicesStatsCards total={services.length} active={totalActive} inactive={totalInactive} />
+        <ServicesStatsCards total={stats.total} active={stats.active} inactive={stats.inactive} />
 
         <ServicesToolbar
           categories={categories}
-          catFilter={catFilter}
-          onCatFilterChange={setCatFilter}
+          catFilter={query.category}
+          onCatFilterChange={changeCategory}
+          statusFilter={query.status}
+          onStatusFilterChange={changeStatus}
           serviceSearch={serviceSearch}
           onServiceSearchChange={setServiceSearch}
           onOpenCategories={() => setShowCategoryModal(true)}
@@ -123,30 +177,42 @@ export function ServicesView({ user }: { user: any }) {
       </div>
 
       {/* SERVICES */}
-      <div>
-        {loading ? (
+      <div ref={listTopRef} className="scroll-mt-4">
+        {showInitialSpinner ? (
           <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-sky-500" /></div>
-        ) : filtered.length === 0 ? (
+        ) : services.length === 0 ? (
           <div className="text-center py-16 text-gray-400">
             <ClipboardList className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p className="font-semibold">Нет услуг в этой категории</p>
-            <p className="text-sm mt-1">Нажмите «Добавить услугу» чтобы создать первую</p>
+            <p className="font-semibold">{hasFilters ? "Ничего не найдено" : "Услуг пока нет"}</p>
+            <p className="text-sm mt-1">
+              {hasFilters
+                ? "Попробуйте изменить фильтры или поисковый запрос"
+                : "Нажмите «Добавить услугу» чтобы создать первую"}
+            </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {filtered.map(s => (
-              <ServiceCard
-                key={s.id}
-                service={s}
-                category={categories.find(c => c.slug === s.category)}
-                clinicCurrency={clinicCurrency}
-                onEdit={openEdit}
-                onToggle={handleToggle}
-                onSchedule={setScheduleService}
-                onDelete={handleDelete}
-              />
-            ))}
-          </div>
+          <>
+            <div className={`space-y-3 transition-opacity ${loading ? "opacity-50 pointer-events-none" : ""}`}>
+              {services.map(s => (
+                <ServiceCard
+                  key={s.id}
+                  service={s}
+                  category={categories.find(c => c.slug === s.category)}
+                  clinicCurrency={clinicCurrency}
+                  onEdit={openEdit}
+                  onToggle={handleToggle}
+                  onSchedule={setScheduleService}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </div>
+            <ServicesPagination
+              page={query.page}
+              pageSize={PAGE_SIZE}
+              totalCount={totalCount}
+              onPageChange={changePage}
+            />
+          </>
         )}
       </div>
 
@@ -161,11 +227,11 @@ export function ServicesView({ user }: { user: any }) {
             clinicCurrency={clinicCurrency}
             user={user}
             onClose={() => setShowModal(false)}
-            onSaved={(saved) => {
-              setServices(prev => editing
-                ? prev.map(s => s.id === saved.id ? saved : s)
-                : [saved, ...prev]);
+            onSaved={() => {
+              // A new/renamed service can land on any page (the list is
+              // sorted by category + name) and changes the counts.
               setShowModal(false);
+              fetchServices({ silent: true });
             }}
           />
         )}
@@ -181,7 +247,7 @@ export function ServicesView({ user }: { user: any }) {
             onCategoryUpdated={(cat) => setCategories(prev => prev.map(c => c.id === cat.id ? cat : c))}
             onCategoryDeleted={(cat) => {
               setCategories(prev => prev.filter(c => c.id !== cat.id));
-              if (catFilter === cat.slug) setCatFilter("all");
+              if (query.category === cat.slug) changeCategory("all");
             }}
           />
         )}
@@ -204,7 +270,7 @@ export function ServicesView({ user }: { user: any }) {
             categories={categories}
             clinicCurrency={clinicCurrency}
             onClose={() => setShowBulkUploadModal(false)}
-            onUploaded={fetchServices}
+            onUploaded={() => fetchServices({ silent: true })}
           />
         )}
       </AnimatePresence>

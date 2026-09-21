@@ -17,6 +17,8 @@ import { aiService } from "@/lib/ai/aiService";
 import { DiagnosticsServiceItem } from "@/lib/ai/types";
 import AIConsultationReview from "@/app/video-call/doctor/components/AIConsultationReview";
 import { SignatureModal } from "@/components/shared/SignatureModal";
+import { ConsultationTemplatePicker, TEMPLATE_SWITCH_CONFIRM } from "@/components/shared/ConsultationTemplatePicker";
+import type { ConsultationFormSection } from "@/types/consultation";
 
 interface OfflineConsultation {
   id: number;
@@ -29,14 +31,14 @@ interface OfflineConsultation {
   started_at: string | null;
   ended_at: string | null;
   duration_seconds: number | null;
-  complaints: string;
-  anamnesis: string;
-  diagnostics: string;
-  treatment: string;
-  diagnosis: string;
-  session_notes: string | null;
   appointment_slot?: { consultation_type?: string; clinic?: number } | null;
-  template_snapshot?: { sections: { key: string; label: string; ai_hint?: string; required?: boolean; placeholder?: string }[] } | null;
+  // Which sections render, and in what order — the clinic's/doctor's active
+  // template, fixed on this record once anything is saved (see backend
+  // ensure_consultation_template_snapshot).
+  template_snapshot?: { id?: number | null; name?: string; selected?: boolean; sections: ConsultationFormSection[] } | null;
+  // Keyed by section — a text section's value is a string, a
+  // diagnostics_referral section's value is {comment, referrals}.
+  form_data?: Record<string, unknown>;
 }
 
 // Catalog-sourced referrals carry `serviceId` (used for dedup and to upgrade
@@ -51,24 +53,6 @@ interface DiagnosticReferral {
   appointmentId?: number;
 }
 
-interface ConsultationFormData {
-  complaints: string;
-  anamnesis: string;
-  diagnostics: string;
-  treatment: string;
-  diagnosis: string;
-  referrals: DiagnosticReferral[];
-}
-
-const EMPTY_FORM: ConsultationFormData = {
-  complaints: "",
-  anamnesis: "",
-  diagnostics: "",
-  treatment: "",
-  diagnosis: "",
-  referrals: [],
-};
-
 function formatDuration(seconds: number) {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
@@ -77,61 +61,43 @@ function formatDuration(seconds: number) {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-type ConsultationTextField = "complaints" | "anamnesis" | "diagnostics" | "treatment" | "diagnosis";
+// Icon/color per well-known legacy key, purely cosmetic — anything else (a
+// clinic's custom section) falls back to the generic style below. The
+// diagnostics_referral section isn't listed: it always gets the special
+// combined block with the referral catalog, never this generic textarea.
+const SECTION_STYLE: Record<string, { icon: React.ComponentType<{ className?: string }>; color: string; bg: string; border: string }> = {
+  complaints: { icon: ClipboardList, color: "text-rose-500", bg: "bg-rose-50", border: "focus:border-rose-400 focus:ring-rose-100" },
+  anamnesis: { icon: FileText, color: "text-amber-500", bg: "bg-amber-50", border: "focus:border-amber-400 focus:ring-amber-100" },
+  treatment: { icon: Pill, color: "text-blue-500", bg: "bg-blue-50", border: "focus:border-blue-400 focus:ring-blue-100" },
+  diagnosis: { icon: Stethoscope, color: "text-emerald-500", bg: "bg-emerald-50", border: "focus:border-emerald-400 focus:ring-emerald-100" },
+};
+const DEFAULT_SECTION_STYLE = { icon: FileText, color: "text-gray-500", bg: "bg-gray-50", border: "focus:border-gray-400 focus:ring-gray-100" };
+const getSectionStyle = (key: string) => SECTION_STYLE[key] || DEFAULT_SECTION_STYLE;
 
-const FIELDS_BEFORE = [
-  {
-    key: "complaints" as ConsultationTextField,
-    label: "Жалобы пациента",
-    placeholder: "Боли, симптомы, длительность...",
-    icon: ClipboardList,
-    color: "text-rose-500",
-    bg: "bg-rose-50",
-    border: "focus:border-rose-400 focus:ring-rose-100",
-    rows: 3,
-  },
-  {
-    key: "anamnesis" as ConsultationTextField,
-    label: "Анамнез",
-    placeholder: "История заболевания, перенесённые болезни, аллергии...",
-    icon: FileText,
-    color: "text-amber-500",
-    bg: "bg-amber-50",
-    border: "focus:border-amber-400 focus:ring-amber-100",
-    rows: 3,
-  },
-];
+const isReferralSection = (section: ConsultationFormSection) => (section.type || "text") === "diagnostics_referral";
 
-const FIELDS_AFTER = [
-  {
-    key: "treatment" as ConsultationTextField,
-    label: "Лечение и рекомендации",
-    placeholder: "Препараты, дозировки, режим приёма, рекомендации...",
-    icon: Pill,
-    color: "text-blue-500",
-    bg: "bg-blue-50",
-    border: "focus:border-blue-400 focus:ring-blue-100",
-    rows: 4,
-  },
-  {
-    key: "diagnosis" as ConsultationTextField,
-    label: "Диагноз",
-    placeholder: "Окончательный или предварительный диагноз по МКБ-10...",
-    icon: Stethoscope,
-    color: "text-emerald-500",
-    bg: "bg-emerald-50",
-    border: "focus:border-emerald-400 focus:ring-emerald-100",
-    rows: 2,
-  },
-];
+// Referrals are kept in this page's own camelCase shape; the backend stores
+// (and validates) the snake_case wire shape inside the section's value.
+function toWireReferral(r: DiagnosticReferral) {
+  return {
+    service_id: r.serviceId,
+    name: r.name,
+    category_label: r.categoryLabel,
+    price: r.price ?? null,
+    booked_at: r.bookedAt,
+    appointment_id: r.appointmentId,
+  };
+}
 
-function parseReferrals(sessionNotes: string | null): DiagnosticReferral[] {
-  if (!sessionNotes) return [];
-  try {
-    const parsed = JSON.parse(sessionNotes);
-    if (Array.isArray(parsed?.referrals)) return parsed.referrals;
-  } catch {}
-  return [];
+function fromWireReferral(r: any): DiagnosticReferral {
+  return {
+    serviceId: r.service_id ?? undefined,
+    name: r.name,
+    categoryLabel: r.category_label,
+    price: r.price ?? null,
+    bookedAt: r.booked_at,
+    appointmentId: r.appointment_id,
+  };
 }
 
 export default function OfflineConsultationByMeetingPage() {
@@ -146,7 +112,13 @@ export default function OfflineConsultationByMeetingPage() {
   const [consultation, setConsultation] = useState<OfflineConsultation | null>(null);
   const [loading, setLoading] = useState(true);
   const [elapsed, setElapsed] = useState(0);
-  const [formData, setFormData] = useState<ConsultationFormData>(EMPTY_FORM);
+  const [templateSections, setTemplateSections] = useState<ConsultationFormSection[]>([]);
+  const [sectionValues, setSectionValues] = useState<Record<string, string>>({});
+  const [referrals, setReferrals] = useState<DiagnosticReferral[]>([]);
+  // At most one section is type="diagnostics_referral" in v1 (whatever the
+  // clinic named it, or the legacy "diagnostics" fallback key) — it gets the
+  // combined textarea + referral-catalog block, all others a plain textarea.
+  const diagnosticsSection = templateSections.find(isReferralSection);
   const [saving, setSaving] = useState(false);
   const [showAI, setShowAI] = useState(false);
   const [showNavGuard, setShowNavGuard] = useState(false);
@@ -183,18 +155,66 @@ export default function OfflineConsultationByMeetingPage() {
     clearTranscript,
   } = useDeepgram();
 
+  // Fill the form from the record. form_data can carry keys that aren't in the
+  // template (for a record with nothing saved yet it is the legacy 8-field
+  // mapping) — only the template's own sections are taken, otherwise the next
+  // save would send unknown keys and be rejected.
+  const applyLoadedForm = useCallback((data: OfflineConsultation) => {
+    const sections = data.template_snapshot?.sections || [];
+    setTemplateSections(sections);
+
+    const formData = data.form_data || {};
+    const diagSection = sections.find(isReferralSection);
+    const values: Record<string, string> = {};
+    for (const section of sections) {
+      if (section === diagSection) continue;
+      const value = formData[section.key];
+      values[section.key] = typeof value === "string" ? value : "";
+    }
+
+    if (diagSection) {
+      const diagValue = formData[diagSection.key] as { comment?: unknown; referrals?: unknown[] } | string | undefined;
+      const diagObject = diagValue && typeof diagValue === "object" ? diagValue : null;
+      values[diagSection.key] = typeof diagObject?.comment === "string" ? diagObject.comment : "";
+      setReferrals(Array.isArray(diagObject?.referrals) ? diagObject.referrals.map(fromWireReferral) : []);
+    } else {
+      setReferrals([]);
+    }
+    setSectionValues(values);
+  }, []);
+
+  // The doctor picked another template for this visit (see ConsultationTemplatePicker).
+  // What is already in the form — including text typed but not yet saved — stays
+  // as it is, and values the record has saved under the NEW template's own
+  // sections (e.g. from before switching away) fill in whatever is still empty.
+  const handleTemplateChanged = (record: OfflineConsultation) => {
+    const sections = record.template_snapshot?.sections || [];
+    const saved = record.form_data || {};
+    setConsultation(prev => (prev ? { ...prev, template_snapshot: record.template_snapshot, form_data: record.form_data } : prev));
+    setTemplateSections(sections);
+    setSectionValues(prev => {
+      const next = { ...prev };
+      for (const section of sections) {
+        if (next[section.key] !== undefined) continue;
+        const value = saved[section.key] as { comment?: unknown } | string | undefined;
+        next[section.key] = isReferralSection(section)
+          ? (value && typeof value === "object" && typeof value.comment === "string" ? value.comment : "")
+          : (typeof value === "string" ? value : "");
+      }
+      return next;
+    });
+    const diagSection = sections.find(isReferralSection);
+    const savedDiag = diagSection ? (saved[diagSection.key] as { referrals?: unknown[] } | undefined) : undefined;
+    if (savedDiag && Array.isArray(savedDiag.referrals)) {
+      setReferrals(prev => (prev.length > 0 ? prev : savedDiag.referrals!.map(fromWireReferral)));
+    }
+  };
+
   const fetchConsultation = useCallback(async () => {
     try {
       const { data } = await api.get<OfflineConsultation>(`/consultations/${meetingId}/`);
       setConsultation(data);
-      setFormData({
-        complaints: data.complaints || "",
-        anamnesis: data.anamnesis || "",
-        diagnostics: data.diagnostics || "",
-        treatment: data.treatment || "",
-        diagnosis: data.diagnosis || "",
-        referrals: parseReferrals(data.session_notes),
-      });
+      applyLoadedForm(data);
       if (data.started_at && !data.ended_at) {
         startTimeRef.current = new Date(data.started_at).getTime();
       }
@@ -204,7 +224,7 @@ export default function OfflineConsultationByMeetingPage() {
     } finally {
       setLoading(false);
     }
-  }, [meetingId]);
+  }, [meetingId, applyLoadedForm]);
 
   useEffect(() => { fetchConsultation(); }, [fetchConsultation]);
 
@@ -263,26 +283,26 @@ export default function OfflineConsultationByMeetingPage() {
     else router.back();
   };
 
-  const handleUpdate = (field: keyof ConsultationFormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleUpdate = (key: string, value: string) => {
+    setSectionValues(prev => ({ ...prev, [key]: value }));
   };
 
   const handleAddManualReferral = () => {
     const name = manualReferral.trim();
     if (!name) return;
-    setFormData(prev => ({ ...prev, referrals: [...prev.referrals, { name }] }));
+    setReferrals(prev => [...prev, { name }]);
     setManualReferral("");
   };
 
   const handleRemoveReferral = (index: number) => {
-    const referral = formData.referrals[index];
+    const referral = referrals[index];
     if (referral?.appointmentId) {
       const confirmed = window.confirm(
         "Приём уже создан в системе. Удаление уберёт направление только из этого списка — сама запись на приём останется активной. Продолжить?"
       );
       if (!confirmed) return;
     }
-    setFormData(prev => ({ ...prev, referrals: prev.referrals.filter((_, i) => i !== index) }));
+    setReferrals(prev => prev.filter((_, i) => i !== index));
   };
 
   // Diagnostics catalog — filtering, add-without-booking, inline booking
@@ -309,16 +329,13 @@ export default function OfflineConsultationByMeetingPage() {
   });
 
   const handleAddReferral = (service: DiagnosticsServiceItem) => {
-    if (formData.referrals.some(r => r.serviceId === service.id)) return;
-    setFormData(prev => ({
-      ...prev,
-      referrals: [...prev.referrals, {
-        serviceId: service.id,
-        name: service.name,
-        categoryLabel: service.category_label,
-        price: service.price,
-      }],
-    }));
+    if (referrals.some(r => r.serviceId === service.id)) return;
+    setReferrals(prev => [...prev, {
+      serviceId: service.id,
+      name: service.name,
+      categoryLabel: service.category_label,
+      price: service.price,
+    }]);
   };
 
   const openBooking = (service: DiagnosticsServiceItem) => {
@@ -367,8 +384,8 @@ export default function OfflineConsultationByMeetingPage() {
       const dateLabel = nextDays.find(d => d.iso === bookingDate)?.label ?? bookingDate;
       const timeLabel = slotObj?.label ?? selectedSlot;
 
-      setFormData(prev => {
-        const existingIndex = prev.referrals.findIndex(r => r.serviceId === service.id);
+      setReferrals(prev => {
+        const existingIndex = prev.findIndex(r => r.serviceId === service.id);
         const bookedReferral: DiagnosticReferral = {
           serviceId: service.id,
           name: service.name,
@@ -377,13 +394,11 @@ export default function OfflineConsultationByMeetingPage() {
           bookedAt: selectedSlot,
           appointmentId,
         };
-        if (existingIndex === -1) {
-          return { ...prev, referrals: [...prev.referrals, bookedReferral] };
-        }
+        if (existingIndex === -1) return [...prev, bookedReferral];
         // Already added without a booking — upgrade in place instead of duplicating.
-        const referrals = [...prev.referrals];
-        referrals[existingIndex] = bookedReferral;
-        return { ...prev, referrals };
+        const next = [...prev];
+        next[existingIndex] = bookedReferral;
+        return next;
       });
 
       toast.success(`Записано: ${service.name} — ${dateLabel}, ${timeLabel}`);
@@ -395,38 +410,44 @@ export default function OfflineConsultationByMeetingPage() {
     }
   };
 
+  // Only this record's own template sections are taken; an empty AI value
+  // never overwrites what the doctor already typed.
   const handleAIApply = (fields: Record<string, string>) => {
-    Object.entries(fields).forEach(([k, v]) => {
-      if (v && k in formData) handleUpdate(k as keyof ConsultationFormData, v);
+    const allowed = new Set(templateSections.map(s => s.key));
+    setSectionValues(prev => {
+      const next = { ...prev };
+      for (const [key, value] of Object.entries(fields)) {
+        if (allowed.has(key) && value && value.trim()) next[key] = value;
+      }
+      return next;
     });
   };
 
   const handleSave = useCallback(async () => {
     setSaving(true);
     try {
-      await api.patch(`/consultations/${meetingId}/`, {
-        complaints: formData.complaints,
-        anamnesis: formData.anamnesis,
-        diagnostics: formData.diagnostics,
-        treatment: formData.treatment,
-        diagnosis: formData.diagnosis,
-        session_notes: formData.referrals.length > 0
-          ? JSON.stringify({ referrals: formData.referrals })
-          : null,
-      });
+      // Keyed strictly by the template's own sections — the backend rejects
+      // unknown keys. The diagnostics_referral section nests its text and
+      // referrals as {comment, referrals}, the wire shape it validates.
+      const structuredData: Record<string, unknown> = {};
+      for (const section of templateSections) {
+        structuredData[section.key] = isReferralSection(section)
+          ? { comment: sectionValues[section.key] || "", referrals: referrals.map(toWireReferral) }
+          : sectionValues[section.key] || "";
+      }
+      await api.patch(`/consultations/${meetingId}/save-consultation-form/`, { structured_data: structuredData });
       toast.success("Сохранено");
-    } catch {
-      toast.error("Ошибка при сохранении");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Ошибка при сохранении");
     } finally {
       setSaving(false);
     }
-  }, [meetingId, formData]);
+  }, [meetingId, templateSections, sectionValues, referrals]);
 
-  // Server renders the PDF from the record's own saved fields (and archives
-  // it to the patient's documents in the same request) via the same
-  // generate-pdf endpoint the dynamic-template video-call flow uses — the
-  // backend falls back to these legacy columns when structured_data is
-  // empty, so this page's fixed 5-field form still works unchanged.
+  // Server renders the PDF from the record's own saved structured_data (and
+  // archives it to the patient's documents in the same request) via the same
+  // generate-pdf endpoint the video-call flow uses — so the form is saved
+  // first, otherwise the PDF would miss whatever was just typed.
   const generateAndUploadPdf = async (signature: string) => {
     if (!consultation) return;
     setGeneratingPdf(true);
@@ -519,6 +540,7 @@ export default function OfflineConsultationByMeetingPage() {
   const isCompleted = consultation.status === "completed";
   const isPending = !isOngoing && !isCompleted;
   const patientName = [consultation.patient_first_name, consultation.patient_last_name].filter(Boolean).join(" ") || "Пациент";
+  const hasContent = referrals.length > 0 || Object.values(sectionValues).some(v => v && v.trim());
 
   return (
     <div className="min-h-screen bg-gray-50 -mx-3 -mt-4 -mb-3">
@@ -585,7 +607,7 @@ export default function OfflineConsultationByMeetingPage() {
 
             <button
               onClick={handleGeneratePdfClick}
-              disabled={generatingPdf || !Object.entries(formData).some(([k, v]) => k !== "referrals" && typeof v === "string" && v.trim())}
+              disabled={generatingPdf || !hasContent}
               title={signatureData ? "Сформировать подписанный PDF" : "Подписать и сформировать PDF"}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded-lg shadow-sm shadow-blue-200 disabled:opacity-40 disabled:shadow-none transition-all"
             >
@@ -646,6 +668,19 @@ export default function OfflineConsultationByMeetingPage() {
                 </div>
               ))}
             </div>
+          </div>
+
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Шаблон листа</p>
+            <ConsultationTemplatePicker
+              basePath={`/consultations/${meetingId}`}
+              currentTemplateId={consultation.template_snapshot?.id ?? null}
+              currentTemplateName={consultation.template_snapshot?.name}
+              selected={!!consultation.template_snapshot?.selected}
+              disabled={isCompleted}
+              confirmMessage={hasContent ? TEMPLATE_SWITCH_CONFIRM : null}
+              onChanged={handleTemplateChanged}
+            />
           </div>
 
           {isCompleted && consultation.duration_seconds && (
@@ -716,31 +751,15 @@ export default function OfflineConsultationByMeetingPage() {
         {/* ── Main form area ── */}
         <main className="flex-1">
           <div className="flex flex-col divide-y divide-gray-200">
-            {FIELDS_BEFORE.map(({ key, label, placeholder, icon: Icon, color, bg, border, rows }) => (
-              <div key={key} className="bg-white overflow-hidden">
-                <div className={`flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 ${bg}`}>
-                  <Icon className={`w-4 h-4 ${color}`} />
-                  <span className="text-sm font-semibold text-gray-800">{label}</span>
-                </div>
-                <textarea
-                  value={formData[key]}
-                  onChange={e => handleUpdate(key, e.target.value)}
-                  placeholder={placeholder}
-                  rows={rows}
-                  className={`w-full px-4 py-3 text-sm text-gray-800 placeholder-gray-400 resize-none border border-transparent focus:outline-none focus:ring-2 transition-all ${border}`}
-                />
-              </div>
-            ))}
-
-            {/* Диагностика и направления */}
-            <div className="bg-white overflow-hidden">
+            {templateSections.map(section => isReferralSection(section) ? (
+            <div key={section.key} className="bg-white overflow-hidden">
               <div className="flex items-center justify-between gap-2.5 px-4 py-3 border-b border-gray-100 bg-cyan-50">
                 <div className="flex items-center gap-2.5">
                   <Activity className="w-4 h-4 text-cyan-500" />
-                  <span className="text-sm font-semibold text-gray-800">Диагностика и направления</span>
-                  {formData.referrals.length > 0 && (
+                  <span className="text-sm font-semibold text-gray-800">{section.label}</span>
+                  {referrals.length > 0 && (
                     <span className="text-xs bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded-full font-medium">
-                      {formData.referrals.length} направл.
+                      {referrals.length} направл.
                     </span>
                   )}
                 </div>
@@ -756,9 +775,9 @@ export default function OfflineConsultationByMeetingPage() {
               </div>
 
               <textarea
-                value={formData.diagnostics}
-                onChange={e => handleUpdate("diagnostics", e.target.value)}
-                placeholder="Обследования, анализы, результаты..."
+                value={sectionValues[section.key] || ""}
+                onChange={e => handleUpdate(section.key, e.target.value)}
+                placeholder={section.placeholder || "Обследования, анализы, результаты..."}
                 rows={3}
                 className="w-full px-4 py-3 text-sm text-gray-800 placeholder-gray-400 resize-none border border-transparent focus:outline-none focus:ring-2 focus:border-cyan-400 focus:ring-cyan-100 transition-all"
               />
@@ -809,7 +828,7 @@ export default function OfflineConsultationByMeetingPage() {
                       <p className="text-xs text-center py-4 text-gray-400">Ничего не найдено</p>
                     )}
                     {filteredServices.map(service => {
-                      const isAdded = formData.referrals.some(r => r.serviceId === service.id);
+                      const isAdded = referrals.some(r => r.serviceId === service.id);
                       const isBookingOpen = bookingServiceId === service.id;
                       return (
                         <div key={service.id} className="bg-white border border-gray-200 rounded-xl p-2.5">
@@ -902,9 +921,9 @@ export default function OfflineConsultationByMeetingPage() {
                 </div>
               )}
 
-              {formData.referrals.length > 0 && (
+              {referrals.length > 0 && (
                 <div className="px-4 pb-3 flex flex-wrap gap-2 border-t border-gray-50 pt-2">
-                  {formData.referrals.map((ref, i) => (
+                  {referrals.map((ref, i) => (
                     <div key={i} className="flex items-center gap-1.5 bg-cyan-50 border border-cyan-200 text-cyan-800 text-xs rounded-xl px-3 py-1.5">
                       {ref.appointmentId && <CalendarCheck className="w-3 h-3 text-emerald-600" />}
                       {ref.categoryLabel && (
@@ -948,20 +967,25 @@ export default function OfflineConsultationByMeetingPage() {
               </div>
             </div>
 
-            {FIELDS_AFTER.map(({ key, label, placeholder, icon: Icon, color, bg, border, rows }) => (
-              <div key={key} className="bg-white overflow-hidden">
-                <div className={`flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 ${bg}`}>
-                  <Icon className={`w-4 h-4 ${color}`} />
-                  <span className="text-sm font-semibold text-gray-800">{label}</span>
-                </div>
-                <textarea
-                  value={formData[key]}
-                  onChange={e => handleUpdate(key, e.target.value)}
-                  placeholder={placeholder}
-                  rows={rows}
-                  className={`w-full px-4 py-3 text-sm text-gray-800 placeholder-gray-400 resize-none border border-transparent focus:outline-none focus:ring-2 transition-all ${border}`}
-                />
-              </div>
+            ) : (
+              (() => {
+                const { icon: Icon, color, bg, border } = getSectionStyle(section.key);
+                return (
+                  <div key={section.key} className="bg-white overflow-hidden">
+                    <div className={`flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 ${bg}`}>
+                      <Icon className={`w-4 h-4 ${color}`} />
+                      <span className="text-sm font-semibold text-gray-800">{section.label}</span>
+                    </div>
+                    <textarea
+                      value={sectionValues[section.key] || ""}
+                      onChange={e => handleUpdate(section.key, e.target.value)}
+                      placeholder={section.placeholder || `${section.label}...`}
+                      rows={3}
+                      className={`w-full px-4 py-3 text-sm text-gray-800 placeholder-gray-400 resize-none border border-transparent focus:outline-none focus:ring-2 transition-all ${border}`}
+                    />
+                  </div>
+                );
+              })()
             ))}
           </div>
 
@@ -975,7 +999,7 @@ export default function OfflineConsultationByMeetingPage() {
         <AIConsultationReview
           sourceType="consultation"
           sourceId={consultation?.id ?? 0}
-          templateSections={consultation?.template_snapshot?.sections || []}
+          templateSections={templateSections}
           patientName={patientName}
           initialDescription={transcript ?? ""}
           onApply={handleAIApply}

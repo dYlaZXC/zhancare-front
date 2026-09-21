@@ -28,6 +28,7 @@ import {
   faWarehouse,
   faLayerGroup,
   faDoorOpen,
+  faListCheck,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useState, useEffect, useRef, type CSSProperties } from "react";
@@ -77,6 +78,7 @@ const adminMenu: MenuItem[] = [
     ],
   },
   { id: "profile", icon: faUser, title: "Профиль", color: "#3772ff", href: "/admin/profile" },
+  { id: "tasks", icon: faListCheck, title: "Задачи", color: "#059669", href: "/admin/tasks" },
   {
     id: "management",
     icon: faUsers,

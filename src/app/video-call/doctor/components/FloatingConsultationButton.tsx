@@ -28,6 +28,7 @@ import {
 import DiagnosticsForm, { DiagnosticReferral } from "./forms/DiagnosticsForm";
 import GenericSectionForm from "./forms/GenericSectionForm";
 import AudioWaveform from "./AudioWaveform";
+import { ConsultationTemplatePicker, TEMPLATE_SWITCH_CONFIRM } from "@/components/shared/ConsultationTemplatePicker";
 import { Sparkles } from "lucide-react";
 import AIConsultationReview from "./AIConsultationReview";
 import { Consultation, ConsultationFormSection, DiagnosticsReferralValue } from "@/types/consultation";
@@ -102,6 +103,9 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
   // "comment" also lives here (keyed by its own section key), its referral
   // list lives separately in diagnosticsReferrals below.
   const [sectionValues, setSectionValues] = useState<SectionValues>({});
+  // Which template this visit uses and whether the doctor hand-picked it —
+  // drives the picker in the form panel header.
+  const [templateMeta, setTemplateMeta] = useState<{ id: number | null; name: string; selected: boolean } | null>(null);
 
   const updateSection = (key: string, value: string) => {
     setSectionValues(prev => ({ ...prev, [key]: value }));
@@ -165,6 +169,8 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
         if (consultationData) {
           const sections: ConsultationFormSection[] = consultationData.template_snapshot?.sections || [];
           setTemplateSections(sections);
+          const snapshot = consultationData.template_snapshot;
+          setTemplateMeta(snapshot ? { id: snapshot.id ?? null, name: snapshot.name, selected: !!snapshot.selected } : null);
 
           const formData: Record<string, any> = consultationData.form_data || {};
           const diagSection = sections.find(s => (s.type || 'text') === 'diagnostics_referral');
@@ -203,6 +209,52 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
 
     loadConsultationData();
   }, [consultation.meeting_id]);
+
+  // The doctor picked another template for this visit (see ConsultationTemplatePicker).
+  // What is already in the form — including text typed but not yet saved — stays
+  // as it is, and values the record has saved under the NEW template's own
+  // sections (e.g. from before switching away) fill in whatever is still empty.
+  const handleTemplateChanged = (record: any) => {
+    const snapshot = record?.template_snapshot;
+    const sections: ConsultationFormSection[] = snapshot?.sections || [];
+    const saved: Record<string, any> = record?.form_data || {};
+    setTemplateMeta(snapshot ? { id: snapshot.id ?? null, name: snapshot.name, selected: !!snapshot.selected } : null);
+    setTemplateSections(sections);
+    setSectionValues(prev => {
+      const next = { ...prev };
+      for (const section of sections) {
+        if (next[section.key] !== undefined) continue;
+        const value = saved[section.key];
+        next[section.key] = (section.type || 'text') === 'diagnostics_referral'
+          ? (value && typeof value === 'object' && typeof value.comment === 'string' ? value.comment : '')
+          : (typeof value === 'string' ? value : '');
+      }
+      return next;
+    });
+    const diagSection = sections.find(s => (s.type || 'text') === 'diagnostics_referral');
+    const savedDiag = diagSection ? saved[diagSection.key] : undefined;
+    if (savedDiag && Array.isArray(savedDiag.referrals)) {
+      setDiagnosticsReferrals(prev => prev.length > 0 ? prev : savedDiag.referrals.map((r: any) => ({
+        serviceId: r.service_id,
+        name: r.name,
+        categoryLabel: r.category_label,
+        price: r.price ?? null,
+        bookedAt: r.booked_at,
+        appointmentId: r.appointment_id,
+        originalText: r.original_text ?? null,
+        source: r.source,
+      })));
+    }
+    // The tab that was open may not exist in the new template.
+    setActiveTab(prev =>
+      prev && (prev === 'ai-chat' || prev === 'transcription' || sections.some(s => s.key === prev))
+        ? prev
+        : sections[0]?.key ?? null
+    );
+  };
+
+  const hasFormContent =
+    diagnosticsReferrals.length > 0 || Object.values(sectionValues).some(v => typeof v === 'string' && v.trim());
 
   // AI Chat states
   const [aiMessages, setAiMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
@@ -332,7 +384,11 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
   // sections, {referrals, comment} (snake_case, matching the backend) for
   // the diagnostics_referral section.
   const buildStructuredData = (): Record<string, string | DiagnosticsReferralValue> => {
-    const out: Record<string, string | DiagnosticsReferralValue> = { ...sectionValues };
+    // Only the current template's sections — after a template switch the local
+    // state (and the saved record) can still hold the previous template's
+    // keys, which the backend rejects as unknown.
+    const out: Record<string, string | DiagnosticsReferralValue> = {};
+    for (const section of templateSections) out[section.key] = sectionValues[section.key] || '';
     if (diagnosticsSection) {
       out[diagnosticsSection.key] = {
         comment: sectionValues[diagnosticsSection.key] || '',
@@ -712,6 +768,19 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <div className="w-48 lg:w-60">
+                    <ConsultationTemplatePicker
+                      basePath={`/consultations/${consultation.meeting_id}`}
+                      currentTemplateId={templateMeta?.id ?? null}
+                      currentTemplateName={templateMeta?.name}
+                      selected={!!templateMeta?.selected}
+                      disabled={consultation.status === 'completed'}
+                      confirmMessage={hasFormContent ? TEMPLATE_SWITCH_CONFIRM : null}
+                      theme="dark"
+                      align="right"
+                      onChanged={handleTemplateChanged}
+                    />
+                  </div>
                   {isSectionTab(activeTab) && (
                     <button
                       onClick={handleClearActiveTab}

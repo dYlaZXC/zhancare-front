@@ -16,6 +16,7 @@ import AIConsultationReview from "@/app/video-call/doctor/components/AIConsultat
 import DiagnosticsReferralExtractModal, { ExtractedReferralResult } from "@/components/diagnostics/DiagnosticsReferralExtractModal";
 import { SignatureModal } from "@/components/shared/SignatureModal";
 import type { ConsultationFormSection } from "@/types/consultation";
+import { ConsultationTemplatePicker, TEMPLATE_SWITCH_CONFIRM } from "@/components/shared/ConsultationTemplatePicker";
 
 interface ClinicAppointment {
   id: number;
@@ -32,7 +33,7 @@ interface ClinicAppointment {
   consultation_started_at: string | null;
   consultation_ended_at: string | null;
   duration_seconds: number | null;
-  template_snapshot?: { sections: ConsultationFormSection[] } | null;
+  template_snapshot?: { id?: number | null; name?: string; selected?: boolean; sections: ConsultationFormSection[] } | null;
   form_data?: Record<string, unknown>;
 }
 
@@ -184,6 +185,42 @@ export default function OfflineConsultationPage() {
   }, [id]);
 
   useEffect(() => { fetchAppointment(); }, [fetchAppointment]);
+
+  // The doctor picked another template for this visit (see ConsultationTemplatePicker).
+  // What is already in the form — including text typed but not yet saved — stays
+  // as it is, and values the record has saved under the NEW template's own
+  // sections (e.g. from before switching away) fill in whatever is still empty.
+  const handleTemplateChanged = (record: ClinicAppointment) => {
+    const sections = record.template_snapshot?.sections || [];
+    const saved = record.form_data || {};
+    setAppointment(prev => (prev ? { ...prev, template_snapshot: record.template_snapshot, form_data: record.form_data } : prev));
+    setTemplateSections(sections);
+    setSectionValues(prev => {
+      const next = { ...prev };
+      for (const section of sections) {
+        if (next[section.key] !== undefined) continue;
+        const value = saved[section.key] as { comment?: unknown } | string | undefined;
+        next[section.key] = (section.type || "text") === "diagnostics_referral"
+          ? (value && typeof value === "object" && typeof value.comment === "string" ? value.comment : "")
+          : (typeof value === "string" ? value : "");
+      }
+      return next;
+    });
+    const diagSection = sections.find(s => (s.type || "text") === "diagnostics_referral");
+    const savedDiag = diagSection ? (saved[diagSection.key] as { referrals?: any[] } | undefined) : undefined;
+    if (savedDiag && Array.isArray(savedDiag.referrals)) {
+      setReferrals(prev => prev.length > 0 ? prev : savedDiag.referrals!.map((r: any) => ({
+        id: r.service_id,
+        name: r.name,
+        category_label: r.category_label,
+        price: r.price ?? null,
+        booked_at: r.booked_at,
+        appointment_id: r.appointment_id,
+        original_text: r.original_text ?? null,
+        source: r.source,
+      })));
+    }
+  };
 
   useEffect(() => {
     if (appointment?.status !== "in_progress" || !startTimeRef.current) return;
@@ -419,21 +456,23 @@ export default function OfflineConsultationPage() {
       // {referrals, comment} — matching the wire shape the backend validates
       // per-section (see consultations/template_utils.py::validate_structured_data),
       // so this now goes through the same validated endpoint as the video-call flow.
-      const structuredData: Record<string, unknown> = { ...sectionValues };
-      if (diagnosticsSection) {
-        structuredData[diagnosticsSection.key] = {
-          comment: sectionValues[diagnosticsSection.key] || "",
-          referrals: referrals.map(r => ({
-            service_id: r.id,
-            name: r.name,
-            category_label: r.category_label,
-            price: r.price ?? null,
-            booked_at: r.booked_at,
-            appointment_id: r.appointment_id,
-            original_text: r.original_text ?? undefined,
-            source: r.source,
-          })),
-        };
+      const structuredData: Record<string, unknown> = {};
+      for (const section of templateSections) {
+        structuredData[section.key] = section.key === diagnosticsSection?.key
+          ? {
+              comment: sectionValues[section.key] || "",
+              referrals: referrals.map(r => ({
+                service_id: r.id,
+                name: r.name,
+                category_label: r.category_label,
+                price: r.price ?? null,
+                booked_at: r.booked_at,
+                appointment_id: r.appointment_id,
+                original_text: r.original_text ?? undefined,
+                source: r.source,
+              })),
+            }
+          : sectionValues[section.key] || "";
       }
       await api.post(`/clinic-appointments/${id}/save-consultation-form/`, { structured_data: structuredData });
       toast.success("Сохранено");
@@ -442,7 +481,7 @@ export default function OfflineConsultationPage() {
     } finally {
       setSaving(false);
     }
-  }, [id, sectionValues, referrals, diagnosticsSection]);
+  }, [id, templateSections, sectionValues, referrals, diagnosticsSection]);
 
   // Server renders the PDF from the record's own saved structured_data (and
   // archives it to the patient's documents in the same request), so the form
@@ -537,6 +576,7 @@ export default function OfflineConsultationPage() {
   const isOngoing = appointment.status === "in_progress";
   const isCompleted = appointment.status === "completed";
   const isPending = !isOngoing && !isCompleted;
+  const hasContent = referrals.length > 0 || Object.values(sectionValues).some(v => v && v.trim());
 
   return (
     <div className="min-h-screen bg-gray-50 -mx-3 -mt-4 -mb-3">
@@ -609,7 +649,7 @@ export default function OfflineConsultationPage() {
 
             <button
               onClick={handleGeneratePdfClick}
-              disabled={generatingPdf || !Object.values(sectionValues).some(v => v && v.trim())}
+              disabled={generatingPdf || !hasContent}
               title={signatureData ? "Сформировать подписанный PDF" : "Подписать и сформировать PDF"}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded-lg shadow-sm shadow-blue-200 disabled:opacity-40 disabled:shadow-none transition-all"
             >
@@ -670,6 +710,19 @@ export default function OfflineConsultationPage() {
                 </div>
               ))}
             </div>
+          </div>
+
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Шаблон листа</p>
+            <ConsultationTemplatePicker
+              basePath={`/clinic-appointments/${id}`}
+              currentTemplateId={appointment.template_snapshot?.id ?? null}
+              currentTemplateName={appointment.template_snapshot?.name}
+              selected={!!appointment.template_snapshot?.selected}
+              disabled={isCompleted}
+              confirmMessage={hasContent ? TEMPLATE_SWITCH_CONFIRM : null}
+              onChanged={handleTemplateChanged}
+            />
           </div>
 
           {/* Duration if completed */}

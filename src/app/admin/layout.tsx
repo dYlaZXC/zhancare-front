@@ -8,6 +8,7 @@ import { AdminSidebar } from "@/components/layout/AdminSidebar";
 import { AdminHeader } from "@/components/layout/AdminHeader";
 import { AdminBreadcrumb } from "@/components/layout/AdminBreadcrumb";
 import { PremiumLoadingScreen } from "@/components/layout/PremiumLoadingScreen";
+import { websocketService } from "@/services/websocketService";
 
 export default function AdminLayout({
   children,
@@ -39,6 +40,15 @@ export default function AdminLayout({
       router.replace("/");
     }
   }, [loading, user, isAdmin, isDoctor, isNurse, isPatient, router, isLoggingOut, setIsAuthOpen]);
+
+  // Admins never called this before — only doctor-facing components did
+  // (DoctorHeader.tsx etc). The singleton is what delivers admin_tasks
+  // reminder/due notifications live to the bell dropdown.
+  useEffect(() => {
+    if (!user || !isAdmin) return;
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (token) websocketService.connect(token).catch(() => {});
+  }, [user, isAdmin]);
 
   const handleToggleSidebar = () => {
     setSidebarCollapsed(!sidebarCollapsed);

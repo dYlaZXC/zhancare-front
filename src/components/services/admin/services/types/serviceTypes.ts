@@ -70,6 +70,16 @@ export interface StaffMember {
 
 export type ScheduleSource = "own" | "doctor";
 
+export type StatusFilter = "all" | "active" | "inactive";
+
+// Clinic-wide catalog counts sent with every paginated page — NOT narrowed
+// by the current search/category/status filter (unlike `count`).
+export interface ServiceStats {
+  total: number;
+  active: number;
+  inactive: number;
+}
+
 export interface Service {
   id: number;
   name: string;

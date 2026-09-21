@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Logo from "@/assets/logosaas.png";
 import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBars,
@@ -11,7 +12,8 @@ import {
   faChevronLeft,
   faChevronRight,
 } from "@fortawesome/free-solid-svg-icons";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useAdminNotifications } from "@/hooks/useAdminNotifications";
 
 interface AdminHeaderProps {
   onMenuClick: () => void;
@@ -25,7 +27,29 @@ export const AdminHeader = ({
   onToggleSidebar
 }: AdminHeaderProps) => {
   const { user } = useAuth();
+  const router = useRouter();
   const [isHovered, setIsHovered] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+  const { notifications, unreadCount, markRead } = useAdminNotifications();
+
+  useEffect(() => {
+    if (!notifOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [notifOpen]);
+
+  const handleNotificationClick = (n: { id: number; is_read: boolean; admin_task: number | null }) => {
+    if (!n.is_read) markRead(n.id);
+    setNotifOpen(false);
+    if (n.admin_task) router.push("/admin/tasks");
+  };
+
+  const formatNotifTime = (iso: string) =>
+    new Date(iso).toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
   if (!user) return null;
 
@@ -109,23 +133,49 @@ export const AdminHeader = ({
       {/* Right - Notifications & User Info */}
       <div className="flex items-center gap-4">
         {/* Premium Notifications */}
-        <button className="relative group p-3 rounded-xl transition-all duration-300 hover:scale-110 hover:shadow-lg border border-gray-200/50 backdrop-blur-sm"
-                style={{ background: 'linear-gradient(135deg, rgba(55, 114, 255, 0.05) 0%, rgba(41, 53, 143, 0.05) 100%)' }}>
-          <FontAwesomeIcon
-            icon={faBell}
-            className="text-lg text-gray-600 group-hover:text-blue-600 transition-colors duration-300 group-hover:animate-pulse"
-          />
+        <div className="relative" ref={notifRef}>
+          <button onClick={() => setNotifOpen((v) => !v)}
+                  className="relative group p-3 rounded-xl transition-all duration-300 hover:scale-110 hover:shadow-lg border border-gray-200/50 backdrop-blur-sm"
+                  style={{ background: 'linear-gradient(135deg, rgba(55, 114, 255, 0.05) 0%, rgba(41, 53, 143, 0.05) 100%)' }}>
+            <FontAwesomeIcon
+              icon={faBell}
+              className={`text-lg text-gray-600 group-hover:text-blue-600 transition-colors duration-300 ${unreadCount > 0 ? 'group-hover:animate-pulse' : ''}`}
+            />
 
-          {/* Notification Badge */}
-          <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-lg animate-pulse"
-               style={{ background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' }}>
-            1
-          </div>
+            {unreadCount > 0 && (
+              <div className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-lg"
+                   style={{ background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' }}>
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </div>
+            )}
 
-          {/* Hover Effect */}
-          <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-               style={{ background: 'linear-gradient(135deg, rgba(55, 114, 255, 0.1) 0%, rgba(41, 53, 143, 0.1) 100%)' }}></div>
-        </button>
+            {/* Hover Effect */}
+            <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                 style={{ background: 'linear-gradient(135deg, rgba(55, 114, 255, 0.1) 0%, rgba(41, 53, 143, 0.1) 100%)' }}></div>
+          </button>
+
+          {notifOpen && (
+            <div className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-y-auto bg-white rounded-2xl shadow-2xl border border-gray-100 z-40">
+              <div className="px-4 py-3 border-b border-gray-100">
+                <p className="text-sm font-bold text-gray-800">Уведомления</p>
+              </div>
+              {notifications.length === 0 ? (
+                <p className="text-center text-sm text-gray-400 py-8 px-4">Пока нет уведомлений</p>
+              ) : (
+                <div className="divide-y divide-gray-50">
+                  {notifications.map((n) => (
+                    <button key={n.id} onClick={() => handleNotificationClick(n)}
+                            className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${!n.is_read ? 'bg-blue-50/40' : ''}`}>
+                      <p className="text-sm font-semibold text-gray-800">{n.title}</p>
+                      {n.body && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.body}</p>}
+                      <p className="text-[11px] text-gray-400 mt-1">{formatNotifTime(n.created_at)}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* User Quick Info */}
         {user && (
