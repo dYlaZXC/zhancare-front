@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Search, ChevronDown, ClipboardList, Settings } from "lucide-react";
+import { Search, ChevronDown, ClipboardList } from "lucide-react";
 import type { ServiceCategory, StatusFilter } from "../types/serviceTypes";
 import { getCategoryIcon } from "../types/serviceTypes";
 
@@ -19,7 +19,6 @@ export function ServicesToolbar({
   onStatusFilterChange,
   serviceSearch,
   onServiceSearchChange,
-  onOpenCategories,
 }: {
   categories: ServiceCategory[];
   catFilter: string;
@@ -28,7 +27,6 @@ export function ServicesToolbar({
   onStatusFilterChange: (status: StatusFilter) => void;
   serviceSearch: string;
   onServiceSearchChange: (v: string) => void;
-  onOpenCategories: () => void;
 }) {
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
   const filterDropdownRef = useRef<HTMLDivElement>(null);
@@ -113,14 +111,6 @@ export function ServicesToolbar({
           </div>
         )}
       </div>
-
-      {/* Category management */}
-      <button onClick={onOpenCategories}
-        className="flex items-center gap-2 px-4 py-3 rounded-2xl font-semibold transition-all bg-white border-2 border-gray-200 text-gray-700 hover:border-sky-300 flex-shrink-0"
-        title="Управление категориями">
-        <Settings className="w-5 h-5" />
-        Категории
-      </button>
     </div>
   );
 }

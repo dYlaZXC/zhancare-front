@@ -58,6 +58,10 @@ export interface ServiceCategory {
   color: string;
   order: number;
   is_active: boolean;
+  /** Services in the admin's own clinic — read-only, from the list endpoint. */
+  services_count?: number;
+  /** Weekdays (0=Пн..6=Вс) the category-wide schedule covers — read-only. */
+  schedule_weekdays?: number[];
 }
 
 export interface StaffMember {

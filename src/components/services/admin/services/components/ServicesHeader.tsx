@@ -6,9 +6,15 @@ import { ClipboardList, Plus, FileSpreadsheet } from "lucide-react";
 export function ServicesHeader({
   onOpenCreate,
   onOpenBulkUpload,
+  onOpenCreateCategory,
+  tab = 'services',
 }: {
   onOpenCreate: () => void;
   onOpenBulkUpload: () => void;
+  onOpenCreateCategory: () => void;
+  /** Each tab gets its own primary action — "Добавить услугу"/"Загрузить из
+   * Excel" would be misleading on Категории, and vice versa. */
+  tab?: 'services' | 'categories';
 }) {
   return (
     <div className="flex items-center justify-between mb-6">
@@ -20,7 +26,18 @@ export function ServicesHeader({
           Управление диагностическими услугами клиники
         </p>
       </div>
-      <div className="flex items-center gap-2">
+      {tab === 'categories' ? (
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={onOpenCreateCategory}
+          className="flex items-center gap-2 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+          style={{ background: 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%)' }}
+        >
+          <Plus className="w-5 h-5" />
+          Добавить категорию
+        </motion.button>
+      ) : <div className="flex items-center gap-2">
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -40,7 +57,7 @@ export function ServicesHeader({
           <Plus className="w-5 h-5" />
           Добавить услугу
         </motion.button>
-      </div>
+      </div>}
     </div>
   );
 }
@@ -49,13 +66,15 @@ export function ServicesStatsCards({
   total,
   active,
   inactive,
+  totalLabel = "Всего услуг",
 }: {
   total: number;
   active: number;
   inactive: number;
+  totalLabel?: string;
 }) {
   const stats = [
-    { label: "Всего услуг", value: total, icon: ClipboardList, color: "#0ea5e9", bg: "#e0f2fe" },
+    { label: totalLabel, value: total, icon: ClipboardList, color: "#0ea5e9", bg: "#e0f2fe" },
     { label: "Активных", value: active, icon: ClipboardList, color: "#059669", bg: "#a7f3d0" },
     { label: "Неактивных", value: inactive, icon: ClipboardList, color: "#6b7280", bg: "#e5e7eb" },
   ];

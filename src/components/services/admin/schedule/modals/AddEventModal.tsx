@@ -53,15 +53,38 @@ interface AddEventModalProps {
   onClose: () => void;
   selectedDate: string | null;
   onEventAdded: () => void;
+  /** Docks the card to the left instead of centering it — used when
+   * DateDetailsDrawer is ALSO open for the same date (see ScheduleView's
+   * "+" on a day cell), so the drawer's own right-anchored panel doesn't
+   * sit on top of/cover part of this card. */
+  dockLeft?: boolean;
+  /** Fires whenever the admin changes the date field here — lets the
+   * caller keep DateDetailsDrawer (when also open) pointed at the same
+   * date, instead of it silently going stale the moment the two disagree. */
+  onDateChange?: (date: string) => void;
+  /** Fires whenever the consultation type here changes — same idea as
+   * onDateChange, so DateDetailsDrawer's "Свободные врачи" Видео/В клинике
+   * toggle (when also open) can follow along. Home visit/diagnostics have
+   * no equivalent there (that tab only ever books online/offline), so the
+   * caller just leaves its own toggle alone for those two. */
+  onConsultationTypeChange?: (type: ConsultationType) => void;
 }
 
 export default function AddEventModal({
   isOpen,
   onClose,
   selectedDate,
-  onEventAdded
+  onEventAdded,
+  dockLeft = false,
+  onDateChange: onSelectedDateChange,
+  onConsultationTypeChange,
 }: AddEventModalProps) {
   const [consultationType, setConsultationType] = useState<ConsultationType>('online');
+  // Reports every change (not just the type-card clicks) so the reset-on-
+  // open effect below — which also sets this back to 'online' — keeps the
+  // caller's copy (DateDetailsDrawer's toggle, when also open) in sync too,
+  // without having to thread the callback into every individual call site.
+  useEffect(() => { onConsultationTypeChange?.(consultationType); }, [consultationType, onConsultationTypeChange]);
   const [paymentType, setPaymentType] = useState<PaymentTypeOption>('pay_at_clinic');
   const [prepayAmount, setPrepayAmount] = useState('');
   const [formData, setFormData] = useState<EventFormData>({
@@ -81,7 +104,12 @@ export default function AddEventModal({
   const [scheduleEditMember, setScheduleEditMember] = useState<{ id: number; first_name: string; last_name: string } | null>(null);
   const [availabilityEntry, setAvailabilityEntry] = useState<{ start_time: string; end_time: string } | null>(null);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
-  const [bookedTimes, setBookedTimes] = useState<Set<string>>(new Set());
+  // Each existing booking's REAL [start, end) window (in minutes since
+  // midnight, clinic-local) — not just its start time. Duration now varies
+  // per booking (an admin can override it — see DateTimeSection), so a
+  // candidate slot must be checked for genuine overlap against these
+  // windows, not matched against a set of exact start-time strings.
+  const [bookedIntervals, setBookedIntervals] = useState<{ startMin: number; endMin: number }[]>([]);
   const [timePickerOpen, setTimePickerOpen] = useState(false);
   const timePickerRef = useRef<HTMLDivElement>(null);
   const [doctorFirstSlots, setDoctorFirstSlots] = useState<Record<number, string>>({});
@@ -217,29 +245,38 @@ export default function AddEventModal({
       .finally(() => setLoadingAvailability(false));
   }, [formData.doctor_id, formData.date, consultationType]);
 
-  // Fetch booked consultations for selected doctor+date to mark busy slots
+  // Fetch booked consultations for selected doctor+date to mark busy slots —
+  // `duration` here is the booking's own ACTUAL duration (the backend now
+  // derives it from the real AppointmentSlot, not the doctor's default), so
+  // a slot extended past its usual length correctly shows everything it
+  // overlaps as busy, not just its own start time.
   useEffect(() => {
-    if (!formData.doctor_id || !formData.date) { setBookedTimes(new Set()); return; }
+    if (!formData.doctor_id || !formData.date) { setBookedIntervals([]); return; }
     api.get('/schedule/', { params: { doctor_id: formData.doctor_id, date: formData.date } })
       .then(res => {
-        const times = new Set<string>((res.data as any[]).map(e => (e.time as string)?.substring(0, 5)).filter(Boolean));
-        setBookedTimes(times);
+        const intervals = (res.data as any[])
+          .map(e => {
+            const t = (e.time as string | undefined)?.substring(0, 5);
+            if (!t) return null;
+            const [h, m] = t.split(':').map(Number);
+            const startMin = h * 60 + m;
+            const duration = typeof e.duration === 'number' && e.duration > 0 ? e.duration : 30;
+            return { startMin, endMin: startMin + duration };
+          })
+          .filter((iv): iv is { startMin: number; endMin: number } => iv !== null);
+        setBookedIntervals(intervals);
       })
-      .catch(() => setBookedTimes(new Set()));
+      .catch(() => setBookedIntervals([]));
   }, [formData.doctor_id, formData.date]);
 
-  // Auto-fill duration based on doctor's preferred consultation duration
-  useEffect(() => {
-    if (formData.doctor_id) {
-      const selectedDoctor = doctors.find(d => String(d.id) === formData.doctor_id);
-      if (selectedDoctor?.preferred_consultation_duration) {
-        setFormData(prev => ({
-          ...prev,
-          duration: selectedDoctor.preferred_consultation_duration!
-        }));
-      }
-    }
-  }, [formData.doctor_id, doctors]);
+  // Duration defaults to the selected staff member's own preferred
+  // consultation duration — set once, at selection time, by
+  // handleDoctorChange below (which correctly checks nurses for a home
+  // visit, doctors otherwise). Deliberately NOT a useEffect keyed on
+  // [formData.doctor_id, doctors]: since duration is now admin-editable
+  // (see DateTimeSection's "Продолжительность"), re-running this on every
+  // doctors-array refetch would silently clobber a manual edit the admin
+  // already made for THIS visit.
 
   // Fetch first available slot for every doctor on the selected date (used in dropdown badges)
   useEffect(() => {
@@ -321,11 +358,32 @@ export default function AddEventModal({
       if (isToday && cur <= nowMinutes) { cur += duration; continue; }
       const s = fmt(cur);
       const e = fmt(cur + duration);
-      slots.push({ start: s, end: e, busy: bookedTimes.has(s) });
+      const slotEnd = cur + duration;
+      // Genuine overlap, not an exact-start-time match — a booking extended
+      // past its usual length (e.g. 11:00–11:50 instead of 11:00–11:30)
+      // must also grey out 11:30, not just 11:00, exactly like the
+      // server-side conflict check (BookingService.acquire_slot_for_time).
+      const busy = bookedIntervals.some(iv => cur < iv.endMin && iv.startMin < slotEnd);
+      slots.push({ start: s, end: e, busy });
       cur += duration;
     }
     return slots;
   };
+
+  // Auto-fill the nearest free slot once this doctor's real working hours +
+  // busy intervals are known for the chosen date — the dropdown already
+  // computes and shows this same "Ближайший слот: HH:MM" as a badge per
+  // doctor, so silently requiring one more click to actually apply it was
+  // pure friction for the overwhelmingly common case (book the very next
+  // opening). Only fires while time is still empty: never overwrites a
+  // slot the admin already picked or deliberately cleared via the time
+  // picker's own × button.
+  useEffect(() => {
+    if (formData.time || !formData.doctor_id || !formData.date || loadingAvailability) return;
+    const nextFree = generateSlots().find(s => !s.busy);
+    if (nextFree) setFormData(f => (f.time ? f : { ...f, time: nextFree.start }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availabilityEntry, bookedIntervals, formData.doctor_id, formData.date, loadingAvailability]);
 
   // A doctor "has a schedule" if they have either:
   // - active DoctorSchedule template rows (schedules[].is_active), OR
@@ -493,12 +551,16 @@ export default function AddEventModal({
 
   return (
     <>
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    {/* dockLeft: centered within the space LEFT of the drawer (reserves
+        exactly its max width, 42rem/672px = max-w-2xl) instead of the
+        whole viewport, so the card sits in the middle of its own half
+        rather than glued to the left edge. */}
+    <div className={`fixed z-50 bg-black/50 flex items-center justify-center p-4 ${dockLeft ? 'top-0 left-0 bottom-0 right-[42rem]' : 'inset-0'}`}>
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
-        className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto scrollbar-hide"
+        className={`bg-white rounded-3xl w-full max-h-[90vh] overflow-y-auto scrollbar-hide ${dockLeft ? 'max-w-xl' : 'max-w-2xl'}`}
       >
         <div className="sticky top-0 z-10 bg-white border-b-2 border-gray-100 px-8 py-6 rounded-t-3xl flex items-center justify-between">
           <h2 className="text-2xl font-bold" style={{ color: '#1e263e' }}>
@@ -599,11 +661,15 @@ export default function AddEventModal({
           <DateTimeSection
             consultationType={consultationType}
             date={formData.date}
-            onDateChange={(val) => setFormData({ ...formData, date: val })}
+            onDateChange={(val) => {
+              setFormData({ ...formData, date: val });
+              onSelectedDateChange?.(val);
+            }}
             time={formData.time}
             onTimeChange={(val) => setFormData(f => ({ ...f, time: val }))}
             duration={formData.duration}
             onDurationChange={(val) => setFormData({ ...formData, duration: val })}
+            defaultDuration={(consultationType === 'home' ? nurses : doctors).find(d => String(d.id) === formData.doctor_id)?.preferred_consultation_duration ?? null}
             doctorId={formData.doctor_id}
             loadingAvailability={loadingAvailability}
             slots={slots}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Calendar as CalendarIcon,
@@ -27,6 +27,7 @@ import {
   FlaskConical,
   ChevronDown,
   Loader2,
+  UserSearch,
 } from "lucide-react";
 import { ScheduleEvent, PaymentHistoryEntry } from "../types/scheduleTypes";
 import { getStatusColor, getPaymentStatusColor, PAYMENT_TYPE_LABELS } from "../utils/scheduleUtils";
@@ -34,6 +35,7 @@ import { api } from "@/utils/api";
 import { toast } from "react-toastify";
 import RescheduleModal from "./RescheduleModal";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
+import { AvailableDoctorsTab } from "../components/AvailableDoctorsTab";
 
 interface DateDetailsDrawerProps {
   isOpen: boolean;
@@ -41,6 +43,18 @@ interface DateDetailsDrawerProps {
   selectedDate: string | null;
   events: ScheduleEvent[];
   onEventChanged?: () => void;
+  /** Opens the full "Добавить Запись" modal for this same date — the escape
+   * hatch for a home visit/diagnostics/anything the "Свободные врачи" quick-
+   * book flow doesn't cover (it only creates online/offline consultations). */
+  onOpenFullForm?: () => void;
+  /** True while AddEventModal is ALSO open for the same date — drops this
+   * drawer's own backdrop so the two can be visible and usable together
+   * instead of one blocking the other. See the render below for why. */
+  hideBackdrop?: boolean;
+  /** Mirrors AddEventModal's own consultation type into the "Свободные
+   * врачи" tab's Видео/В клинике/На дом/Диагностика toggle, so they don't
+   * silently disagree about which type's availability is being shown. */
+  syncConsultationType?: 'online' | 'offline' | 'home' | 'diagnostics' | null;
 }
 
 function CopyButton({ value, label }: { value: string; label: string }) {
@@ -273,7 +287,12 @@ function getHeaderInfo(event: ScheduleEvent) {
     return {
       icon: <FlaskConical className="w-5 h-5 text-cyan-600" />,
       iconBg: '#0891b220',
-      title: event.service_name ? `Диагностика: ${event.service_name}` : 'Диагностика',
+      // The service name is the useful part — lead with it (it can wrap to
+      // two lines, see the row) and demote "Диагностика" to the sub-line,
+      // rather than a "Диагностика: " prefix that eats the room the name
+      // needs next to the status/payment badges.
+      title: event.service_name ?? 'Диагностика',
+      subtitle: event.service_name ? 'Диагностика' : undefined,
     };
   }
   return {
@@ -351,10 +370,11 @@ function BookingRow({ event, onChanged }: { event: ScheduleEvent; onChanged?: ()
           {headerInfo.icon}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-800 truncate">{headerInfo.title}</p>
-          <div className="flex items-center gap-1.5 text-xs text-gray-400 mt-0.5">
-            <Clock className="w-3 h-3" />
-            {event.time} · {event.duration} мин
+          <p className="text-sm font-semibold text-gray-800 line-clamp-2 leading-snug">{headerInfo.title}</p>
+          <div className="flex items-center gap-x-1.5 text-xs text-gray-400 mt-0.5 flex-wrap">
+            <Clock className="w-3 h-3 flex-shrink-0" />
+            <span className="whitespace-nowrap">{event.time} · {event.duration} мин</span>
+            {headerInfo.subtitle && <span className="whitespace-nowrap font-semibold text-cyan-600/80">{headerInfo.subtitle}</span>}
           </div>
         </div>
         {!!event.reschedule_count && (
@@ -428,10 +448,10 @@ function BookingRow({ event, onChanged }: { event: ScheduleEvent; onChanged?: ()
                   roles (whoever referred the patient vs whoever actually
                   performs the test), so they get their own separate,
                   explicitly-labeled blocks rather than the single generic
-                  "Доктор" block every other event type uses. Neither role
-                  carries specialization/phone/email/room here — the
-                  backend only fetches those for consultation/appointment
-                  events, not diagnostics. */}
+                  "Доктор" block every other event type uses. Only the
+                  performer gets the contact block (specialization/phone/
+                  email/experience/room) — the referring doctor is just a
+                  name, the backend doesn't fetch more for them. */}
               {event.type === 'diagnostics' ? (
                 <>
                   {event.doctor_name && (
@@ -450,6 +470,21 @@ function BookingRow({ event, onChanged }: { event: ScheduleEvent; onChanged?: ()
                         <span className="text-xs font-bold text-violet-700 uppercase tracking-wide">Исполнитель услуги</span>
                       </div>
                       <p className="font-semibold text-gray-900 text-sm leading-snug">{event.performing_doctor_name}</p>
+                      {event.performing_doctor_specialization && (
+                        <InfoRow icon={<Activity className="w-3.5 h-3.5" />} value={event.performing_doctor_specialization} />
+                      )}
+                      {event.performing_doctor_phone && (
+                        <InfoRow icon={<Phone className="w-3.5 h-3.5" />} value={event.performing_doctor_phone} copyable />
+                      )}
+                      {event.performing_doctor_email && (
+                        <InfoRow icon={<Mail className="w-3.5 h-3.5" />} value={event.performing_doctor_email} copyable />
+                      )}
+                      {event.performing_doctor_years_of_experience != null && (
+                        <InfoRow icon={<BadgeInfo className="w-3.5 h-3.5" />} value={`${event.performing_doctor_years_of_experience} лет опыта`} />
+                      )}
+                      {event.room_name && (
+                        <InfoRow icon={<DoorOpen className="w-3.5 h-3.5" />} value={event.room_name} />
+                      )}
                     </div>
                   )}
                 </>
@@ -712,6 +747,16 @@ function PatientGroupCard({ events, onChanged }: { events: ScheduleEvent[]; onCh
     .join('')
     .toUpperCase();
 
+  // Total cost across every service/visit this patient has THIS date —
+  // payment_info is priced per booking independently, so this is a plain
+  // sum, not re-derived from anything else. A booking with no payment_info
+  // (a type that doesn't carry pricing) just contributes 0 rather than
+  // being skipped, so the total still reflects everything that WAS priced.
+  const pricedEvents = sortedEvents.filter(e => e.payment_info);
+  const currency = pricedEvents[0]?.payment_info?.currency ?? 'KZT';
+  const totalDue = pricedEvents.reduce((sum, e) => sum + (Number(e.payment_info!.amount_due) || 0), 0);
+  const totalPaid = pricedEvents.reduce((sum, e) => sum + (Number(e.payment_info!.amount_paid) || 0), 0);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -746,6 +791,23 @@ function PatientGroupCard({ events, onChanged }: { events: ScheduleEvent[]; onCh
         </span>
       </div>
 
+      {/* Total across every service this patient has today — pointless
+          noise for a single free/unpriced booking, useful the moment
+          there's more than one paid visit to add up. */}
+      {totalDue > 0 && (
+        <div className="px-5 py-2 flex items-center justify-between bg-gray-50/70 border-b border-gray-100">
+          <span className="text-xs font-semibold text-gray-500">Итого за день</span>
+          <span className="flex items-center gap-2 text-xs">
+            <span className="font-bold text-gray-900">{totalDue.toLocaleString('ru-RU')} {currency}</span>
+            {totalPaid >= totalDue ? (
+              <span className="font-semibold text-emerald-600">оплачено</span>
+            ) : totalPaid > 0 ? (
+              <span className="font-semibold text-amber-600">оплачено {totalPaid.toLocaleString('ru-RU')}</span>
+            ) : null}
+          </span>
+        </div>
+      )}
+
       <div className="divide-y divide-gray-100">
         {sortedEvents.map(event => (
           <BookingRow key={event.id} event={event} onChanged={onChanged} />
@@ -761,8 +823,21 @@ export default function DateDetailsDrawer({
   selectedDate,
   events,
   onEventChanged,
+  onOpenFullForm,
+  hideBackdrop = false,
+  syncConsultationType = null,
 }: DateDetailsDrawerProps) {
   const [search, setSearch] = useState("");
+  // "Записи" is the useful default when the day already has bookings to
+  // review; a day with none is far more likely to be an admin about to
+  // create one, so it opens straight into "Свободные врачи" instead of an
+  // empty list. Re-evaluated only on a fresh open (not on every events
+  // change) so switching tabs manually mid-session isn't fought.
+  const [tab, setTab] = useState<'bookings' | 'available'>('bookings');
+  useEffect(() => {
+    if (isOpen) setTab(events.length > 0 ? 'bookings' : 'available');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, selectedDate]);
 
   if (!isOpen || !selectedDate) return null;
 
@@ -801,21 +876,32 @@ export default function DateDetailsDrawer({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 overflow-hidden">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        />
+      {/* hideBackdrop: used when this drawer is opened alongside AddEventModal
+          (see ScheduleView's "+" on a day cell) — the modal already owns a
+          full-screen dark backdrop, so a second one here would double-darken
+          the screen AND (being on top, later in the DOM) block every click
+          meant for the modal underneath. Dropping the backdrop just leaves
+          this panel floating on top of the modal on the right, both fully
+          visible and interactive; pointer-events-none on the outer wrapper
+          lets clicks fall through to the modal everywhere except the panel
+          itself (re-enabled with pointer-events-auto). */}
+      <div className={`fixed inset-0 z-50 overflow-hidden ${hideBackdrop ? 'pointer-events-none' : ''}`}>
+        {!hideBackdrop && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+          />
+        )}
 
         <motion.div
           initial={{ x: '100%' }}
           animate={{ x: 0 }}
           exit={{ x: '100%' }}
           transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-          className="absolute right-0 top-0 bottom-0 w-full max-w-2xl bg-white shadow-2xl flex flex-col"
+          className={`absolute right-0 top-0 bottom-0 w-full max-w-2xl bg-white shadow-2xl flex flex-col ${hideBackdrop ? 'pointer-events-auto' : ''}`}
         >
           {/* Header — same gradient as AdminSidebar/navbar */}
           <div className="sticky top-0 z-10 px-6 py-5 flex items-center justify-between"
@@ -830,6 +916,47 @@ export default function DateDetailsDrawer({
             </button>
           </div>
 
+          {/* Tab switcher — "Записи" reviews what's already booked on this
+              date; "Свободные врачи" is the quick-booking path (who's free
+              right now, book them without leaving this drawer). */}
+          <div className="flex items-center gap-1.5 px-5 py-3 border-b border-gray-100 bg-gray-50 flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => setTab('bookings')}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all ${
+                tab === 'bookings' ? 'bg-white text-blue-600 shadow-sm border border-gray-200' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <CalendarIcon className="w-3.5 h-3.5" />
+              Записи
+              {sorted.length > 0 && (
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${tab === 'bookings' ? 'bg-blue-100 text-blue-600' : 'bg-gray-200 text-gray-500'}`}>
+                  {sorted.length}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab('available')}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all ${
+                tab === 'available' ? 'bg-white text-emerald-600 shadow-sm border border-gray-200' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <UserSearch className="w-3.5 h-3.5" />
+              Свободные врачи
+            </button>
+          </div>
+
+          {tab === 'available' ? (
+            <AvailableDoctorsTab
+              date={selectedDate}
+              events={events}
+              onBooked={() => onEventChanged?.()}
+              onOpenFullForm={onOpenFullForm}
+              syncConsultationType={syncConsultationType}
+            />
+          ) : (
+            <>
           {/* Search */}
           {sorted.length > 0 && (
             <div className="px-5 py-3 border-b border-gray-100 bg-white">
@@ -863,6 +990,14 @@ export default function DateDetailsDrawer({
                 </div>
                 <p className="text-gray-600 font-semibold">Нет запланированных консультаций</p>
                 <p className="text-gray-400 text-sm mt-1">На эту дату пока нет записей</p>
+                <button
+                  type="button"
+                  onClick={() => setTab('available')}
+                  className="mt-4 flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                >
+                  <UserSearch className="w-3.5 h-3.5" />
+                  Посмотреть свободных врачей
+                </button>
               </div>
             ) : filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center px-6">
@@ -885,6 +1020,8 @@ export default function DateDetailsDrawer({
               </div>
             )}
           </div>
+            </>
+          )}
 
           {/* Footer */}
           <div className="sticky bottom-0 bg-white border-t border-gray-100 px-5 py-4">

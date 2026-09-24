@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle, Loader2, Trash2, DoorOpen } from "lucide-react";
+import { CheckCircle, CopyPlus, Loader2, Trash2, DoorOpen } from "lucide-react";
 import type { AvailableRoom } from "../types/scheduleTypes";
 
 // One "room + time range" row — reused by both TemplateScheduleTab
@@ -21,6 +21,9 @@ export interface RoomBandRowProps {
   onCommit: () => Promise<void> | void;
   onDelete: () => Promise<void> | void;
   isNew?: boolean;
+  /** Opens the "copy this band onto other days" panel — omitted for a not-yet-saved (isNew) band. */
+  onCopy?: () => void;
+  copyActive?: boolean;
 }
 
 export function RoomBandRow({
@@ -32,6 +35,8 @@ export function RoomBandRow({
   onCommit,
   onDelete,
   isNew,
+  onCopy,
+  copyActive,
 }: RoomBandRowProps) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -93,6 +98,21 @@ export function RoomBandRow({
       >
         {saving ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={13} />}
       </button>
+      {!isNew && onCopy && (
+        <button
+          type="button"
+          onClick={onCopy}
+          disabled={saving || deleting}
+          title="Скопировать этот кабинет на другие дни"
+          className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50 flex-shrink-0 ${
+            copyActive
+              ? "bg-orange-200 text-orange-700"
+              : "bg-white border border-gray-200 hover:bg-orange-50 hover:border-orange-200 text-gray-400 hover:text-orange-500"
+          }`}
+        >
+          <CopyPlus size={12} />
+        </button>
+      )}
       {!isNew && (
         <button
           type="button"

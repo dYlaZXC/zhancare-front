@@ -67,6 +67,11 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
   const [showDateDetailsDrawer, setShowDateDetailsDrawer] = useState(false);
   const [showArchiveDrawer, setShowArchiveDrawer] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  // Mirrors AddEventModal's own "Тип консультации" while it's open alongside
+  // the drawer, so "Свободные врачи"'s Видео/В клинике toggle can follow
+  // along too — same idea as selectedDate above. Home visit/diagnostics have
+  // no equivalent there, so those two just leave the toggle wherever it was.
+  const [modalConsultationType, setModalConsultationType] = useState<'online' | 'offline' | 'home' | 'diagnostics' | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<'all' | 'consultation' | 'appointment' | 'diagnostics'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'scheduled' | 'in_progress' | 'completed' | 'cancelled'>('all');
@@ -409,10 +414,12 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
                       !isCurrentMonth ? 'bg-gray-50/50' : 'bg-white'
                     } ${isToday ? 'bg-blue-50/50' : ''}`}
                     onClick={() => {
-                      if (dayEvents.length > 0) {
-                        setSelectedDate(dateString);
-                        setShowDateDetailsDrawer(true);
-                      }
+                      // Always open — even a day with zero bookings is
+                      // useful to click: the drawer's "Свободные врачи" tab
+                      // is exactly how an admin checks availability and
+                      // books a slot for that date.
+                      setSelectedDate(dateString);
+                      setShowDateDetailsDrawer(true);
                     }}
                   >
                     <div className="flex items-center justify-between mb-1 md:mb-2">
@@ -437,7 +444,14 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
+                          // Opens BOTH: the full form (has every type —
+                          // home visit, diagnostics, everything) AND the
+                          // "Свободные врачи" drawer alongside it, so the
+                          // admin can check who's actually free that date
+                          // without leaving the form. Each closes
+                          // independently via its own X/Закрыть.
                           setSelectedDate(dateString);
+                          setShowDateDetailsDrawer(true);
                           setShowAddModal(true);
                         }}
                         className="p-0.5 md:p-1 rounded-lg hover:bg-blue-100 transition-colors"
@@ -729,15 +743,19 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
         </div>
       )}
 
-      {/* Add Event Modal */}
+      {/* Add Event Modal — docks left instead of centering while the
+          drawer is also open, so the two don't cover each other. */}
       <AddEventModal
         isOpen={showAddModal}
         onClose={() => {
           setShowAddModal(false);
-          setSelectedDate(null);
+          if (!showDateDetailsDrawer) setSelectedDate(null);
         }}
         selectedDate={selectedDate}
         onEventAdded={fetchSchedule}
+        dockLeft={showDateDetailsDrawer}
+        onDateChange={setSelectedDate}
+        onConsultationTypeChange={setModalConsultationType}
       />
 
       {/* Date Details Drawer */}
@@ -747,6 +765,12 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
         selectedDate={selectedDate}
         onEventChanged={fetchSchedule}
         events={selectedDate ? events.filter(e => e.date === selectedDate) : []}
+        onOpenFullForm={() => setShowAddModal(true)}
+        hideBackdrop={showAddModal}
+        // "Свободные врачи" now has a toggle for every type AddEventModal
+        // offers — Видео/В клинике/На дом/Диагностика — so this maps
+        // straight across 1:1, no per-type special-casing needed here.
+        syncConsultationType={modalConsultationType}
       />
 
       <ArchivedRecordsDrawer

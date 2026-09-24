@@ -1,12 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle, Loader2, RotateCcw, Plus } from "lucide-react";
+import { CheckCircle, Loader2, RotateCcw, Plus, CopyPlus } from "lucide-react";
 import { formatWeekLabel, isCurrentWeekPlanner } from "../utils/dateHelpers";
 import { TYPE_META } from "../utils/typeDisplay";
 import { CONSULTATION_TYPES } from "../types/scheduleTypes";
 import type { ConsultationType, DoctorRoomOverrideRow, AvailableRoom } from "../types/scheduleTypes";
 import { RoomBandRow } from "../components/RoomBandRow";
+import { DayCopyPanel, type DayCopyOption } from "../components/DayCopyPanel";
+
+const DAY_SHORT_NAMES = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
+const dayChipLabel = (dateStr: string) => {
+  const d = new Date(dateStr + "T00:00:00");
+  const dateLabel = d.toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
+  return `${DAY_SHORT_NAMES[d.getDay()]} ${dateLabel}`;
+};
 
 // ── DateScheduleTab ("По датам") — reads/writes DoctorAvailability rows ────────
 // Date-specific entries always take priority over the weekly template; this
@@ -59,6 +67,100 @@ export function DateScheduleTab({
   const current = TYPE_META[plannerConsultationType];
   const [newOverrideByDate, setNewOverrideByDate] = useState<Record<string, { roomId: number | null; startTime: string; endTime: string }>>({});
   const [editsByOverrideId, setEditsByOverrideId] = useState<Record<number, { roomId?: number | null; startTime?: string; endTime?: string }>>({});
+
+  // "Скопировать на другие дни" — one day's open panel at a time, keyed by
+  // its date. Selection defaults to every OTHER day that's already working
+  // (not a day-off), so applying a time never silently turns a rest day
+  // into a working one unless the admin explicitly opts it in. Purely a
+  // local draft (same as typing into the time inputs) — nothing is sent to
+  // the server until "Сохранить" (per-day or the whole-week footer button).
+  const [copyPanelDate, setCopyPanelDate] = useState<string | null>(null);
+  const [copySelection, setCopySelection] = useState<Record<string, boolean>>({});
+
+  const toggleSelection = (setter: typeof setCopySelection, date: string) =>
+    setter((prev) => ({ ...prev, [date]: !prev[date] }));
+
+  const toggleAllSelection = (
+    setter: typeof setCopySelection,
+    others: { date: string }[]
+  ) =>
+    setter((prev) => {
+      const allChecked = others.every((d) => prev[d.date]);
+      const next: Record<string, boolean> = {};
+      for (const d of others) next[d.date] = !allChecked;
+      return next;
+    });
+
+  const openCopyPanel = (sourceDate: string) => {
+    if (copyPanelDate === sourceDate) {
+      setCopyPanelDate(null);
+      return;
+    }
+    const initial: Record<string, boolean> = {};
+    for (const d of plannerDays) {
+      if (d.date !== sourceDate) initial[d.date] = !d.is_day_off;
+    }
+    setCopySelection(initial);
+    setCopyPanelDate(sourceDate);
+  };
+
+  const applyCopyPanel = (sourceDay: any) => {
+    const targets = plannerDays.filter((d) => d.date !== sourceDay.date && copySelection[d.date]);
+    targets.forEach((d) => {
+      onUpdateDay(
+        plannerDays.findIndex((x) => x.date === d.date),
+        { is_day_off: false, start_time: sourceDay.start_time, end_time: sourceDay.end_time }
+      );
+    });
+    setCopyPanelDate(null);
+  };
+
+  // "Скопировать этот кабинет на другие дни" — mirrors the day-time copy
+  // above, but for one specific DoctorRoomOverride band. Unlike the day-time
+  // copy, this ISN'T a local draft: every add already hits the API
+  // immediately (same as "+ Добавить интервал"), so applying here creates
+  // real DoctorRoomOverride rows on each selected date right away. Rooms
+  // have no day-off concept, so the safe default here is instead "don't
+  // touch a day that already has its own room band" — a day with none yet
+  // is pre-checked, one that's already configured is left for the admin to
+  // opt in explicitly (adding a second, concurrent interval there).
+  const [copyRoomPanelId, setCopyRoomPanelId] = useState<number | null>(null);
+  const [copyRoomSelection, setCopyRoomSelection] = useState<Record<string, boolean>>({});
+  const [copyRoomApplying, setCopyRoomApplying] = useState(false);
+
+  const openRoomCopyPanel = (overrideId: number, sourceDate: string) => {
+    if (copyRoomPanelId === overrideId) {
+      setCopyRoomPanelId(null);
+      return;
+    }
+    const initial: Record<string, boolean> = {};
+    for (const d of plannerDays) {
+      if (d.date !== sourceDate) {
+        initial[d.date] = !roomOverrides.some((o) => o.date === d.date);
+      }
+    }
+    setCopyRoomSelection(initial);
+    setCopyRoomPanelId(overrideId);
+  };
+
+  const applyRoomCopyPanel = async (
+    sourceDate: string,
+    roomId: number | null,
+    startTime: string,
+    endTime: string
+  ) => {
+    const targets = plannerDays.filter((d) => d.date !== sourceDate && copyRoomSelection[d.date]);
+    if (targets.length === 0) return;
+    setCopyRoomApplying(true);
+    try {
+      await Promise.allSettled(
+        targets.map((d) => onAddRoomOverride(d.date, roomId, startTime, endTime))
+      );
+    } finally {
+      setCopyRoomApplying(false);
+      setCopyRoomPanelId(null);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -232,6 +334,28 @@ export function DateScheduleTab({
                   .filter((o) => o.day && !o.day.is_day_off && o.day.start_time)
               : [];
 
+            // "Смешанное" is only ever used as a FALLBACK when the exact
+            // type (Online/Offline) has no override of its own for this
+            // date — an explicit "Выходной" set on one of those types
+            // silently wins over whatever's configured here, for THAT
+            // type's own bookings, even though this Смешанное row itself
+            // still looks perfectly fine. Real bug hit during this
+            // session's own testing: Online was set to day-off, then
+            // Смешанное was set to 09:00–18:00 for the same dates — nothing
+            // here showed that Online would keep resolving to day-off
+            // regardless. Scoped to plannerConsultationType === 'mixed'
+            // (the only type that can be shadowed this way — an exact type
+            // always wins, so viewing Online/Offline is never misleading)
+            // and to source === 'availability' (a genuine date-specific
+            // override someone could easily forget exists — a day-off
+            // coming from the recurring weekly template is a permanent,
+            // visible setting on its own "Постоянное" tab, not a surprise).
+            const shadowingDayOffs = !isOff && plannerConsultationType === "mixed"
+              ? CONSULTATION_TYPES.filter((t) => t !== "mixed")
+                  .map((t) => ({ type: t, day: plannerOtherDaysByType[t]?.[i] }))
+                  .filter((o) => o.day?.is_day_off && o.day?.source === "availability")
+              : [];
+
             return (
               <div
                 key={day.date}
@@ -296,6 +420,12 @@ export function DateScheduleTab({
                         {conflictMeta.fullLabel}: {otherTime} — пересечение времени
                       </p>
                     )}
+                    {shadowingDayOffs.map(({ type }) => (
+                      <p key={type} className="text-xs mt-0.5 font-semibold text-amber-600">
+                        ⚠ {TYPE_META[type].fullLabel}: отдельно стоит «Выходной» на эту дату — записи
+                        этого типа не будут использовать смешанное расписание
+                      </p>
+                    ))}
                     {otherInfoLines.map(({ type, day: otherDay }) => (
                       <p key={type} className={`text-xs mt-0.5 ${TYPE_META[type].text}`}>
                         {TYPE_META[type].emoji} {TYPE_META[type].fullLabel}: {otherDay.start_time} –{" "}
@@ -359,8 +489,48 @@ export function DateScheduleTab({
                         <RotateCcw className="w-4 h-4" />
                       </button>
                     )}
+                    {!isOff && (
+                      <button
+                        type="button"
+                        onClick={() => openCopyPanel(day.date)}
+                        className={`p-1.5 rounded-lg transition-colors ${
+                          copyPanelDate === day.date
+                            ? "bg-orange-200 text-orange-700"
+                            : "bg-gray-100 hover:bg-orange-100 text-gray-400 hover:text-orange-500"
+                        }`}
+                        title="Скопировать это время на другие дни"
+                      >
+                        <CopyPlus className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
+
+                {/* Скопировать это время на другие дни — a lightweight bulk-fill
+                    shortcut: pick one day's hours once, then tick which other
+                    days should get the same start/end. Purely a local draft
+                    (same as typing into the time inputs) — nothing is sent to
+                    the server until "Сохранить" (per-day or the whole-week
+                    footer button). */}
+                {!isOff && copyPanelDate === day.date && (
+                  <DayCopyPanel
+                    heading={`Скопировать ${day.start_time || "09:00"}–${day.end_time || "18:00"} на:`}
+                    options={plannerDays
+                      .filter((d) => d.date !== day.date)
+                      .map((d): DayCopyOption => ({
+                        date: d.date,
+                        label: dayChipLabel(d.date),
+                        sublabel: d.is_day_off ? "· вых." : undefined,
+                      }))}
+                    selection={copySelection}
+                    onToggle={(date) => toggleSelection(setCopySelection, date)}
+                    onToggleAll={() =>
+                      toggleAllSelection(setCopySelection, plannerDays.filter((d) => d.date !== day.date))
+                    }
+                    onApply={() => applyCopyPanel(day)}
+                    onCancel={() => setCopyPanelDate(null)}
+                  />
+                )}
 
                 {/* Кабинеты на эту дату — независимо от start/end этого дня выше,
                     И НЕЗАВИСИМО от is_day_off: DoctorRoomOverride resolves
@@ -379,34 +549,62 @@ export function DateScheduleTab({
                       <p className="text-[11px] font-bold text-orange-500 uppercase tracking-wide mb-1.5">Кабинеты</p>
                       {bands.map((o) => {
                         const edits = editsByOverrideId[o.id];
+                        const currentRoomId = edits?.roomId !== undefined ? edits.roomId : o.room_id;
+                        const currentStart = edits?.startTime ?? o.start_time.slice(0, 5);
+                        const currentEnd = edits?.endTime ?? o.end_time.slice(0, 5);
                         return (
-                          <RoomBandRow
-                            key={o.id}
-                            roomId={edits?.roomId !== undefined ? edits.roomId : o.room_id}
-                            startTime={edits?.startTime ?? o.start_time.slice(0, 5)}
-                            endTime={edits?.endTime ?? o.end_time.slice(0, 5)}
-                            availableRooms={availableRooms}
-                            onChange={(changes) =>
-                              setEditsByOverrideId((prev) => ({
-                                ...prev,
-                                [o.id]: { ...prev[o.id], ...changes },
-                              }))
-                            }
-                            onCommit={async () => {
-                              if (!edits) return;
-                              const patch: { room_id?: number | null; start_time?: string; end_time?: string } = {};
-                              if (edits.roomId !== undefined) patch.room_id = edits.roomId;
-                              if (edits.startTime !== undefined) patch.start_time = edits.startTime;
-                              if (edits.endTime !== undefined) patch.end_time = edits.endTime;
-                              await onUpdateRoomOverride(o.id, patch);
-                              setEditsByOverrideId((prev) => {
-                                const next = { ...prev };
-                                delete next[o.id];
-                                return next;
-                              });
-                            }}
-                            onDelete={() => onDeleteRoomOverride(o.id)}
-                          />
+                          <div key={o.id}>
+                            <RoomBandRow
+                              roomId={currentRoomId}
+                              startTime={currentStart}
+                              endTime={currentEnd}
+                              availableRooms={availableRooms}
+                              onChange={(changes) =>
+                                setEditsByOverrideId((prev) => ({
+                                  ...prev,
+                                  [o.id]: { ...prev[o.id], ...changes },
+                                }))
+                              }
+                              onCommit={async () => {
+                                if (!edits) return;
+                                const patch: { room_id?: number | null; start_time?: string; end_time?: string } = {};
+                                if (edits.roomId !== undefined) patch.room_id = edits.roomId;
+                                if (edits.startTime !== undefined) patch.start_time = edits.startTime;
+                                if (edits.endTime !== undefined) patch.end_time = edits.endTime;
+                                await onUpdateRoomOverride(o.id, patch);
+                                setEditsByOverrideId((prev) => {
+                                  const next = { ...prev };
+                                  delete next[o.id];
+                                  return next;
+                                });
+                              }}
+                              onDelete={() => onDeleteRoomOverride(o.id)}
+                              onCopy={() => openRoomCopyPanel(o.id, day.date)}
+                              copyActive={copyRoomPanelId === o.id}
+                            />
+                            {copyRoomPanelId === o.id && (
+                              <DayCopyPanel
+                                heading={`Скопировать кабинет (${currentStart}–${currentEnd}) на:`}
+                                options={plannerDays
+                                  .filter((d) => d.date !== day.date)
+                                  .map((d): DayCopyOption => ({
+                                    date: d.date,
+                                    label: dayChipLabel(d.date),
+                                    sublabel: roomOverrides.some((ov) => ov.date === d.date)
+                                      ? "· уже настроено"
+                                      : undefined,
+                                  }))}
+                                selection={copyRoomSelection}
+                                onToggle={(date) => toggleSelection(setCopyRoomSelection, date)}
+                                onToggleAll={() =>
+                                  toggleAllSelection(setCopyRoomSelection, plannerDays.filter((d) => d.date !== day.date))
+                                }
+                                onApply={() => applyRoomCopyPanel(day.date, currentRoomId, currentStart, currentEnd)}
+                                onCancel={() => setCopyRoomPanelId(null)}
+                                applying={copyRoomApplying}
+                              />
+                            )}
+                          </div>
                         );
                       })}
                       {draft ? (

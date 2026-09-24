@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
 import { api } from "@/utils/api";
 import { toast } from "react-toastify";
-import { Loader2, ClipboardList } from "lucide-react";
+import { Loader2, ClipboardList, Layers } from "lucide-react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 import type { Service, ServiceCategory, ServiceStats, StaffMember, StatusFilter } from "./services/types/serviceTypes";
@@ -12,6 +12,7 @@ import { ServicesHeader, ServicesStatsCards } from "./services/components/Servic
 import { ServicesToolbar } from "./services/components/ServicesToolbar";
 import { ServiceCard } from "./services/components/ServiceCard";
 import { ServicesPagination } from "./services/components/ServicesPagination";
+import { CategoriesPanel } from "./services/components/CategoriesPanel";
 import { ServiceFormModal } from "./services/modals/ServiceFormModal";
 import { CategoryFormModal } from "./services/modals/CategoryFormModal";
 import { ServiceScheduleModal } from "./services/modals/ServiceScheduleModal";
@@ -43,7 +44,9 @@ export function ServicesView({ user }: { user: any }) {
   const [editing, setEditing] = useState<Service | null>(null);
   const [scheduleService, setScheduleService] = useState<Service | null>(null);
   const [staff, setStaff] = useState<StaffMember[]>([]);
-  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'services' | 'categories'>('services');
+  // `false` = closed, `null` = create, a category = edit that one.
+  const [categoryModal, setCategoryModal] = useState<ServiceCategory | null | false>(false);
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
 
   const listTopRef = useRef<HTMLDivElement>(null);
@@ -154,30 +157,104 @@ export function ServicesView({ user }: { user: any }) {
     }
   };
 
+  const handleToggleCategory = async (cat: ServiceCategory) => {
+    try {
+      const res = await api.patch(`/diagnostics/categories/${cat.id}/`, { is_active: !cat.is_active });
+      setCategories(prev => prev.map(c => c.id === cat.id ? { ...c, ...res.data } : c));
+    } catch {
+      toast.error("Не удалось изменить статус категории");
+    }
+  };
+
+  const handleDeleteCategory = async (cat: ServiceCategory) => {
+    if (!confirm(`Удалить категорию «${cat.name}»?`)) return;
+    try {
+      await api.delete(`/diagnostics/categories/${cat.id}/`);
+      setCategories(prev => prev.filter(c => c.id !== cat.id));
+      if (query.category === cat.slug) changeCategory("all");
+      toast.success("Категория удалена");
+    } catch {
+      toast.error("Не удалось удалить категорию");
+    }
+  };
+
   const hasFilters = query.category !== "all" || query.status !== "all" || query.search !== "";
   const showInitialSpinner = loading && services.length === 0;
 
+  const TABS = [
+    { key: 'services' as const,   label: 'Услуги',    Icon: ClipboardList, count: stats.total },
+    { key: 'categories' as const, label: 'Категории', Icon: Layers,        count: categories.length },
+  ];
+
   return (
     <div className="w-full">
-      <div className="mb-8">
-        <ServicesHeader onOpenCreate={openCreate} onOpenBulkUpload={() => setShowBulkUploadModal(true)} />
-
-        <ServicesStatsCards total={stats.total} active={stats.active} inactive={stats.inactive} />
-
-        <ServicesToolbar
-          categories={categories}
-          catFilter={query.category}
-          onCatFilterChange={changeCategory}
-          statusFilter={query.status}
-          onStatusFilterChange={changeStatus}
-          serviceSearch={serviceSearch}
-          onServiceSearchChange={setServiceSearch}
-          onOpenCategories={() => setShowCategoryModal(true)}
+      {/* mb-8 only on the Услуги tab: there the stats + toolbar live in this
+          block, so it is what spaces them from the list. The Категории tab
+          renders its own stats + toolbar inside CategoriesPanel and matches the
+          same gaps there. */}
+      <div className={activeTab === 'services' ? 'mb-8' : ''}>
+        <ServicesHeader
+          onOpenCreate={openCreate}
+          onOpenBulkUpload={() => setShowBulkUploadModal(true)}
+          onOpenCreateCategory={() => setCategoryModal(null)}
+          tab={activeTab}
         />
+
+        {/* Tabs — Услуги and Категории are two views of the same catalog,
+            not a main page plus a settings popup. */}
+        <div className="flex items-center gap-1 border-b-2 border-gray-100 mb-6">
+          {TABS.map(({ key, label, Icon, count }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setActiveTab(key)}
+              className={`flex items-center gap-2 px-5 py-3 -mb-0.5 text-sm font-bold border-b-2 transition-all ${
+                activeTab === key
+                  ? 'border-sky-500 text-sky-600'
+                  : 'border-transparent text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {label}
+              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                activeTab === key ? 'bg-sky-100 text-sky-600' : 'bg-gray-100 text-gray-400'
+              }`}>
+                {count}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {activeTab === 'services' && (
+          <>
+            <ServicesStatsCards total={stats.total} active={stats.active} inactive={stats.inactive} />
+
+            <ServicesToolbar
+              categories={categories}
+              catFilter={query.category}
+              onCatFilterChange={changeCategory}
+              statusFilter={query.status}
+              onStatusFilterChange={changeStatus}
+              serviceSearch={serviceSearch}
+              onServiceSearchChange={setServiceSearch}
+            />
+          </>
+        )}
       </div>
 
+      {/* CATEGORIES */}
+      {activeTab === 'categories' && (
+        <CategoriesPanel
+          categories={categories}
+          onEdit={(cat) => setCategoryModal(cat)}
+          onToggle={handleToggleCategory}
+          onDelete={handleDeleteCategory}
+          onScheduleSaved={fetchCategories}
+        />
+      )}
+
       {/* SERVICES */}
-      <div ref={listTopRef} className="scroll-mt-4">
+      {activeTab === 'services' && <div ref={listTopRef} className="scroll-mt-4">
         {showInitialSpinner ? (
           <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-sky-500" /></div>
         ) : services.length === 0 ? (
@@ -214,7 +291,7 @@ export function ServicesView({ user }: { user: any }) {
             />
           </>
         )}
-      </div>
+      </div>}
 
       {/* ADD / EDIT SERVICE MODAL */}
       <AnimatePresence>
@@ -237,17 +314,20 @@ export function ServicesView({ user }: { user: any }) {
         )}
       </AnimatePresence>
 
-      {/* CATEGORY MANAGEMENT MODAL */}
+      {/* ADD / EDIT CATEGORY MODAL */}
       <AnimatePresence>
-        {showCategoryModal && (
+        {categoryModal !== false && (
           <CategoryFormModal
-            categories={categories}
-            onClose={() => setShowCategoryModal(false)}
-            onCategoryCreated={(cat) => setCategories(prev => [...prev, cat].sort((a, b) => a.order - b.order))}
-            onCategoryUpdated={(cat) => setCategories(prev => prev.map(c => c.id === cat.id ? cat : c))}
-            onCategoryDeleted={(cat) => {
-              setCategories(prev => prev.filter(c => c.id !== cat.id));
-              if (query.category === cat.slug) changeCategory("all");
+            initial={categoryModal}
+            nextOrder={categories.length}
+            onClose={() => setCategoryModal(false)}
+            onSaved={(cat, mode) => {
+              setCategories(prev => (
+                mode === "create"
+                  ? [...prev, cat]
+                  : prev.map(c => c.id === cat.id ? cat : c)
+              ).sort((a, b) => a.order - b.order));
+              setCategoryModal(false);
             }}
           />
         )}

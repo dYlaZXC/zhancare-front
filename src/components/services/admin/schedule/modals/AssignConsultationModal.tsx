@@ -18,6 +18,8 @@ import {
   EyeOff,
   Copy,
 } from "lucide-react";
+import SearchSelect from "../components/SearchSelect";
+import { DURATION_OPTIONS, minutesBetween, addMinutes } from "../utils/durationOptions";
 
 interface AssignConsultationModalProps {
   isOpen: boolean;
@@ -25,6 +27,11 @@ interface AssignConsultationModalProps {
   doctorId: number;
   doctorName: string;
   doctorSpecialization?: string;
+  /** A nurse books a home visit, not an online/offline consultation — no
+   * "Тип консультации" choice, and the submit below sends type='home_visit'
+   * instead of 'consultation'. Defaults to 'doctor' for the existing
+   * DoctorsScheduleContent call site, which never passes this. */
+  staffRole?: 'doctor' | 'nurse';
   slot: any;
   availableSlots: any[];
   date: string;
@@ -37,6 +44,7 @@ export default function AssignConsultationModal({
   doctorId,
   doctorName,
   doctorSpecialization,
+  staffRole = 'doctor',
   slot,
   availableSlots,
   date,
@@ -48,6 +56,13 @@ export default function AssignConsultationModal({
   const [dropdownRect, setDropdownRect] = useState<DOMRect | null>(null);
   const [selectedPatient, setSelectedPatient] = useState<{ id: number; name: string; phone?: string } | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<any>(slot || null);
+  // Defaults to the doctor's own step size (every generated slot in
+  // availableSlots spans exactly their preferred_consultation_duration —
+  // see generateSlots/generateAllSlots in the callers), but stays editable:
+  // an admin booking a longer/shorter visit for THIS patient no longer has
+  // to leave this quick-book flow and use the full "Добавить Запись" modal
+  // instead (that hardcoded 30 here regardless of what was actually free).
+  const [duration, setDuration] = useState<number>(30);
   const [consultationType, setConsultationType] = useState<'online' | 'offline'>('online');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -106,9 +121,20 @@ export default function AssignConsultationModal({
     }
   };
 
+  // The doctor's own typical duration — derived from the generated slots
+  // themselves (every entry in availableSlots spans exactly this many
+  // minutes) rather than a new prop, since the callers already encode it
+  // there. Falls back to whichever slot was pre-selected, then 30.
+  const doctorDefaultDuration = availableSlots.length > 0
+    ? minutesBetween(availableSlots[0].start_time, availableSlots[0].end_time)
+    : slot
+    ? minutesBetween(slot.start_time, slot.end_time)
+    : null;
+
   useEffect(() => {
     if (!isOpen) return;
     setSelectedSlot(slot || null);
+    setDuration(doctorDefaultDuration ?? 30);
     setSelectedPatient(null);
     setPatientSearch('');
     setNotes('');
@@ -160,13 +186,26 @@ export default function AssignConsultationModal({
     setSubmitting(true);
 
     try {
-      await api.post('/schedule/', {
+      await api.post('/schedule/', staffRole === 'nurse' ? {
+        // Same shape AddEventModal itself sends for a home visit — the
+        // nurse's id still goes under doctor_id (the backend's own
+        // create() resolves staff via `nurse_id or doctor_id`, and this
+        // frontend never actually sends a separate nurse_id key either).
+        type: 'home_visit',
+        consultation_type: 'home',
+        patient_id: selectedPatient.id,
+        doctor_id: doctorId,
+        date: date,
+        time: selectedSlot.start_time,
+        duration,
+        notes: notes,
+      } : {
         type: 'consultation',
         patient_id: selectedPatient.id,
         doctor_id: doctorId,
         date: date,
         time: selectedSlot.start_time,
-        duration: 30,
+        duration,
         consultation_type: consultationType,
         notes: notes
       });
@@ -217,7 +256,9 @@ export default function AssignConsultationModal({
                 <p className="text-sm font-semibold text-gray-900 truncate">{doctorName}</p>
                 {doctorSpecialization && <p className="text-xs text-gray-400 truncate">{doctorSpecialization}</p>}
               </div>
-              <span className="flex-shrink-0 text-xs font-medium px-2 py-1 bg-blue-50 text-blue-600 rounded-lg">Врач</span>
+              <span className="flex-shrink-0 text-xs font-medium px-2 py-1 bg-blue-50 text-blue-600 rounded-lg">
+                {staffRole === 'nurse' ? 'Медсестра' : 'Врач'}
+              </span>
             </div>
 
             {/* Slot picker */}
@@ -253,7 +294,7 @@ export default function AssignConsultationModal({
                         <div className="text-left">
                           <p className="text-base font-bold leading-tight">Ближайший: {nearest.start_time}</p>
                           <p className={`text-xs mt-0.5 ${selectedSlot?.start_time === nearest.start_time ? 'text-emerald-100' : 'text-emerald-400'}`}>
-                            до {nearest.end_time}
+                            до {addMinutes(nearest.start_time, duration)}
                           </p>
                         </div>
                         {selectedSlot?.start_time === nearest.start_time && (
@@ -288,31 +329,70 @@ export default function AssignConsultationModal({
               )}
             </div>
 
-            {/* Consultation type */}
-            <div>
-              <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
-                Тип консультации
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {([['online', 'Видеоконсультация', Video], ['offline', 'Приём в клинике', Home]] as const).map(([val, label, Icon]) => (
-                  <button
-                    key={val}
-                    type="button"
-                    onClick={() => setConsultationType(val)}
-                    className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${
-                      consultationType === val
-                        ? val === 'online'
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-violet-500 bg-violet-50 text-violet-700'
-                        : 'border-gray-200 text-gray-500 hover:border-gray-300'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {label}
-                  </button>
-                ))}
+            {/* Duration — defaults to this doctor's own typical slot length
+                (derived from availableSlots), but stays editable: the admin
+                can book a longer/shorter visit for this one patient without
+                leaving this quick-book flow. Booking then locks exactly
+                that window (BookingService.acquire_slot_for_time already
+                handles genuine overlap, not just exact-start matches). */}
+            {selectedSlot && (
+              <div>
+                <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
+                  Продолжительность
+                </label>
+                <SearchSelect
+                  options={DURATION_OPTIONS}
+                  value={String(duration)}
+                  onChange={(val) => setDuration(parseInt(val))}
+                  placeholder="Выберите продолжительность..."
+                />
+                {doctorDefaultDuration != null && (
+                  duration === doctorDefaultDuration ? (
+                    <p className="text-xs text-gray-400 mt-1.5">По умолчанию для этого специалиста</p>
+                  ) : (
+                    <p className="text-xs text-amber-600 mt-1.5">
+                      Обычно у этого специалиста {DURATION_OPTIONS.find(o => o.id === doctorDefaultDuration)?.label?.toLowerCase() ?? `${doctorDefaultDuration} минут`}.{' '}
+                      <button
+                        type="button"
+                        onClick={() => setDuration(doctorDefaultDuration)}
+                        className="underline font-semibold hover:text-amber-700"
+                      >
+                        Вернуть по умолчанию
+                      </button>
+                    </p>
+                  )
+                )}
               </div>
-            </div>
+            )}
+
+            {/* Consultation type — a home visit doesn't have one; a nurse
+                always makes a home visit, no online/offline choice to make. */}
+            {staffRole !== 'nurse' && (
+              <div>
+                <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
+                  Тип консультации
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {([['online', 'Видеоконсультация', Video], ['offline', 'Приём в клинике', Home]] as const).map(([val, label, Icon]) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setConsultationType(val)}
+                      className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${
+                        consultationType === val
+                          ? val === 'online'
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-violet-500 bg-violet-50 text-violet-700'
+                          : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Patient search */}
             <div ref={patientSearchRef} className="relative">

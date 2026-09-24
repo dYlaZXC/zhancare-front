@@ -3,14 +3,9 @@
 import { RefObject } from "react";
 import { ChevronDown, Clock, Loader2, X } from "lucide-react";
 import SearchSelect from "../../../components/SearchSelect";
+import { DURATION_OPTIONS } from "../../../utils/durationOptions";
+import { DateCalendarPicker } from "./DateCalendarPicker";
 import type { ConsultationType, DiagService, DiagSlot, DoctorSlot } from "../types/addEventTypes";
-
-const DURATION_OPTIONS = [
-  { id: 15, label: '15 минут' }, { id: 30, label: '30 минут' },
-  { id: 45, label: '45 минут' }, { id: 60, label: '1 час' },
-  { id: 90, label: '1.5 часа' }, { id: 120, label: '2 часа' },
-  { id: 150, label: '2.5 часа' }, { id: 180, label: '3 часа' },
-];
 
 export function DateTimeSection({
   consultationType,
@@ -20,6 +15,7 @@ export function DateTimeSection({
   onTimeChange,
   duration,
   onDurationChange,
+  defaultDuration = null,
   doctorId,
   loadingAvailability,
   slots,
@@ -38,6 +34,11 @@ export function DateTimeSection({
   onTimeChange: (val: string) => void;
   duration: number;
   onDurationChange: (val: number) => void;
+  /** The selected staff member's own preferred consultation duration — used
+   * only as a hint ("по умолчанию: X") once the admin has picked someone;
+   * it no longer locks the field. `null` when nobody's selected yet, or the
+   * selected person has no preference configured. */
+  defaultDuration?: number | null;
   doctorId: string;
   loadingAvailability: boolean;
   slots: DoctorSlot[];
@@ -54,41 +55,61 @@ export function DateTimeSection({
 
   return (
     <>
-      {/* Duration (hidden for diagnostics) */}
+      {/* Duration (hidden for diagnostics) — defaults to the selected staff
+          member's own preferred duration (see handleDoctorChange), but stays
+          editable so the admin can pick a different one for THIS visit.
+          Booking then correctly locks exactly that window (see
+          BookingService.acquire_slot_for_time), and every schedule listing
+          shows the real duration actually booked — not this default. */}
       {consultationType !== 'diagnostics' && (
         <div>
           <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
             Продолжительность (минут)
           </label>
-          {doctorId ? (
-            <div className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl border-2 border-gray-100 bg-gray-50 text-sm text-gray-500 select-none cursor-default">
-              <span className="flex-1 font-medium text-gray-700">
-                {DURATION_OPTIONS.find(o => o.id === duration)?.label ?? `${duration} минут`}
-              </span>
-              <span className="text-xs text-gray-400">из профиля врача</span>
-            </div>
-          ) : (
-            <SearchSelect
-              options={DURATION_OPTIONS}
-              value={String(duration)}
-              onChange={(val) => onDurationChange(parseInt(val))}
-              placeholder="Выберите продолжительность..."
-            />
+          <SearchSelect
+            options={DURATION_OPTIONS}
+            value={String(duration)}
+            onChange={(val) => onDurationChange(parseInt(val))}
+            placeholder="Выберите продолжительность..."
+          />
+          {defaultDuration != null && (
+            duration === defaultDuration ? (
+              <p className="text-xs text-gray-400 mt-1.5">По умолчанию для этого специалиста</p>
+            ) : (
+              <p className="text-xs text-amber-600 mt-1.5">
+                Обычно у этого специалиста {DURATION_OPTIONS.find(o => o.id === defaultDuration)?.label?.toLowerCase() ?? `${defaultDuration} минут`}.{' '}
+                <button
+                  type="button"
+                  onClick={() => onDurationChange(defaultDuration)}
+                  className="underline font-semibold hover:text-amber-700"
+                >
+                  Вернуть по умолчанию
+                </button>
+              </p>
+            )
           )}
         </div>
       )}
 
-      {/* Date */}
+      {/* Date — a proper dropdown calendar, not the browser's native picker.
+          Once a doctor/nurse is selected, it also shades in which days they
+          actually work, resolved with the exact same "mixed as fallback"
+          precedence the time picker below already uses — so the admin can
+          see at a glance where there's any point clicking, instead of
+          picking a date blind and only then finding out it's a day off. */}
       <div>
         <label className="block text-sm font-semibold mb-2" style={{ color: '#1e263e' }}>
           Дата
         </label>
-        <input
-          type="date"
+        <DateCalendarPicker
           value={date}
-          onChange={(e) => onDateChange(e.target.value)}
-          className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
-          required
+          onChange={onDateChange}
+          doctorId={consultationType !== 'diagnostics' ? doctorId : undefined}
+          consultationType={consultationType}
+          slots={consultationType !== 'diagnostics' ? slots : undefined}
+          loadingSlots={loadingAvailability}
+          time={time}
+          onTimeChange={consultationType !== 'diagnostics' ? onTimeChange : undefined}
         />
       </div>
 

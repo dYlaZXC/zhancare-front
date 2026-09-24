@@ -61,6 +61,10 @@ export interface ScheduleEvent {
   // Performing doctor (diagnostics only)
   performing_doctor_id?: number | null;
   performing_doctor_name?: string | null;
+  performing_doctor_phone?: string | null;
+  performing_doctor_email?: string | null;
+  performing_doctor_specialization?: string | null;
+  performing_doctor_years_of_experience?: number | null;
   // Nurse (appointments only)
   nurse_id?: number;
   nurse_name?: string;
