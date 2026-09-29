@@ -24,8 +24,10 @@ export function CategoriesPanel({
   onToggle,
   onDelete,
   onScheduleSaved,
+  clinicCurrency,
 }: {
   categories: ServiceCategory[];
+  clinicCurrency?: string;
   onEdit: (cat: ServiceCategory) => void;
   onToggle: (cat: ServiceCategory) => void;
   onDelete: (cat: ServiceCategory) => void;
@@ -99,6 +101,7 @@ export function CategoriesPanel({
             <CategoryCard
               key={cat.id}
               category={cat}
+              clinicCurrency={clinicCurrency}
               onEdit={onEdit}
               onToggle={onToggle}
               onSchedule={setScheduleCategory}

@@ -250,6 +250,7 @@ export function ServicesView({ user }: { user: any }) {
           onToggle={handleToggleCategory}
           onDelete={handleDeleteCategory}
           onScheduleSaved={fetchCategories}
+          clinicCurrency={clinicCurrency}
         />
       )}
 
@@ -319,14 +320,19 @@ export function ServicesView({ user }: { user: any }) {
         {categoryModal !== false && (
           <CategoryFormModal
             initial={categoryModal}
-            nextOrder={categories.length}
+            staff={staff}
+            clinicCurrency={clinicCurrency}
+            user={user}
             onClose={() => setCategoryModal(false)}
             onSaved={(cat, mode) => {
+              // Saving a category's settings pushes them to the services that
+              // follow it — refresh the list so it shows the new values.
+              if (cat.synced_services) fetchServices({ silent: true });
               setCategories(prev => (
                 mode === "create"
                   ? [...prev, cat]
                   : prev.map(c => c.id === cat.id ? cat : c)
-              ).sort((a, b) => a.order - b.order));
+              ).sort((a, b) => b.id - a.id));
               setCategoryModal(false);
             }}
           />

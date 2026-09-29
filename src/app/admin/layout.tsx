@@ -43,11 +43,19 @@ export default function AdminLayout({
 
   // Admins never called this before — only doctor-facing components did
   // (DoctorHeader.tsx etc). The singleton is what delivers admin_tasks
-  // reminder/due notifications live to the bell dropdown.
+  // reminder/due notifications live to the bell dropdown, and now also
+  // doctor_availability_changed/nurse_availability_changed (staff picker
+  // real-time updates).
+  //
+  // Bug fixed here: this read localStorage['token'], a key nothing in the
+  // app ever writes (the JWT lives under 'access_token' — see
+  // websocketService.getStoredToken()'s own fallback chain). `token` was
+  // therefore always null and connect() never actually ran — admins never
+  // got a live socket at all, silently, since the empty-token branch is
+  // just skipped. connect() with no argument resolves the right key itself.
   useEffect(() => {
     if (!user || !isAdmin) return;
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    if (token) websocketService.connect(token).catch(() => {});
+    websocketService.connect().catch(() => {});
   }, [user, isAdmin]);
 
   const handleToggleSidebar = () => {

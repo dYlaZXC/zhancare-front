@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Pencil, Trash2, CalendarDays, ClipboardList } from "lucide-react";
+import { Pencil, Trash2, CalendarDays, ClipboardList, Clock, Banknote } from "lucide-react";
+import { formatPrice } from "@/utils/currency";
 import type { ServiceCategory } from "../types/serviceTypes";
 import { getCategoryIcon } from "../types/serviceTypes";
 
@@ -19,12 +20,14 @@ function pluralizeServices(n: number) {
 // status chips, right-hand action rail) so the two tabs read as one catalog.
 export function CategoryCard({
   category,
+  clinicCurrency,
   onEdit,
   onToggle,
   onSchedule,
   onDelete,
 }: {
   category: ServiceCategory;
+  clinicCurrency?: string;
   onEdit: (category: ServiceCategory) => void;
   onToggle: (category: ServiceCategory) => void;
   onSchedule: (category: ServiceCategory) => void;
@@ -60,9 +63,18 @@ export function CategoryCard({
               <span className="flex items-center gap-1">
                 <ClipboardList className="w-4 h-4" /> {servicesCount} {pluralizeServices(servicesCount)}
               </span>
-              <span className="flex items-center gap-1 text-gray-400">
-                порядок: {category.order}
-              </span>
+              {/* This clinic's defaults for new services — same meta as a service card */}
+              {category.settings?.default_duration_minutes ? (
+                <span className="flex items-center gap-1">
+                  <Clock className="w-4 h-4" /> {category.settings.default_duration_minutes} мин
+                </span>
+              ) : null}
+              {category.settings?.default_price ? (
+                <span className="flex items-center gap-1 font-semibold text-emerald-600">
+                  <Banknote className="w-4 h-4" />
+                  {formatPrice(category.settings.default_price, category.settings.default_currency || clinicCurrency || 'KZT')}
+                </span>
+              ) : null}
             </div>
 
             <div className="mt-2 flex flex-wrap items-center gap-2">

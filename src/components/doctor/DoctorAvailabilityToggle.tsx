@@ -56,11 +56,16 @@ const DoctorAvailabilityToggle: React.FC<DoctorAvailabilityToggleProps> = ({
   // Sync when parent passes a new status (e.g. from WebSocket in DoctorHeader)
   useEffect(() => { setStatus(currentStatus); }, [currentStatus]);
 
-  // WebSocket: listen for real-time status changes for this doctor
+  // WebSocket: listen for real-time status changes for this user — despite
+  // the doctor-only naming, this component is shared by NurseHeader too (the
+  // backend branches on role server-side, both events carry the same shape
+  // keyed by doctor_id/nurse_id respectively), so both event types are
+  // handled here rather than duplicating this component per role.
   useEffect(() => {
     const handleWsChange = (data: any) => {
       const payload = data?.data ?? data;
-      if (doctorId && payload?.doctor_id !== doctorId) return;
+      const changedId = payload?.doctor_id ?? payload?.nurse_id;
+      if (doctorId && changedId !== doctorId) return;
       const newStatus = payload?.availability_status as AvailabilityStatus;
       if (newStatus) {
         setStatus(newStatus);
@@ -68,8 +73,12 @@ const DoctorAvailabilityToggle: React.FC<DoctorAvailabilityToggleProps> = ({
       }
     };
 
-    websocketService.onDoctorAvailabilityChanged(handleWsChange);
-    return () => websocketService.offDoctorAvailabilityChanged(handleWsChange);
+    websocketService.on("doctor_availability_changed", handleWsChange);
+    websocketService.on("nurse_availability_changed", handleWsChange);
+    return () => {
+      websocketService.off("doctor_availability_changed", handleWsChange);
+      websocketService.off("nurse_availability_changed", handleWsChange);
+    };
   }, [doctorId, onStatusChange]);
 
   const statusOptions: StatusOption[] = [

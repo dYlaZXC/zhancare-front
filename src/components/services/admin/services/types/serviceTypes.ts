@@ -60,8 +60,25 @@ export interface ServiceCategory {
   is_active: boolean;
   /** Services in the admin's own clinic — read-only, from the list endpoint. */
   services_count?: number;
-  /** Weekdays (0=Пн..6=Вс) the category-wide schedule covers — read-only. */
+  /** Weekdays (0=Пн..6=Вс) the category-wide schedule covers — read-only.
+   *  Both this and `settings` are the requesting admin's OWN clinic's. */
   schedule_weekdays?: number[];
+  /** This clinic's defaults for new services in the category; null for an
+   *  admin with no clinic. */
+  settings?: CategorySettings | null;
+}
+
+/** What a NEW service in a category starts with — the service form's fields. */
+export interface CategorySettings {
+  /** False until this clinic has saved the category's settings once. */
+  configured: boolean;
+  description: string;
+  default_price: string | null;
+  default_currency: string | null;
+  default_duration_minutes: number | null;
+  default_schedule_source: ScheduleSource;
+  default_doctor_ids: number[];
+  default_capacity_per_slot: number | null;
 }
 
 export interface StaffMember {
@@ -99,7 +116,14 @@ export interface Service {
   schedule_source: ScheduleSource;
   doctor_ids: number[];
   doctor_names: string[];
+  /** Which inheritable fields THIS service set itself; the rest follow its category. */
+  own_fields?: InheritableField[];
 }
+
+/** The service fields a category can supply (the service form's own fields). */
+export type InheritableField =
+  | "description" | "price" | "currency" | "duration_minutes"
+  | "schedule_source" | "doctors" | "capacity_per_slot";
 
 export interface ServiceFormData {
   name: string;
@@ -123,10 +147,10 @@ export interface CategoryFormData {
   name: string;
   icon: string;
   color: string;
-  order: number;
   is_active: boolean;
 }
 
+// No `order`: the admin list is newest-first by id, so there is nothing to type in.
 export const EMPTY_CATEGORY_FORM: CategoryFormData = {
-  slug: "", name: "", icon: "clipboard-list", color: "#6366f1", order: 0, is_active: true,
+  slug: "", name: "", icon: "clipboard-list", color: "#6366f1", is_active: true,
 };

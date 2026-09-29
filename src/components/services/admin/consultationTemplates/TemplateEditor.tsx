@@ -8,6 +8,7 @@ import { Layers, Loader2, CheckCircle2, Save, Plus, Trash2, ChevronUp, ChevronDo
 import { AnimatePresence } from "framer-motion";
 import SearchSelect from "../schedule/components/SearchSelect";
 import { TemplatePreview } from "./TemplatePreview";
+import { TemplateLivePreview } from "./TemplateLivePreview";
 import type { ConsultationFormTemplate, FormSection, SectionType } from "./types";
 import { EMPTY_SECTION, SECTION_KEY_RE, SECTION_TYPE_LABELS, generateSectionKey } from "./types";
 
@@ -149,116 +150,127 @@ export function TemplateEditor({
           </button>
         </div>
 
-        <div className="space-y-6">
-          <div className="max-w-md">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Название шаблона</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Например: Терапевт"
-              className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-sky-400 outline-none transition-colors"
-            />
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <label className="block text-sm font-semibold text-gray-700">Секции листа</label>
-              <button
-                type="button"
-                onClick={addSection}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-sky-700 bg-sky-50 hover:bg-sky-100 transition-colors"
-              >
-                <Plus className="w-4 h-4" /> Добавить секцию
-              </button>
+        {/* Left: the fields being edited. Right: a live, read-only sketch of
+            the resulting page (TemplateLivePreview) that just re-renders off
+            the same `name`/`sections` state — no separate "apply" step,
+            nothing to keep in sync by hand. Stacks on narrow screens instead
+            of disappearing, so it's never simply unreachable there. */}
+        <div className="flex flex-col lg:flex-row gap-6 items-start">
+          <div className="w-full lg:w-1/2 min-w-0 space-y-6">
+            <div className="max-w-md">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Название шаблона</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Например: Терапевт"
+                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-sky-400 outline-none transition-colors"
+              />
             </div>
 
-            <div className="space-y-3">
-              {sections.map((section, index) => (
-                <div
-                  key={index}
-                  onDragOver={handleDragOver(index)}
-                  onDrop={handleDrop(index)}
-                  className={`rounded-2xl border-2 p-4 bg-gray-50/50 transition-all ${
-                    dragOverIndex === index ? "border-sky-400 bg-sky-50/50" : "border-gray-100"
-                  } ${draggedIndex === index ? "opacity-40" : ""}`}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-semibold text-gray-700">Секции листа</label>
+                <button
+                  type="button"
+                  onClick={addSection}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-sky-700 bg-sky-50 hover:bg-sky-100 transition-colors"
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="flex flex-col items-center gap-1 pt-2 flex-shrink-0">
-                      <div
-                        draggable
-                        onDragStart={handleDragStart(index)}
-                        onDragEnd={handleDragEnd}
-                        className="cursor-grab active:cursor-grabbing touch-none"
-                        title="Перетащите, чтобы изменить порядок"
-                      >
-                        <GripVertical className="w-4 h-4 text-gray-400 hover:text-gray-600" />
-                      </div>
-                      <button type="button" onClick={() => moveSection(index, -1)} disabled={index === 0}
-                        className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-20 disabled:cursor-not-allowed">
-                        <ChevronUp className="w-4 h-4" />
-                      </button>
-                      <button type="button" onClick={() => moveSection(index, 1)} disabled={index === sections.length - 1}
-                        className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-20 disabled:cursor-not-allowed">
-                        <ChevronDown className="w-4 h-4" />
-                      </button>
-                    </div>
+                  <Plus className="w-4 h-4" /> Добавить секцию
+                </button>
+              </div>
 
-                    <div className="flex-1 min-w-0 space-y-2">
-                      <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-3">
+                {sections.map((section, index) => (
+                  <div
+                    key={index}
+                    onDragOver={handleDragOver(index)}
+                    onDrop={handleDrop(index)}
+                    className={`rounded-2xl border-2 p-4 bg-gray-50/50 transition-all ${
+                      dragOverIndex === index ? "border-sky-400 bg-sky-50/50" : "border-gray-100"
+                    } ${draggedIndex === index ? "opacity-40" : ""}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex flex-col items-center gap-1 pt-2 flex-shrink-0">
+                        <div
+                          draggable
+                          onDragStart={handleDragStart(index)}
+                          onDragEnd={handleDragEnd}
+                          className="cursor-grab active:cursor-grabbing touch-none"
+                          title="Перетащите, чтобы изменить порядок"
+                        >
+                          <GripVertical className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+                        </div>
+                        <button type="button" onClick={() => moveSection(index, -1)} disabled={index === 0}
+                          className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-20 disabled:cursor-not-allowed">
+                          <ChevronUp className="w-4 h-4" />
+                        </button>
+                        <button type="button" onClick={() => moveSection(index, 1)} disabled={index === sections.length - 1}
+                          className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-20 disabled:cursor-not-allowed">
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Заголовок вкладки</label>
+                            <input
+                              type="text"
+                              value={section.label}
+                              onChange={(e) => updateSection(index, { label: e.target.value })}
+                              placeholder="Жалобы"
+                              className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-sky-400 outline-none text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Тип поля</label>
+                            <SearchSelect
+                              options={SECTION_TYPE_OPTIONS}
+                              value={section.type}
+                              onChange={(v) => { if (v) updateSection(index, { type: v as SectionType }); }}
+                              placeholder="Выберите тип"
+                            />
+                          </div>
+                        </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1">Заголовок вкладки</label>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Подсказка для ИИ-анализа (необязательно)</label>
                           <input
                             type="text"
-                            value={section.label}
-                            onChange={(e) => updateSection(index, { label: e.target.value })}
-                            placeholder="Жалобы"
+                            value={section.ai_hint ?? ""}
+                            onChange={(e) => updateSection(index, { ai_hint: e.target.value })}
+                            placeholder="Что именно ИИ должен писать в этот раздел"
                             className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-sky-400 outline-none text-sm"
                           />
                         </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1">Тип поля</label>
-                          <SearchSelect
-                            options={SECTION_TYPE_OPTIONS}
-                            value={section.type}
-                            onChange={(v) => { if (v) updateSection(index, { type: v as SectionType }); }}
-                            placeholder="Выберите тип"
+                        <label className="flex items-center gap-2 text-sm text-gray-600 pt-1 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={!!section.required}
+                            onChange={(e) => updateSection(index, { required: e.target.checked })}
+                            className="w-4 h-4 rounded border-gray-300"
                           />
-                        </div>
+                          Обязательная секция (визуальная пометка)
+                        </label>
                       </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Подсказка для ИИ-анализа (необязательно)</label>
-                        <input
-                          type="text"
-                          value={section.ai_hint ?? ""}
-                          onChange={(e) => updateSection(index, { ai_hint: e.target.value })}
-                          placeholder="Что именно ИИ должен писать в этот раздел"
-                          className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-sky-400 outline-none text-sm"
-                        />
-                      </div>
-                      <label className="flex items-center gap-2 text-sm text-gray-600 pt-1 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={!!section.required}
-                          onChange={(e) => updateSection(index, { required: e.target.checked })}
-                          className="w-4 h-4 rounded border-gray-300"
-                        />
-                        Обязательная секция (визуальная пометка)
-                      </label>
-                    </div>
 
-                    <button
-                      type="button"
-                      onClick={() => removeSection(index)}
-                      disabled={sections.length === 1}
-                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-20 disabled:cursor-not-allowed flex-shrink-0"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => removeSection(index)}
+                        disabled={sections.length === 1}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-20 disabled:cursor-not-allowed flex-shrink-0"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
+          </div>
+
+          <div className="w-full lg:w-1/2 flex-shrink-0">
+            <TemplateLivePreview name={name} sections={sections} />
           </div>
         </div>
 

@@ -17,6 +17,8 @@ import DiagnosticsReferralExtractModal, { ExtractedReferralResult } from "@/comp
 import { SignatureModal } from "@/components/shared/SignatureModal";
 import type { ConsultationFormSection } from "@/types/consultation";
 import { ConsultationTemplatePicker, TEMPLATE_SWITCH_CONFIRM } from "@/components/shared/ConsultationTemplatePicker";
+import { ConsultationFormPresetPicker } from "@/components/shared/ConsultationFormPresetPicker";
+import { LoadLastVisitButton } from "@/components/shared/LoadLastVisitButton";
 
 interface ClinicAppointment {
   id: number;
@@ -723,6 +725,24 @@ export default function OfflineConsultationPage() {
               confirmMessage={hasContent ? TEMPLATE_SWITCH_CONFIRM : null}
               onChanged={handleTemplateChanged}
             />
+            <div className="mt-2 space-y-1.5">
+              <ConsultationFormPresetPicker
+                templateId={appointment.template_snapshot?.id ?? null}
+                sections={templateSections}
+                hasContent={hasContent}
+                getCurrentValues={() => sectionValues}
+                onApply={(values) => setSectionValues(prev => ({ ...prev, ...values }))}
+                disabled={isCompleted}
+              />
+              <LoadLastVisitButton
+                patientId={appointment.patient}
+                excludeMeetingId={undefined}
+                sections={templateSections}
+                hasContent={hasContent}
+                onApply={(values) => setSectionValues(prev => ({ ...prev, ...values }))}
+                disabled={isCompleted}
+              />
+            </div>
           </div>
 
           {/* Duration if completed */}
@@ -981,13 +1001,21 @@ export default function OfflineConsultationPage() {
                               <div className="bg-blue-50 border-t border-blue-100 px-4 py-3 space-y-3">
                                 {/* Date picker */}
                                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Выберите дату</p>
-                                <div className="flex gap-1.5 overflow-x-auto pb-1">
+                                {/* flex-wrap, not overflow-x-auto — with the doctor's own
+                                    sidebar + this panel's voice/AI aside both eating into
+                                    the width, a horizontally-scrolling strip left most of
+                                    the 14 days reachable only by scrolling a strip with no
+                                    visible affordance (or by zooming the browser out to
+                                    force everything to fit) — wrapping keeps every date
+                                    permanently visible and clickable regardless of window
+                                    width or zoom level. */}
+                                <div className="flex flex-wrap gap-1.5">
                                   {nextDays.map(day => (
                                     <button
                                       key={day.iso}
                                       onClick={() => fetchSlots(service.id, day.iso)}
                                       disabled={day.isWeekend}
-                                      className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors ${
+                                      className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors ${
                                         bookingDate === day.iso
                                           ? "bg-cyan-500 text-white border-cyan-500"
                                           : day.isWeekend

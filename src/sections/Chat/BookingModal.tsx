@@ -30,6 +30,8 @@ import { useVoiceGuide } from "@/hooks/useVoiceGuide";
 import type { Doctor, TimeSlot } from "@/components/services/consultations/types/doctor";
 import PhoneInput from "@/components/ui/PhoneInput";
 import { useSlotWebSocket } from "@/hooks/useSlotWebSocket";
+import { websocketService } from "@/services/websocketService";
+import { toast } from "react-toastify";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -428,6 +430,34 @@ export default function BookingModal({
       );
     }, []),
   });
+
+  // Live removal of a doctor who just went offline — so a patient can never
+  // book (or keep looking at) a doctor an admin/the doctor themselves just
+  // marked "Не работает". The backend already broadcasts this to every
+  // connected client (common/views/profile.py); this just has to be
+  // listening. Only wired while the modal is actually open.
+  useEffect(() => {
+    if (!isOpen) return;
+    websocketService.connect().catch(() => {});
+    const onDoctorChange = (data: any) => {
+      const changedId = data?.data?.doctor_id ?? data?.doctor_id;
+      const newStatus = data?.data?.availability_status ?? data?.availability_status;
+      if (selectedDoctor && changedId === selectedDoctor.id && newStatus !== "available") {
+        // bookingError's banner only renders on the "confirmation" step — a
+        // toast is what actually reaches the patient while sent back to
+        // "doctors" from any other step (timeslots, emailcollect, ...).
+        toast.info("Этот врач больше недоступен для записи. Выберите другого.");
+        setSelectedDoctor(null);
+        setSelectedTimeslot(null);
+        setStep("doctors");
+        fetchDoctors();
+        return;
+      }
+      if (step === "doctors") fetchDoctors();
+    };
+    websocketService.on("doctor_availability_changed", onDoctorChange);
+    return () => websocketService.off("doctor_availability_changed", onDoctorChange);
+  }, [isOpen, step, selectedDoctor]); // eslint-disable-line
 
   // Reset state when modal closes
   useEffect(() => {

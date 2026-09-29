@@ -63,12 +63,16 @@ export const DoctorHeader = ({
     fetchCurrentStatus();
   }, [user]);
 
-  // Connect WebSocket and listen for availability changes
+  // Connect WebSocket and listen for availability changes.
+  //
+  // Bug fixed here: this read localStorage['token'], a key nothing in the app
+  // ever writes (the JWT lives under 'access_token'), so `token` was always
+  // null and connect() never ran — this header's own live status sync never
+  // actually worked. connect() with no argument resolves the right key itself
+  // (see websocketService.getStoredToken()).
   useEffect(() => {
     if (!user || !isDoctor) return;
-
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    if (token) websocketService.connect(token).catch(() => {});
+    websocketService.connect().catch(() => {});
 
     const handleAvailabilityChange = (data: any) => {
       if (data.data && data.data.doctor_id === user.id) {

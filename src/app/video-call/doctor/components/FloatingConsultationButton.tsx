@@ -29,6 +29,8 @@ import DiagnosticsForm, { DiagnosticReferral } from "./forms/DiagnosticsForm";
 import GenericSectionForm from "./forms/GenericSectionForm";
 import AudioWaveform from "./AudioWaveform";
 import { ConsultationTemplatePicker, TEMPLATE_SWITCH_CONFIRM } from "@/components/shared/ConsultationTemplatePicker";
+import { ConsultationFormPresetPicker } from "@/components/shared/ConsultationFormPresetPicker";
+import { LoadLastVisitButton } from "@/components/shared/LoadLastVisitButton";
 import { Sparkles } from "lucide-react";
 import AIConsultationReview from "./AIConsultationReview";
 import { Consultation, ConsultationFormSection, DiagnosticsReferralValue } from "@/types/consultation";
@@ -767,7 +769,7 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
                     <p className="text-xs" style={{ color: '#bcc0ca' }}>{consultation.patient_name}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap justify-end">
                   <div className="w-48 lg:w-60">
                     <ConsultationTemplatePicker
                       basePath={`/consultations/${consultation.meeting_id}`}
@@ -781,6 +783,25 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
                       onChanged={handleTemplateChanged}
                     />
                   </div>
+                  <ConsultationFormPresetPicker
+                    templateId={templateMeta?.id ?? null}
+                    sections={templateSections}
+                    hasContent={hasFormContent}
+                    getCurrentValues={() => sectionValues}
+                    onApply={(values) => setSectionValues(prev => ({ ...prev, ...values }))}
+                    disabled={consultation.status === 'completed'}
+                    theme="dark"
+                    align="right"
+                  />
+                  <LoadLastVisitButton
+                    patientId={patientId}
+                    excludeMeetingId={consultation.meeting_id}
+                    sections={templateSections}
+                    hasContent={hasFormContent}
+                    onApply={(values) => setSectionValues(prev => ({ ...prev, ...values }))}
+                    disabled={consultation.status === 'completed'}
+                    theme="dark"
+                  />
                   {isSectionTab(activeTab) && (
                     <button
                       onClick={handleClearActiveTab}

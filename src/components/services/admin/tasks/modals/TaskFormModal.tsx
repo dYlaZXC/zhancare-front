@@ -40,11 +40,14 @@ export function TaskFormModal({
   initial,
   onClose,
   onSaved,
+  dealId,
 }: {
   mode: "create" | "edit";
   initial: AdminTask | null;
   onClose: () => void;
   onSaved: (task: AdminTask) => void;
+  /** Set when opened from a deal card's "Создать задачу" — links the new task back to it (see AdminTask.deal). Ignored in edit mode. */
+  dealId?: number;
 }) {
   const [form, setForm] = useState<TaskFormData>(() => buildInitialForm(initial));
   const [admins, setAdmins] = useState<AssignableAdmin[]>([]);
@@ -86,7 +89,7 @@ export function TaskFormModal({
         res = await api.patch(`/admin-tasks/${initial.id}/`, payload);
         toast.success("Задача обновлена");
       } else {
-        res = await api.post("/admin-tasks/", payload);
+        res = await api.post("/admin-tasks/", dealId ? { ...payload, deal: dealId } : payload);
         toast.success("Задача создана");
       }
       onSaved(res.data);

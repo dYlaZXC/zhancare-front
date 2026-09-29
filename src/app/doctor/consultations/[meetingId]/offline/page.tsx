@@ -18,6 +18,8 @@ import { DiagnosticsServiceItem } from "@/lib/ai/types";
 import AIConsultationReview from "@/app/video-call/doctor/components/AIConsultationReview";
 import { SignatureModal } from "@/components/shared/SignatureModal";
 import { ConsultationTemplatePicker, TEMPLATE_SWITCH_CONFIRM } from "@/components/shared/ConsultationTemplatePicker";
+import { ConsultationFormPresetPicker } from "@/components/shared/ConsultationFormPresetPicker";
+import { LoadLastVisitButton } from "@/components/shared/LoadLastVisitButton";
 import type { ConsultationFormSection } from "@/types/consultation";
 
 interface OfflineConsultation {
@@ -681,6 +683,24 @@ export default function OfflineConsultationByMeetingPage() {
               confirmMessage={hasContent ? TEMPLATE_SWITCH_CONFIRM : null}
               onChanged={handleTemplateChanged}
             />
+            <div className="mt-2 space-y-1.5">
+              <ConsultationFormPresetPicker
+                templateId={consultation.template_snapshot?.id ?? null}
+                sections={templateSections}
+                hasContent={hasContent}
+                getCurrentValues={() => sectionValues}
+                onApply={(values) => setSectionValues(prev => ({ ...prev, ...values }))}
+                disabled={isCompleted}
+              />
+              <LoadLastVisitButton
+                patientId={consultation.patient}
+                excludeMeetingId={meetingId}
+                sections={templateSections}
+                hasContent={hasContent}
+                onApply={(values) => setSectionValues(prev => ({ ...prev, ...values }))}
+                disabled={isCompleted}
+              />
+            </div>
           </div>
 
           {isCompleted && consultation.duration_seconds && (
@@ -867,12 +887,17 @@ export default function OfflineConsultationByMeetingPage() {
 
                           {isBookingOpen && (
                             <div className="mt-2.5 pt-2.5 border-t border-gray-100">
-                              <div className="flex gap-1.5 overflow-x-auto pb-1.5 mb-2">
+                              {/* flex-wrap, not overflow-x-auto — see the same fix in the
+                                  appointments/[id]/offline page: a horizontally-scrolling
+                                  strip left most of the 14 days reachable only via a
+                                  scrollbar with no visible affordance (or by zooming the
+                                  browser out), wrapping keeps every date always visible. */}
+                              <div className="flex flex-wrap gap-1.5 mb-2">
                                 {nextDays.map(d => (
                                   <button
                                     key={d.iso}
                                     onClick={() => fetchSlots(service.id, d.iso)}
-                                    className={`flex-shrink-0 px-2.5 py-1.5 rounded-lg text-xs whitespace-nowrap transition-colors ${
+                                    className={`px-2.5 py-1.5 rounded-lg text-xs whitespace-nowrap transition-colors ${
                                       bookingDate === d.iso ? "bg-cyan-500 text-white" : "bg-gray-100 text-gray-500"
                                     }`}
                                   >

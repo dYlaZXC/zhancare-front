@@ -198,6 +198,24 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
     setDoctorsViewDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
   };
 
+  // "Add a record on this date": opens BOTH the full form (has every type —
+  // home visit, diagnostics, everything) AND the "Свободные врачи" drawer
+  // alongside it, so the admin can check who's actually free that date without
+  // leaving the form. Each closes independently via its own X/Закрыть. The one
+  // path every add-entry point in the week and month views goes through, so
+  // they can't drift apart again.
+  const openDayWithForm = (dateString: string) => {
+    setSelectedDate(dateString);
+    setShowDateDetailsDrawer(true);
+    setShowAddModal(true);
+  };
+
+  // Just the drawer for a date (no form) — a day's records + free doctors.
+  const openDayDetails = (dateString: string) => {
+    setSelectedDate(dateString);
+    setShowDateDetailsDrawer(true);
+  };
+
   // Render Week View
   const renderWeekView = () => {
     const weekDays = getWeekDays();
@@ -249,11 +267,16 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
 
           {/* Selected day header */}
           <div className="flex items-center justify-between">
-            <h3 className="text-sm sm:text-base font-semibold text-gray-800 capitalize">
-              {selectedDayDate.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
-            </h3>
             <button
-              onClick={() => { setSelectedDate(effectiveDay); setShowAddModal(true); }}
+              type="button"
+              onClick={() => openDayDetails(effectiveDay)}
+              title="Записи и свободные врачи на этот день"
+              className="text-left text-sm sm:text-base font-semibold text-gray-800 capitalize hover:text-blue-600 transition-colors"
+            >
+              {selectedDayDate.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </button>
+            <button
+              onClick={() => openDayWithForm(effectiveDay)}
               className="flex items-center gap-1 px-3 py-1.5 rounded-lg border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50 transition-colors text-xs text-gray-500 hover:text-blue-600"
             >
               <Plus className="w-3 h-3" />
@@ -269,7 +292,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
                   key={event.id}
                   event={event}
                   onChanged={fetchSchedule}
-                  onClick={() => { setSelectedDate(effectiveDay); setShowDateDetailsDrawer(true); }}
+                  onClick={() => openDayDetails(effectiveDay)}
                 />
               ))
             ) : (
@@ -299,10 +322,17 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
               >
                 {/* Day header — fixed */}
                 <div className="flex-shrink-0 mb-3 pb-2 border-b-2 border-gray-200">
-                  <div className="text-[10px] text-gray-500 uppercase font-semibold">{getDayName(day)}</div>
-                  <div className={`text-xl font-bold mt-0.5 ${isToday ? 'text-blue-600' : 'text-gray-900'}`}>{day.getDate()}</div>
                   <button
-                    onClick={() => { setSelectedDate(dateString); setShowAddModal(true); }}
+                    type="button"
+                    onClick={() => openDayDetails(dateString)}
+                    title="Записи и свободные врачи на этот день"
+                    className="block w-full text-left group"
+                  >
+                    <div className="text-[10px] text-gray-500 uppercase font-semibold">{getDayName(day)}</div>
+                    <div className={`text-xl font-bold mt-0.5 group-hover:underline ${isToday ? 'text-blue-600' : 'text-gray-900'}`}>{day.getDate()}</div>
+                  </button>
+                  <button
+                    onClick={() => openDayWithForm(dateString)}
                     className="mt-1.5 w-full py-1 rounded-lg border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1 text-[10px] text-gray-600 hover:text-blue-600"
                   >
                     <Plus className="w-3 h-3" />
@@ -319,7 +349,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
                           event={event}
                           onChanged={fetchSchedule}
                           compact
-                          onClick={() => { setSelectedDate(dateString); setShowDateDetailsDrawer(true); }}
+                          onClick={() => openDayDetails(dateString)}
                         />
                       ))
                     : (
@@ -418,8 +448,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
                       // useful to click: the drawer's "Свободные врачи" tab
                       // is exactly how an admin checks availability and
                       // books a slot for that date.
-                      setSelectedDate(dateString);
-                      setShowDateDetailsDrawer(true);
+                      openDayDetails(dateString);
                     }}
                   >
                     <div className="flex items-center justify-between mb-1 md:mb-2">
@@ -444,15 +473,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          // Opens BOTH: the full form (has every type —
-                          // home visit, diagnostics, everything) AND the
-                          // "Свободные врачи" drawer alongside it, so the
-                          // admin can check who's actually free that date
-                          // without leaving the form. Each closes
-                          // independently via its own X/Закрыть.
-                          setSelectedDate(dateString);
-                          setShowDateDetailsDrawer(true);
-                          setShowAddModal(true);
+                          openDayWithForm(dateString);
                         }}
                         className="p-0.5 md:p-1 rounded-lg hover:bg-blue-100 transition-colors"
                         title="Добавить запись"
@@ -529,8 +550,16 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => {
-                setSelectedDate(null);
-                setShowAddModal(true);
+                // In the calendar views this is the same "add a record" as
+                // a day's button, for the date the form defaults to (today),
+                // so the drawer opens beside it here too. Other tabs
+                // (doctors/rooms/referrals…) keep the plain form.
+                if (viewMode === 'week' || viewMode === 'month') {
+                  openDayWithForm(toLocalDateStr(new Date()));
+                } else {
+                  setSelectedDate(null);
+                  setShowAddModal(true);
+                }
               }}
               className="flex items-center gap-1.5 px-3 md:px-5 py-2 md:py-2.5 rounded-xl text-white text-sm font-semibold shadow-md hover:shadow-lg transition-all whitespace-nowrap"
               style={{ background: 'linear-gradient(135deg, #3772ff 0%, #2c5bcc 100%)' }}

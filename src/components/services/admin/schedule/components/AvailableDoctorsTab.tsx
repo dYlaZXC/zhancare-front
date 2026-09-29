@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { api } from "@/utils/api";
+import { websocketService } from "@/services/websocketService";
 import { toast } from "react-toastify";
 import {
   Search,
@@ -148,17 +149,22 @@ export function AvailableDoctorsTab({
     allSlots: { start: string; end: string }[];
   } | null>(null);
 
-  useEffect(() => {
-    if (!date || viewMode !== 'diagnostics') return;
+  const fetchServicesDay = useCallback(() => {
+    if (!date) return;
     setLoading(true);
     api.get('/diagnostics/services/services-day/', { params: { date } })
       .then(res => setServicesDay(res.data.results ?? res.data))
       .catch(() => toast.error("Не удалось загрузить доступность услуг на дату"))
       .finally(() => setLoading(false));
-  }, [date, viewMode]);
+  }, [date]);
 
   useEffect(() => {
-    if (!date || viewMode === 'diagnostics') return;
+    if (viewMode !== 'diagnostics') return;
+    fetchServicesDay();
+  }, [viewMode, fetchServicesDay]);
+
+  const fetchStaffDay = useCallback(() => {
+    if (!date) return;
     setLoading(true);
     api.get('/staff/doctors-day/', { params: { date, consultation_type: apiConsultationType } })
       .then(res => setStaffDay(res.data))
@@ -169,6 +175,28 @@ export function AvailableDoctorsTab({
     // between them is instant, filtered client-side by role below, not a
     // second round-trip for data that's already in hand.
   }, [date, apiConsultationType]);
+
+  useEffect(() => {
+    if (viewMode === 'diagnostics') return;
+    fetchStaffDay();
+  }, [viewMode, fetchStaffDay]);
+
+  // Live removal/return of a doctor or nurse the moment they toggle their own
+  // status (DoctorHeader's dropdown) or an admin toggles it from the staff
+  // list — refetches whichever of the two views is on screen, so a doctor
+  // marked "Не работает" disappears from here without anyone refreshing the
+  // page. The backend already broadcasts both events to every connected
+  // client (common/views/profile.py); this tab just has to be listening.
+  useEffect(() => {
+    websocketService.connect().catch(() => {});
+    const onChange = () => { fetchStaffDay(); fetchServicesDay(); };
+    websocketService.on('doctor_availability_changed', onChange);
+    websocketService.on('nurse_availability_changed', onChange);
+    return () => {
+      websocketService.off('doctor_availability_changed', onChange);
+      websocketService.off('nurse_availability_changed', onChange);
+    };
+  }, [fetchStaffDay, fetchServicesDay]);
 
   const toggleDoctor = (id: number) => {
     setExpandedDoctors(prev => {

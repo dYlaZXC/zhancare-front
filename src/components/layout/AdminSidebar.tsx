@@ -29,6 +29,8 @@ import {
   faLayerGroup,
   faDoorOpen,
   faListCheck,
+  faNotesMedical,
+  faHandshake,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useState, useEffect, useRef, type CSSProperties } from "react";
@@ -79,6 +81,7 @@ const adminMenu: MenuItem[] = [
   },
   { id: "profile", icon: faUser, title: "Профиль", color: "#3772ff", href: "/admin/profile" },
   { id: "tasks", icon: faListCheck, title: "Задачи", color: "#059669", href: "/admin/tasks" },
+  { id: "deals", icon: faHandshake, title: "Сделки", color: "#3772ff", href: "/admin/deals" },
   {
     id: "management",
     icon: faUsers,
@@ -90,6 +93,7 @@ const adminMenu: MenuItem[] = [
       { id: "rooms", icon: faDoorOpen, title: "Кабинеты", color: "#f97316", href: "/admin/rooms" },
       { id: "consultation-templates", icon: faLayerGroup, title: "Шаблоны листов", color: "#a855f7", href: "/admin/consultation-templates" },
       { id: "patients", icon: faUserMd, title: "Пациенты", color: "#10b981", href: "/admin/patients" },
+      { id: "treatment-plans", icon: faNotesMedical, title: "Планы лечения", color: "#ef4444", href: "/admin/treatment-plans" },
       { id: "schedule", icon: faCalendarCheck, title: "Расписание", color: "#295bbf", href: "/admin/schedule" },
       { id: "warehouse", icon: faWarehouse, title: "Склад", color: "#78716c", href: "/admin/warehouse" },
       { id: "admins", icon: faUserShield, title: "Администраторы", color: "#f59e0b", href: "/admin/admins", superOnly: true },

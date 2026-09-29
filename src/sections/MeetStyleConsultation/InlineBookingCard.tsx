@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { api } from "@/utils/api";
+import { websocketService } from "@/services/websocketService";
 import { useAuth } from "@/context/AuthContext";
 import { useConsultationPayment } from "@/components/payment/useConsultationPayment";
 import type { DoctorRecommendation } from "@/lib/ai";
@@ -149,6 +150,27 @@ export default function InlineBookingCard({
   const isFirstRun = useRef(true);
   // true when the mount effect just set selectedDate — suppress the resulting [selectedDate] run
   const suppressNextFetch = useRef(false);
+
+  // Live removal: this card is scoped to one specific recommended doctor, so
+  // if THEY go offline while it's open, there's no "pick someone else" step
+  // to fall back to here — just clear the slots and say why, same message
+  // path an ordinary booking failure already uses. The backend already
+  // broadcasts this to every connected client (common/views/profile.py);
+  // this just has to be listening.
+  useEffect(() => {
+    websocketService.connect().catch(() => {});
+    const onDoctorChange = (data: any) => {
+      const changedId = data?.data?.doctor_id ?? data?.doctor_id;
+      const newStatus = data?.data?.availability_status ?? data?.availability_status;
+      if (changedId !== doctor.id || newStatus === "available") return;
+      setSlots([]);
+      setSelectedSlot(null);
+      setBookingError(t.bookingError);
+    };
+    websocketService.on("doctor_availability_changed", onDoctorChange);
+    return () => websocketService.off("doctor_availability_changed", onDoctorChange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doctor.id]);
 
   // Manual date change: re-fetch slots for the newly selected date
   useEffect(() => {
