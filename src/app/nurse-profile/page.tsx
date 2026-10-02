@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { PremiumLoadingScreen } from "@/components/layout/PremiumLoadingScreen";
 
 export default function NurseProfilePage() {
   const router = useRouter();
@@ -11,9 +12,5 @@ export default function NurseProfilePage() {
     router.replace("/nurse/home-visits");
   }, [router]);
 
-  return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-lg text-gray-600">Redirecting...</div>
-    </div>
-  );
+  return <PremiumLoadingScreen message="Перенаправление в кабинет медсестры" />;
 }

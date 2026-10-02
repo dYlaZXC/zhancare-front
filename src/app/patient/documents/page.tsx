@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { api } from "@/utils/local";
+// Was "@/utils/local" — its own separate axios instance with its own
+// independently-drifted 401-refresh logic (no refreshPromise dedup, unlike
+// the shared client below), vulnerable to the same spurious-logout race as
+// the now-removed @/utils/axiosInstance.ts: SIMPLE_JWT rotates+blacklists
+// refresh tokens on use, so two of this page's own concurrent requests
+// 401-ing together could each try to refresh with the same (one-time-use)
+// token and the loser got force-logged-out for no real reason.
+import { api } from "@/utils/api";
 import { toast } from "react-toastify";
 import { useLanguage } from "@/context/LanguageContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";

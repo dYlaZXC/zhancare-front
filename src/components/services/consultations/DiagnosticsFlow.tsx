@@ -7,7 +7,18 @@ import {
   FlaskConical, Scan, Heart, Brain, Bone, Eye, Baby, Microscope,
   Loader2, MapPin, Phone, Sparkles, RefreshCw, Lock, LogIn, UserPlus,
 } from "lucide-react";
-import { api as axiosInstance } from "@/utils/axiosInstance";
+// Was its own separate axios instance (@/utils/axiosInstance) with its own,
+// independently-drifted 401-refresh logic — no refreshPromise dedup, unlike
+// the shared client below. With SIMPLE_JWT's ROTATE_REFRESH_TOKENS +
+// BLACKLIST_AFTER_ROTATION (refresh tokens are single-use), two of this
+// component's own concurrent requests 401-ing near the same 15-minute
+// access-token boundary would each fire their own refresh call with the
+// SAME refresh token; the second one to reach the backend got rejected
+// (already rotated/blacklisted by the first) and force-logged out a user
+// whose session was actually fine. The shared client already dedupes
+// concurrent refreshes via its own refreshPromise — reusing it fixes this
+// for free instead of patching the race into a second implementation.
+import { api as axiosInstance } from "@/utils/api";
 import { getCurrencySymbol } from "@/utils/currency";
 import { useLanguage } from "@/context/LanguageContext";
 import { useConsultationPayment } from "@/components/payment/useConsultationPayment";

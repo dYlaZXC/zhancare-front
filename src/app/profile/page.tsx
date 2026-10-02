@@ -3,6 +3,7 @@
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { PremiumLoadingScreen } from "@/components/layout/PremiumLoadingScreen";
 
 export default function ProfilePage() {
   const { user, loading, isDoctor, isNurse, isAdmin } = useAuth();
@@ -17,19 +18,15 @@ export default function ProfilePage() {
     }
 
     if (isDoctor) {
-      router.replace('/doctor-profile');
+      router.replace('/doctor/consultations');
     } else if (isNurse) {
-      router.replace('/nurse-profile');
+      router.replace('/nurse/home-visits');
     } else if (isAdmin) {
-      router.replace('/admin-profile');
+      router.replace('/admin/profile');
     } else {
       router.replace('/patient/profile');
     }
   }, [user, loading, isDoctor, isNurse, isAdmin, router]);
 
-  return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-lg text-gray-600">Перенаправление на страницу профиля пользователя...</div>
-    </div>
-  );
+  return <PremiumLoadingScreen message="Перенаправление на страницу профиля" />;
 }

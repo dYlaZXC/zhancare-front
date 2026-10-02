@@ -40,14 +40,14 @@ export function TaskFormModal({
   initial,
   onClose,
   onSaved,
-  dealId,
+  pathOfPatientId,
 }: {
   mode: "create" | "edit";
   initial: AdminTask | null;
   onClose: () => void;
   onSaved: (task: AdminTask) => void;
-  /** Set when opened from a deal card's "Создать задачу" — links the new task back to it (see AdminTask.deal). Ignored in edit mode. */
-  dealId?: number;
+  /** Set when opened from a "Путь пациента" card's "Создать задачу" — links the new task back to it (see AdminTask.path_of_patient). Ignored in edit mode. */
+  pathOfPatientId?: number;
 }) {
   const [form, setForm] = useState<TaskFormData>(() => buildInitialForm(initial));
   const [admins, setAdmins] = useState<AssignableAdmin[]>([]);
@@ -89,7 +89,7 @@ export function TaskFormModal({
         res = await api.patch(`/admin-tasks/${initial.id}/`, payload);
         toast.success("Задача обновлена");
       } else {
-        res = await api.post("/admin-tasks/", dealId ? { ...payload, deal: dealId } : payload);
+        res = await api.post("/admin-tasks/", pathOfPatientId ? { ...payload, path_of_patient: pathOfPatientId } : payload);
         toast.success("Задача создана");
       }
       onSaved(res.data);

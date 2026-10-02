@@ -187,9 +187,9 @@ const AuthPopup = () => {
       if (!authNoRedirect) {
         const userRoles: string[] = responseData.user.roles ?? [];
         let redirectUrl = "/patient/video";
-        if (userRoles.includes("doctor")) redirectUrl = "/doctor-profile";
-        else if (userRoles.includes("nurse")) redirectUrl = "/nurse-profile";
-        else if (userRoles.includes("admin")) redirectUrl = "/admin-profile";
+        if (userRoles.includes("doctor")) redirectUrl = "/doctor/consultations";
+        else if (userRoles.includes("nurse")) redirectUrl = "/nurse/home-visits";
+        else if (userRoles.includes("admin")) redirectUrl = "/admin/profile";
 
         setTimeout(() => { window.location.href = redirectUrl; }, 500);
       }
@@ -221,9 +221,9 @@ const AuthPopup = () => {
     if (!authNoRedirect) {
       const userRoles: string[] = safeUser.roles ?? [];
       let redirectUrl = "/patient/video";
-      if (userRoles.includes("doctor")) redirectUrl = "/doctor-profile";
-      else if (userRoles.includes("nurse")) redirectUrl = "/nurse-profile";
-      else if (userRoles.includes("admin")) redirectUrl = "/admin-profile";
+      if (userRoles.includes("doctor")) redirectUrl = "/doctor/consultations";
+      else if (userRoles.includes("nurse")) redirectUrl = "/nurse/home-visits";
+      else if (userRoles.includes("admin")) redirectUrl = "/admin/profile";
       setTimeout(() => { window.location.href = redirectUrl; }, 300);
     }
   };
@@ -272,9 +272,9 @@ const AuthPopup = () => {
         if (!authNoRedirect) {
           const userRoles: string[] = ld.user.roles ?? [];
           let redirectUrl = "/patient/video";
-          if (userRoles.includes("doctor")) redirectUrl = "/doctor-profile";
-          else if (userRoles.includes("nurse")) redirectUrl = "/nurse-profile";
-          else if (userRoles.includes("admin")) redirectUrl = "/admin-profile";
+          if (userRoles.includes("doctor")) redirectUrl = "/doctor/consultations";
+          else if (userRoles.includes("nurse")) redirectUrl = "/nurse/home-visits";
+          else if (userRoles.includes("admin")) redirectUrl = "/admin/profile";
           setTimeout(() => { window.location.href = redirectUrl; }, 500);
         }
       } catch {

@@ -25,7 +25,7 @@ export default function DoctorLayout({
       if (isAdmin) {
         router.replace('/admin/profile');
       } else if (isNurse) {
-        router.replace('/nurse-profile');
+        router.replace('/nurse/home-visits');
       } else if (isPatient) {
         router.replace('/patient/profile');
       } else {
@@ -45,11 +45,7 @@ export default function DoctorLayout({
   }
 
   if (!user || !isDoctor) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg text-gray-600">Перенаправление на страницу профиля врача...</div>
-      </div>
-    );
+    return <PremiumLoadingScreen message="Перенаправление на страницу профиля врача" />;
   }
 
   return (

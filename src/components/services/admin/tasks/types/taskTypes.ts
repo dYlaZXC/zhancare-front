@@ -13,9 +13,10 @@ export interface AdminTask {
   assigned_to_user_id: number;
   created_by: number;
   created_by_name: string;
-  // Nullable link back to a "Сделка" (see deals/types.ts) — set when the
-  // task was created FROM a deal card ("Создать задачу"); null otherwise.
-  deal: number | null;
+  // Nullable link back to a "Путь пациента" card (see
+  // pathOfPatient/types.ts) — set when the task was created FROM a card
+  // ("Создать задачу"); null otherwise.
+  path_of_patient: number | null;
   due_at: string;
   remind_at: string | null;
   status: TaskStatus;

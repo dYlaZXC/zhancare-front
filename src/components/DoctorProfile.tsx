@@ -9,6 +9,7 @@ import { DoctorSidebar } from "@/components/layout/DoctorSidebar";
 import { DoctorHeader } from "@/components/layout/DoctorHeader";
 import { DoctorBreadcrumb } from "@/components/layout/DoctorBreadcrumb";
 import { DoctorMainContent } from "@/components/layout/DoctorMainContent";
+import { PremiumLoadingScreen } from "@/components/layout/PremiumLoadingScreen";
 
 // import DoctorConsultations from "@/components/services/DoctorConsultations";
 import DoctorConsultationsNew from "@/components/services/DoctorConsultationsNew";
@@ -26,9 +27,9 @@ export default function DoctorProfile() {
   useEffect(() => {
     if (!loading && user && !isDoctor) {
       if (isAdmin) {
-        router.replace('/admin-profile');
+        router.replace('/admin/profile');
       } else if (isNurse) {
-        router.replace('/nurse-profile');
+        router.replace('/nurse/home-visits');
       } else if (isPatient) {
         router.replace('/profile');
       } else {
@@ -40,19 +41,11 @@ export default function DoctorProfile() {
   }, [loading, user, isDoctor, isAdmin, isNurse, isPatient, router]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-lg">
-        🔄 Проверка авторизации...
-      </div>
-    );
+    return <PremiumLoadingScreen message="Проверка авторизации" />;
   }
 
   if (!user || !isDoctor) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg text-gray-600">Перенаправление на страницу профиля врача...</div>
-      </div>
-    );
+    return <PremiumLoadingScreen message="Перенаправление на страницу профиля врача" />;
   }
 
   const handleLogout = () => {

@@ -8,6 +8,7 @@ import { toast } from "react-toastify";
 import { NurseSidebar } from "@/components/layout/NurseSidebar";
 import { NurseHeader } from "@/components/layout/NurseHeader";
 import NurseHomeVisits from "@/components/nurse/NurseHomeVisits";
+import { PremiumLoadingScreen } from "@/components/layout/PremiumLoadingScreen";
 
 export default function NurseProfile() {
   const { user, logoutUser, loading, isNurse, isAdmin, isDoctor, isPatient } = useAuth();
@@ -20,9 +21,9 @@ export default function NurseProfile() {
   useEffect(() => {
     if (!loading && user && !isNurse) {
       if (isAdmin) {
-        router.replace('/admin-profile');
+        router.replace('/admin/profile');
       } else if (isDoctor) {
-        router.replace('/doctor-profile');
+        router.replace('/doctor/consultations');
       } else if (isPatient) {
         router.replace('/profile');
       } else {
@@ -34,19 +35,11 @@ export default function NurseProfile() {
   }, [loading, user, isNurse, isAdmin, isDoctor, isPatient, router]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-lg">
-        🔄 Проверка авторизации...
-      </div>
-    );
+    return <PremiumLoadingScreen message="Проверка авторизации" />;
   }
 
   if (!user || !isNurse) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg text-gray-600">Перенаправление на страницу профиля медсестры...</div>
-      </div>
-    );
+    return <PremiumLoadingScreen message="Перенаправление на страницу профиля медсестры" />;
   }
 
   const handleLogout = () => {

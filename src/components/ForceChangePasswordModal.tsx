@@ -75,9 +75,9 @@ export default function ForceChangePasswordModal() {
 
       const roles: string[] = user?.roles ?? [];
       let redirectUrl = "/patient/video";
-      if (roles.includes("doctor")) redirectUrl = "/doctor-profile";
-      else if (roles.includes("nurse")) redirectUrl = "/nurse-profile";
-      else if (roles.includes("admin")) redirectUrl = "/admin-profile";
+      if (roles.includes("doctor")) redirectUrl = "/doctor/consultations";
+      else if (roles.includes("nurse")) redirectUrl = "/nurse/home-visits";
+      else if (roles.includes("admin")) redirectUrl = "/admin/profile";
       setTimeout(() => { window.location.href = redirectUrl; }, 800);
     } catch (err: any) {
       setError(err?.response?.data?.error || "Ошибка при смене пароля");

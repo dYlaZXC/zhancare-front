@@ -1,7 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import { motion } from "framer-motion";
-import { Shield, Loader2, Heart } from "lucide-react";
+import { Shield, Loader2 } from "lucide-react";
+import LogoIcon from "../../../public/logo_icon.png";
 
 interface PremiumLoadingScreenProps {
   message?: string;
@@ -56,9 +58,15 @@ export const PremiumLoadingScreen = ({
           {/* Glow Effect */}
           <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full blur-2xl opacity-30 animate-pulse" />
 
-          {/* Main Icon Container */}
+          {/* Main Icon Container — real brand mark (logo_icon.png is the
+              colored ribbon icon alone, no text baked in, so it reads fine
+              on any background — unlike logosaas.png's wordmark, which is
+              white-lettered and needs a dark backdrop like the sidebar's
+              own blue header, not this light card). White badge behind it
+              so the blue/indigo ribbon pops instead of blending into the
+              page's own blue-tinted gradient background. */}
           <motion.div
-            className="relative w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 shadow-2xl flex items-center justify-center border-4 border-white/20 backdrop-blur-sm"
+            className="relative w-24 h-24 rounded-full bg-white shadow-2xl flex items-center justify-center border-4 border-white/60 backdrop-blur-sm p-4"
             animate={{
               boxShadow: [
                 "0 0 20px rgba(59, 130, 246, 0.3)",
@@ -72,7 +80,7 @@ export const PremiumLoadingScreen = ({
               ease: "easeInOut",
             }}
           >
-            <Heart className="w-12 h-12 text-white" fill="white" />
+            <Image src={LogoIcon} alt="ZhanCare" className="w-full h-full object-contain" priority />
           </motion.div>
 
           {/* Rotating Ring */}

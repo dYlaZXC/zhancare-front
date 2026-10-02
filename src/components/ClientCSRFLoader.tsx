@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { api } from "@/utils/api"; // or "@/utils/axiosInstance"
+import { api } from "@/utils/api";
 
 export function ClientCSRFLoader() {
   useEffect(() => {

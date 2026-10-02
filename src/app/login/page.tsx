@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { PremiumLoadingScreen } from "@/components/layout/PremiumLoadingScreen";
 
 export default function LoginPage() {
   const { user, loading, setIsAuthOpen, isAdmin, isDoctor, isNurse } = useAuth();
@@ -27,12 +28,5 @@ export default function LoginPage() {
     }
   }, [loading, user, isAdmin, isDoctor, isNurse, router, setIsAuthOpen]);
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p className="text-gray-600">Перенаправление...</p>
-      </div>
-    </div>
-  );
+  return <PremiumLoadingScreen message="Перенаправление" />;
 }

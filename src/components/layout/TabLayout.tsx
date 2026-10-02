@@ -50,7 +50,7 @@ const TabLayout = ({ children }: TabLayoutProps) => {
 
   useEffect(() => {
     if (!loading && isDoctor) {
-      router.replace("/doctor-profile");
+      router.replace("/doctor/consultations");
     }
   }, [loading, user, isDoctor, router]);
 

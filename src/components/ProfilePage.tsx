@@ -44,7 +44,7 @@ const ProfilePage = () => {
     }
 
     if (!loading && isDoctor) {
-      router.replace("/doctor-profile");
+      router.replace("/doctor/consultations");
       return;
     }
   }, [loading, user, isDoctor, router]);

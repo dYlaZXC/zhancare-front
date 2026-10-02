@@ -27,9 +27,9 @@ export default function AdminLayout({
 
     if (!loading && user && !isAdmin) {
       if (isDoctor) {
-        router.replace('/doctor-profile');
+        router.replace('/doctor/consultations');
       } else if (isNurse) {
-        router.replace('/nurse-profile');
+        router.replace('/nurse/home-visits');
       } else if (isPatient) {
         router.replace('/patient/profile');
       } else {
@@ -67,11 +67,7 @@ export default function AdminLayout({
   }
 
   if (!user || !isAdmin) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg text-gray-600">Перенаправление на страницу профиля администратора...</div>
-      </div>
-    );
+    return <PremiumLoadingScreen message="Перенаправление на страницу профиля администратора" />;
   }
 
   return (

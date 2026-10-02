@@ -81,7 +81,7 @@ const adminMenu: MenuItem[] = [
   },
   { id: "profile", icon: faUser, title: "Профиль", color: "#3772ff", href: "/admin/profile" },
   { id: "tasks", icon: faListCheck, title: "Задачи", color: "#059669", href: "/admin/tasks" },
-  { id: "deals", icon: faHandshake, title: "Сделки", color: "#3772ff", href: "/admin/deals" },
+  { id: "path-of-patient", icon: faHandshake, title: "Путь пациента", color: "#3772ff", href: "/admin/path-of-patient" },
   {
     id: "management",
     icon: faUsers,

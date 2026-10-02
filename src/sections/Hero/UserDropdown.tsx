@@ -215,8 +215,8 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
 
   // Get profile path based on role
   const getProfilePath = () => {
-    if (hasRole("doctor")) return "/doctor-profile";
-    if (hasRole("nurse")) return "/nurse-profile";
+    if (hasRole("doctor")) return "/doctor/consultations";
+    if (hasRole("nurse")) return "/nurse/home-visits";
     return "/profile"; // default for patients
   };
 
@@ -231,7 +231,7 @@ export default function UserDropdown({ user, onLogout, disableClickOutside = fal
 
     const getAppointmentsHref = () => {
       if (hasRole("doctor")) return "/doctor-appointments";
-      if (hasRole("nurse")) return "/nurse-profile"; // nurse home visits are in their profile
+      if (hasRole("nurse")) return "/nurse/home-visits"; // "appointments" for a nurse IS their home-visits list
       return "/video";
     };
 

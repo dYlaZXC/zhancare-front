@@ -55,7 +55,7 @@ export default function HeroContent() {
   const handleBookAppointment = () => {
     if (user) {
       // User is authenticated, navigate to appropriate profile page
-      const profileRoute = isDoctor ? "/doctor-profile" : "/profile";
+      const profileRoute = isDoctor ? "/doctor/consultations" : "/profile";
       router.push(profileRoute);
     } else {
       // User is not authenticated, show auth popup

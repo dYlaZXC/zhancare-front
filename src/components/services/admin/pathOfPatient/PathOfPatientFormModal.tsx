@@ -6,20 +6,20 @@ import { toast } from "react-toastify";
 import { api } from "@/utils/api";
 import { X, Loader2, Handshake } from "lucide-react";
 import type { AssignableAdmin } from "../tasks/types/taskTypes";
-import type { Deal, DealSource } from "./types";
+import type { PathOfPatient, PathOfPatientSource } from "./types";
 import { SOURCE_LABELS } from "./types";
 
-export function DealFormModal({
+export function PathOfPatientFormModal({
   onClose,
   onSaved,
 }: {
   onClose: () => void;
-  onSaved: (deal: Deal) => void;
+  onSaved: (item: PathOfPatient) => void;
 }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [amount, setAmount] = useState("");
-  const [source, setSource] = useState<DealSource>("other");
+  const [source, setSource] = useState<PathOfPatientSource>("other");
   const [assignedTo, setAssignedTo] = useState<number | "">("");
   const [admins, setAdmins] = useState<AssignableAdmin[]>([]);
   const [saving, setSaving] = useState(false);
@@ -31,21 +31,21 @@ export function DealFormModal({
   }, []);
 
   const handleSave = async () => {
-    if (!name.trim()) { toast.error("Введите имя / название сделки"); return; }
+    if (!name.trim()) { toast.error("Введите имя / название карточки"); return; }
     setSaving(true);
     try {
-      const { data } = await api.post("/deals/", {
+      const { data } = await api.post("/path-of-patient/", {
         name: name.trim(),
         phone: phone.trim(),
         amount: amount || "0",
         source,
         assigned_to: assignedTo || null,
       });
-      toast.success("Сделка создана");
+      toast.success("Карточка создана");
       onSaved(data);
     } catch (err: any) {
       const d = err?.response?.data;
-      const msg = d?.assigned_to?.[0] || d?.name?.[0] || d?.error || "Не удалось создать сделку";
+      const msg = d?.assigned_to?.[0] || d?.name?.[0] || d?.error || "Не удалось создать карточку";
       toast.error(msg);
     } finally {
       setSaving(false);
@@ -64,7 +64,7 @@ export function DealFormModal({
               style={{ background: "linear-gradient(135deg, #3772ff, #2c5bcc)" }}>
               <Handshake size={18} className="text-white" />
             </div>
-            <h3 className="text-base font-black text-gray-900 flex-1">Новая сделка</h3>
+            <h3 className="text-base font-black text-gray-900 flex-1">Новая карточка</h3>
             <button onClick={onClose} className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-gray-100 transition-colors">
               <X size={16} className="text-gray-500" />
             </button>
@@ -92,9 +92,9 @@ export function DealFormModal({
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Источник</label>
-                <select value={source} onChange={e => setSource(e.target.value as DealSource)}
+                <select value={source} onChange={e => setSource(e.target.value as PathOfPatientSource)}
                   className="w-full px-4 py-2.5 text-sm rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors bg-white">
-                  {(Object.keys(SOURCE_LABELS) as DealSource[]).map(s => (
+                  {(Object.keys(SOURCE_LABELS) as PathOfPatientSource[]).map(s => (
                     <option key={s} value={s}>{SOURCE_LABELS[s]}</option>
                   ))}
                 </select>
@@ -129,4 +129,4 @@ export function DealFormModal({
   );
 }
 
-export default DealFormModal;
+export default PathOfPatientFormModal;

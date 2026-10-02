@@ -9,6 +9,7 @@ import { AdminSidebar } from "@/components/layout/AdminSidebar";
 import { AdminHeader } from "@/components/layout/AdminHeader";
 import { AdminBreadcrumb } from "@/components/layout/AdminBreadcrumb";
 import { DoctorMainContent } from "@/components/layout/DoctorMainContent";
+import { PremiumLoadingScreen } from "@/components/layout/PremiumLoadingScreen";
 
 import AdminProfileDashboard from "@/components/services/admin/AdminProfileDashboard";
 import StaffManagement from "@/components/services/admin/StaffManagement";
@@ -32,9 +33,9 @@ export default function AdminProfile() {
 
     if (!loading && user && !isAdmin) {
       if (isDoctor) {
-        router.replace('/doctor-profile');
+        router.replace('/doctor/consultations');
       } else if (isNurse) {
-        router.replace('/nurse-profile');
+        router.replace('/nurse/home-visits');
       } else if (isPatient) {
         router.replace('/profile');
       } else {
@@ -46,19 +47,11 @@ export default function AdminProfile() {
   }, [loading, user, isAdmin, isDoctor, isNurse, isPatient, router, isLoggingOut]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-lg">
-        🔄 Проверка авторизации...
-      </div>
-    );
+    return <PremiumLoadingScreen message="Проверка авторизации" />;
   }
 
   if (!user || !isAdmin) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg text-gray-600">Redirecting...</div>
-      </div>
-    );
+    return <PremiumLoadingScreen message="Перенаправление на страницу профиля администратора" />;
   }
 
   const handleLogout = () => {

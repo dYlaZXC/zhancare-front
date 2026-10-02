@@ -45,7 +45,7 @@ export default function AuthRedirect({ children }: AuthRedirectProps) {
     }
     
     if (!loading && isDoctor) {
-      router.replace("/doctor-profile");
+      router.replace("/doctor/consultations");
     }
 
     // Hide loading screen when auth check is done and minimum time elapsed

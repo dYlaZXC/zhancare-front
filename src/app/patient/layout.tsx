@@ -40,17 +40,17 @@ export default function PatientLayout({
     }
 
     if (!loading && isDoctor) {
-      router.replace("/doctor-profile");
+      router.replace("/doctor/consultations");
       return;
     }
 
     if (!loading && isAdmin) {
-      router.replace("/admin-profile");
+      router.replace("/admin/profile");
       return;
     }
 
     if (!loading && isNurse) {
-      router.replace("/nurse-profile");
+      router.replace("/nurse/home-visits");
       return;
     }
   }, [loading, user, isDoctor, isAdmin, isNurse, router, setIsAuthOpen]);

@@ -90,7 +90,7 @@ const TelegramAuthPage = () => {
           console.log("✅ User already authenticated:", user);
 
           // Redirect based on role
-          const redirectUrl = user.roles?.includes("doctor") ? "/doctor-profile" : "/profile";
+          const redirectUrl = user.roles?.includes("doctor") ? "/doctor/consultations" : "/profile";
           console.log(`🔄 Redirecting to ${redirectUrl}...`);
 
           window.location.href = redirectUrl;
@@ -166,7 +166,7 @@ const TelegramAuthPage = () => {
       webApp?.HapticFeedback?.notificationOccurred("success");
 
       // Redirect based on role - SAME AS AUTH POPUP!
-      const redirectUrl = responseData.user.roles?.includes("doctor") ? "/doctor-profile" : "/profile";
+      const redirectUrl = responseData.user.roles?.includes("doctor") ? "/doctor/consultations" : "/profile";
 
       setTimeout(() => {
         window.location.href = redirectUrl;
