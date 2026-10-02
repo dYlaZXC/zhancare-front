@@ -20,6 +20,10 @@ const MONTHS_SHORT_RU = [
   "июл", "авг", "сен", "окт", "ноя", "дек",
 ];
 
+// Same convention as e2e/global-setup.ts — the API lives on a different
+// origin/port than the frontend `baseURL` this config points `page` at.
+const BACKEND_URL = process.env.E2E_BACKEND_URL ?? "http://localhost:8000/api/v1";
+
 test.use({ storageState: path.join(__dirname, ".auth/clinic-admin.json") });
 
 test("diagnostics booking keeps referring and performing doctor distinct end to end", async ({
@@ -30,6 +34,8 @@ test("diagnostics booking keeps referring and performing doctor distinct end to 
   // 30s global timeout is tuned for lighter flows and cuts this one off
   // mid-assertion even on a clean pass.
   test.setTimeout(60_000);
+
+  let performerDoctorId: number | null = null;
 
   const unique = Date.now();
   const performerFirstName = "Смоук";
@@ -49,6 +55,8 @@ test("diagnostics booking keeps referring and performing doctor distinct end to 
   const performerServiceDisplayName = `${performerLastName} ${performerFirstName}`;
 
   page.on("dialog", (d) => d.accept());
+
+  try {
 
   // Booking date: tomorrow, computed in the CLINIC's own timezone
   // (Asia/Almaty), not the runner's. Two independent reasons to avoid
@@ -80,7 +88,19 @@ test("diagnostics booking keeps referring and performing doctor distinct end to 
   await page.getByPlaceholder("+7 (700) 123-45-67").fill(`703${String(unique).slice(-7)}`);
   await page.getByRole("button", { name: "Сгенерировать" }).click();
   await page.locator('input[type="number"][placeholder="30"]').fill("30");
-  await page.locator('button[type="submit"]').filter({ hasText: "Добавить" }).click();
+  // Capture the created doctor's id from the real create response so it can
+  // be cleaned up below — otherwise every run leaves a real, permanently-
+  // 'available' doctor account behind (this is exactly how a batch of
+  // leftover "Смоук..." test doctors ended up surfacing in real AI
+  // consultation recommendations).
+  const [createResponse] = await Promise.all([
+    page.waitForResponse(
+      (resp) => resp.url().includes("/staff/") && resp.request().method() === "POST"
+    ),
+    page.locator('button[type="submit"]').filter({ hasText: "Добавить" }).click(),
+  ]);
+  const createdPerformer = await createResponse.json().catch(() => null);
+  performerDoctorId = createdPerformer?.id ?? null;
   await expect(
     page.getByText(`${performerFirstName} ${performerLastName}`)
   ).toBeVisible({ timeout: 10_000 });
@@ -222,4 +242,21 @@ test("diagnostics booking keeps referring and performing doctor distinct end to 
   await expect(page.getByText(performerServiceDisplayName)).toBeVisible();
   await expect(page.getByText("Назначил", { exact: true })).toBeVisible();
   await expect(page.getByText("Дмитрий Врачёв")).toBeVisible();
+
+  } finally {
+    // Runs whether the test passed or failed — same pattern as
+    // staff-management.spec.ts. page.request shares the page's browser
+    // context, but NOT its JS-level axios Authorization header, so that
+    // header is set by hand here from the same localStorage token api.ts
+    // itself reads from.
+    if (performerDoctorId) {
+      const accessToken = await page.evaluate(() => localStorage.getItem("access_token")).catch(() => null);
+      await page.request
+        .patch(`${BACKEND_URL}/staff/${performerDoctorId}/`, {
+          headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+          data: { is_deleted: true },
+        })
+        .catch(() => {}); // best-effort — never let cleanup itself fail the test
+    }
+  }
 });
