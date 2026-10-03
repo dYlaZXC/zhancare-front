@@ -317,9 +317,19 @@ function BookingRow({ event, onChanged }: { event: ScheduleEvent; onChanged?: ()
   const [deleting, setDeleting] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<string>(event.payment_info?.status ?? 'unpaid');
   const [paymentNotes, setPaymentNotes] = useState<string>(event.payment_info?.notes ?? '');
+  const [paymentAmount, setPaymentAmount] = useState<string>('');
   const [paymentSaving, setPaymentSaving] = useState(false);
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryEntry[]>(event.payment_info?.history ?? []);
   const headerInfo = getHeaderInfo(event);
+
+  // Amount is only meaningful for 'partial'/'paid' — it records a REAL
+  // collected sum (payments.AppointmentPayment.amount_paid, via an actual
+  // PaymentTransaction) rather than just flipping the status label; the
+  // backend derives the final status from the real total, which can
+  // legitimately disagree with whichever button was clicked (e.g. typing
+  // an amount below the full price while "Оплачено" is selected correctly
+  // lands back on "Частично").
+  const amountApplies = paymentStatus === 'partial' || paymentStatus === 'paid';
 
   const savePayment = async () => {
     const paymentId = event.payment_info?.id;
@@ -327,17 +337,24 @@ function BookingRow({ event, onChanged }: { event: ScheduleEvent; onChanged?: ()
       toast.error('Обновите страницу — ID оплаты не загружен');
       return;
     }
+    if (amountApplies && paymentAmount && Number(paymentAmount) <= 0) {
+      toast.error('Сумма должна быть больше нуля');
+      return;
+    }
     setPaymentSaving(true);
     try {
-      const { data } = await api.patch(`/schedule/payment/${paymentId}/`, {
-        status: paymentStatus,
-        notes: paymentNotes,
-      });
+      const payload: Record<string, unknown> = { status: paymentStatus, notes: paymentNotes };
+      if (amountApplies && paymentAmount) {
+        payload.amount = paymentAmount;
+      }
+      const { data } = await api.patch(`/schedule/payment/${paymentId}/`, payload);
       if (data.history) setPaymentHistory(data.history);
+      if (data.status) setPaymentStatus(data.status);
       toast.success('Статус оплаты обновлён');
+      setPaymentAmount('');
       onChanged?.();
-    } catch {
-      toast.error('Не удалось обновить статус оплаты');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || 'Не удалось обновить статус оплаты');
     } finally {
       setPaymentSaving(false);
     }
@@ -653,6 +670,23 @@ function BookingRow({ event, onChanged }: { event: ScheduleEvent; onChanged?: ()
                           })}
                         </div>
                       </div>
+                      {/* Amount — only meaningful for partial/paid; entered relative to the total (due) */}
+                      {amountApplies && (
+                        <div className="px-4 py-3 space-y-1.5">
+                          <p className="text-xs text-gray-400">
+                            Внесённая сумма{due > 0 ? ` (из ${due.toLocaleString('ru-RU')} ${currency})` : ''}
+                          </p>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={paymentAmount}
+                            onChange={e => setPaymentAmount(e.target.value)}
+                            placeholder={due > 0 ? String(due) : 'Сумма'}
+                            className="w-full text-xs text-gray-700 border border-gray-100 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-300 bg-gray-50"
+                          />
+                        </div>
+                      )}
                       {/* Notes edit */}
                       <div className="px-4 py-3 space-y-1.5">
                         <p className="text-xs text-gray-400">{paymentNotes ? 'Редактировать комментарий' : 'Добавить комментарий'}</p>

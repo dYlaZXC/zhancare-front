@@ -1,4 +1,4 @@
-export type PlanItemSource = "manual" | "diagnostics_referral" | "consultation" | "clinic_appointment";
+export type PlanItemSource = "diagnostics_referral" | "consultation" | "clinic_appointment";
 export type PlanItemStatus = "planned" | "completed" | "no_show" | "cancelled";
 export type PlanStatus = "active" | "completed" | "cancelled";
 
@@ -46,27 +46,27 @@ export interface TreatmentPlan {
   updated_at: string;
 }
 
-export interface PlanSuggestion {
-  source: Exclude<PlanItemSource, "manual">;
-  source_id: number;
-  name: string;
-  doctor: number | null;
-  doctor_name: string | null;
-  price: number | string | null;
-  currency: string;
-  scheduled_at: string | null;
-  status_label: string;
-}
-
 export interface DashboardOverview {
   total_patients: number;
   with_debt: number;
   with_no_show: number;
   total_plans: number;
+  items_total: number;
+  sum_planned: number | string;
+  sum_paid: number | string;
+  sum_owed: number | string;
+  collection_pct: number;
+}
+
+export interface DashboardTopDebtor {
+  patient_id: number;
+  patient_name: string;
   sum_planned: number | string;
   sum_paid: number | string;
   sum_owed: number | string;
 }
+
+export type DashboardByStatus = Record<PlanItemStatus, number>;
 
 export interface DashboardByPatientRow {
   patient_id: number;
@@ -85,7 +85,6 @@ export interface DashboardByPatientRow {
 
 export interface DashboardByMonthRow {
   month: string;
-  plans_created: number;
   items_total: number;
   items_completed: number;
   items_no_show: number;
@@ -98,12 +97,13 @@ export interface DashboardByMonthRow {
 
 export interface DashboardData {
   overview: DashboardOverview;
+  by_status: DashboardByStatus;
+  top_debtors: DashboardTopDebtor[];
   by_patient: DashboardByPatientRow[];
   by_month: DashboardByMonthRow[];
 }
 
 export const SOURCE_LABELS: Record<PlanItemSource, string> = {
-  manual: "Вручную",
   diagnostics_referral: "Направление на диагностику",
   consultation: "Видео-консультация",
   clinic_appointment: "Приём в клинике",

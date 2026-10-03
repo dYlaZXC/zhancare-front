@@ -4,11 +4,12 @@ import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { api } from "@/utils/api";
 import { toast } from "react-toastify";
-import { Loader2, Plus, Search, Users, CreditCard, AlertTriangle, ClipboardList } from "lucide-react";
+import { Loader2, Search, Users, CreditCard, AlertTriangle, ClipboardList } from "lucide-react";
 
 import type { DashboardData, TreatmentPlan } from "./types";
 import { formatMoney } from "./types";
 import { PlanEditor } from "./PlanEditor";
+import { OverviewCharts } from "./OverviewCharts";
 
 type Tab = "overview" | "by_patient" | "by_month";
 
@@ -60,7 +61,6 @@ export function TreatmentPlansView({ user }: { user: any }) {
 
   const reset = () => { setDateFrom(""); setDateTo(""); setSearch(""); setAppliedSearch(""); };
 
-  const openCreate = () => { setEditingPatientPlans(null); setShowEditor(true); };
   const openPatientPlans = async (patientId: number) => {
     try {
       const { data } = await api.get("/treatment-plans/", { params: { patient_id: patientId } });
@@ -90,12 +90,6 @@ export function TreatmentPlansView({ user }: { user: any }) {
             <h1 className="text-3xl font-bold mb-2" style={{ color: "#1e263e" }}>Планы лечения</h1>
             <p className="text-gray-600">Статистика и аналитика планов лечения пациентов</p>
           </div>
-          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={openCreate}
-            className="flex items-center gap-2 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all"
-            style={{ background: "linear-gradient(135deg, #3772ff 0%, #2c5bcc 100%)" }}>
-            <Plus className="w-5 h-5" />
-            Новый план
-          </motion.button>
         </div>
 
         <div className="flex items-end gap-3 mb-5 flex-wrap">
@@ -130,7 +124,7 @@ export function TreatmentPlansView({ user }: { user: any }) {
           ))}
         </div>
 
-        {tab !== "by_month" && (
+        {tab === "by_patient" && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
             {statCards.map((s, i) => (
               <motion.div key={s.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
@@ -159,15 +153,7 @@ export function TreatmentPlansView({ user }: { user: any }) {
       {loading ? (
         <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
       ) : tab === "overview" ? (
-        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-          <p className="text-sm text-gray-500 mb-4">Сводка за выбранный период</p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div><p className="text-xs text-gray-400 mb-1">Всего планов</p><p className="text-xl font-bold text-gray-800">{overview?.total_plans ?? 0}</p></div>
-            <div><p className="text-xs text-gray-400 mb-1">Сумма планов</p><p className="text-xl font-bold text-gray-800">{formatMoney(overview?.sum_planned)}</p></div>
-            <div><p className="text-xs text-gray-400 mb-1">Оплачено</p><p className="text-xl font-bold text-emerald-600">{formatMoney(overview?.sum_paid)}</p></div>
-            <div><p className="text-xs text-gray-400 mb-1">К доплате</p><p className="text-xl font-bold text-red-500">{formatMoney(overview?.sum_owed)}</p></div>
-          </div>
-        </div>
+        data ? <OverviewCharts data={data} /> : null
       ) : tab === "by_patient" ? (
         <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
           <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
@@ -185,7 +171,7 @@ export function TreatmentPlansView({ user }: { user: any }) {
                 <thead>
                   <tr className="text-left text-[11px] text-gray-400 uppercase tracking-wide border-b border-gray-100">
                     <th className="px-5 py-2.5 font-semibold">Пациент</th>
-                    <th className="px-3 py-2.5 font-semibold">Планов</th>
+                    <th className="px-3 py-2.5 font-semibold">Услуг</th>
                     <th className="px-3 py-2.5 font-semibold">Выполнено</th>
                     <th className="px-3 py-2.5 font-semibold">Не пришёл</th>
                     <th className="px-3 py-2.5 font-semibold">Сумма планов</th>
@@ -245,7 +231,7 @@ export function TreatmentPlansView({ user }: { user: any }) {
                   {data?.by_month.map(row => (
                     <tr key={row.month} className="border-b border-gray-50 last:border-0">
                       <td className="px-5 py-3 font-medium text-gray-800">{formatMonth(row.month)}</td>
-                      <td className="px-3 py-3 text-gray-700">{row.plans_created}</td>
+                      <td className="px-3 py-3 text-gray-700">{row.items_total}</td>
                       <td className="px-3 py-3 text-emerald-600 font-medium">{row.items_completed}</td>
                       <td className="px-3 py-3 text-red-500 font-medium">{row.items_no_show}</td>
                       <td className="px-3 py-3 text-gray-700">{formatMoney(row.sum_planned)}</td>
@@ -263,7 +249,7 @@ export function TreatmentPlansView({ user }: { user: any }) {
         </div>
       )}
 
-      {showEditor && (
+      {showEditor && editingPatientPlans && (
         <PlanEditor
           initialPlan={editingPatientPlans}
           onClose={() => setShowEditor(false)}

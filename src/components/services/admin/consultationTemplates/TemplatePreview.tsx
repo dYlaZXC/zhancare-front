@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import { AnimatePresence } from "framer-motion";
@@ -34,11 +34,28 @@ const PLACEHOLDER_SIGNATURE = "data:image/svg+xml;charset=UTF-8," + encodeURICom
 
 export function TemplatePreview({ sections, onClose }: { sections: FormSection[]; onClose: () => void }) {
   // Local-only — lets the admin click around and type to get a feel for it,
-  // nothing here is saved or sent anywhere.
-  const [values, setValues] = useState<Record<string, string>>({});
+  // nothing here is saved or sent anywhere. Seeded from each section's
+  // default_text, exactly like a real new consultation sheet would be —
+  // this is what a doctor actually sees, not an empty form.
+  const [values, setValues] = useState<Record<string, string>>(() =>
+    Object.fromEntries(sections.map((s) => [s.key, s.default_text ?? ""]))
+  );
   const [showCatalog, setShowCatalog] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [showAIReview, setShowAIReview] = useState(false);
+
+  // sections can change while this modal is open (admin edits the template
+  // behind it) — keep any section the admin hasn't typed into yet in sync
+  // with its current default_text, same non-destructive rule as handleAIApply.
+  useEffect(() => {
+    setValues((prev) => {
+      const next = { ...prev };
+      for (const s of sections) {
+        if (next[s.key] === undefined) next[s.key] = s.default_text ?? "";
+      }
+      return next;
+    });
+  }, [sections]);
 
   // Same non-destructive merge as the real doctor pages: a non-empty AI value
   // fills/replaces a field, an empty one never overwrites something the admin

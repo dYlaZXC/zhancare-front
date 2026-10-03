@@ -14,6 +14,11 @@ function exampleContent(section: FormSection): string {
   if (section.type === "diagnostics_referral") {
     return "Общий анализ крови, УЗИ брюшной полости — направлены по результатам осмотра.";
   }
+  // Real default text (if set) is exactly what a new sheet will actually
+  // show — more accurate for the admin to see than a synthesized example.
+  if (section.default_text?.trim()) {
+    return section.default_text.trim();
+  }
   if (section.ai_hint?.trim()) {
     return `Пример: ${section.ai_hint.trim()}`;
   }

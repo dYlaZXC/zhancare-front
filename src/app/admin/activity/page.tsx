@@ -8,5 +8,5 @@ export default function AdminActivityPage() {
 
   if (!user) return null;
 
-  return <AnalyticsView user={user} initialTab="activity" />;
+  return <AnalyticsView user={user} module="activity" />;
 }

@@ -31,6 +31,7 @@ import {
   faListCheck,
   faNotesMedical,
   faHandshake,
+  faHistory,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useState, useEffect, useRef, type CSSProperties } from "react";
@@ -93,14 +94,23 @@ const adminMenu: MenuItem[] = [
       { id: "rooms", icon: faDoorOpen, title: "Кабинеты", color: "#f97316", href: "/admin/rooms" },
       { id: "consultation-templates", icon: faLayerGroup, title: "Шаблоны листов", color: "#a855f7", href: "/admin/consultation-templates" },
       { id: "patients", icon: faUserMd, title: "Пациенты", color: "#10b981", href: "/admin/patients" },
-      { id: "treatment-plans", icon: faNotesMedical, title: "Планы лечения", color: "#ef4444", href: "/admin/treatment-plans" },
       { id: "schedule", icon: faCalendarCheck, title: "Расписание", color: "#295bbf", href: "/admin/schedule" },
       { id: "warehouse", icon: faWarehouse, title: "Склад", color: "#78716c", href: "/admin/warehouse" },
       { id: "admins", icon: faUserShield, title: "Администраторы", color: "#f59e0b", href: "/admin/admins", superOnly: true },
       { id: "clinics", icon: faHospital, title: "Клиники", color: "#10b981", href: "/admin/clinics", superOnly: true },
     ],
   },
-  { id: "analytics", icon: faChartLine, title: "Аналитика", color: "#3267e6", href: "/admin/reports" },
+  {
+    id: "analytics",
+    icon: faChartLine,
+    title: "Аналитика",
+    color: "#3267e6",
+    children: [
+      { id: "reports", icon: faChartLine, title: "Отчёты", color: "#3267e6", href: "/admin/reports" },
+      { id: "activity", icon: faHistory, title: "Активность", color: "#6366f1", href: "/admin/activity" },
+      { id: "treatment-plans", icon: faNotesMedical, title: "Планы лечения", color: "#ef4444", href: "/admin/treatment-plans" },
+    ],
+  },
   { id: "ai-agents", icon: faRobot, title: "AI Агенты", color: "#8b5cf6", href: "/admin/ai-agents" },
   {
     id: "messengers",

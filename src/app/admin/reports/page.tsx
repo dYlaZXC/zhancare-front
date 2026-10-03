@@ -8,5 +8,5 @@ export default function AdminReportsPage() {
 
   if (!user) return null;
 
-  return <AnalyticsView user={user} initialTab="reports" />;
+  return <AnalyticsView user={user} module="reports" />;
 }

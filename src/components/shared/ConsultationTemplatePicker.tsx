@@ -3,20 +3,43 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "react-toastify";
-import { Check, ChevronDown, LayoutTemplate, Loader2, Search, Sparkles } from "lucide-react";
+import { Award, Check, ChevronDown, LayoutTemplate, Loader2, Search, Sparkles, Star } from "lucide-react";
 import { api } from "@/utils/api";
 
 interface TemplateOption {
   id: number;
   name: string;
-  scope: "doctor" | "clinic" | "system";
+  scope: "doctor" | "clinic" | "shared" | "system";
   is_default: boolean;
   sections_count: number;
+  // Only set for scope="shared" — who published it, for attribution.
+  clinic_name?: string | null;
+  doctor_name?: string | null;
 }
+
+// GET .../available-templates/'s "recommended" array — same shape as
+// TemplateOption plus the ranking's own machine-readable output, so the
+// picker can explain WHY something is suggested instead of silently
+// ordering it first.
+interface RecommendedOption extends TemplateOption {
+  specialty_name?: string | null;
+  is_verified: boolean;
+  score: number;
+  reasons: string[];
+}
+
+const REASON_LABELS: Record<string, string> = {
+  specialty_match: "Специальность совпадает",
+  visit_type_match: "Тип визита совпадает",
+  clinic_template: "Шаблон клиники",
+  verified: "Проверено ZhanCare",
+  popular: "Популярный",
+};
 
 const SCOPE_LABELS: Record<TemplateOption["scope"], string> = {
   doctor: "Мои шаблоны",
   clinic: "Шаблоны клиники",
+  shared: "Библиотека шаблонов",
   system: "Системные",
 };
 
@@ -104,6 +127,7 @@ export function ConsultationTemplatePicker({
 }) {
   const [open, setOpen] = useState(false);
   const [options, setOptions] = useState<TemplateOption[] | null>(null);
+  const [recommended, setRecommended] = useState<RecommendedOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState("");
@@ -179,6 +203,7 @@ export function ConsultationTemplatePicker({
     try {
       const res = await api.get(`${basePath}/available-templates/`);
       setOptions(res.data?.templates ?? []);
+      setRecommended(res.data?.recommended ?? []);
     } catch {
       toast.error("Не удалось загрузить список шаблонов");
       setOpen(false);
@@ -210,13 +235,14 @@ export function ConsultationTemplatePicker({
 
   const q = query.trim().toLowerCase();
   const showAuto = !q || AUTO_LABEL.toLowerCase().includes(q);
-  const grouped = (["doctor", "clinic", "system"] as const)
+  const visibleRecommended = recommended.filter(o => !q || o.name.toLowerCase().includes(q));
+  const grouped = (["doctor", "clinic", "shared", "system"] as const)
     .map(scope => ({
       scope,
       items: (options ?? []).filter(o => o.scope === scope && (!q || o.name.toLowerCase().includes(q))),
     }))
     .filter(g => g.items.length > 0);
-  const nothingFound = options !== null && !showAuto && grouped.length === 0;
+  const nothingFound = options !== null && !showAuto && visibleRecommended.length === 0 && grouped.length === 0;
 
   return (
     <div className="relative">
@@ -273,6 +299,48 @@ export function ConsultationTemplatePicker({
               </div>
             ) : (
               <>
+                {visibleRecommended.length > 0 && (
+                  <div className="pt-1">
+                    <p className={`px-3.5 pt-1.5 pb-1 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${t.heading}`}>
+                      <Star className="w-3 h-3" /> Рекомендовано для этой консультации
+                    </p>
+                    {visibleRecommended.map(option => {
+                      const active = selected && option.id === currentTemplateId;
+                      return (
+                        <button
+                          key={`rec-${option.id}`}
+                          type="button"
+                          onClick={() => choose(option.id)}
+                          className={`w-full flex items-center gap-2.5 px-3.5 py-2 text-left text-sm transition-colors ${active ? t.itemActive : t.item}`}
+                          style={dark && active ? DARK_ACTIVE : undefined}
+                        >
+                          <span className="flex-1 min-w-0">
+                            <span className="flex items-center gap-1 font-medium leading-snug break-words">
+                              {option.name}
+                              {option.is_verified && <Award className="w-3 h-3 flex-shrink-0 text-emerald-500" />}
+                            </span>
+                            <span className={`block text-xs ${active && !dark ? "text-blue-400" : t.muted}`}>
+                              {option.sections_count} секц.
+                              {(option.clinic_name || option.doctor_name) && <> · {option.clinic_name || option.doctor_name}</>}
+                            </span>
+                            <span className="flex flex-wrap gap-1 mt-1">
+                              {option.reasons.map(reason => (
+                                <span
+                                  key={reason}
+                                  className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${t.badge}`}
+                                >
+                                  {REASON_LABELS[reason] ?? reason}
+                                </span>
+                              ))}
+                            </span>
+                          </span>
+                          {active && <Check className="w-4 h-4 flex-shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
                 {showAuto && (
                   <button
                     type="button"
@@ -310,6 +378,9 @@ export function ConsultationTemplatePicker({
                             <span className="block font-medium leading-snug break-words">{option.name}</span>
                             <span className={`block text-xs ${active && !dark ? "text-blue-400" : t.muted}`}>
                               {option.sections_count} секц.
+                              {option.scope === "shared" && (option.clinic_name || option.doctor_name) && (
+                                <> · {option.clinic_name || option.doctor_name}</>
+                              )}
                             </span>
                           </span>
                           {option.is_default && (

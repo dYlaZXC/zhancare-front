@@ -154,10 +154,18 @@ html {
     scrollbar-width: none;
   }
 
-  /* Premium sidebar scrollbar — left side */
+  /* Premium sidebar scrollbar — left side, invisible until hovered/focused
+     (macOS-style auto-hide) so it doesn't sit there as a visible UI chrome
+     element when nobody's interacting with the list. */
   .sidebar-scroll {
     direction: rtl;
     scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.3s ease;
+  }
+
+  .sidebar-scroll:hover,
+  .sidebar-scroll:focus-within {
     scrollbar-color: rgba(99, 131, 255, 0.45) transparent;
   }
 
@@ -175,8 +183,14 @@ html {
   }
 
   .sidebar-scroll::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, rgba(99, 131, 255, 0.6) 0%, rgba(139, 92, 246, 0.5) 100%);
+    background: transparent;
     border-radius: 99px;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .sidebar-scroll:hover::-webkit-scrollbar-thumb,
+  .sidebar-scroll:focus-within::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(99, 131, 255, 0.6) 0%, rgba(139, 92, 246, 0.5) 100%);
     box-shadow: 0 0 6px rgba(99, 131, 255, 0.3);
   }
 

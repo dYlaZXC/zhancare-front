@@ -177,9 +177,15 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
           const formData: Record<string, any> = consultationData.form_data || {};
           const diagSection = sections.find(s => (s.type || 'text') === 'diagnostics_referral');
           const textValues: SectionValues = {};
-          for (const [key, value] of Object.entries(formData)) {
-            if (diagSection && key === diagSection.key) continue;
-            textValues[key] = typeof value === 'string' ? value : '';
+          // Iterate the template's own sections (not just whatever keys
+          // form_data already has) so a brand-new, never-saved section
+          // still gets seeded from its default_text instead of staying
+          // undefined — default_text pre-fills real, editable content, not
+          // just placeholder ghost text.
+          for (const section of sections) {
+            if (diagSection && section.key === diagSection.key) continue;
+            const value = formData[section.key];
+            textValues[section.key] = typeof value === 'string' ? value : (section.default_text || '');
           }
           if (diagSection) {
             const diagValue = formData[diagSection.key];
@@ -229,7 +235,7 @@ const FloatingConsultationButton = React.forwardRef<{ openSheet: () => void }, F
         const value = saved[section.key];
         next[section.key] = (section.type || 'text') === 'diagnostics_referral'
           ? (value && typeof value === 'object' && typeof value.comment === 'string' ? value.comment : '')
-          : (typeof value === 'string' ? value : '');
+          : (typeof value === 'string' ? value : (section.default_text || ''));
       }
       return next;
     });

@@ -73,6 +73,10 @@ export interface ConsultationFormSection {
   ai_hint?: string;
   required?: boolean;
   placeholder?: string;
+  // Real, editable starting text that pre-fills a brand-new sheet's field —
+  // see components/services/admin/consultationTemplates/types.ts::FormSection
+  // for the full rationale. Only meaningful for type="text".
+  default_text?: string;
 }
 
 // Wire shape for a type="diagnostics_referral" section's value — the doctor

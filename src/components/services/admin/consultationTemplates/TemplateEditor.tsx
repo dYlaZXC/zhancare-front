@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import { api } from "@/utils/api";
@@ -9,10 +9,11 @@ import { AnimatePresence } from "framer-motion";
 import SearchSelect from "../schedule/components/SearchSelect";
 import { TemplatePreview } from "./TemplatePreview";
 import { TemplateLivePreview } from "./TemplateLivePreview";
-import type { ConsultationFormTemplate, FormSection, SectionType } from "./types";
-import { EMPTY_SECTION, SECTION_KEY_RE, SECTION_TYPE_LABELS, generateSectionKey } from "./types";
+import type { ConsultationFormTemplate, FormSection, SectionType, VisitType } from "./types";
+import { EMPTY_SECTION, SECTION_KEY_RE, SECTION_TYPE_LABELS, VISIT_TYPE_LABELS, generateSectionKey } from "./types";
 
 const SECTION_TYPE_OPTIONS = Object.entries(SECTION_TYPE_LABELS).map(([id, label]) => ({ id, label }));
+const VISIT_TYPE_OPTIONS = Object.entries(VISIT_TYPE_LABELS).map(([id, label]) => ({ id, label }));
 
 export function TemplateEditor({
   mode,
@@ -26,6 +27,9 @@ export function TemplateEditor({
   onSaved: (template: ConsultationFormTemplate) => void;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
+  const [specialtyId, setSpecialtyId] = useState<string>(initial?.specialty ? String(initial.specialty) : "");
+  const [visitType, setVisitType] = useState<string>(initial?.visit_type ?? "");
+  const [specialtyOptions, setSpecialtyOptions] = useState<{ id: number; label: string }[]>([]);
   const [sections, setSections] = useState<FormSection[]>(
     // Existing sections keep their existing key untouched — only a brand-new
     // section (created or edited before, key already blank) gets one assigned.
@@ -35,6 +39,12 @@ export function TemplateEditor({
   );
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+
+  useEffect(() => {
+    api.get("/consultation-templates/specialties/")
+      .then((res) => setSpecialtyOptions((res.data ?? []).map((s: { id: number; name_ru: string }) => ({ id: s.id, label: s.name_ru }))))
+      .catch(() => setSpecialtyOptions([]));
+  }, []);
 
   const updateSection = (index: number, patch: Partial<FormSection>) => {
     setSections((prev) => prev.map((s, i) => (i === index ? { ...s, ...patch } : s)));
@@ -103,7 +113,11 @@ export function TemplateEditor({
     if (error) { toast.error(error); return; }
     setSaving(true);
     try {
-      const payload = { name: name.trim(), document_type: "consultation", sections };
+      const payload = {
+        name: name.trim(), document_type: "consultation", sections,
+        specialty: specialtyId ? Number(specialtyId) : null,
+        visit_type: visitType || null,
+      };
       let res;
       if (mode === "edit") {
         res = await api.patch(`/consultation-templates/${initial!.id}/`, payload);
@@ -166,6 +180,27 @@ export function TemplateEditor({
                 placeholder="Например: Терапевт"
                 className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-sky-400 outline-none transition-colors"
               />
+            </div>
+
+            <div className="max-w-md grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Специальность</label>
+                <SearchSelect
+                  options={specialtyOptions}
+                  value={specialtyId}
+                  onChange={(v) => setSpecialtyId(v)}
+                  placeholder="Любая"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Тип визита</label>
+                <SearchSelect
+                  options={VISIT_TYPE_OPTIONS}
+                  value={visitType}
+                  onChange={(v) => setVisitType(v)}
+                  placeholder="Любой"
+                />
+              </div>
             </div>
 
             <div>
@@ -243,6 +278,18 @@ export function TemplateEditor({
                             className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-sky-400 outline-none text-sm"
                           />
                         </div>
+                        {(section.type || "text") === "text" && (
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Готовый текст по умолчанию (необязательно)</label>
+                            <textarea
+                              value={section.default_text ?? ""}
+                              onChange={(e) => updateSection(index, { default_text: e.target.value })}
+                              placeholder="Текст, который будет уже вписан в это поле — врач сможет изменить его при необходимости"
+                              rows={2}
+                              className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-sky-400 outline-none text-sm resize-none"
+                            />
+                          </div>
+                        )}
                         <label className="flex items-center gap-2 text-sm text-gray-600 pt-1 cursor-pointer">
                           <input
                             type="checkbox"

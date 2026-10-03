@@ -171,7 +171,9 @@ export default function OfflineConsultationByMeetingPage() {
     for (const section of sections) {
       if (section === diagSection) continue;
       const value = formData[section.key];
-      values[section.key] = typeof value === "string" ? value : "";
+      // Falls back to default_text (real, editable starting content), not
+      // plain "" — same reasoning as FloatingConsultationButton.tsx.
+      values[section.key] = typeof value === "string" ? value : (section.default_text || "");
     }
 
     if (diagSection) {
@@ -201,7 +203,7 @@ export default function OfflineConsultationByMeetingPage() {
         const value = saved[section.key] as { comment?: unknown } | string | undefined;
         next[section.key] = isReferralSection(section)
           ? (value && typeof value === "object" && typeof value.comment === "string" ? value.comment : "")
-          : (typeof value === "string" ? value : "");
+          : (typeof value === "string" ? value : (section.default_text || ""));
       }
       return next;
     });

@@ -151,9 +151,13 @@ export default function OfflineConsultationPage() {
       const formData = data.form_data || {};
       const diagKey = sections.find(s => (s.type || "text") === "diagnostics_referral")?.key;
       const textValues: Record<string, string> = {};
-      for (const [key, value] of Object.entries(formData)) {
-        if (key === diagKey) continue;
-        textValues[key] = typeof value === "string" ? value : "";
+      // Iterate the template's own sections (not just saved form_data keys)
+      // so a never-saved section still gets seeded from its default_text —
+      // same reasoning as FloatingConsultationButton.tsx.
+      for (const section of sections) {
+        if (section.key === diagKey) continue;
+        const value = formData[section.key];
+        textValues[section.key] = typeof value === "string" ? value : (section.default_text || "");
       }
       if (diagKey) {
         const diagValue = formData[diagKey] as any;
@@ -204,7 +208,7 @@ export default function OfflineConsultationPage() {
         const value = saved[section.key] as { comment?: unknown } | string | undefined;
         next[section.key] = (section.type || "text") === "diagnostics_referral"
           ? (value && typeof value === "object" && typeof value.comment === "string" ? value.comment : "")
-          : (typeof value === "string" ? value : "");
+          : (typeof value === "string" ? value : (section.default_text || ""));
       }
       return next;
     });

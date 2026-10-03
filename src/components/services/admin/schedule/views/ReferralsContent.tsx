@@ -5,7 +5,7 @@ import { api } from "@/utils/api";
 import {
   FlaskConical, Scan, HeartPulse, Brain, Bone, Eye, Baby, Microscope,
   User, Phone, Stethoscope, Building2,
-  Search, ChevronDown, Loader2, CalendarDays, UserCheck, CalendarPlus,
+  Search, Loader2, CalendarDays, UserCheck, CalendarPlus,
   Sparkles, FileText,
 } from "lucide-react";
 import ScheduleReferralModal from "../modals/ScheduleReferralModal";
@@ -32,24 +32,17 @@ interface Referral {
   original_text: string;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; dot: string }> = {
-  awaiting_schedule: { label: 'Ожидает записи',  bg: '#f5f3ff', text: '#7c3aed',  dot: '#a855f7' },
-  scheduled:   { label: 'Запланировано', bg: '#eff6ff', text: '#2563eb',  dot: '#3b82f6' },
-  confirmed:   { label: 'Подтверждено',  bg: '#f0fdf4', text: '#16a34a',  dot: '#22c55e' },
-  in_progress: { label: 'В процессе',    bg: '#fefce8', text: '#ca8a04',  dot: '#eab308' },
-  completed:   { label: 'Завершено',     bg: '#f0fdf4', text: '#15803d',  dot: '#22c55e' },
-  cancelled:   { label: 'Отменено',      bg: '#fef2f2', text: '#dc2626',  dot: '#ef4444' },
+// Two mutually exclusive views, chosen server-side via `view` (see
+// common/views/admin.py::get_referrals) — 'awaiting' only ever returns
+// status='awaiting_schedule' rows (hence one fixed badge), 'booked' returns
+// everything with a real appointment_time, which can be any of these four.
+const AWAITING_SCHEDULE_BADGE = { label: 'Ожидает записи', bg: '#f5f3ff', text: '#7c3aed', dot: '#a855f7' };
+const BOOKED_STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; dot: string }> = {
+  scheduled:   { label: 'Запланировано', bg: '#eff6ff', text: '#2563eb', dot: '#3b82f6' },
+  confirmed:   { label: 'Подтверждено',  bg: '#f0fdf4', text: '#16a34a', dot: '#22c55e' },
+  in_progress: { label: 'В процессе',    bg: '#fefce8', text: '#ca8a04', dot: '#eab308' },
+  completed:   { label: 'Завершено',     bg: '#f0fdf4', text: '#15803d', dot: '#22c55e' },
 };
-
-const STATUS_OPTIONS = [
-  { value: '', label: 'Все статусы' },
-  { value: 'awaiting_schedule', label: 'Ожидает записи' },
-  { value: 'scheduled',   label: 'Запланировано' },
-  { value: 'confirmed',   label: 'Подтверждено'  },
-  { value: 'in_progress', label: 'В процессе'    },
-  { value: 'completed',   label: 'Завершено'     },
-  { value: 'cancelled',   label: 'Отменено'      },
-];
 
 // Matches DiagnosticsAppointment.CATEGORY_CHOICES on the backend — one
 // accent color + icon per category, purely cosmetic (falls back to a plain
@@ -73,21 +66,19 @@ function plural(n: number) {
 }
 
 export function ReferralsContent() {
+  const [view, setView] = useState<'awaiting' | 'booked'>('awaiting');
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [statusDropdown, setStatusDropdown] = useState(false);
   const [schedulingReferral, setSchedulingReferral] = useState<Referral | null>(null);
 
   const fetchReferrals = useCallback(async () => {
     setLoading(true);
     try {
-      const params: Record<string, string> = {};
+      const params: Record<string, string> = { view };
       if (search)       params.search    = search;
-      if (statusFilter) params.status    = statusFilter;
       if (dateFrom)     params.date_from = dateFrom;
       if (dateTo)       params.date_to   = dateTo;
       const { data } = await api.get('/schedule/referrals/', { params });
@@ -97,7 +88,7 @@ export function ReferralsContent() {
     } finally {
       setLoading(false);
     }
-  }, [search, statusFilter, dateFrom, dateTo]);
+  }, [view, search, dateFrom, dateTo]);
 
   useEffect(() => {
     const t = setTimeout(fetchReferrals, search ? 350 : 0);
@@ -114,18 +105,37 @@ export function ReferralsContent() {
   };
 
   const handleScheduled = (updated: any) => {
-    setReferrals(prev => prev.map(r => r.id === updated.id ? {
-      ...r,
-      status: updated.status,
-      appointment_time: updated.appointment_time,
-      service_id: updated.service ?? r.service_id,
-      service_name: updated.service_display?.name ?? r.service_name,
-      responsible_doctor_name: updated.performing_doctor_name ?? r.responsible_doctor_name,
-    } : r));
+    // A just-scheduled referral is no longer awaiting a booking — remove it
+    // rather than updating it in place, so it disappears from the
+    // 'awaiting' list immediately instead of lingering (with its new time
+    // shown) until the next refetch. It now belongs under the 'booked' tab.
+    setReferrals(prev => prev.filter(r => r.id !== updated.id));
   };
 
   return (
     <div className="flex flex-col gap-4">
+
+      {/* ── View toggle ── */}
+      <div className="inline-flex self-start p-1 rounded-2xl bg-gray-100 gap-1">
+        <button
+          type="button"
+          onClick={() => setView('awaiting')}
+          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+            view === 'awaiting' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Ожидают записи
+        </button>
+        <button
+          type="button"
+          onClick={() => setView('booked')}
+          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+            view === 'booked' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Уже записаны
+        </button>
+      </div>
 
       {/* ── Filters ── */}
       <div className="flex flex-wrap gap-2 items-center">
@@ -147,25 +157,6 @@ export function ReferralsContent() {
           <span className="text-gray-300 text-xs">—</span>
           <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
             className="text-sm border-2 border-gray-200 rounded-2xl px-3 py-2.5 bg-white focus:border-blue-500 focus:outline-none transition-colors" />
-        </div>
-
-        <div className="relative">
-          <button type="button" onClick={() => setStatusDropdown(v => !v)}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-2 border-gray-200 rounded-2xl bg-white hover:border-gray-300 transition-colors">
-            {statusFilter ? (STATUS_CONFIG[statusFilter]?.label ?? statusFilter) : 'Все статусы'}
-            <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${statusDropdown ? 'rotate-180' : ''}`} />
-          </button>
-          {statusDropdown && (
-            <div className="absolute right-0 top-full mt-1.5 z-20 bg-white border border-gray-100 rounded-2xl shadow-xl py-1.5 min-w-44">
-              {STATUS_OPTIONS.map(opt => (
-                <button key={opt.value} type="button"
-                  onClick={() => { setStatusFilter(opt.value); setStatusDropdown(false); }}
-                  className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-gray-50 ${statusFilter === opt.value ? 'font-semibold text-blue-600' : 'text-gray-700'}`}>
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 
@@ -189,8 +180,10 @@ export function ReferralsContent() {
       ) : (
         <div className="flex flex-col gap-3">
           {referrals.map(r => {
-            const sc = STATUS_CONFIG[r.status] ?? { label: r.status, bg: '#f3f4f6', text: '#6b7280', dot: '#9ca3af' };
-            const scheduled = fmt(r.appointment_time || new Date().toISOString());
+            const sc = view === 'awaiting'
+              ? AWAITING_SCHEDULE_BADGE
+              : (BOOKED_STATUS_CONFIG[r.status] ?? { label: r.status, bg: '#f3f4f6', text: '#6b7280', dot: '#9ca3af' });
+            const scheduled = r.appointment_time ? fmt(r.appointment_time) : null;
             const cat = CATEGORY_STYLE[r.category] ?? DEFAULT_CATEGORY_STYLE;
             const CatIcon = cat.icon;
             // original_text is frozen AI-extraction context, never the primary
@@ -289,16 +282,16 @@ export function ReferralsContent() {
 
                   <div className="w-px bg-gray-100 flex-shrink-0" />
 
-                  {/* Date/time — or a "Записать" action when nothing is scheduled yet */}
+                  {/* 'awaiting' rows never have a time yet (see
+                      get_referrals) — offer to book; 'booked' rows always
+                      do — show it read-only instead. */}
                   <div className="text-right flex-shrink-0 pl-2 self-center">
-                    {r.appointment_time ? (
+                    {view === 'booked' && scheduled ? (
                       <>
                         <p className="text-xl font-black text-gray-800 leading-tight capitalize">{scheduled.day}</p>
                         <p className="text-xs text-gray-400">{scheduled.year}</p>
                         <p className="text-sm font-bold text-blue-600 mt-1">{scheduled.time}</p>
                       </>
-                    ) : r.status === 'cancelled' ? (
-                      <p className="text-xs text-gray-300">—</p>
                     ) : (
                       <button
                         onClick={() => setSchedulingReferral(r)}

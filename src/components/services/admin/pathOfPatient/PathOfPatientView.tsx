@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { api } from "@/utils/api";
 import { toast } from "react-toastify";
 import {
   Loader2, Plus, Search, MessageCircle, ListChecks, Trash2,
-  Pencil, Check, X, ChevronLeft, ChevronRight, Sparkles,
+  Pencil, Check, X, ChevronLeft, ChevronRight, ChevronDown, Sparkles,
 } from "lucide-react";
 
 import type { PathOfPatient, PathOfPatientStage } from "./types";
@@ -17,11 +18,14 @@ import { TaskFormModal } from "../tasks/modals/TaskFormModal";
 /**
  * "Путь пациента" — basic v1 Kanban board (see backend PathOfPatient/
  * PathOfPatientStage's own docstrings for why it's deliberately simple).
- * Stages are per-clinic and fully customizable — each clinic runs its own
- * patient journey — except the one `is_intake` stage, which always exists
- * and is where the clinic's AI agent lands a captured lead (see
- * deals.services.capture_ai_agent_lead) regardless of how the rest of the
- * board is customized.
+ * Stages are per-clinic and customizable, but the 6-stage starter funnel
+ * (`is_default`) is permanent — can be renamed/recolored but never deleted
+ * or reordered — with 2 of them wired to real system events: AI-agent
+ * leads (path_of_patient.services.capture_ai_agent_lead) and real bookings
+ * (sync_patient_path_card) land in their own dedicated stage instead of
+ * generic intake, as long as that stage keeps its default label. A clinic
+ * can still add its own extra stages on top, which behave exactly like the
+ * original fully-custom stages always have.
  *
  * No drag-and-drop yet (no dnd library in this project) — moving a card
  * between stages is a dropdown on the card, reordering stages is a pair of
@@ -44,6 +48,64 @@ export function PathOfPatientView({ user }: { user: any }) {
   const [addingStage, setAddingStage] = useState(false);
   const [newStageLabel, setNewStageLabel] = useState("");
   const [addingStageBusy, setAddingStageBusy] = useState(false);
+  const addStagePopoverRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!addingStage) return;
+    const handler = (e: MouseEvent) => {
+      if (addStagePopoverRef.current && !addStagePopoverRef.current.contains(e.target as Node)) {
+        setAddingStage(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [addingStage]);
+
+  // Only one card's stage-picker can be open at a time. The panel itself is
+  // portaled to document.body (see render below) so it can escape the
+  // card column's overflow-y-auto — anchored inside it, an absolutely
+  // positioned panel got silently clipped the moment it needed to extend
+  // past the column's own scroll bounds. Position is computed from the
+  // trigger button's real screen position, same convention as
+  // schedule/components/SearchSelect.tsx.
+  const [stageMenuDealId, setStageMenuDealId] = useState<number | null>(null);
+  const [stageMenuPos, setStageMenuPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const stageMenuTriggerRef = useRef<HTMLButtonElement>(null);
+  const stageMenuPanelRef = useRef<HTMLDivElement>(null);
+
+  const updateStageMenuPosition = useCallback(() => {
+    const trigger = stageMenuTriggerRef.current;
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    setStageMenuPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (stageMenuDealId === null) return;
+    updateStageMenuPosition();
+    const handleScroll = () => updateStageMenuPosition();
+    const handleResize = () => updateStageMenuPosition();
+    window.addEventListener("scroll", handleScroll, true);
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("scroll", handleScroll, true);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [stageMenuDealId, updateStageMenuPosition]);
+
+  useEffect(() => {
+    if (stageMenuDealId === null) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        stageMenuTriggerRef.current && !stageMenuTriggerRef.current.contains(target) &&
+        stageMenuPanelRef.current && !stageMenuPanelRef.current.contains(target)
+      ) {
+        setStageMenuDealId(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [stageMenuDealId]);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -149,8 +211,8 @@ export function PathOfPatientView({ user }: { user: any }) {
   };
 
   const deleteStage = async (stage: PathOfPatientStage) => {
-    if (stage.is_intake) {
-      toast.error("Нельзя удалить этап приёма ИИ-лидов — переименуйте его вместо этого");
+    if (stage.is_default) {
+      toast.error("Нельзя удалить базовый этап — переименуйте его вместо этого");
       return;
     }
     if (stage.deals_count > 0) {
@@ -236,7 +298,34 @@ export function PathOfPatientView({ user }: { user: any }) {
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${scope === "mine" ? "bg-blue-50 text-blue-600 border border-blue-200" : "text-gray-500 border border-gray-200 hover:bg-gray-50"}`}>
             Мои карточки
           </button>
-          <div className="relative flex-1 min-w-[220px] max-w-xs ml-auto">
+
+          <div className="relative ml-auto" ref={addStagePopoverRef}>
+            <button onClick={() => setAddingStage(true)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-gray-500 border-2 border-dashed border-gray-300 hover:border-blue-300 hover:text-blue-500 transition-colors">
+              <Plus className="w-4 h-4" /> Добавить этап
+            </button>
+            {addingStage && (
+              <div className="absolute z-30 top-full right-0 mt-2 w-64 rounded-2xl border-2 border-gray-200 bg-white shadow-lg p-3 space-y-2">
+                <input
+                  value={newStageLabel} onChange={e => setNewStageLabel(e.target.value)} autoFocus
+                  onKeyDown={e => { if (e.key === "Enter") addStage(); if (e.key === "Escape") setAddingStage(false); }}
+                  placeholder="Название этапа..."
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-blue-400 focus:outline-none"
+                />
+                <div className="flex gap-2">
+                  <button onClick={() => setAddingStage(false)} className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-gray-500 hover:bg-gray-50 border border-gray-200">
+                    Отмена
+                  </button>
+                  <button onClick={addStage} disabled={!newStageLabel.trim() || addingStageBusy}
+                    className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-semibold text-white bg-blue-500 hover:bg-blue-600 disabled:opacity-50">
+                    {addingStageBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Добавить"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="relative flex-1 min-w-[220px] max-w-xs">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input type="text" value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Поиск..."
@@ -254,7 +343,7 @@ export function PathOfPatientView({ user }: { user: any }) {
             const total = items.reduce((s, d) => s + parseFloat(d.amount || "0"), 0);
             const isStageBusy = stageBusyId === stage.id;
             return (
-              <div key={stage.id} className="flex-shrink-0 w-72 rounded-2xl border border-gray-100 bg-gray-50/60 flex flex-col max-h-[75vh]">
+              <div key={stage.id} className="flex-shrink-0 w-72 rounded-2xl border border-gray-200 bg-white shadow-sm flex flex-col max-h-[75vh]">
                 <div className="px-4 py-3 border-b border-gray-100 flex-shrink-0 group/header">
                   {editingStageId === stage.id ? (
                     <div className="flex items-center gap-1">
@@ -275,21 +364,21 @@ export function PathOfPatientView({ user }: { user: any }) {
                       <div className="flex items-center gap-1.5 min-w-0">
                         <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: stage.color }} />
                         <p className="text-xs font-bold uppercase tracking-wide truncate" style={{ color: stage.color }}>{stage.label}</p>
-                        {stage.is_intake && (
-                          <Sparkles className="w-3 h-3 text-gray-300 flex-shrink-0" aria-label="Сюда попадают лиды от ИИ-агента" />
+                        {stage.is_default && (
+                          <Sparkles className="w-3 h-3 text-gray-300 flex-shrink-0" aria-label="Базовый этап — нельзя удалить или переместить" />
                         )}
                       </div>
                       <div className="flex items-center gap-0.5 opacity-0 group-hover/header:opacity-100 transition-opacity flex-shrink-0">
-                        <button onClick={() => moveStageOrder(stage, -1)} disabled={idx === 0 || isStageBusy} className="text-gray-300 hover:text-gray-600 disabled:opacity-30">
+                        <button onClick={() => moveStageOrder(stage, -1)} disabled={idx === 0 || isStageBusy || stage.is_default} className="text-gray-300 hover:text-gray-600 disabled:opacity-30">
                           <ChevronLeft className="w-3 h-3" />
                         </button>
-                        <button onClick={() => moveStageOrder(stage, 1)} disabled={idx === stages.length - 1 || isStageBusy} className="text-gray-300 hover:text-gray-600 disabled:opacity-30">
+                        <button onClick={() => moveStageOrder(stage, 1)} disabled={idx === stages.length - 1 || isStageBusy || stage.is_default} className="text-gray-300 hover:text-gray-600 disabled:opacity-30">
                           <ChevronRight className="w-3 h-3" />
                         </button>
                         <button onClick={() => startEditStage(stage)} className="text-gray-300 hover:text-blue-500">
                           <Pencil className="w-3 h-3" />
                         </button>
-                        {!stage.is_intake && (
+                        {!stage.is_default && (
                           <button onClick={() => deleteStage(stage)} disabled={isStageBusy} className="text-gray-300 hover:text-red-500">
                             <Trash2 className="w-3 h-3" />
                           </button>
@@ -311,7 +400,7 @@ export function PathOfPatientView({ user }: { user: any }) {
                   <p className="text-lg font-bold text-gray-800 mt-1.5">{formatMoney(total)}</p>
                   <p className="text-xs text-gray-400">{items.length} {items.length === 1 ? "карточка" : "карточек"}</p>
                 </div>
-                <div className="flex-1 overflow-y-auto p-2.5 space-y-2.5">
+                <div className="flex-1 overflow-y-auto scrollbar-hide p-2.5 space-y-2.5 bg-gray-50/60 rounded-b-2xl">
                   {items.length === 0 ? (
                     <p className="text-center py-6 text-xs text-gray-300">Пусто</p>
                   ) : (
@@ -350,13 +439,55 @@ export function PathOfPatientView({ user }: { user: any }) {
                             <ListChecks className="w-3.5 h-3.5" /> Создать задачу
                           </button>
 
-                          <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-gray-50">
-                            <select value={deal.stage} onChange={e => moveStage(deal, Number(e.target.value))} disabled={busy}
-                              className="text-[11px] text-gray-500 bg-transparent border-none focus:outline-none cursor-pointer disabled:opacity-50">
-                              {stages.map(s => (
-                                <option key={s.id} value={s.id}>{s.label}</option>
-                              ))}
-                            </select>
+                          <div className="mt-2.5 pt-2 border-t border-gray-50">
+                            {(() => {
+                              const currentStage = stages.find(s => s.id === deal.stage);
+                              const open = stageMenuDealId === deal.id;
+                              return (
+                                <>
+                                  <button
+                                    type="button"
+                                    ref={open ? stageMenuTriggerRef : undefined}
+                                    onClick={() => setStageMenuDealId(open ? null : deal.id)}
+                                    disabled={busy}
+                                    className="w-full flex items-center justify-between gap-1 px-1.5 py-1 -mx-1.5 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                                  >
+                                    <span className="flex items-center gap-1.5 min-w-0">
+                                      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: currentStage?.color }} />
+                                      <span className="text-[11px] font-semibold truncate" style={{ color: currentStage?.color }}>
+                                        {currentStage?.label || "—"}
+                                      </span>
+                                    </span>
+                                    <ChevronDown className={`w-3 h-3 text-gray-300 flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+                                  </button>
+                                  {open && stageMenuPos && typeof document !== "undefined" && createPortal(
+                                    <AnimatePresence>
+                                      <motion.div
+                                        ref={stageMenuPanelRef}
+                                        initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
+                                        transition={{ duration: 0.12 }}
+                                        className="fixed z-[9999] bg-white rounded-xl shadow-lg border border-gray-100 py-1 max-h-56 overflow-y-auto"
+                                        style={{ top: stageMenuPos.top, left: stageMenuPos.left, width: stageMenuPos.width }}
+                                      >
+                                        {stages.map(s => (
+                                          <button
+                                            key={s.id}
+                                            type="button"
+                                            onClick={() => { setStageMenuDealId(null); if (s.id !== deal.stage) moveStage(deal, s.id); }}
+                                            className={`w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-left hover:bg-gray-50 transition-colors ${s.id === deal.stage ? "bg-gray-50" : ""}`}
+                                          >
+                                            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: s.color }} />
+                                            <span className="truncate font-medium" style={{ color: s.color }}>{s.label}</span>
+                                            {s.id === deal.stage && <Check className="w-3 h-3 ml-auto text-emerald-500 flex-shrink-0" />}
+                                          </button>
+                                        ))}
+                                      </motion.div>
+                                    </AnimatePresence>,
+                                    document.body
+                                  )}
+                                </>
+                              );
+                            })()}
                           </div>
                           <div className="flex items-center justify-between mt-1">
                             <span className="text-[11px] text-gray-400">{deal.assigned_to_name || "Не назначено"}</span>
@@ -372,33 +503,6 @@ export function PathOfPatientView({ user }: { user: any }) {
               </div>
             );
           })}
-
-          <div className="flex-shrink-0 w-72">
-            {addingStage ? (
-              <div className="rounded-2xl border-2 border-dashed border-gray-200 p-3 space-y-2 bg-white">
-                <input
-                  value={newStageLabel} onChange={e => setNewStageLabel(e.target.value)} autoFocus
-                  onKeyDown={e => { if (e.key === "Enter") addStage(); if (e.key === "Escape") setAddingStage(false); }}
-                  placeholder="Название этапа..."
-                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-blue-400 focus:outline-none"
-                />
-                <div className="flex gap-2">
-                  <button onClick={() => setAddingStage(false)} className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-gray-500 hover:bg-gray-50 border border-gray-200">
-                    Отмена
-                  </button>
-                  <button onClick={addStage} disabled={!newStageLabel.trim() || addingStageBusy}
-                    className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-semibold text-white bg-blue-500 hover:bg-blue-600 disabled:opacity-50">
-                    {addingStageBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Добавить"}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button onClick={() => setAddingStage(true)}
-                className="w-full h-20 rounded-2xl border-2 border-dashed border-gray-200 text-gray-400 hover:border-blue-300 hover:text-blue-500 flex items-center justify-center gap-2 transition-colors">
-                <Plus className="w-4 h-4" /> Добавить этап
-              </button>
-            )}
-          </div>
         </div>
       )}
 

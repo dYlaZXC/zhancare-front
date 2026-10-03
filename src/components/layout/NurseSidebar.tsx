@@ -282,7 +282,7 @@ export const NurseSidebar = ({
 
 
         {/* Responsive Navigation */}
-        <nav className={`mt-2 space-y-2 xs:space-y-3 ${isCollapsed ? 'px-2' : 'px-3 xs:px-4 sm:px-6'} flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative z-10`}>
+        <nav className={`mt-2 space-y-2 xs:space-y-3 ${isCollapsed ? 'px-2' : 'px-3 xs:px-4 sm:px-6'} flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative z-10 sidebar-scroll`}>
           {nurseMenu.map((item, index) => (
             <div key={item.id} className="relative">
               <Link
@@ -553,7 +553,7 @@ export const NurseSidebar = ({
         </div>{/* end top group */}
 
         {/* Desktop Navigation */}
-        <nav className={`flex-1 min-h-0 flex flex-col justify-start gap-2 ${isCollapsed ? 'px-2 py-3' : 'px-6 py-3'} overflow-x-hidden overflow-y-auto relative z-10`}>
+        <nav className={`flex-1 min-h-0 flex flex-col justify-start gap-2 ${isCollapsed ? 'px-2 py-3' : 'px-6 py-3'} overflow-x-hidden overflow-y-auto relative z-10 sidebar-scroll`}>
           {nurseMenu.map((item, index) => (
             <div key={`desktop-${item.id}`} className="relative">
               <Link

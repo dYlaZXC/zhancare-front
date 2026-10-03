@@ -1,10 +1,13 @@
-export type PathOfPatientSource = "site" | "whatsapp" | "instagram" | "phone" | "referral" | "ai_agent" | "other";
+export type PathOfPatientSource = "site" | "whatsapp" | "instagram" | "phone" | "referral" | "ai_agent" | "booking" | "other";
 
 // A column of the clinic's own "Путь пациента" board — per-clinic and
-// customizable (see backend PathOfPatientStage's own docstring). `is_intake`
-// marks the one stage that's always there (seeded for every clinic) and
-// where the clinic's AI agent lands a captured lead — it can be renamed
-// but never deleted, enforced server-side.
+// customizable (see backend PathOfPatientStage's own docstring).
+// `is_intake` marks the one fallback stage that's always there (seeded for
+// every clinic). `is_default` marks any of the 6 starter-funnel stages
+// (computed server-side from the CURRENT label matching one of
+// DEFAULT_STAGE_LABELS, not a stored flag — renaming one opts it out) —
+// can be renamed/recolored but never deleted or reordered, enforced
+// server-side; the frontend disables those actions to match.
 export interface PathOfPatientStage {
   id: number;
   clinic: number;
@@ -12,6 +15,7 @@ export interface PathOfPatientStage {
   color: string;
   order: number;
   is_intake: boolean;
+  is_default: boolean;
   deals_count: number;
 }
 
@@ -47,6 +51,7 @@ export const SOURCE_LABELS: Record<PathOfPatientSource, string> = {
   phone: "Телефон",
   referral: "Рекомендация",
   ai_agent: "ИИ-агент",
+  booking: "Запись на приём",
   other: "Другое",
 };
 
