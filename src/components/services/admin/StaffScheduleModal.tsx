@@ -72,6 +72,12 @@ export default function StaffScheduleModal({
   const [roomAssignments, setRoomAssignments] = useState<DoctorRoomAssignmentRow[]>([]);
   const [availableRooms, setAvailableRooms] = useState<AvailableRoom[]>([]);
   const [roomOverrides, setRoomOverrides] = useState<DoctorRoomOverrideRow[]>([]);
+  // Uncommitted room-band drafts/edits from TemplateScheduleTab's "Кабинеты"
+  // rows — lives here (not in that tab) so handleSaveSchedule can flush them
+  // before saving, and so closing the modal with something still pending can
+  // warn instead of silently discarding it (see both uses below).
+  const [newBandByWeekday, setNewBandByWeekday] = useState<Record<number, { roomId: number | null; startTime: string; endTime: string }>>({});
+  const [editsByBandId, setEditsByBandId] = useState<Record<number, { roomId?: number | null; startTime?: string; endTime?: string }>>({});
 
   // ── Fetch helpers ────────────────────────────────────────────────────────────
 
@@ -157,6 +163,8 @@ export default function StaffScheduleModal({
     setCurrentWeekIndex(0);
     setPlannerConsultationType(startType);
     setPlannerDirty(false);
+    setNewBandByWeekday({});
+    setEditsByBandId({});
 
     const monday = initialDate ? getMondayOfWeekContaining(initialDate) : getCurrentMondayStr();
     setPlannerWeekStart(monday);
@@ -380,6 +388,37 @@ export default function StaffScheduleModal({
 
   // ── Template-tab: save schedule ───────────────────────────────────────────────
 
+  // True once anything in the Кабинеты rows has been touched but not yet
+  // committed via that row's own checkmark — an edit to an existing band is
+  // always meaningful (something real is changing), but a freshly-opened
+  // "+ Добавить интервал" draft only counts once a room has actually been
+  // picked, matching flushPendingRoomBands below (an empty draft is "opened
+  // then abandoned," not "forgot to save").
+  const hasPendingRoomChanges =
+    Object.keys(editsByBandId).length > 0 ||
+    Object.values(newBandByWeekday).some((d) => d.roomId !== null);
+
+  // Commits every still-pending Кабинеты row the same way its own checkmark
+  // would — called from handleSaveSchedule so "Сохранить постоянное" (the
+  // one big, obvious button) actually persists a room the admin just set,
+  // instead of silently dropping it the moment the modal closes right after.
+  const flushPendingRoomBands = async () => {
+    for (const [idStr, edits] of Object.entries(editsByBandId)) {
+      const id = Number(idStr);
+      const patch: { room_id?: number | null; start_time?: string; end_time?: string } = {};
+      if (edits.roomId !== undefined) patch.room_id = edits.roomId;
+      if (edits.startTime !== undefined) patch.start_time = edits.startTime;
+      if (edits.endTime !== undefined) patch.end_time = edits.endTime;
+      await handleUpdateRoomBand(id, patch);
+    }
+    for (const [weekdayStr, draft] of Object.entries(newBandByWeekday)) {
+      if (draft.roomId === null) continue; // opened but never filled in — nothing to save
+      await handleAddRoomBand(Number(weekdayStr), draft.roomId, draft.startTime, draft.endTime);
+    }
+    setEditsByBandId({});
+    setNewBandByWeekday({});
+  };
+
   const handleSaveSchedule = async () => {
     if (!member) return;
     // Saving writes all three types at once (buildSchedulesArray), so check
@@ -395,6 +434,13 @@ export default function StaffScheduleModal({
     }
     setScheduleLoading(true);
     try {
+      if (hasPendingRoomChanges) {
+        // Each individual call already toasts its own error and throws on
+        // failure (see handleAddRoomBand/handleUpdateRoomBand above) — on
+        // failure, stop here rather than also saving the schedule, so the
+        // admin notices and can fix the room before retrying.
+        await flushPendingRoomBands();
+      }
       await api.patch(`/staff/${member.id}/`, {
         schedules: buildSchedulesArray(weeklySchedules),
       });
@@ -666,6 +712,22 @@ export default function StaffScheduleModal({
     }
   };
 
+  // Closing (X, backdrop, "Закрыть") used to silently discard an in-progress
+  // Кабинеты row with zero warning — this is the other half of the
+  // "doctors aren't saved in rooms" bug: filling in a room and expecting
+  // either Save button to catch it. hasPendingRoomChanges only looks at the
+  // Постоянное tab's state, but is checked regardless of which tab is
+  // active since switching tabs doesn't clear it.
+  const handleRequestClose = () => {
+    if (
+      hasPendingRoomChanges &&
+      !window.confirm("Есть несохранённый кабинет — изменения будут потеряны. Закрыть без сохранения?")
+    ) {
+      return;
+    }
+    onClose();
+  };
+
   // ── Render ────────────────────────────────────────────────────────────────────
 
   if (!isOpen || !member) return null;
@@ -681,7 +743,7 @@ export default function StaffScheduleModal({
           onMouseDown={(e) => setMouseDownTarget(e.target)}
           onClick={(e) => {
             if (e.target === e.currentTarget && mouseDownTarget === e.currentTarget) {
-              onClose();
+              handleRequestClose();
             }
             setMouseDownTarget(null);
           }}
@@ -708,7 +770,7 @@ export default function StaffScheduleModal({
                 </div>
               </div>
               <button
-                onClick={onClose}
+                onClick={handleRequestClose}
                 className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
               >
                 <svg
@@ -798,6 +860,10 @@ export default function StaffScheduleModal({
                   onAddRoomBand={handleAddRoomBand}
                   onUpdateRoomBand={handleUpdateRoomBand}
                   onDeleteRoomBand={handleDeleteRoomBand}
+                  newBandByWeekday={newBandByWeekday}
+                  setNewBandByWeekday={setNewBandByWeekday}
+                  editsByBandId={editsByBandId}
+                  setEditsByBandId={setEditsByBandId}
                 />
               )}
 
@@ -810,7 +876,7 @@ export default function StaffScheduleModal({
             <div className="sticky bottom-0 bg-white border-t border-gray-100 px-8 py-5 rounded-b-3xl flex gap-4">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleRequestClose}
                 disabled={scheduleLoading}
                 className="flex-1 px-6 py-3 rounded-2xl border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
               >

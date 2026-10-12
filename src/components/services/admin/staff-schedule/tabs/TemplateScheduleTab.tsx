@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import { Plus } from "lucide-react";
 import { DEFAULT_WEEKDAYS, CONSULTATION_TYPES, DAY_TO_WEEKDAY } from "../types/scheduleTypes";
 import type { DaySchedule, ConsultationType, DoctorRoomAssignmentRow, AvailableRoom } from "../types/scheduleTypes";
@@ -32,6 +32,10 @@ export function TemplateScheduleTab({
   onAddRoomBand,
   onUpdateRoomBand,
   onDeleteRoomBand,
+  newBandByWeekday,
+  setNewBandByWeekday,
+  editsByBandId,
+  setEditsByBandId,
 }: {
   scheduleType: ConsultationType;
   onScheduleTypeChange: (t: ConsultationType) => void;
@@ -45,11 +49,18 @@ export function TemplateScheduleTab({
   onAddRoomBand: (weekday: number, roomId: number | null, startTime: string, endTime: string) => Promise<void>;
   onUpdateRoomBand: (id: number, changes: { room_id?: number | null; start_time?: string; end_time?: string }) => Promise<void>;
   onDeleteRoomBand: (id: number) => Promise<void>;
+  // Lifted up to StaffScheduleModal (rather than local useState here) so the
+  // big "Сохранить постоянное" button can flush any still-uncommitted room
+  // draft/edit before it saves+closes — these used to be silently discarded
+  // the moment the modal closed, since this tab's own component state
+  // doesn't survive unmount and nothing else ever read it.
+  newBandByWeekday: Record<number, { roomId: number | null; startTime: string; endTime: string }>;
+  setNewBandByWeekday: Dispatch<SetStateAction<Record<number, { roomId: number | null; startTime: string; endTime: string }>>>;
+  editsByBandId: Record<number, { roomId?: number | null; startTime?: string; endTime?: string }>;
+  setEditsByBandId: Dispatch<SetStateAction<Record<number, { roomId?: number | null; startTime?: string; endTime?: string }>>>;
 }) {
   const current = TYPE_META[scheduleType];
   const otherTypes = CONSULTATION_TYPES.filter((t) => t !== scheduleType);
-  const [newBandByWeekday, setNewBandByWeekday] = useState<Record<number, { roomId: number | null; startTime: string; endTime: string }>>({});
-  const [editsByBandId, setEditsByBandId] = useState<Record<number, { roomId?: number | null; startTime?: string; endTime?: string }>>({});
 
   return (
     <>
