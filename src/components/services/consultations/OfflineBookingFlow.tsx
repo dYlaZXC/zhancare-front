@@ -6,6 +6,7 @@ import { ArrowLeft, CheckCircle2, Calendar, MapPin, Phone, Building2, Navigation
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { useConsultationPayment } from "@/components/payment/useConsultationPayment";
+import { resolveConsultationDisplayAmount } from "@/components/payment/resolveConsultationAmount";
 import Step2 from "./VideoConsultationStep2";
 import type { Doctor, RecommendedDoctor } from "./types/doctor";
 
@@ -85,8 +86,7 @@ const OfflineBookingFlow: React.FC<OfflineBookingFlowProps> = ({
     if (!doc) return;
 
     const scheduledTime: string = data?.scheduled_time || data?.scheduled_at || '';
-    const rawPrice = doc.offline_consultation_price;
-    const amount = (rawPrice !== null && rawPrice !== undefined) ? Math.round(Number(rawPrice)) : 0;
+    const { amount } = resolveConsultationDisplayAmount(doc, "offline");
 
     setBookingError(null);
     try {

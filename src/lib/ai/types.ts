@@ -42,6 +42,10 @@ export interface DoctorRecommendation {
   reason?: string;
   online_consultation_price?: number | null;
   offline_consultation_price?: number | null;
+  online_payment_preference?: "pay_at_clinic" | "full_prepay" | "partial_prepay" | null;
+  offline_payment_preference?: "pay_at_clinic" | "full_prepay" | "partial_prepay" | null;
+  online_prepay_percent?: number | null;
+  offline_prepay_percent?: number | null;
 }
 
 export interface DiagnosticsServiceSchedule {

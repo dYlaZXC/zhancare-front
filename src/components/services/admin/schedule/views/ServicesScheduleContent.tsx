@@ -11,6 +11,8 @@ import {
 import AssignDiagnosticsModal from "../modals/AssignDiagnosticsModal";
 import { ServiceScheduleModal } from "../../services/modals/ServiceScheduleModal";
 import type { Service } from "../../services/types/serviceTypes";
+import { getClinicToday, getClinicNowMinutes } from "../utils/scheduleUtils";
+import { useBrand } from "@/context/BrandContext";
 
 interface ServiceDay {
   id: number;
@@ -77,6 +79,7 @@ export function ServicesScheduleContent({
   events,
   onAddClick,
 }: ServicesScheduleContentProps) {
+  const { clinicTimezone } = useBrand();
   const [services, setServices] = useState<ServiceDay[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -183,7 +186,7 @@ export function ServicesScheduleContent({
     });
   };
 
-  const todayStr = new Date().toLocaleDateString('sv-SE');
+  const todayStr = getClinicToday(clinicTimezone);
   const weekDays = getWeekStrip();
 
   const filtered = services.filter(s =>
@@ -220,8 +223,7 @@ export function ServicesScheduleContent({
     const end = eh * 60 + em;
     const fmt = (m: number) =>
       `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
-    const now = new Date();
-    const nowMinutes = selectedDate === todayStr ? now.getHours() * 60 + now.getMinutes() : -1;
+    const nowMinutes = selectedDate === todayStr ? getClinicNowMinutes(clinicTimezone) : -1;
     const slots: { start: string; end: string }[] = [];
     while (cur + dur <= end) {
       if (cur > nowMinutes) {

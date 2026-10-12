@@ -20,16 +20,7 @@ import { DiagnosticsSection } from "./add-event/components/DiagnosticsSection";
 import { DateTimeSection } from "./add-event/components/DateTimeSection";
 import { PaymentSection } from "./add-event/components/PaymentSection";
 import { EventSuccessScreen } from "./add-event/components/EventSuccessScreen";
-
-// "Today" must be computed in the CLINIC's own timezone, not the browser's —
-// a browser-local date can already be a day behind/ahead of the clinic's
-// actual calendar date near midnight, which made diagnostics slot lookups
-// silently return empty (the backend compares against clinic-local `now()`).
-// Falls back to Asia/Almaty, matching the backend's own fallback and the
-// only timezone any clinic in this system is currently configured with.
-function getClinicToday(tz: string): string {
-  return new Intl.DateTimeFormat('sv-SE', { timeZone: tz }).format(new Date());
-}
+import { getClinicToday, getClinicNowMinutes } from "../utils/scheduleUtils";
 
 // Mirrors PatientFormModal's generator — guarantees one of each character
 // class rather than a plain Math.random() slice, which could (rarely) land
@@ -346,9 +337,8 @@ export default function AddEventModal({
     // time because it lands on the next calendar day — extend past midnight
     // instead of treating the shift as zero-length.
     if (endMin <= cur) endMin += 24 * 60;
-    const now = new Date();
-    const isToday = formData.date === now.toLocaleDateString('sv-SE');
-    const nowMinutes = isToday ? now.getHours() * 60 + now.getMinutes() : -1;
+    const isToday = formData.date === getClinicToday(clinicTimezone);
+    const nowMinutes = isToday ? getClinicNowMinutes(clinicTimezone) : -1;
     const fmt = (mins: number) => {
       const m = mins % (24 * 60);
       return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;

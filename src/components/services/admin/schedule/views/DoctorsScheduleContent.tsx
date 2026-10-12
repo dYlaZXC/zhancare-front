@@ -26,6 +26,8 @@ import StaffScheduleModal from "../../StaffScheduleModal";
 import AssignConsultationModal from "../modals/AssignConsultationModal";
 import RescheduleModal from "../modals/RescheduleModal";
 import ConfirmDeleteModal from "../modals/ConfirmDeleteModal";
+import { getClinicToday, getClinicNowMinutes } from "../utils/scheduleUtils";
+import { useBrand } from "@/context/BrandContext";
 
 interface DoctorsScheduleContentProps {
   selectedDate: string;
@@ -52,6 +54,7 @@ export function DoctorsScheduleContent({
   events,
   onEventAdded
 }: DoctorsScheduleContentProps) {
+  const { clinicTimezone } = useBrand();
   const [staffDay, setStaffDay] = useState<StaffDay[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -124,9 +127,8 @@ export function DoctorsScheduleContent({
     // instead of treating the shift as zero-length.
     if (end <= cur) end += 24 * 60;
 
-    const now = new Date();
-    const isToday = selectedDate === now.toLocaleDateString('sv-SE');
-    const nowMinutes = isToday ? now.getHours() * 60 + now.getMinutes() : -1;
+    const isToday = selectedDate === getClinicToday(clinicTimezone);
+    const nowMinutes = isToday ? getClinicNowMinutes(clinicTimezone) : -1;
     const fmt = (mins: number) => {
       const m = mins % (24 * 60);
       return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;

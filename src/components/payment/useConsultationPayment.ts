@@ -18,6 +18,9 @@ export interface PaymentResult {
   paymentId: string;
   resultId: string;
   status: "paid";
+  /** True when nothing was charged online because the doctor is configured
+   * "pay at clinic" (as opposed to the consultation genuinely being free). */
+  payAtClinic?: boolean;
 }
 
 export function useConsultationPayment() {
@@ -45,11 +48,13 @@ export function useConsultationPayment() {
         { headers: token ? { Authorization: `Token ${token}` } : {} }
       );
 
-      const { free, payment_id: paymentId, result_id: freeResultId } = checkoutRes.data;
+      const { free, pay_at_clinic: payAtClinic, payment_id: paymentId, result_id: freeResultId } = checkoutRes.data;
 
-      // Free consultation (doctor price = 0) — no payment widget needed
+      // Free consultation (doctor price = 0), OR a "pay at clinic" doctor
+      // (real price > 0, just not collected online) — either way nothing
+      // to charge right now, so the payment widget is skipped entirely.
       if (free) {
-        return { paymentId, resultId: freeResultId ?? "", status: "paid" };
+        return { paymentId, resultId: freeResultId ?? "", status: "paid", payAtClinic: Boolean(payAtClinic) };
       }
 
       const { amount, currency, description, public_terminal_id: publicTerminalId, email } = checkoutRes.data;

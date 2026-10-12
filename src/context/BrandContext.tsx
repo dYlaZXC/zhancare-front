@@ -24,6 +24,12 @@ interface BrandContextValue {
   appLogo: StaticImageData;
   clinicCurrency: string;
   setClinicCurrency: (c: string) => void;
+  // IANA name or fixed UTC offset (e.g. "Asia/Almaty", "+05:00") — the
+  // clinic's own timezone, never the browser's. Schedule/slot code must use
+  // this (not new Date()) for any "is this today" / "is this slot already
+  // past" check, or an admin whose device clock is in a different zone sees
+  // a skewed slot list and can end up booking an already-past time.
+  clinicTimezone: string;
 }
 
 const BrandContext = createContext<BrandContextValue>({
@@ -31,6 +37,7 @@ const BrandContext = createContext<BrandContextValue>({
   appLogo: LogoKZ,
   clinicCurrency: "KZT",
   setClinicCurrency: () => {},
+  clinicTimezone: "Asia/Almaty",
 });
 
 interface BrandProviderProps {
@@ -54,6 +61,8 @@ export function BrandProvider({ children, initialBrand = "kz" }: BrandProviderPr
     }
   };
 
+  const [clinicTimezone, setClinicTimezone] = useState<string>("Asia/Almaty");
+
   useEffect(() => {
     const token =
       localStorage.getItem("access_token") ||
@@ -67,6 +76,8 @@ export function BrandProvider({ children, initialBrand = "kz" }: BrandProviderPr
       .then((data) => {
         const cur = data?.clinic_info?.currency;
         if (cur) setClinicCurrency(cur);
+        const tz = data?.clinic_info?.time_zone;
+        if (tz) setClinicTimezone(tz);
       })
       .catch(() => {});
   }, []);
@@ -82,7 +93,7 @@ export function BrandProvider({ children, initialBrand = "kz" }: BrandProviderPr
   const appLogo = language === "uz" ? LogoUZ : brand.logo;
 
   return (
-    <BrandContext.Provider value={{ brand, appLogo, clinicCurrency, setClinicCurrency }}>
+    <BrandContext.Provider value={{ brand, appLogo, clinicCurrency, setClinicCurrency, clinicTimezone }}>
       {children}
     </BrandContext.Provider>
   );

@@ -44,6 +44,15 @@ export interface Doctor {
   } | null;
   online_consultation_price?: string | null;
   offline_consultation_price?: string | null;
+  // How much of the price (if any) is actually charged online at booking
+  // time — see OfflineBookingFlow.tsx/VideoConsultation.tsx's amount
+  // computation, which must mirror resolve_consultation_payment_plan
+  // (payments/services.py) for display purposes. The backend is always the
+  // enforced source of truth regardless of what this computes.
+  online_payment_preference?: 'pay_at_clinic' | 'full_prepay' | 'partial_prepay' | null;
+  offline_payment_preference?: 'pay_at_clinic' | 'full_prepay' | 'partial_prepay' | null;
+  online_prepay_percent?: number | null;
+  offline_prepay_percent?: number | null;
   preferred_consultation_duration?: number | null;
   language?: string | null;
   work_schedule?: Record<string, WorkScheduleDay> | null;

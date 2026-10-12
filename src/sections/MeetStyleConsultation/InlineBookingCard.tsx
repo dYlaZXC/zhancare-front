@@ -5,6 +5,7 @@ import { api } from "@/utils/api";
 import { websocketService } from "@/services/websocketService";
 import { useAuth } from "@/context/AuthContext";
 import { useConsultationPayment } from "@/components/payment/useConsultationPayment";
+import { resolveConsultationDisplayAmount } from "@/components/payment/resolveConsultationAmount";
 import type { DoctorRecommendation } from "@/lib/ai";
 
 interface InlineSlot {
@@ -258,9 +259,12 @@ export default function InlineBookingCard({
           ? `Офлайн приём у ${firstName}`
           : `Онлайн консультация с ${firstName}`;
 
+      const { amount } = resolveConsultationDisplayAmount(
+        doctor, consultationType === "offline" ? "offline" : "online",
+      );
       await payForConsultation({
         paymentType: consultationType === "offline" ? "offline" : "online",
-        amount: doctor.online_consultation_price ? Number(doctor.online_consultation_price) : 0,
+        amount,
         description,
         bookingData: {
           doctor_id: doctor.id,

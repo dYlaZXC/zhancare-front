@@ -2,6 +2,25 @@
  * Schedule utility functions
  */
 
+// "Today" and "now" for slot generation must be computed in the CLINIC's own
+// timezone, never the browser's — an admin whose device clock is in a
+// different zone than the clinic (e.g. Europe/Moscow vs Asia/Almaty, a
+// consistent 2-hour skew) would otherwise see the wrong slots filtered out
+// as "already past", or book a slot that's genuinely already in the past.
+// Accepts either an IANA name ("Asia/Almaty") or a fixed UTC offset
+// ("+05:00") — both are valid Intl.DateTimeFormat timeZone identifiers.
+export function getClinicToday(tz: string): string {
+  return new Intl.DateTimeFormat('sv-SE', { timeZone: tz }).format(new Date());
+}
+
+export function getClinicNowMinutes(tz: string): number {
+  const hm = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).format(new Date());
+  const [h, m] = hm.split(':').map(Number);
+  return h * 60 + m;
+}
+
 export interface StatusColor {
   bg: string;
   text: string;

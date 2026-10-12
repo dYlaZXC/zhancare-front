@@ -296,18 +296,6 @@ export default function OfflineConsultationPage() {
     return matchCat && matchSearch;
   });
 
-  const handleAddReferral = (service: DiagnosticServiceItem) => {
-    if (referrals.some(r => r.id === service.id)) return;
-    setReferrals(prev => [...prev, {
-      id: service.id,
-      name: service.name,
-      category: service.category,
-      category_label: service.category_label,
-      price: service.price != null ? Number(service.price) : undefined,
-      currency: service.currency ?? undefined,
-    }]);
-  };
-
   const handleAddManualReferral = async () => {
     const name = manualReferral.trim();
     if (!name) return;

@@ -5,89 +5,10 @@ import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import { api } from "@/utils/api";
 import { Edit, Loader2, UserPlus, X } from "lucide-react";
-import type { StaffMember, StaffFormData, Clinic, WeeklySchedules } from "../types/staffTypes";
+import type { StaffMember, StaffFormData, Clinic } from "../types/staffTypes";
 import { EMPTY_STAFF_FORM } from "../types/staffTypes";
 import { BasicInfoTab } from "../form/BasicInfoTab";
 import { FinanceTab } from "../form/FinanceTab";
-
-const DAY_TO_WEEKDAY: Record<string, number> = {
-  monday: 0, tuesday: 1, wednesday: 2, thursday: 3, friday: 4, saturday: 5, sunday: 6,
-};
-const WEEKDAY_TO_DAY: Record<number, string> = {
-  0: 'monday', 1: 'tuesday', 2: 'wednesday', 3: 'thursday', 4: 'friday', 5: 'saturday', 6: 'sunday',
-};
-
-function defaultDay(start: string, end: string, enabled = false) {
-  return { start, end, enabled };
-}
-function emptyWeek() {
-  return {
-    online: {
-      monday: defaultDay('09:00', '18:00'), tuesday: defaultDay('09:00', '18:00'),
-      wednesday: defaultDay('09:00', '18:00'), thursday: defaultDay('09:00', '18:00'),
-      friday: defaultDay('09:00', '18:00'), saturday: defaultDay('10:00', '14:00'),
-      sunday: defaultDay('10:00', '14:00'),
-    },
-    offline: {
-      monday: defaultDay('09:00', '18:00'), tuesday: defaultDay('09:00', '18:00'),
-      wednesday: defaultDay('09:00', '18:00'), thursday: defaultDay('09:00', '18:00'),
-      friday: defaultDay('09:00', '18:00'), saturday: defaultDay('10:00', '14:00'),
-      sunday: defaultDay('10:00', '14:00'),
-    },
-  };
-}
-function currentWeekStart(): string {
-  const now = new Date();
-  const dayOfWeek = now.getDay();
-  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() + mondayOffset);
-  monday.setHours(0, 0, 0, 0);
-  return monday.toLocaleDateString('sv-SE');
-}
-
-// Build weeklySchedules (JSON per-week format) from a member's DoctorSchedule
-// rows, so an untouched edit round-trips back through buildSchedulesArray()
-// to the exact same rows — this is the contract that keeps editing a staff
-// member from wiping their existing schedule.
-function weeklySchedulesFromMember(member: StaffMember): WeeklySchedules {
-  const weekStartDate = currentWeekStart();
-  const weekEntry = emptyWeek();
-  const scheduleRows = member.schedules || [];
-  for (const row of scheduleRows) {
-    const dayName = WEEKDAY_TO_DAY[row.weekday];
-    if (dayName && (row.consultation_type === 'online' || row.consultation_type === 'offline')) {
-      (weekEntry[row.consultation_type] as Record<string, { start: string; end: string; enabled: boolean }>)[dayName] =
-        { start: row.start_time.slice(0, 5), end: row.end_time.slice(0, 5), enabled: row.is_active };
-    }
-  }
-  return { [weekStartDate]: weekEntry };
-}
-
-// Convert weeklySchedules (JSON per-week format) → DoctorSchedule rows array
-function buildSchedulesArray(weeklySchedules: WeeklySchedules) {
-  // Merge all configured weeks — sort by week start date so later weeks override earlier ones
-  // for the SAME day when explicitly enabled. Disabled days in a later week never remove
-  // a day that was enabled in an earlier week (additive merge).
-  const merged = new Map<string, { consultation_type: string; weekday: number; start_time: string; end_time: string; is_active: boolean }>();
-  const sortedEntries = Object.entries(weeklySchedules).sort(([a], [b]) => a.localeCompare(b));
-  for (const [, weekEntry] of sortedEntries) {
-    for (const type of ['online', 'offline'] as const) {
-      const dayMap = weekEntry[type];
-      if (!dayMap) continue;
-      for (const [day, cfg] of Object.entries(dayMap)) {
-        const weekday = DAY_TO_WEEKDAY[day] ?? 0;
-        const key = `${type}-${weekday}`;
-        if (cfg.enabled) {
-          // Later weeks override time settings for the same day
-          merged.set(key, { consultation_type: type, weekday, start_time: cfg.start, end_time: cfg.end, is_active: true });
-        }
-        // Disabled in a later week does NOT remove a day enabled in an earlier week
-      }
-    }
-  }
-  return Array.from(merged.values());
-}
 
 // ─── Staff Form Modal ────────────────────────────────────────────────────────
 
@@ -171,10 +92,6 @@ export function StaffFormModal({
   const FINANCE_ERROR_KEYS: string[] = []; // none of the validated fields currently live in the Финансы tab
   const hasFinanceErrors = Object.keys(formErrors).some(k => FINANCE_ERROR_KEYS.includes(k));
   const hasBasicErrors = Object.keys(formErrors).some(k => !FINANCE_ERROR_KEYS.includes(k));
-
-  const [weeklySchedules, setWeeklySchedules] = useState<WeeklySchedules>(() =>
-    mode === "edit" && initial ? weeklySchedulesFromMember(initial) : {}
-  );
 
   const set = (k: keyof StaffFormData, v: any) => setForm(prev => ({ ...prev, [k]: v }));
 
@@ -277,7 +194,14 @@ export function StaffFormModal({
         online_prepay_percent: form.online_prepay_percent ? Number(form.online_prepay_percent) : 50,
         preferred_consultation_duration: form.preferred_consultation_duration ? Number(form.preferred_consultation_duration) : null,
         room_number: form.room_number || null,
-        schedules: buildSchedulesArray(weeklySchedules),
+        // Deliberately NOT sending `schedules` — this modal (Основное/Финансы
+        // tabs) has no schedule UI at all. It used to round-trip a silently
+        // incomplete reconstruction (only online/offline, never "Гибкий
+        // формат"/mixed) back to the backend, which does a full
+        // delete-then-recreate from whatever `schedules` it's given — so
+        // saving a doctor's price here was wiping their mixed-format
+        // schedule. Schedule editing lives in StaffScheduleModal, which
+        // round-trips all 3 consultation types correctly.
         diagnostics_commissions: diagCommissions
           .filter(r => r.service_id)
           .map(r => ({ service_id: Number(r.service_id), doctor_share_percent: Number(r.doctor_share_percent) || 0 })),

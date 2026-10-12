@@ -10,6 +10,7 @@ import Step1 from "./consultations/VideoConsultationStep1";
 import Step2 from "./consultations/VideoConsultationStep2";
 import Step3 from "./consultations/VideoConsultationStep3";
 import { useConsultationPayment } from "@/components/payment/useConsultationPayment";
+import { resolveConsultationDisplayAmount } from "@/components/payment/resolveConsultationAmount";
 import TipsPanel from "./consultations/TipsPanel";
 import OfflineBookingFlow from "./consultations/OfflineBookingFlow";
 import DiagnosticsFlow from "./consultations/DiagnosticsFlow";
@@ -548,8 +549,7 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
     }
 
     const doctor = doctors.find(d => d.id === pendingConsultationData.doctor_id);
-    const priceRaw = doctor?.online_consultation_price;
-    const amount = (priceRaw !== null && priceRaw !== undefined) ? Math.round(Number(priceRaw)) : 0;
+    const { amount } = resolveConsultationDisplayAmount(doctor, "online");
     const doctorName = doctor ? doctor.name.split(" ")[0] : "врачом";
     const description = `Онлайн консультация с ${doctorName}`;
 
@@ -588,8 +588,7 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
   const pendingConsultationPrice = useMemo(() => {
     if (!pendingConsultationData) return null;
     const doctor = doctors.find(d => d.id === pendingConsultationData.doctor_id);
-    const raw = doctor?.online_consultation_price;
-    return (raw !== null && raw !== undefined) ? Math.round(Number(raw)) : 0;
+    return resolveConsultationDisplayAmount(doctor, "online").amount;
   }, [pendingConsultationData, doctors]);
 
   // COMMENTED OUT: Urgent consultations removed - all consultations now require time slot selection

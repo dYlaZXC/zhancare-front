@@ -32,6 +32,8 @@ import { ScheduleEvent } from "../types/scheduleTypes";
 import StaffScheduleModal from "../../StaffScheduleModal";
 import AssignConsultationModal from "../modals/AssignConsultationModal";
 import AssignDiagnosticsModal from "../modals/AssignDiagnosticsModal";
+import { getClinicToday, getClinicNowMinutes } from "../utils/scheduleUtils";
+import { useBrand } from "@/context/BrandContext";
 
 interface StaffDay {
   id: number;
@@ -112,6 +114,7 @@ export function AvailableDoctorsTab({
    * keeps the two from starting out disagreeing. */
   syncConsultationType?: 'online' | 'offline' | 'home' | 'diagnostics' | null;
 }) {
+  const { clinicTimezone } = useBrand();
   const [staffDay, setStaffDay] = useState<StaffDay[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -220,9 +223,8 @@ export function AvailableDoctorsTab({
     let end = endH * 60 + endM;
     if (end <= cur) end += 24 * 60;
 
-    const now = new Date();
-    const isToday = date === now.toLocaleDateString('sv-SE');
-    const nowMinutes = isToday ? now.getHours() * 60 + now.getMinutes() : -1;
+    const isToday = date === getClinicToday(clinicTimezone);
+    const nowMinutes = isToday ? getClinicNowMinutes(clinicTimezone) : -1;
     const fmt = (mins: number) => {
       const m = mins % (24 * 60);
       return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
@@ -286,9 +288,8 @@ export function AvailableDoctorsTab({
     let cur = sh * 60 + sm;
     const end = eh * 60 + em;
     const fmt = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
-    const now = new Date();
-    const isToday = date === now.toLocaleDateString('sv-SE');
-    const nowMinutes = isToday ? now.getHours() * 60 + now.getMinutes() : -1;
+    const isToday = date === getClinicToday(clinicTimezone);
+    const nowMinutes = isToday ? getClinicNowMinutes(clinicTimezone) : -1;
     const slots: { start: string; end: string }[] = [];
     while (cur + dur <= end) {
       if (cur > nowMinutes) slots.push({ start: fmt(cur), end: fmt(cur + dur) });

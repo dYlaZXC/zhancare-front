@@ -291,11 +291,25 @@ export default function OfflineConsultationByMeetingPage() {
     setSectionValues(prev => ({ ...prev, [key]: value }));
   };
 
-  const handleAddManualReferral = () => {
+  const [addingManualReferral, setAddingManualReferral] = useState(false);
+
+  const handleAddManualReferral = async () => {
     const name = manualReferral.trim();
-    if (!name) return;
-    setReferrals(prev => [...prev, { name }]);
-    setManualReferral("");
+    if (!name || !consultation) return;
+    setAddingManualReferral(true);
+    try {
+      const { data } = await api.post<{ appointment: { id: number } }>("/diagnostics/appointments/", {
+        service_name: name,
+        source_type: "consultation",
+        source_id: consultation.id,
+      });
+      setReferrals(prev => [...prev, { name, appointmentId: data?.appointment?.id }]);
+      setManualReferral("");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Не удалось добавить направление");
+    } finally {
+      setAddingManualReferral(false);
+    }
   };
 
   const handleRemoveReferral = (index: number) => {
@@ -332,14 +346,29 @@ export default function OfflineConsultationByMeetingPage() {
     };
   });
 
-  const handleAddReferral = (service: DiagnosticsServiceItem) => {
-    if (referrals.some(r => r.serviceId === service.id)) return;
-    setReferrals(prev => [...prev, {
-      serviceId: service.id,
-      name: service.name,
-      categoryLabel: service.category_label,
-      price: service.price,
-    }]);
+  const [addingServiceId, setAddingServiceId] = useState<number | null>(null);
+
+  const handleAddReferral = async (service: DiagnosticsServiceItem) => {
+    if (referrals.some(r => r.serviceId === service.id) || !consultation) return;
+    setAddingServiceId(service.id);
+    try {
+      const { data } = await api.post<{ appointment: { id: number } }>("/diagnostics/appointments/", {
+        service_id: service.id,
+        source_type: "consultation",
+        source_id: consultation.id,
+      });
+      setReferrals(prev => [...prev, {
+        serviceId: service.id,
+        name: service.name,
+        categoryLabel: service.category_label,
+        price: service.price,
+        appointmentId: data?.appointment?.id,
+      }]);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Не удалось добавить направление");
+    } finally {
+      setAddingServiceId(null);
+    }
   };
 
   const openBooking = (service: DiagnosticsServiceItem) => {
@@ -866,12 +895,16 @@ export default function OfflineConsultationByMeetingPage() {
                             <div className="flex items-center gap-1.5 flex-shrink-0">
                               <button
                                 onClick={() => handleAddReferral(service)}
-                                disabled={isAdded}
+                                disabled={isAdded || addingServiceId === service.id}
                                 className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1 ${
                                   isAdded ? "bg-emerald-50 text-emerald-600" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                                 }`}
                               >
-                                {isAdded ? <CheckCircle className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                                {isAdded
+                                  ? <CheckCircle className="w-3.5 h-3.5" />
+                                  : addingServiceId === service.id
+                                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  : <Plus className="w-3.5 h-3.5" />}
                                 {isAdded ? "Добавлено" : "Добавить"}
                               </button>
                               {canBookDiagnostics && (
@@ -985,10 +1018,10 @@ export default function OfflineConsultationByMeetingPage() {
                 />
                 <button
                   onClick={handleAddManualReferral}
-                  disabled={!manualReferral.trim()}
+                  disabled={!manualReferral.trim() || addingManualReferral}
                   className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-white bg-cyan-500 hover:bg-cyan-600 disabled:opacity-40 rounded-xl transition-colors"
                 >
-                  <Plus className="w-4 h-4" />
+                  {addingManualReferral ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                   Добавить
                 </button>
               </div>

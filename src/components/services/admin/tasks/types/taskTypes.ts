@@ -76,6 +76,22 @@ export const PRIORITY_COLORS: Record<TaskPriority, { text: string; bg: string }>
 // as "no separate reminder" (remind_at__lt=F('due_at')) — only the due
 // notification fires, avoiding two near-identical notifications for the
 // same moment.
+export interface AdminTaskStatsByAdmin {
+  admin_id: number;
+  admin_name: string;
+  clinic_id: number | null;
+  clinic_name: string | null;
+  // created_count/completed_count/avg_completion_minutes respect the
+  // [start, end] date range passed to the endpoint. overdue_count and
+  // active_now_count are always live/current-state — the backend never
+  // date-filters them.
+  created_count: number;
+  completed_count: number;
+  overdue_count: number;
+  active_now_count: number;
+  avg_completion_minutes: number | null;
+}
+
 export const REMINDER_OFFSET_OPTIONS: { value: string; label: string; minutes: number | null }[] = [
   { value: "none", label: "Без напоминания", minutes: null },
   { value: "0", label: "В момент выполнения", minutes: 0 },

@@ -32,6 +32,7 @@ import {
   faNotesMedical,
   faHandshake,
   faHistory,
+  faChartBar,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useState, useEffect, useRef, type CSSProperties } from "react";
@@ -109,6 +110,7 @@ const adminMenu: MenuItem[] = [
       { id: "reports", icon: faChartLine, title: "Отчёты", color: "#3267e6", href: "/admin/reports" },
       { id: "activity", icon: faHistory, title: "Активность", color: "#6366f1", href: "/admin/activity" },
       { id: "treatment-plans", icon: faNotesMedical, title: "Планы лечения", color: "#ef4444", href: "/admin/treatment-plans" },
+      { id: "task-analytics", icon: faChartBar, title: "Задачи админов", color: "#059669", href: "/admin/task-analytics" },
     ],
   },
   { id: "ai-agents", icon: faRobot, title: "AI Агенты", color: "#8b5cf6", href: "/admin/ai-agents" },

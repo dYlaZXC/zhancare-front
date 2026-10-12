@@ -26,6 +26,7 @@ import {
 import { api } from "@/utils/api";
 import { useAuth } from "@/context/AuthContext";
 import { useConsultationPayment } from "@/components/payment/useConsultationPayment";
+import { resolveConsultationDisplayAmount } from "@/components/payment/resolveConsultationAmount";
 import { useVoiceGuide } from "@/hooks/useVoiceGuide";
 import type { Doctor, TimeSlot } from "@/components/services/consultations/types/doctor";
 import PhoneInput from "@/components/ui/PhoneInput";
@@ -349,9 +350,7 @@ export default function BookingModal({
 
   const resolveDoctorPrice = (doctor: Doctor | null): number | null => {
     if (!doctor) return null;
-    const raw = doctor.online_consultation_price;
-    if (raw == null || raw === "") return null;
-    return Math.round(Number(raw));
+    return resolveConsultationDisplayAmount(doctor, consultationType === "offline" ? "offline" : "online").amount;
   };
   const [timeslots, setTimeslots] = useState<TimeSlot[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(
