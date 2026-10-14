@@ -10,9 +10,10 @@ import type { FoundPatient } from "../types/patientTypes";
 // ─── Patient Clinic Link Modal ──────────────────────────────────────────────
 // Shown when "Добавить Пациента" finds an existing patient (registered under
 // a different clinic) by phone/email. Two steps: confirm + send the code
-// (delivered to the patient's email, and best-effort WhatsApp), then the
-// ADMIN types the code back in here — the patient relays it by phone/in
-// person, there is no patient-facing confirmation screen for this.
+// (delivered to whichever of email/WhatsApp the patient actually has — both,
+// if both), then the ADMIN types the code back in here — the patient relays
+// it by phone/in person, there is no patient-facing confirmation screen for
+// this.
 
 const CODE_LENGTH = 6;
 const CODE_EXPIRATION_SECONDS = 15 * 60;
@@ -114,6 +115,13 @@ export function PatientClinicLinkModal({
   };
 
   const clinicLabel = patient.clinic?.name || patient.additional_clinics[0]?.name || null;
+  // The backend now sends the code to whichever channel(s) actually exist
+  // (email and/or WhatsApp via phone, both if both) — phone is mandatory for
+  // new patients, but `patient.phone` can still be empty for legacy data, so
+  // this stays defensive rather than assuming it's always present.
+  const hasEmail = Boolean(patient.has_email);
+  const hasPhone = Boolean(patient.phone);
+  const canSendCode = hasEmail || hasPhone;
 
   return (
     <motion.div
@@ -174,16 +182,17 @@ export function PatientClinicLinkModal({
               )}
             </div>
 
-            {!patient.has_email ? (
+            {!canSendCode ? (
               <div className="flex items-start gap-3 p-4 rounded-2xl bg-amber-50 border-2 border-amber-200 mb-5">
                 <MailX className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-amber-800">
-                  У пациента не указан email — привязка через код подтверждения недоступна.
+                  У пациента не указаны ни email, ни телефон — привязка через код подтверждения недоступна.
                 </p>
               </div>
             ) : (
               <p className="text-xs text-gray-400 text-center mb-5">
-                Код придёт пациенту на email — сообщите его вам по телефону или лично, чтобы завершить привязку.
+                Код придёт пациенту {hasEmail && hasPhone ? "на email и в WhatsApp" : hasEmail ? "на email" : "в WhatsApp"} —
+                сообщите его вам по телефону или лично, чтобы завершить привязку.
               </p>
             )}
 
@@ -197,7 +206,7 @@ export function PatientClinicLinkModal({
               </button>
               <button
                 onClick={handleSendCode}
-                disabled={sending || !patient.has_email}
+                disabled={sending || !canSendCode}
                 className="flex-1 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' }}
               >
