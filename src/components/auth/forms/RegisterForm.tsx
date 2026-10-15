@@ -267,7 +267,7 @@ const RegisterForm = ({ translations, onSubmit, loading, language = "en" }: Regi
     }
     setSendingCode(true);
     try {
-      await api.post("/auth/send-phone-code/", { phone: formData.phone, turnstile_token: phoneTurnstileToken });
+      await api.post("/auth/send-phone-code/", { phone: formData.phone, turnstile_token: phoneTurnstileToken, language });
       setValidationErrors(prev => ({ ...prev, phone: undefined }));
       setOtpError(null);
       setStep("otp");
@@ -283,7 +283,7 @@ const RegisterForm = ({ translations, onSubmit, loading, language = "en" }: Regi
       setPhoneTurnstileToken(null);
       setPhoneTurnstileKey(k => k + 1);
     }
-  }, [formData.phone, translations, wizardLabels, phoneTurnstileToken]);
+  }, [formData.phone, translations, wizardLabels, phoneTurnstileToken, language]);
 
   const handleVerifyPhoneCode = useCallback(async (code: string) => {
     setVerifyingCode(true);
@@ -300,13 +300,13 @@ const RegisterForm = ({ translations, onSubmit, loading, language = "en" }: Regi
 
   const handleResendPhoneCode = useCallback(async (): Promise<boolean> => {
     try {
-      await api.post("/auth/send-phone-code/", { phone: formData.phone });
+      await api.post("/auth/send-phone-code/", { phone: formData.phone, language });
       return true;
     } catch (err: any) {
       toast.error(err?.response?.data?.error || translations.failedToSend || "Не удалось отправить код");
       return false;
     }
-  }, [formData.phone, translations]);
+  }, [formData.phone, translations, language]);
 
   const handleSendEmailCode = useCallback(async () => {
     const email = (formData.email || "").trim();
