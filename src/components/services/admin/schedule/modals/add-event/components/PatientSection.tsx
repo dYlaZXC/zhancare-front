@@ -1,17 +1,21 @@
 "use client";
 
-import { Dispatch, SetStateAction, useState } from "react";
-import { Loader2, Mail, Phone, Plus, Stethoscope, User, X, Calendar as CalendarIcon, MapPin, Lock, RefreshCw, Eye, EyeOff, Copy } from "lucide-react";
+import { Dispatch, SetStateAction } from "react";
+import { Loader2, Mail, Phone, Plus, Stethoscope, User, X, Calendar as CalendarIcon, MapPin } from "lucide-react";
 import SearchSelect from "../../../components/SearchSelect";
 import type { Patient } from "../types/addEventTypes";
 import { REFERRAL_SOURCE_OPTIONS } from "../../../../patient-management/types/patientTypes";
+import PhoneVerificationField from "../../../../patient-management/components/PhoneVerificationField";
+import EmailVerificationField from "../../../../patient-management/components/EmailVerificationField";
+import type { VerificationStatus } from "../../../../patient-management/hooks/usePatientVerificationCodes";
+
+export type { VerificationStatus };
 
 export interface NewPatientForm {
   first_name: string;
   last_name: string;
   phone: string;
   email: string;
-  password: string;
   referral_source: string;
 }
 
@@ -25,8 +29,19 @@ export function PatientSection({
   onNewPatientFormChange,
   creatingPatient,
   onCreatePatient,
-  onGeneratePassword,
-  onCopyPassword,
+  phoneStatus,
+  onSendPhoneCode,
+  onVerifyPhoneCode,
+  onResendPhoneCode,
+  phoneOtpError,
+  onChangePhone,
+  emailStatus,
+  onSendEmailCode,
+  onVerifyEmailCode,
+  onResendEmailCode,
+  emailOtpError,
+  onSkipEmail,
+  onChangeEmail,
 }: {
   patients: Patient[];
   patientId: string;
@@ -37,11 +52,23 @@ export function PatientSection({
   onNewPatientFormChange: Dispatch<SetStateAction<NewPatientForm>>;
   creatingPatient: boolean;
   onCreatePatient: () => void;
-  onGeneratePassword: () => void;
-  onCopyPassword: () => void;
+  phoneStatus: VerificationStatus;
+  onSendPhoneCode: () => void;
+  onVerifyPhoneCode: (code: string) => Promise<void>;
+  onResendPhoneCode: () => Promise<boolean>;
+  phoneOtpError: string | null;
+  onChangePhone: () => void;
+  emailStatus: VerificationStatus;
+  onSendEmailCode: () => void;
+  onVerifyEmailCode: (code: string) => Promise<void>;
+  onResendEmailCode: () => Promise<boolean>;
+  emailOtpError: string | null;
+  onSkipEmail: () => void;
+  onChangeEmail: () => void;
 }) {
-  const [showPassword, setShowPassword] = useState(false);
   const patient = patients.find(p => String(p.id) === patientId);
+
+  const canSubmit = phoneStatus === "verified" && (emailStatus === "verified" || emailStatus === "skipped" || !newPatientForm.email.trim());
 
   return (
     <div>
@@ -83,56 +110,38 @@ export function PatientSection({
                 className="w-full px-3 py-2 text-sm rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
               />
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Телефон <span className="text-red-500">*</span></label>
-              <input
-                type="tel"
-                value={newPatientForm.phone}
-                onChange={e => onNewPatientFormChange(p => ({ ...p, phone: e.target.value }))}
-                placeholder="+7 (999) 000-00-00"
-                className="w-full px-3 py-2 text-sm rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
-              <input
-                type="email"
-                value={newPatientForm.email}
-                onChange={e => onNewPatientFormChange(p => ({ ...p, email: e.target.value }))}
-                placeholder="email@example.com"
-                className="w-full px-3 py-2 text-sm rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
-              />
-            </div>
+
+            {/* Phone — must be verified via WhatsApp code before the patient can be created */}
             <div className="col-span-2">
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-medium text-gray-600">Пароль <span className="text-red-500">*</span></label>
-                <button type="button" onClick={onGeneratePassword}
-                  className="flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-700">
-                  <RefreshCw className="w-3 h-3" />
-                  Сгенерировать
-                </button>
-              </div>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={newPatientForm.password}
-                  onChange={e => onNewPatientFormChange(p => ({ ...p, password: e.target.value }))}
-                  placeholder="Минимум 8 символов"
-                  className="w-full pl-8 pr-16 py-2 text-sm rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none font-mono"
-                />
-                <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-                  <button type="button" onClick={() => setShowPassword(s => !s)}
-                    className="p-1 text-gray-400 hover:text-gray-600 transition-colors" title={showPassword ? "Скрыть" : "Показать"}>
-                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
-                  <button type="button" onClick={onCopyPassword}
-                    className="p-1 text-gray-400 hover:text-blue-600 transition-colors" title="Скопировать пароль">
-                    <Copy className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Телефон <span className="text-red-500">*</span></label>
+              <PhoneVerificationField
+                phone={newPatientForm.phone}
+                onPhoneChange={(e164) => onNewPatientFormChange(p => ({ ...p, phone: e164 }))}
+                status={phoneStatus}
+                onSend={onSendPhoneCode}
+                onVerify={onVerifyPhoneCode}
+                onResend={onResendPhoneCode}
+                otpError={phoneOtpError}
+                onChangePhone={onChangePhone}
+              />
             </div>
+
+            {/* Email — optional, same Confirm/Skip pattern as self-registration */}
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
+              <EmailVerificationField
+                email={newPatientForm.email}
+                onEmailChange={(value) => onNewPatientFormChange(p => ({ ...p, email: value }))}
+                status={emailStatus}
+                onSend={onSendEmailCode}
+                onVerify={onVerifyEmailCode}
+                onResend={onResendEmailCode}
+                otpError={emailOtpError}
+                onSkip={onSkipEmail}
+                onChangeEmail={onChangeEmail}
+              />
+            </div>
+
             <div className="col-span-2">
               <label className="block text-xs font-medium text-gray-600 mb-1">Откуда узнал о клинике</label>
               <SearchSelect
@@ -146,7 +155,7 @@ export function PatientSection({
           <button
             type="button"
             onClick={onCreatePatient}
-            disabled={creatingPatient}
+            disabled={creatingPatient || !canSubmit}
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-60"
             style={{ background: 'linear-gradient(135deg, #3772ff 0%, #2c5bcc 100%)' }}
           >

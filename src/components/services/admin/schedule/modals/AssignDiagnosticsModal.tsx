@@ -9,6 +9,8 @@ import {
   FlaskConical, ScanLine, Heart, Brain, Bone, Eye as EyeIcon, Baby,
   Microscope, ClipboardList, Stethoscope,
 } from "lucide-react";
+import { usePhoneVerification } from "@/components/services/admin/patient-management/hooks/usePatientVerificationCodes";
+import PhoneVerificationField from "@/components/services/admin/patient-management/components/PhoneVerificationField";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   'flask-conical':  FlaskConical,
@@ -71,43 +73,24 @@ export default function AssignDiagnosticsModal({
   const [patientsLoading, setPatientsLoading] = useState(false);
   const [showNewPatientForm, setShowNewPatientForm] = useState(false);
   const [newPatientForm, setNewPatientForm] = useState({ first_name: '', last_name: '', phone: '' });
-  const [newPatientPassword, setNewPatientPassword] = useState('');
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [requirePasswordChange, setRequirePasswordChange] = useState(true);
   const [creatingPatient, setCreatingPatient] = useState(false);
+  const phoneVerification = usePhoneVerification(newPatientForm.phone);
   const patientSearchRef = useRef<HTMLDivElement>(null);
   const patientInputRef = useRef<HTMLInputElement>(null);
 
-  const generatePassword = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%';
-    let pwd = '';
-    for (let i = 0; i < 12; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
-    setNewPatientPassword(pwd);
-  };
-
-  const copyPassword = () => {
-    if (newPatientPassword) { navigator.clipboard.writeText(newPatientPassword); toast.success('Пароль скопирован'); }
-  };
-
   const handleCreatePatient = async () => {
-    if (!newPatientForm.first_name.trim() || !newPatientForm.last_name.trim() || !newPatientForm.phone.trim()) {
-      toast.error('Заполните обязательные поля: имя, фамилия, телефон'); return;
-    }
-    if (!newPatientPassword || newPatientPassword.length < 8) {
-      toast.error('Введите пароль (минимум 8 символов)'); return;
+    if (!newPatientForm.first_name.trim() || !newPatientForm.last_name.trim() || phoneVerification.status !== 'verified') {
+      toast.error('Заполните имя, фамилию и подтвердите телефон'); return;
     }
     setCreatingPatient(true);
     try {
-      const response = await api.post('/patients/', {
-        ...newPatientForm, password: newPatientPassword, require_password_change: requirePasswordChange,
-      });
+      const response = await api.post('/patients/', newPatientForm);
       const created = response.data;
       setPatients(prev => [...prev, created]);
       setSelectedPatient({ id: created.id, name: `${created.first_name} ${created.last_name}`, phone: created.phone });
       setShowNewPatientForm(false);
       setNewPatientForm({ first_name: '', last_name: '', phone: '' });
-      setNewPatientPassword('');
-      setRequirePasswordChange(true);
+      phoneVerification.reset();
       toast.success(`Пациент ${created.first_name} ${created.last_name} создан и выбран`);
     } catch (err: any) {
       toast.error(err?.response?.data?.error || Object.values(err?.response?.data || {})[0] as string || 'Ошибка создания пациента');
@@ -124,8 +107,7 @@ export default function AssignDiagnosticsModal({
     setNotes('');
     setShowNewPatientForm(false);
     setNewPatientForm({ first_name: '', last_name: '', phone: '' });
-    setNewPatientPassword('');
-    setRequirePasswordChange(true);
+    phoneVerification.reset();
 
     setPatientsLoading(true);
     api.get('/patients/?all=true')
@@ -333,43 +315,19 @@ export default function AssignDiagnosticsModal({
                     </div>
                     <div className="col-span-2">
                       <label className="block text-xs font-medium text-gray-600 mb-1">Телефон <span className="text-red-500">*</span></label>
-                      <input type="tel" value={newPatientForm.phone}
-                        onChange={e => setNewPatientForm(p => ({ ...p, phone: e.target.value }))}
-                        placeholder="+7 (999) 000-00-00"
-                        className="w-full px-3 py-2 text-sm rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none" />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Пароль <span className="text-red-500">*</span></label>
-                      <div className="flex gap-1">
-                        <div className="relative flex-1">
-                          <input type={showNewPassword ? 'text' : 'password'}
-                            value={newPatientPassword}
-                            onChange={e => setNewPatientPassword(e.target.value)}
-                            placeholder="Минимум 8 символов"
-                            className="w-full pl-3 pr-8 py-2 text-sm rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none font-mono" />
-                          <button type="button" onClick={() => setShowNewPassword(v => !v)}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                            {showNewPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                          </button>
-                        </div>
-                        <button type="button" onClick={generatePassword}
-                          className="p-2 rounded-xl border-2 border-gray-200 hover:border-blue-400 text-gray-500 hover:text-blue-600 transition-all" title="Сгенерировать">
-                          <RefreshCw className="w-3.5 h-3.5" />
-                        </button>
-                        <button type="button" onClick={copyPassword}
-                          className="p-2 rounded-xl border-2 border-gray-200 hover:border-green-400 text-gray-500 hover:text-green-600 transition-all" title="Скопировать">
-                          <Copy className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                      <PhoneVerificationField
+                        phone={newPatientForm.phone}
+                        onPhoneChange={(e164) => setNewPatientForm(p => ({ ...p, phone: e164 }))}
+                        status={phoneVerification.status}
+                        onSend={phoneVerification.send}
+                        onVerify={phoneVerification.verify}
+                        onResend={phoneVerification.resend}
+                        otpError={phoneVerification.otpError}
+                        onChangePhone={phoneVerification.changePhone}
+                      />
                     </div>
                   </div>
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input type="checkbox" checked={requirePasswordChange}
-                      onChange={e => setRequirePasswordChange(e.target.checked)}
-                      className="w-4 h-4 rounded accent-blue-600" />
-                    <span className="text-xs text-gray-600 font-medium">Потребовать смену пароля при первом входе</span>
-                  </label>
-                  <button type="button" onClick={handleCreatePatient} disabled={creatingPatient}
+                  <button type="button" onClick={handleCreatePatient} disabled={creatingPatient || phoneVerification.status !== 'verified'}
                     className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-60"
                     style={{ background: 'linear-gradient(135deg, #3772ff 0%, #2c5bcc 100%)' }}>
                     {creatingPatient ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}

@@ -14,30 +14,13 @@ import type {
   ConsultationType, CreatedInfo, DiagCategoryItem, DiagService, DiagSlot,
   DoctorSlot, EventFormData, Patient, PaymentTypeOption, StaffMember,
 } from "./add-event/types/addEventTypes";
-import { PatientSection, type NewPatientForm } from "./add-event/components/PatientSection";
+import { PatientSection, type NewPatientForm, type VerificationStatus } from "./add-event/components/PatientSection";
 import { StaffSection } from "./add-event/components/StaffSection";
 import { DiagnosticsSection } from "./add-event/components/DiagnosticsSection";
 import { DateTimeSection } from "./add-event/components/DateTimeSection";
 import { PaymentSection } from "./add-event/components/PaymentSection";
 import { EventSuccessScreen } from "./add-event/components/EventSuccessScreen";
 import { getClinicToday, getClinicNowMinutes } from "../utils/scheduleUtils";
-
-// Mirrors PatientFormModal's generator — guarantees one of each character
-// class rather than a plain Math.random() slice, which could (rarely) land
-// on something that fails the backend's password strength check.
-function generateRandomPassword(): string {
-  const lower = 'abcdefghijklmnopqrstuvwxyz';
-  const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  const digits = '0123456789';
-  const special = '!@#$%&*';
-  const all = lower + upper + digits + special;
-  let pass = lower[Math.floor(Math.random() * lower.length)]
-    + upper[Math.floor(Math.random() * upper.length)]
-    + digits[Math.floor(Math.random() * digits.length)]
-    + special[Math.floor(Math.random() * special.length)];
-  for (let i = 4; i < 12; i++) pass += all[Math.floor(Math.random() * all.length)];
-  return pass.split('').sort(() => Math.random() - 0.5).join('');
-}
 
 interface AddEventModalProps {
   isOpen: boolean;
@@ -90,8 +73,24 @@ export default function AddEventModal({
   const [submitting, setSubmitting] = useState(false);
   const [createdInfo, setCreatedInfo] = useState<CreatedInfo | null>(null);
   const [showNewPatientForm, setShowNewPatientForm] = useState(false);
-  const [newPatientForm, setNewPatientForm] = useState<NewPatientForm>({ first_name: '', last_name: '', phone: '', email: '', password: generateRandomPassword(), referral_source: '' });
+  const [newPatientForm, setNewPatientForm] = useState<NewPatientForm>({ first_name: '', last_name: '', phone: '', email: '', referral_source: '' });
   const [creatingPatient, setCreatingPatient] = useState(false);
+  // New patient is created only once the phone (always) and email (only if
+  // given) have been verified via a code the PATIENT reads back to the
+  // admin — see PatientsViewSet.create's own docstring (common/views/admin.py)
+  // for why this replaced the old admin-typed-password flow.
+  const [phoneStatus, setPhoneStatus] = useState<VerificationStatus>('unset');
+  const [phoneOtpError, setPhoneOtpError] = useState<string | null>(null);
+  const [emailStatus, setEmailStatus] = useState<VerificationStatus>('unset');
+  const [emailOtpError, setEmailOtpError] = useState<string | null>(null);
+
+  const resetNewPatientForm = () => {
+    setNewPatientForm({ first_name: '', last_name: '', phone: '', email: '', referral_source: '' });
+    setPhoneStatus('unset');
+    setPhoneOtpError(null);
+    setEmailStatus('unset');
+    setEmailOtpError(null);
+  };
   const [scheduleEditMember, setScheduleEditMember] = useState<{ id: number; first_name: string; last_name: string } | null>(null);
   const [availabilityEntry, setAvailabilityEntry] = useState<{ start_time: string; end_time: string } | null>(null);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
@@ -195,7 +194,7 @@ export default function AddEventModal({
       setPaymentType('pay_at_clinic');
       setPrepayAmount('');
       setShowNewPatientForm(false);
-      setNewPatientForm({ first_name: '', last_name: '', phone: '', email: '', password: generateRandomPassword(), referral_source: '' });
+      resetNewPatientForm();
       setTimePickerOpen(false);
       setDiagServices([]);
       setSelectedDiagService(null);
@@ -384,35 +383,141 @@ export default function AddEventModal({
     return hasTemplate || hasAvailability;
   };
 
+  const handleSendPhoneCode = async () => {
+    setPhoneStatus('sending');
+    try {
+      await api.post('/patients/send-create-phone-code/', { phone: newPatientForm.phone });
+      setPhoneOtpError(null);
+      setPhoneStatus('sent');
+    } catch (err: any) {
+      // Phone already belongs to an existing patient — offer to just select
+      // them instead of leaving the admin stuck on a dead-end error. Booking
+      // them here makes them visible to this clinic on its own (see
+      // PatientsViewSet.list's own docstring on self-booking visibility) —
+      // no separate clinic-link step is required just to book an appointment.
+      if (err?.response?.status === 409) {
+        try {
+          const lookupRes = await api.get('/patients/lookup/', { params: { phone: newPatientForm.phone } });
+          if (lookupRes.data?.found) {
+            const found = lookupRes.data.patient;
+            setPatients(prev => prev.some(p => p.id === found.id) ? prev : [...prev, found]);
+            setFormData(prev => ({ ...prev, patient_id: String(found.id) }));
+            setShowNewPatientForm(false);
+            resetNewPatientForm();
+            toast.info(`Пациент ${found.first_name} ${found.last_name} уже есть в системе — выбран автоматически`);
+            return;
+          }
+        } catch {
+          // fall through to the generic error below
+        }
+      }
+      toast.error(err?.response?.data?.error || 'Не удалось отправить код');
+      setPhoneStatus('unset');
+    }
+  };
+
+  const handleVerifyPhoneCode = async (code: string) => {
+    setPhoneStatus('verifying');
+    setPhoneOtpError(null);
+    try {
+      await api.post('/patients/verify-create-phone-code/', { phone: newPatientForm.phone, code });
+      setPhoneStatus('verified');
+    } catch (err: any) {
+      setPhoneOtpError(err?.response?.data?.error || 'Неверный код. Попробуйте снова.');
+      setPhoneStatus('sent');
+    }
+  };
+
+  const handleResendPhoneCode = async (): Promise<boolean> => {
+    try {
+      await api.post('/patients/send-create-phone-code/', { phone: newPatientForm.phone });
+      return true;
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || 'Не удалось отправить код');
+      return false;
+    }
+  };
+
+  const handleChangePhone = () => {
+    setPhoneStatus('unset');
+    setPhoneOtpError(null);
+  };
+
+  const handleSendEmailCode = async () => {
+    setEmailStatus('sending');
+    try {
+      await api.post('/patients/send-create-email-code/', { email: newPatientForm.email });
+      setEmailOtpError(null);
+      setEmailStatus('sent');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || 'Не удалось отправить код');
+      setEmailStatus('unset');
+    }
+  };
+
+  const handleVerifyEmailCode = async (code: string) => {
+    setEmailStatus('verifying');
+    setEmailOtpError(null);
+    try {
+      await api.post('/patients/verify-create-email-code/', { email: newPatientForm.email, code });
+      setEmailStatus('verified');
+    } catch (err: any) {
+      setEmailOtpError(err?.response?.data?.error || 'Неверный код. Попробуйте снова.');
+      setEmailStatus('sent');
+    }
+  };
+
+  const handleResendEmailCode = async (): Promise<boolean> => {
+    try {
+      await api.post('/patients/send-create-email-code/', { email: newPatientForm.email });
+      return true;
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || 'Не удалось отправить код');
+      return false;
+    }
+  };
+
+  const handleSkipEmail = () => {
+    setEmailStatus('skipped');
+    setEmailOtpError(null);
+  };
+
+  const handleChangeEmail = () => {
+    setEmailStatus('unset');
+    setEmailOtpError(null);
+  };
+
   const handleCreatePatient = async () => {
-    if (!newPatientForm.first_name.trim() || !newPatientForm.last_name.trim() || !newPatientForm.phone.trim() || !newPatientForm.password.trim()) {
-      toast.error('Заполните обязательные поля: имя, фамилия, телефон, пароль');
+    if (!newPatientForm.first_name.trim() || !newPatientForm.last_name.trim() || phoneStatus !== 'verified') {
+      toast.error('Заполните имя, фамилию и подтвердите телефон');
+      return;
+    }
+    if (newPatientForm.email.trim() && emailStatus !== 'verified' && emailStatus !== 'skipped') {
+      toast.error('Подтвердите email или нажмите «Указать позже»');
       return;
     }
     setCreatingPatient(true);
     try {
-      const response = await api.post('/patients/', newPatientForm);
+      const payload = {
+        first_name: newPatientForm.first_name,
+        last_name: newPatientForm.last_name,
+        phone: newPatientForm.phone,
+        referral_source: newPatientForm.referral_source,
+        // Only ever sent once actually verified — never an unconfirmed email.
+        email: emailStatus === 'verified' ? newPatientForm.email : undefined,
+      };
+      const response = await api.post('/patients/', payload);
       const created = response.data;
       setPatients(prev => [...prev, created]);
       setFormData(prev => ({ ...prev, patient_id: String(created.id) }));
       setShowNewPatientForm(false);
-      setNewPatientForm({ first_name: '', last_name: '', phone: '', email: '', password: generateRandomPassword(), referral_source: '' });
-      const notified = created.email_sent
-        ? (created.whatsapp_sent ? ' Данные для входа отправлены на email и в WhatsApp.' : ' Данные для входа отправлены на email.')
-        : (created.whatsapp_sent || created.whatsapp_queued ? ' Данные для входа отправлены в WhatsApp.' : '');
-      toast.success(`Пациент создан.${notified}`);
+      resetNewPatientForm();
+      toast.success('Пациент создан. Он сможет войти по телефону через «Войти по коду».');
     } catch (err: any) {
-      toast.error(err?.response?.data?.detail || Object.values(err?.response?.data || {})[0] as string || 'Ошибка создания пациента');
+      toast.error(err?.response?.data?.error || Object.values(err?.response?.data || {})[0] as string || 'Ошибка создания пациента');
     } finally {
       setCreatingPatient(false);
     }
-  };
-
-  const generateNewPatientPassword = () => setNewPatientForm(p => ({ ...p, password: generateRandomPassword() }));
-  const copyNewPatientPassword = () => {
-    if (!newPatientForm.password) return;
-    navigator.clipboard.writeText(newPatientForm.password);
-    toast.success('Пароль скопирован');
   };
 
   const handleDoctorChange = (val: string) => {
@@ -608,13 +713,24 @@ export default function AddEventModal({
             patientId={formData.patient_id}
             onPatientChange={(val) => setFormData({ ...formData, patient_id: val })}
             showNewPatientForm={showNewPatientForm}
-            onToggleNewPatientForm={() => { setShowNewPatientForm(v => !v); setFormData(prev => ({ ...prev, patient_id: '' })); }}
+            onToggleNewPatientForm={() => { setShowNewPatientForm(v => !v); setFormData(prev => ({ ...prev, patient_id: '' })); resetNewPatientForm(); }}
             newPatientForm={newPatientForm}
             onNewPatientFormChange={setNewPatientForm}
             creatingPatient={creatingPatient}
             onCreatePatient={handleCreatePatient}
-            onGeneratePassword={generateNewPatientPassword}
-            onCopyPassword={copyNewPatientPassword}
+            phoneStatus={phoneStatus}
+            onSendPhoneCode={handleSendPhoneCode}
+            onVerifyPhoneCode={handleVerifyPhoneCode}
+            onResendPhoneCode={handleResendPhoneCode}
+            phoneOtpError={phoneOtpError}
+            onChangePhone={handleChangePhone}
+            emailStatus={emailStatus}
+            onSendEmailCode={handleSendEmailCode}
+            onVerifyEmailCode={handleVerifyEmailCode}
+            onResendEmailCode={handleResendEmailCode}
+            emailOtpError={emailOtpError}
+            onSkipEmail={handleSkipEmail}
+            onChangeEmail={handleChangeEmail}
           />
 
           {/* Doctor / Nurse (hidden for diagnostics) */}

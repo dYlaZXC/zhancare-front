@@ -13,6 +13,9 @@ import PhoneInput from "@/components/ui/PhoneInput";
 import SearchSelect from "../../schedule/components/SearchSelect";
 import type { Patient, Clinic, PatientFormData, FoundPatient, PatientLookupResponse } from "../types/patientTypes";
 import { EMPTY_PATIENT_FORM, REFERRAL_SOURCE_OPTIONS } from "../types/patientTypes";
+import { usePhoneVerification, useEmailVerification } from "../hooks/usePatientVerificationCodes";
+import PhoneVerificationField from "../components/PhoneVerificationField";
+import EmailVerificationField from "../components/EmailVerificationField";
 
 // ─── Patient Form Modal ─────────────────────────────────────────────────────
 
@@ -56,7 +59,14 @@ export function PatientFormModal({
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [requirePasswordChange, setRequirePasswordChange] = useState(true);
+  // Create mode no longer collects a password at all — PatientsViewSet.create
+  // (common/views/admin.py) now requires the phone (and, if given, email) to
+  // have just been verified via a code the PATIENT reads back to the admin,
+  // same invariant self-registration enforces. Edit mode is untouched:
+  // partial_update still accepts an optional password reset for an existing
+  // patient, unrelated to this.
+  const phoneVerification = usePhoneVerification(form.phone);
+  const emailVerification = useEmailVerification(form.email);
 
   // Live "does this patient already exist?" check — fires while filling out
   // phone/email, well before submit, so the admin doesn't fill out the whole
@@ -132,8 +142,10 @@ export function PatientFormModal({
     if (!form.phone.trim()) errors.phone = 'Введите номер телефона';
 
     if (mode === "create") {
-      if (!form.password.trim()) errors.password = 'Введите пароль';
-      else if (form.password.length < 8) errors.password = 'Минимум 8 символов';
+      if (phoneVerification.status !== 'verified') errors.phone = 'Подтвердите телефон кодом из WhatsApp';
+      if (form.email.trim() && emailVerification.status !== 'verified' && emailVerification.status !== 'skipped') {
+        errors.email = 'Подтвердите email или нажмите «Указать позже»';
+      }
     } else if (form.password && form.password.length < 8) {
       errors.password = 'Минимум 8 символов';
     }
@@ -178,7 +190,12 @@ export function PatientFormModal({
           }
         }
 
-        const response = await api.post('/patients/', { ...form, require_password_change: requirePasswordChange });
+        const { password: _unusedPassword, ...createData } = form;
+        const response = await api.post('/patients/', {
+          ...createData,
+          // Only ever sent once actually verified — never an unconfirmed email.
+          email: emailVerification.status === 'verified' ? form.email : undefined,
+        });
         toast.success("Пациент успешно добавлен!");
         onSaved(response.data);
       } else {
@@ -269,16 +286,30 @@ export function PatientFormModal({
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Email
               </label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => set('email', e.target.value)}
-                  className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 ${focusColor} focus:outline-none transition-colors`}
-                  placeholder="example@mail.com"
+              {mode === "create" ? (
+                <EmailVerificationField
+                  email={form.email}
+                  onEmailChange={(value) => set('email', value)}
+                  status={emailVerification.status}
+                  onSend={emailVerification.send}
+                  onVerify={emailVerification.verify}
+                  onResend={emailVerification.resend}
+                  otpError={emailVerification.otpError}
+                  onSkip={emailVerification.skip}
+                  onChangeEmail={emailVerification.changeEmail}
                 />
-              </div>
+              ) : (
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => set('email', e.target.value)}
+                    className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 ${focusColor} focus:outline-none transition-colors`}
+                    placeholder="example@mail.com"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Phone */}
@@ -286,12 +317,25 @@ export function PatientFormModal({
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Телефон <span className="text-red-500">*</span>
               </label>
-              <PhoneInput
-                value={form.phone}
-                onChange={(e164) => set('phone', e164)}
-                required
-                defaultCountry="KZ"
-              />
+              {mode === "create" ? (
+                <PhoneVerificationField
+                  phone={form.phone}
+                  onPhoneChange={(e164) => set('phone', e164)}
+                  status={phoneVerification.status}
+                  onSend={phoneVerification.send}
+                  onVerify={phoneVerification.verify}
+                  onResend={phoneVerification.resend}
+                  otpError={phoneVerification.otpError}
+                  onChangePhone={phoneVerification.changePhone}
+                />
+              ) : (
+                <PhoneInput
+                  value={form.phone}
+                  onChange={(e164) => set('phone', e164)}
+                  required
+                  defaultCountry="KZ"
+                />
+              )}
               {checkingExisting && (
                 <p className="flex items-center gap-1.5 text-xs text-gray-400 mt-2">
                   <Search className="w-3.5 h-3.5 animate-pulse" />
@@ -333,79 +377,56 @@ export function PatientFormModal({
               )}
             </div>
 
-            {/* Password */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-semibold text-gray-700">
-                  {mode === "create" ? (
-                    <>Пароль <span className="text-red-500">*</span></>
-                  ) : (
-                    <>Новый пароль <span className="text-gray-400 text-xs font-normal">(оставьте пустым, чтобы не менять)</span></>
-                  )}
-                </label>
-                <button
-                  type="button"
-                  onClick={generatePassword}
-                  className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${accentText}`}
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  Сгенерировать
-                </button>
-              </div>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  required={mode === "create"}
-                  value={form.password}
-                  onChange={(e) => set('password', e.target.value)}
-                  className={`w-full pl-12 pr-20 py-3 rounded-xl border-2 border-gray-200 ${focusColor} focus:outline-none transition-colors font-mono`}
-                  placeholder="Минимум 8 символов"
-                  minLength={8}
-                />
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+            {/* Password — edit mode only now (optional reset for an existing
+                patient). Create mode has no password at all: the patient
+                logs in via OTP (send-login-code/verify-login-code) using the
+                phone/email just verified above. */}
+            {mode === "edit" && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Новый пароль <span className="text-gray-400 text-xs font-normal">(оставьте пустым, чтобы не менять)</span>
+                  </label>
                   <button
                     type="button"
-                    onClick={() => setShowPassword(s => !s)}
-                    className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors"
-                    title={showPassword ? "Скрыть" : "Показать"}
+                    onClick={generatePassword}
+                    className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${accentText}`}
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={copyPassword}
-                    className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors"
-                    title="Скопировать пароль"
-                  >
-                    <Copy className="w-4 h-4" />
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    Сгенерировать
                   </button>
                 </div>
-              </div>
-
-              {/* Force password change checkbox (create only) */}
-              {mode === "create" && (
-                <label className="flex items-center gap-2.5 mt-3 cursor-pointer select-none group">
-                  <div
-                    onClick={() => setRequirePasswordChange(v => !v)}
-                    className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-all flex-shrink-0 ${
-                      requirePasswordChange
-                        ? 'bg-green-600 border-green-600'
-                        : 'bg-white border-gray-300 group-hover:border-green-400'
-                    }`}
-                  >
-                    {requirePasswordChange && (
-                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12">
-                        <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    )}
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={form.password}
+                    onChange={(e) => set('password', e.target.value)}
+                    className={`w-full pl-12 pr-20 py-3 rounded-xl border-2 border-gray-200 ${focusColor} focus:outline-none transition-colors font-mono`}
+                    placeholder="Минимум 8 символов"
+                    minLength={8}
+                  />
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(s => !s)}
+                      className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors"
+                      title={showPassword ? "Скрыть" : "Показать"}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={copyPassword}
+                      className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors"
+                      title="Скопировать пароль"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
                   </div>
-                  <span className="text-sm text-gray-600 group-hover:text-gray-800 transition-colors">
-                    Потребовать смену пароля при первом входе
-                  </span>
-                </label>
-              )}
-            </div>
+                </div>
+              </div>
+            )}
 
             {/* Birth Date & Gender */}
             <div className="grid grid-cols-2 gap-4">
@@ -571,7 +592,7 @@ export function PatientFormModal({
             </button>
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || (mode === "create" && phoneVerification.status !== 'verified')}
               className="flex-1 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               style={{
                 background: mode === "create"
