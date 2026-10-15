@@ -11,11 +11,12 @@ import { api } from "@/utils/api";
 interface PhoneLoginFormProps {
   translations: any;
   onSuccess: (accessToken: string, refreshToken: string, user: any) => void;
+  onForgotPassword: () => void;
   loading: boolean;
   setLoading: (v: boolean) => void;
 }
 
-export default function PhoneLoginForm({ translations, onSuccess, loading, setLoading }: PhoneLoginFormProps) {
+export default function PhoneLoginForm({ translations, onSuccess, onForgotPassword, loading, setLoading }: PhoneLoginFormProps) {
   // phone is always stored as E.164 (+7XXXXXXXXXX) — PhoneAuthInput emits that
   const [phone, setPhone]       = useState("");
   const [password, setPassword] = useState("");
@@ -79,6 +80,16 @@ export default function PhoneLoginForm({ translations, onSuccess, loading, setLo
         validationError={errors.password}
         loading={loading}
       />
+
+      <div className="flex justify-end -mt-1">
+        <button
+          type="button"
+          onClick={onForgotPassword}
+          className="text-sm text-[#3772ff] hover:text-[#3267e6] font-medium transition-colors hover:underline"
+        >
+          {translations.forgotPassword}
+        </button>
+      </div>
 
       <motion.button
         type="submit"

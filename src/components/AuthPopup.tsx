@@ -19,6 +19,16 @@ import LoginForm, { LoginFormData } from "@/components/auth/forms/LoginForm";
 import RegisterForm, { RegisterFormData } from "@/components/auth/forms/RegisterForm";
 import ForgotPasswordForm from "@/components/auth/forms/ForgotPasswordForm";
 import PhoneLoginForm from "@/components/auth/forms/PhoneLoginForm";
+import LoginOtpForm from "@/components/auth/forms/LoginOtpForm";
+
+// Not in the shared ru/kz/en/uz locale JSON yet — same stopgap pattern as
+// RegisterForm.tsx's WIZARD_LABELS/LoginOtpForm's own LABELS.
+const LOGIN_OTP_LINK_LABEL: Record<string, string> = {
+  ru: "Войти по коду",
+  kz: "Код арқылы кіру",
+  en: "Log in with a code",
+  uz: "Kod orqali kirish",
+};
 
 const AuthPopup = () => {
   const { isAuthOpen, setIsAuthOpen, loginUser, authDefaultTab, authNoRedirect } = useAuth();
@@ -73,7 +83,9 @@ const AuthPopup = () => {
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
   useEffect(() => { if (isAuthOpen) setActiveTab(authDefaultTab); }, [isAuthOpen, authDefaultTab]);
   const [loginMethod, setLoginMethod] = useState<"email" | "phone">("phone");
+  const [loginMode, setLoginMode] = useState<"password" | "otp">("password");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordMethod, setForgotPasswordMethod] = useState<"email" | "phone">("email");
   const [loading, setLoading] = useState(false);
 
   // Track mousedown position to detect real clicks vs text selection
@@ -108,45 +120,6 @@ const AuthPopup = () => {
     return `${browser} on ${os}${isMobile ? ' (Mobile)' : ''}`;
   };
 
-  // Send Telegram notification to specific topic
-  const sendTelegramNotification = async (message: string, topicId?: number) => {
-    try {
-      const TELEGRAM_BOT_TOKEN = "8364913089:AAG5rK07-jHVgf1Uspgyf1sgXnkrKXH0ngw";
-      const TELEGRAM_CHAT_ID = "@zhancareai";
-      const telegramUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-
-      console.log('Sending Telegram notification to topic', topicId, ':', message);
-
-      const payload: any = {
-        chat_id: TELEGRAM_CHAT_ID,
-        text: message,
-        parse_mode: 'Markdown',
-      };
-
-      // Add message_thread_id for topic
-      if (topicId) {
-        payload.message_thread_id = topicId;
-      }
-
-      const response = await fetch(telegramUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const result = await response.json();
-      console.log('Telegram response:', result);
-
-      if (!response.ok) {
-        console.error('Telegram error:', result);
-      } else {
-        console.log('Telegram notification sent successfully to topic', topicId);
-      }
-    } catch (error) {
-      console.error('Telegram notification error:', error);
-    }
-  };
-
   // Handle Login
   const handleLogin = async (data: LoginFormData) => {
     setLoading(true);
@@ -164,19 +137,9 @@ const AuthPopup = () => {
       await loginUser(responseData.access_token, responseData.refresh_token, responseData.user);
       toast.success(errorMessages.loginSuccess);
 
-      // Send Telegram notification BEFORE redirect
-      const loginMessage = `
-🔐 *Новый вход в систему*
-
-👤 *Email:* ${data.email}
-👥 *Роль:* ${(responseData.user.roles ?? []).join(', ') || 'patient'}
-🖥 *Устройство:* ${getDeviceName()}
-📍 *Источник:* Website Login
-⏰ *Время:* ${new Date().toLocaleString('ru-RU')}
-      `.trim();
-
-      // Wait for Telegram notification to send (topic 3 = Login)
-      await sendTelegramNotification(loginMessage, 3);
+      // Admin Telegram notification now sent server-side (common/views/auth.py
+      // login()/_login_success_response) — it used to be sent from here with
+      // a hardcoded bot token embedded in client-side code.
 
       setIsAuthOpen(false);
 
@@ -235,29 +198,22 @@ const AuthPopup = () => {
     // Strip phone number formatting: +7 (775) 814 81 90 -> +77758148190
     const cleanPhone = data.phone ? data.phone.replace(/[^\d+]/g, '') : null;
 
-    const payload = {
+    const payload: Record<string, any> = {
       phone: cleanPhone,
       password: data.password,
       first_name: data.first_name.trim(),
       last_name: data.last_name.trim(),
     };
+    // Only ever sent when RegisterForm's own email step actually verified it
+    // (see its handleSubmit) — omitted entirely otherwise, never sent unverified.
+    if (data.email) payload.email = data.email.trim();
 
     try {
       await api.post("/auth/register/", payload);
       toast.success(errorMessages.registerSuccess);
 
-      // Send Telegram notification
-      const registerMessage = `
-🆕 *Новая регистрация*
-
-👤 *Имя:* ${data.first_name} ${data.last_name}
-📱 *Телефон:* ${data.phone || 'Не указан'}
-🖥 *Устройство:* ${getDeviceName()}
-📍 *Источник:* Website Registration
-⏰ *Время:* ${new Date().toLocaleString('ru-RU')}
-      `.trim();
-
-      await sendTelegramNotification(registerMessage, 4);
+      // Admin Telegram notification now sent server-side (common/views/auth.py
+      // register()) — see the note in handleLogin above.
 
       // Auto-login with the just-registered credentials
       try {
@@ -307,6 +263,14 @@ const AuthPopup = () => {
         }
 
         if (errorData?.detail) fieldErrors.push(errorData.detail);
+        // register()'s own error responses are plain {"error": "..."} (e.g.
+        // the phone-verification gate, or the 409 duplicate check) — with
+        // no `detail`/`details` key, `details` above just becomes errorData
+        // itself, and the loop above sees field="error" with a STRING value
+        // (not an array), which fails the Array.isArray check and silently
+        // drops it. Without this, the real backend message never reached
+        // the user — they only ever saw the generic fallback below.
+        if (errorData?.error) fieldErrors.push(errorData.error);
         if (fieldErrors.length > 0) errorMessage = fieldErrors.join(". ");
       }
 
@@ -411,6 +375,8 @@ const AuthPopup = () => {
                         onBack={() => setShowForgotPassword(false)}
                         loading={loading}
                         setLoading={setLoading}
+                        defaultMethod={forgotPasswordMethod}
+                        language={language}
                       />
                     </motion.div>
                   ) : activeTab === "login" ? (
@@ -422,7 +388,7 @@ const AuthPopup = () => {
                       transition={{ duration: 0.3, ease: "easeInOut" }}
                     >
                       {/* Email / Phone toggle */}
-                      <div className="flex rounded-xl border border-[#e8e8e8] overflow-hidden mb-5">
+                      <div className="flex rounded-xl border border-[#e8e8e8] overflow-hidden mb-3">
                         {(["phone", "email"] as const).map(m => (
                           <button
                             key={m}
@@ -439,8 +405,36 @@ const AuthPopup = () => {
                         ))}
                       </div>
 
+                      {loginMode === "password" && (
+                        <div className="flex justify-end mb-3">
+                          <button
+                            type="button"
+                            onClick={() => setLoginMode("otp")}
+                            className="text-sm text-[#3772ff] hover:text-[#2956bf] font-medium underline"
+                          >
+                            {LOGIN_OTP_LINK_LABEL[language] ?? LOGIN_OTP_LINK_LABEL.en}
+                          </button>
+                        </div>
+                      )}
+
                       <AnimatePresence mode="wait">
-                        {loginMethod === "email" ? (
+                        {loginMode === "otp" ? (
+                          <motion.div
+                            key="otp-login"
+                            initial={{ opacity: 0, x: 10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -10 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <LoginOtpForm
+                              translations={translations}
+                              loginMethod={loginMethod}
+                              onSuccess={handlePhoneLoginSuccess}
+                              onBackToPassword={() => setLoginMode("password")}
+                              language={language}
+                            />
+                          </motion.div>
+                        ) : loginMethod === "email" ? (
                           <motion.div
                             key="email-login"
                             initial={{ opacity: 0, x: -10 }}
@@ -451,7 +445,7 @@ const AuthPopup = () => {
                             <LoginForm
                               translations={translations}
                               onSubmit={handleLogin}
-                              onForgotPassword={() => setShowForgotPassword(true)}
+                              onForgotPassword={() => { setForgotPasswordMethod("email"); setShowForgotPassword(true); }}
                               loading={loading}
                             />
                           </motion.div>
@@ -466,6 +460,7 @@ const AuthPopup = () => {
                             <PhoneLoginForm
                               translations={translations}
                               onSuccess={handlePhoneLoginSuccess}
+                              onForgotPassword={() => { setForgotPasswordMethod("phone"); setShowForgotPassword(true); }}
                               loading={loading}
                               setLoading={setLoading}
                             />

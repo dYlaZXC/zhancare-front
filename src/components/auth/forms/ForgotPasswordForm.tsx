@@ -4,25 +4,56 @@ import { useState, useEffect, useRef } from "react";
 import { toast } from "react-toastify";
 import { api } from "@/utils/api";
 import { Mail, Lock, Eye, EyeOff, Loader2, ArrowLeft } from "lucide-react";
+import PhoneInput from "@/components/ui/PhoneInput";
+import TurnstileWidget from "../TurnstileWidget";
 
 interface ForgotPasswordFormProps {
   translations: any;
   onBack: () => void;
   loading: boolean;
   setLoading: (loading: boolean) => void;
+  /** Which tab (phone/email login) this was opened from — phone-first-
+   * registered users may have no email on file at all, so the identifier
+   * type must match whichever login method they actually have a password
+   * for. Set once when the form opens, not toggled within it. */
+  defaultMethod?: "email" | "phone";
+  language?: string;
 }
 
 const CODE_LENGTH = 6;
 const CODE_EXPIRATION_SECONDS = 15 * 60;
 const RESEND_COOLDOWN_SECONDS = 15 * 60; // 15 minutes cooldown
 
+// translations.sendCode/codeDescription are hardcoded to email wording in
+// all 4 locale JSON files (shared with the email-identifier path, which
+// still uses them as-is) — these two phone-specific overrides exist ONLY
+// for when method === "phone", same stopgap pattern as RegisterForm.tsx's
+// WIZARD_LABELS/LoginOtpForm.tsx's LABELS.
+const PHONE_COPY: Record<string, { sendCode: string; codeDescription: string }> = {
+  ru: { sendCode: "Отправить код в WhatsApp", codeDescription: "Введите 6-значный код, отправленный в WhatsApp" },
+  kz: { sendCode: "WhatsApp-қа код жіберу", codeDescription: "WhatsApp-қа жіберілген 6 таңбалы кодты енгізіңіз" },
+  en: { sendCode: "Send code via WhatsApp", codeDescription: "Enter the 6-digit code sent via WhatsApp" },
+  uz: { sendCode: "WhatsApp orqali kod yuborish", codeDescription: "WhatsApp orqali yuborilgan 6 xonali kodni kiriting" },
+};
+
 const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
   translations,
   onBack,
   loading,
   setLoading,
+  defaultMethod = "email",
+  language = "en",
 }) => {
+  const method = defaultMethod;
+  const phoneCopy = PHONE_COPY[language] ?? PHONE_COPY.en;
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const identifierValue = method === "phone" ? phone : email;
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileKey, setTurnstileKey] = useState(0);
+  const buildPayload = () => (method === "phone" ? { phone, turnstile_token: turnstileToken } : { email, turnstile_token: turnstileToken });
+  const sendCodeLabel = method === "phone" ? phoneCopy.sendCode : (translations.sendCode || "Send code to email");
+  const codeDescriptionLabel = method === "phone" ? phoneCopy.codeDescription : (translations.codeDescription || "Enter the 6-digit code sent to your email");
   const [code, setCode] = useState(Array(CODE_LENGTH).fill(""));
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -72,7 +103,13 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
   };
 
   const handleSendCode = async () => {
-    if (!email) return toast.error(translations.enterEmail || "Enter your email");
+    if (method === "phone") {
+      if (!phone || phone.replace(/\D/g, "").length < 10) {
+        return toast.error(translations.phoneRequired || "Enter your phone number");
+      }
+    } else if (!email) {
+      return toast.error(translations.enterEmail || "Enter your email");
+    }
 
     // Check if resend cooldown is active
     if (resendCooldown !== null && resendCooldown > 0) {
@@ -86,17 +123,19 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
 
     try {
       setLoading(true);
-      await api.post("/auth/forgot-password/", { email });
-      toast.success(translations.codeSent || "Code sent to your email");
+      const resp = await api.post("/auth/forgot-password/", buildPayload());
+      toast.success(resp?.data?.message || translations.codeSent || "Code sent");
       setStep("code");
       setCountdown(CODE_EXPIRATION_SECONDS);
       setResendCooldown(RESEND_COOLDOWN_SECONDS); // Start 15-minute cooldown
       setCode(Array(CODE_LENGTH).fill(""));
       setTimeout(() => codeRefs.current[0]?.focus(), 100);
-    } catch {
-      toast.error(translations.failedToSend || "Failed to send code");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || translations.failedToSend || "Failed to send code");
     } finally {
       setLoading(false);
+      setTurnstileToken(null);
+      setTurnstileKey(k => k + 1);
     }
   };
 
@@ -122,7 +161,7 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
   const verifyCode = async (codeStr: string) => {
     try {
       setLoading(true);
-      await api.post("/auth/verify-reset-code/", { email, reset_code: codeStr });
+      await api.post("/auth/verify-reset-code/", { ...buildPayload(), reset_code: codeStr });
       setStep("password");
     } catch {
       setCode(Array(CODE_LENGTH).fill(""));
@@ -143,7 +182,7 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
     try {
       setLoading(true);
       await api.post("/auth/reset-password/", {
-        email,
+        ...buildPayload(),
         reset_code: fullCode,
         new_password: newPassword,
       });
@@ -176,38 +215,50 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
         <div className="w-12 h-1 bg-gradient-to-r from-[#3772ff] to-[#2956bf] rounded-full mx-auto"></div>
       </div>
 
-      {/* Email Step */}
+      {/* Identifier Step (email or phone, per defaultMethod) */}
       {step === "email" && (
         <div className="space-y-4">
-          <div className="relative group">
-            <div
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 p-1.5 rounded-lg transition-all duration-200"
-              style={{
-                background: email
-                  ? "rgba(55, 114, 255, 0.1)"
-                  : "rgba(156, 163, 175, 0.1)",
-              }}
-            >
-              <Mail
-                className={`w-4 h-4 transition-colors duration-200 ${
-                  email ? "text-[#3772ff]" : "text-gray-500"
-                }`}
+          {method === "phone" ? (
+            <PhoneInput
+              name="phone"
+              value={phone}
+              onChange={(e164) => setPhone(e164)}
+              disabled={loading}
+              defaultCountry="KZ"
+            />
+          ) : (
+            <div className="relative group">
+              <div
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 p-1.5 rounded-lg transition-all duration-200"
+                style={{
+                  background: email
+                    ? "rgba(55, 114, 255, 0.1)"
+                    : "rgba(156, 163, 175, 0.1)",
+                }}
+              >
+                <Mail
+                  className={`w-4 h-4 transition-colors duration-200 ${
+                    email ? "text-[#3772ff]" : "text-gray-500"
+                  }`}
+                />
+              </div>
+
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={translations.enterEmail || "Enter your email"}
+                className="w-full pl-11 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-[#3772ff] focus:ring-4 focus:ring-[#3772ff]/10 transition-all duration-200 outline-none bg-white text-gray-900 placeholder:text-gray-400"
+                disabled={loading}
               />
             </div>
+          )}
 
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder={translations.enterEmail || "Enter your email"}
-              className="w-full pl-11 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-[#3772ff] focus:ring-4 focus:ring-[#3772ff]/10 transition-all duration-200 outline-none bg-white text-gray-900 placeholder:text-gray-400"
-              disabled={loading}
-            />
-          </div>
+          <TurnstileWidget key={turnstileKey} onToken={setTurnstileToken} />
 
           <button
             onClick={handleSendCode}
-            disabled={loading || !email}
+            disabled={loading || !identifierValue}
             className="w-full bg-gradient-to-r from-[#3772ff] to-[#2956bf] text-white py-3 rounded-xl font-semibold hover:shadow-lg hover:shadow-[#3772ff]/20 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {loading ? (
@@ -216,7 +267,7 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
                 <span>{translations.sending || "Sending..."}</span>
               </>
             ) : (
-              <span>{translations.sendCode || "Send code to email"}</span>
+              <span>{sendCodeLabel}</span>
             )}
           </button>
         </div>
@@ -226,8 +277,7 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
       {step === "code" && (
         <div className="space-y-4">
           <p className="text-sm text-gray-600 text-center">
-            {translations.codeDescription ||
-              "Enter the 6-digit code sent to your email"}
+            {codeDescriptionLabel}
           </p>
 
           <div className="flex gap-2 justify-center">
