@@ -11,6 +11,8 @@ export interface Clinic {
   lat?: number | null;
   lng?: number | null;
   distance_km?: number | null;
+  // IANA name or bare "+HH:MM" offset — see src/utils/clinicTime.ts.
+  time_zone?: string | null;
 }
 
 export interface WorkScheduleDay {

@@ -6,7 +6,7 @@ import { api } from "@/utils/api";
 import { toast } from "react-toastify";
 import { X, Loader2, Wallet } from "lucide-react";
 import type { TreatmentPlan, TreatmentPlanItem, PlanItemStatus } from "./types";
-import { STATUS_LABELS, STATUS_COLORS, SOURCE_LABELS, formatMoney } from "./types";
+import { STATUS_LABELS, STATUS_COLORS, itemSourceLabel, formatMoney } from "./types";
 
 const STATUS_ORDER: PlanItemStatus[] = ["planned", "completed", "no_show", "cancelled"];
 
@@ -128,7 +128,7 @@ export function PlanEditor({
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-gray-800 truncate">{item.name}</p>
                       <p className="text-[11px] text-gray-500 flex items-center gap-2 flex-wrap mt-0.5">
-                        <span>{SOURCE_LABELS[item.source]}</span>
+                        <span>{itemSourceLabel(item)}</span>
                         {item.doctor_name && <span>· {item.doctor_name}</span>}
                         {item.scheduled_at && (
                           <span>· {new Date(item.scheduled_at).toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>

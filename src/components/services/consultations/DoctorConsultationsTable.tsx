@@ -31,6 +31,7 @@ import {
 import { useConsultationManager } from "./useConsultationManager";
 import ConsultationSheetModal from "./ConsultationSheetModal";
 import type { Consultation } from "@/types/consultation";
+import { formatClinicDate, formatClinicTime, formatDualTime, getViewerTimezone } from "@/utils/clinicTime";
 
 interface DoctorConsultationsTableProps {
   consultations?: Consultation[];
@@ -275,9 +276,13 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
     refreshTrigger;
     if (!consultation.scheduled_at) return { canJoin: false, timeUntil: "", isReady: false };
     const now = new Date();
-    let s = consultation.scheduled_at;
-    if (s.endsWith("Z")) s = s.slice(0, -1);
-    const scheduledTime = new Date(s);
+    // consultation.scheduled_at always carries an explicit UTC offset
+    // (DRF's default DateTimeField rendering) — parsing it directly as an
+    // absolute instant is correct. Stripping a trailing "Z" before parsing
+    // would instead make `new Date()` read the remaining digits as the
+    // BROWSER's own local time, silently shifting this countdown by
+    // whatever the viewer's timezone happens to be.
+    const scheduledTime = new Date(consultation.scheduled_at);
     const diffMin = Math.floor((scheduledTime.getTime() - now.getTime()) / 60000);
     const canJoin = diffMin <= 10 && diffMin >= -30;
     const isReady = diffMin <= 0;
@@ -356,13 +361,18 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
     }
   };
 
-  const formatDate = (s: string) => {
-    try { return new Date(s).toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" }); }
+  // Pins this to the BOOKING's OWN clinic time regardless of the viewing
+  // device's own clock — the backend (admin's schedule drawer included)
+  // always renders a given booking's time in its own clinic's timezone, so
+  // a doctor on a device set to a different timezone would otherwise see a
+  // shifted time for the exact same booking. See src/utils/clinicTime.ts.
+  const formatDate = (s: string, clinicTz?: string | null) => {
+    try { return formatClinicDate(s, clinicTz); }
     catch { return s; }
   };
 
-  const formatTime = (s: string) => {
-    try { return new Date(s).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }); }
+  const formatTime = (s: string, clinicTz?: string | null) => {
+    try { return formatClinicTime(s, clinicTz); }
     catch { return s; }
   };
 
@@ -675,6 +685,14 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
               const dateStr = consultation.scheduled_at || consultation.created_at;
               const timeStr = consultation.scheduled_at || consultation.started_at;
               const rowBorder = idx > 0 ? "border-t border-gray-100" : "";
+              // Online: the viewer's OWN local time is the natural primary
+              // reading (both sides are remote anyway), with the clinic's
+              // time as a secondary line when it differs. Offline/home/
+              // diagnostics: only the clinic's time is ever shown — showing
+              // up physically doesn't depend on where the viewer is.
+              const isOnline = (consultation.type || "video") === "video";
+              const primaryTz = isOnline ? getViewerTimezone() : consultation.clinic_timezone;
+              const dual = isOnline && timeStr ? formatDualTime(timeStr, consultation.clinic_timezone) : null;
 
               return (
                 <React.Fragment key={consultation.id}>
@@ -684,11 +702,16 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
                       <Calendar className="w-4 h-4 text-blue-500" />
                     </div>
                     <div>
-                      <div className="text-sm font-semibold text-gray-900">{dateStr ? formatDate(dateStr) : "—"}</div>
+                      <div className="text-sm font-semibold text-gray-900">{dateStr ? formatDate(dateStr, primaryTz) : "—"}</div>
                       <div className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
                         <Clock className="w-3 h-3" />
-                        {timeStr ? formatTime(timeStr) : "—"}
+                        {timeStr ? formatTime(timeStr, primaryTz) : "—"}
                       </div>
+                      {dual && !dual.sameTimezone && (
+                        <div className="text-[11px] text-amber-600 mt-0.5">
+                          Время клиники: {dual.datesDiffer ? `${dual.clinicDate}, ` : ""}{dual.clinicTime} ({dual.clinicLabel})
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -735,6 +758,9 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
               const dateStr = consultation.scheduled_at || consultation.created_at;
               const timeStr = consultation.scheduled_at || consultation.started_at;
               const rowBorder = idx > 0 ? "border-t border-gray-100" : "";
+              const isOnline = (consultation.type || "video") === "video";
+              const primaryTz = isOnline ? getViewerTimezone() : consultation.clinic_timezone;
+              const dual = isOnline && timeStr ? formatDualTime(timeStr, consultation.clinic_timezone) : null;
               return (
                 <React.Fragment key={`tab-${consultation.id}`}>
                   <div className={`flex items-center gap-3 px-5 py-4 hover:bg-gray-50/70 transition-colors ${rowBorder}`}>
@@ -746,8 +772,13 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
                     </div>
                   </div>
                   <div className={`px-5 py-4 border-l border-gray-100 hover:bg-gray-50/70 transition-colors ${rowBorder}`}>
-                    <div className="text-sm font-semibold text-gray-900">{dateStr ? formatDate(dateStr) : "—"}</div>
-                    <div className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><Clock className="w-3 h-3" />{timeStr ? formatTime(timeStr) : "—"}</div>
+                    <div className="text-sm font-semibold text-gray-900">{dateStr ? formatDate(dateStr, primaryTz) : "—"}</div>
+                    <div className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><Clock className="w-3 h-3" />{timeStr ? formatTime(timeStr, primaryTz) : "—"}</div>
+                    {dual && !dual.sameTimezone && (
+                      <div className="text-[10px] text-amber-600 mt-0.5">
+                        Клиника: {dual.datesDiffer ? `${dual.clinicDate}, ` : ""}{dual.clinicTime} ({dual.clinicLabel})
+                      </div>
+                    )}
                   </div>
                   <div className={`px-5 py-4 border-l border-gray-100 hover:bg-gray-50/70 transition-colors ${rowBorder} flex items-center`}>
                     <StatusDropdown consultation={consultation} onStatusChange={onStatusChange} />
@@ -773,6 +804,9 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
               const isScheduled = consultation.status === "scheduled" || consultation.status === "planned";
               const dateStr = consultation.scheduled_at || consultation.created_at;
               const timeStr = consultation.scheduled_at || consultation.started_at;
+              const isOnline = (consultation.type || "video") === "video";
+              const primaryTz = isOnline ? getViewerTimezone() : consultation.clinic_timezone;
+              const dual = isOnline && timeStr ? formatDualTime(timeStr, consultation.clinic_timezone) : null;
 
               return (
                 <div key={`mob-${consultation.id}`} className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
@@ -796,11 +830,16 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
                         <Calendar className="w-3 h-3 text-gray-400" />
                         <span className="text-[10px] text-gray-400 uppercase tracking-wider">Дата</span>
                       </div>
-                      <div className="text-sm font-semibold text-gray-900">{dateStr ? formatDate(dateStr) : "—"}</div>
+                      <div className="text-sm font-semibold text-gray-900">{dateStr ? formatDate(dateStr, primaryTz) : "—"}</div>
                       <div className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
                         <Clock className="w-2.5 h-2.5" />
-                        {timeStr ? formatTime(timeStr) : "—"}
+                        {timeStr ? formatTime(timeStr, primaryTz) : "—"}
                       </div>
+                      {dual && !dual.sameTimezone && (
+                        <div className="text-[10px] text-amber-600 mt-0.5">
+                          Клиника: {dual.datesDiffer ? `${dual.clinicDate}, ` : ""}{dual.clinicTime} ({dual.clinicLabel})
+                        </div>
+                      )}
                     </div>
                     <div className="bg-gray-50 border border-gray-100 rounded-xl p-3">
                       <div className="flex items-center gap-1.5 mb-1">
@@ -1029,6 +1068,9 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
         const status = getStatusConfig(c.status);
         const type = getTypeConfig(c.type || "video");
         const dateStr = c.scheduled_at || c.created_at;
+        const isOnlineDetail = (c.type || "video") === "video";
+        const primaryTzDetail = isOnlineDetail ? getViewerTimezone() : c.clinic_timezone;
+        const dualDetail = isOnlineDetail && dateStr ? formatDualTime(dateStr, c.clinic_timezone) : null;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setDetailsConsultation(null)}>
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
@@ -1061,8 +1103,13 @@ const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 bg-gray-50 rounded-xl">
                   <p className="text-xs text-gray-400 mb-1 flex items-center gap-1"><Calendar className="w-3 h-3" /> Дата</p>
-                  <p className="text-sm font-semibold text-gray-900">{dateStr ? formatDate(dateStr) : "—"}</p>
-                  <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><Clock className="w-3 h-3" />{dateStr ? formatTime(dateStr) : "—"}</p>
+                  <p className="text-sm font-semibold text-gray-900">{dateStr ? formatDate(dateStr, primaryTzDetail) : "—"}</p>
+                  <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><Clock className="w-3 h-3" />{dateStr ? formatTime(dateStr, primaryTzDetail) : "—"}</p>
+                  {dualDetail && !dualDetail.sameTimezone && (
+                    <p className="text-[11px] text-amber-600 mt-0.5">
+                      Клиника: {dualDetail.datesDiffer ? `${dualDetail.clinicDate}, ` : ""}{dualDetail.clinicTime} ({dualDetail.clinicLabel})
+                    </p>
+                  )}
                 </div>
                 <div className="p-3 bg-gray-50 rounded-xl">
                   <p className="text-xs text-gray-400 mb-1">Тип</p>

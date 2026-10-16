@@ -6,6 +6,7 @@ import { X, CalendarDays, Clock, MoveRight, History, Loader2, ChevronDown } from
 import { api } from "@/utils/api";
 import { toast } from "react-toastify";
 import { ScheduleEvent } from "../types/scheduleTypes";
+import { formatClinicDate, formatClinicTime } from "@/utils/clinicTime";
 
 interface RescheduleModalProps {
   event: ScheduleEvent;
@@ -22,8 +23,8 @@ interface RescheduleHistoryEntry {
   changed_at: string;
 }
 
-function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+function formatDateTime(iso: string, clinicTz?: string | null) {
+  return `${formatClinicDate(iso, clinicTz, { day: 'numeric', month: 'short', year: undefined })}, ${formatClinicTime(iso, clinicTz)}`;
 }
 
 export default function RescheduleModal({ event, onClose, onRescheduled }: RescheduleModalProps) {
@@ -144,13 +145,13 @@ export default function RescheduleModal({ event, onClose, onRescheduled }: Resch
                       history.map(h => (
                         <div key={h.id} className="text-xs border-b border-amber-100 last:border-0 pb-2 last:pb-0">
                           <div className="flex items-center gap-1.5 text-gray-600 font-semibold">
-                            {h.old_datetime && <span>{formatDateTime(h.old_datetime)}</span>}
+                            {h.old_datetime && <span>{formatDateTime(h.old_datetime, event.clinic_timezone)}</span>}
                             {h.old_datetime && <MoveRight className="w-3 h-3 text-amber-400" />}
-                            <span>{formatDateTime(h.new_datetime)}</span>
+                            <span>{formatDateTime(h.new_datetime, event.clinic_timezone)}</span>
                           </div>
                           <p className="text-gray-500 mt-0.5">«{h.reason}»</p>
                           <p className="text-gray-400 mt-0.5">
-                            {h.changed_by ?? 'Администратор'} · {formatDateTime(h.changed_at)}
+                            {h.changed_by ?? 'Администратор'} · {formatDateTime(h.changed_at, event.clinic_timezone)}
                           </p>
                         </div>
                       ))

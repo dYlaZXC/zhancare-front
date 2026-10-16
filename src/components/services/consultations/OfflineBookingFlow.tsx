@@ -9,6 +9,7 @@ import { useConsultationPayment } from "@/components/payment/useConsultationPaym
 import { resolveConsultationDisplayAmount } from "@/components/payment/resolveConsultationAmount";
 import Step2 from "./VideoConsultationStep2";
 import type { Doctor, RecommendedDoctor } from "./types/doctor";
+import { formatClinicDate, formatClinicTime } from "@/utils/clinicTime";
 
 const OFFLINE_TEXT = {
   ru: {
@@ -65,6 +66,7 @@ interface BookedInfo {
   clinicGis2Url?: string;
   clinicLat?: number | null;
   clinicLng?: number | null;
+  clinicTimezone?: string | null;
   roomNumber?: string | null;
 }
 
@@ -129,6 +131,7 @@ const OfflineBookingFlow: React.FC<OfflineBookingFlowProps> = ({
       clinicGis2Url: clinic?.gis2_url,
       clinicLat: clinic?.lat,
       clinicLng: clinic?.lng,
+      clinicTimezone: clinic?.time_zone,
       roomNumber: doc.room_number,
     });
     setStep(2);
@@ -225,11 +228,7 @@ const OfflineBookingFlow: React.FC<OfflineBookingFlowProps> = ({
                   <div>
                     <p className="text-xs text-gray-400 font-medium">{tt.dateTime}</p>
                     <p className="text-sm font-semibold text-gray-900">
-                      {new Date(bookedInfo.time).toLocaleDateString(tt.locale, {
-                        weekday: 'short', day: 'numeric', month: 'short'
-                      })} · {new Date(bookedInfo.time).toLocaleTimeString(tt.locale, {
-                        hour: '2-digit', minute: '2-digit'
-                      })}
+                      {formatClinicDate(bookedInfo.time, bookedInfo.clinicTimezone, { weekday: 'short', day: 'numeric', month: 'short', year: undefined }, tt.locale)} · {formatClinicTime(bookedInfo.time, bookedInfo.clinicTimezone, undefined, tt.locale)}
                     </p>
                   </div>
                 </div>

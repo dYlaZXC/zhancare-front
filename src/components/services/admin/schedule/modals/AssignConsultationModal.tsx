@@ -13,15 +13,16 @@ import {
   Check,
   Loader2,
   Plus,
-  RefreshCw,
-  Eye,
-  EyeOff,
-  Copy,
+  Banknote,
 } from "lucide-react";
 import SearchSelect from "../components/SearchSelect";
 import { DURATION_OPTIONS, minutesBetween, addMinutes } from "../utils/durationOptions";
 import { usePhoneVerification } from "@/components/services/admin/patient-management/hooks/usePatientVerificationCodes";
 import PhoneVerificationField from "@/components/services/admin/patient-management/components/PhoneVerificationField";
+import { PaymentSection } from "./add-event/components/PaymentSection";
+import type { PaymentTypeOption, StaffMember } from "./add-event/types/addEventTypes";
+import { useClinicCurrency } from "@/context/BrandContext";
+import { getCurrencySymbol } from "@/utils/currency";
 
 interface AssignConsultationModalProps {
   isOpen: boolean;
@@ -76,6 +77,56 @@ export default function AssignConsultationModal({
   const patientSearchRef = useRef<HTMLDivElement>(null);
   const patientInputRef = useRef<HTMLInputElement>(null);
 
+  // Payment — this quick-book modal used to send no payment info at all,
+  // silently defaulting to 'pay_at_clinic' server-side (ScheduleViewSet.create,
+  // common/views/admin.py) regardless of what the doctor actually has
+  // configured (e.g. a required prepayment). /staff/ already returns full
+  // pricing/preference fields (AddEventModal uses the same endpoint) — doctorId
+  // here is only an id, so fetch it directly rather than threading pricing
+  // through every caller of this modal.
+  const [doctorProfile, setDoctorProfile] = useState<StaffMember | null>(null);
+  const [paymentType, setPaymentType] = useState<PaymentTypeOption>('pay_at_clinic');
+  const [prepayAmount, setPrepayAmount] = useState('');
+  const { clinicCurrency } = useClinicCurrency();
+
+  useEffect(() => {
+    if (!isOpen || staffRole === 'nurse') return;
+    api.get('/staff/').then(res => {
+      const match = (res.data || []).find((s: any) => s.id === doctorId);
+      setDoctorProfile(match || null);
+    }).catch(() => setDoctorProfile(null));
+  }, [isOpen, doctorId, staffRole]);
+
+  const doctorPrice = (() => {
+    if (!doctorProfile) return 0;
+    const raw = consultationType === 'online' ? doctorProfile.online_consultation_price : doctorProfile.offline_consultation_price;
+    return raw != null && raw !== '' ? Number(raw) : 0;
+  })();
+  const doctorPaymentPreference = doctorProfile
+    ? (consultationType === 'online' ? doctorProfile.online_payment_preference : doctorProfile.offline_payment_preference)
+    : undefined;
+
+  // Re-derive the default payment type whenever the doctor's pricing loads or
+  // the online/offline toggle changes — mirrors AddEventModal's
+  // handleDoctorChange logic. The admin can still override via PaymentSection.
+  useEffect(() => {
+    if (!doctorProfile || staffRole === 'nurse') return;
+    if (doctorPrice <= 0) {
+      setPaymentType('free');
+      setPrepayAmount('');
+      return;
+    }
+    const pref = doctorPaymentPreference;
+    const prepayPct = consultationType === 'online' ? doctorProfile.online_prepay_percent : doctorProfile.offline_prepay_percent;
+    setPaymentType(pref || 'pay_at_clinic');
+    if (pref === 'partial_prepay') {
+      setPrepayAmount(String(Math.round(doctorPrice * (prepayPct ?? 50) / 100)));
+    } else {
+      setPrepayAmount('');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doctorProfile, consultationType]);
+
   const handleCreatePatient = async () => {
     if (!newPatientForm.first_name.trim() || !newPatientForm.last_name.trim() || phoneVerification.status !== 'verified') {
       toast.error('Заполните имя, фамилию и подтвердите телефон');
@@ -119,6 +170,9 @@ export default function AssignConsultationModal({
     setShowNewPatientForm(false);
     setNewPatientForm({ first_name: '', last_name: '', phone: '' });
     phoneVerification.reset();
+    setDoctorProfile(null);
+    setPaymentType('pay_at_clinic');
+    setPrepayAmount('');
 
     const fetchPatients = async () => {
       setPatientsLoading(true);
@@ -159,6 +213,10 @@ export default function AssignConsultationModal({
     e.preventDefault();
     if (!selectedPatient) { toast.error('Выберите пациента'); return; }
     if (!selectedSlot) { toast.error('Выберите время приёма'); return; }
+    if (staffRole !== 'nurse' && paymentType === 'partial_prepay' && !prepayAmount) {
+      toast.error('Укажите сумму предоплаты');
+      return;
+    }
     setSubmitting(true);
 
     try {
@@ -183,7 +241,9 @@ export default function AssignConsultationModal({
         time: selectedSlot.start_time,
         duration,
         consultation_type: consultationType,
-        notes: notes
+        notes: notes,
+        payment_type: paymentType,
+        ...(paymentType === 'partial_prepay' && prepayAmount ? { prepay_amount: prepayAmount } : {}),
       });
       toast.success('Запись успешно создана!');
       onAssigned();
@@ -524,6 +584,33 @@ export default function AssignConsultationModal({
                 </>
               )}
             </div>
+
+            {/* Price summary + Payment Type (consultations only — a home
+                visit via this same modal has no payment concept) */}
+            {staffRole !== 'nurse' && doctorPrice > 0 && (
+              <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border-2 border-emerald-200 bg-emerald-50">
+                <Banknote className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-emerald-600 font-medium truncate">{doctorName}</p>
+                  <p className="text-lg font-black text-emerald-700 leading-tight">
+                    {doctorPrice.toLocaleString('ru-RU')} {getCurrencySymbol(clinicCurrency)}
+                  </p>
+                </div>
+                <span className="text-[10px] font-semibold text-emerald-500 bg-emerald-100 px-2 py-1 rounded-lg">
+                  Стоимость
+                </span>
+              </div>
+            )}
+            {staffRole !== 'nurse' && doctorProfile && (
+              <PaymentSection
+                paymentType={paymentType}
+                onPaymentTypeChange={setPaymentType}
+                prepayAmount={prepayAmount}
+                onPrepayAmountChange={setPrepayAmount}
+                doctorPrice={doctorPrice}
+                doctorPreference={doctorPaymentPreference}
+              />
+            )}
 
             {/* Notes */}
             <div>

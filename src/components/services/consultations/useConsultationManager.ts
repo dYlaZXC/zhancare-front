@@ -74,6 +74,7 @@ export const useConsultationManager = () => {
               patient_name: a.patient_name,
               clinic_name: a.clinic_name,
               clinic_address: a.clinic_address,
+              clinic_timezone: a.clinic_timezone,
             } as Consultation)
           );
         } catch { /* endpoint may not exist */ }
@@ -99,6 +100,7 @@ export const useConsultationManager = () => {
               patient_name: a.patient_name,
               clinic_name: a.clinic_name,
               clinic_address: a.clinic_address,
+              clinic_timezone: a.clinic_timezone,
               service_name: a.service_display?.name || a.service_name,
               referring_doctor_name: a.doctor_name,
             } as Consultation)
@@ -129,6 +131,7 @@ export const useConsultationManager = () => {
               doctor_type: a.doctor_type,
               clinic_name: a.clinic_name,
               clinic_address: a.clinic_address,
+              clinic_timezone: a.clinic_timezone,
             } as Consultation)
           );
         } catch { /* endpoint may not exist */ }
@@ -156,6 +159,7 @@ export const useConsultationManager = () => {
               nurse_phone: a.nurse_phone || null,
               nurse_photo: a.nurse_photo || null,
               symptoms: a.symptoms,
+              clinic_timezone: a.clinic_timezone,
             } as Consultation)
           );
         } catch { /* endpoint may not exist */ }

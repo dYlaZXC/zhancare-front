@@ -30,6 +30,7 @@ import {
   Loader2
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { formatDualTime } from "@/utils/clinicTime";
 
 const STEP3_TEXT = {
   ru: {
@@ -56,7 +57,7 @@ const STEP3_TEXT = {
     allReady: "Всё готово", checkDataAndAssign: "Проверьте данные и назначьте консультацию",
     connShort: "Связь", cameraShort: "Камера", micShort: "Микро",
     years: "лет",
-    appointment: "Запись", confirmed: "Подтверждено",
+    appointment: "Запись", confirmed: "Подтверждено", clinicTime: "Время клиники",
     symptoms: "Симптомы",
     preparing: "Подготовка...", connecting: "Подключение...", waitingTime: (t: string) => `Ожидание (${t})`,
     assignConsultation: "Назначить консультацию",
@@ -91,7 +92,7 @@ const STEP3_TEXT = {
     allReady: "Бәрі дайын", checkDataAndAssign: "Деректерді тексеріп, кеңесті тағайындаңыз",
     connShort: "Байланыс", cameraShort: "Камера", micShort: "Микро",
     years: "жыл",
-    appointment: "Жазылу", confirmed: "Расталды",
+    appointment: "Жазылу", confirmed: "Расталды", clinicTime: "Клиника уақыты",
     symptoms: "Симптомдар",
     preparing: "Дайындық...", connecting: "Қосылу...", waitingTime: (t: string) => `Күту (${t})`,
     assignConsultation: "Кеңесті тағайындау",
@@ -126,7 +127,7 @@ const STEP3_TEXT = {
     allReady: "All set", checkDataAndAssign: "Review the details and schedule the consultation",
     connShort: "Connection", cameraShort: "Camera", micShort: "Mic",
     years: "yrs",
-    appointment: "Appointment", confirmed: "Confirmed",
+    appointment: "Appointment", confirmed: "Confirmed", clinicTime: "Clinic time",
     symptoms: "Symptoms",
     preparing: "Preparing...", connecting: "Connecting...", waitingTime: (t: string) => `Waiting (${t})`,
     assignConsultation: "Schedule consultation",
@@ -161,7 +162,7 @@ const STEP3_TEXT = {
     allReady: "Hammasi tayyor", checkDataAndAssign: "Ma'lumotlarni tekshirib, konsultatsiyani belgilang",
     connShort: "Aloqa", cameraShort: "Kamera", micShort: "Mikro",
     years: "yosh",
-    appointment: "Yozilish", confirmed: "Tasdiqlandi",
+    appointment: "Yozilish", confirmed: "Tasdiqlandi", clinicTime: "Klinika vaqti",
     symptoms: "Simptomlar",
     preparing: "Tayyorlanmoqda...", connecting: "Ulanmoqda...", waitingTime: (t: string) => `Kutilmoqda (${t})`,
     assignConsultation: "Konsultatsiyani belgilash",
@@ -503,6 +504,7 @@ export interface Step3Props {
     doctor_name: string;
     doctor_type: string;
     booking_type: 'urgent' | 'scheduled';
+    clinic_timezone?: string | null;
   } | null;
   pendingConsultationData?: {
     scheduled_time: string;
@@ -787,28 +789,34 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
           </div>
         )}
 
-        {/* Appointment row */}
-        {scheduledConsultation && (
-          <div className="flex items-center gap-3 px-4 py-3.5 border-b border-gray-50">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0">
-              <Calendar className="w-4 h-4 text-emerald-600" />
+        {/* Appointment row — online, so BOTH the viewer's own time and the
+            clinic's time matter; shown explicitly (date + UTC-offset label),
+            not just "HH:MM", so an international patient always knows
+            exactly which day/instant they're booked for. */}
+        {scheduledConsultation && (() => {
+          const dual = formatDualTime(scheduledConsultation.scheduled_time, scheduledConsultation.clinic_timezone, undefined, tt.locale);
+          return (
+            <div className="flex items-center gap-3 px-4 py-3.5 border-b border-gray-50">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0">
+                <Calendar className="w-4 h-4 text-emerald-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-400 font-medium">{tt.appointment}</p>
+                <p className="text-sm font-semibold text-gray-900 leading-tight">
+                  {dual.viewerDate} · {dual.viewerTime} ({dual.viewerLabel})
+                </p>
+                {!dual.sameTimezone && (
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {tt.clinicTime}: {dual.clinicDate} · {dual.clinicTime} ({dual.clinicLabel})
+                  </p>
+                )}
+              </div>
+              <span className="flex-shrink-0 text-[10px] font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                {tt.confirmed}
+              </span>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-gray-400 font-medium">{tt.appointment}</p>
-              <p className="text-sm font-semibold text-gray-900 leading-tight">
-                {new Date(scheduledConsultation.scheduled_time).toLocaleDateString(tt.locale, {
-                  weekday: 'short', day: 'numeric', month: 'short'
-                })}{' · '}
-                {new Date(scheduledConsultation.scheduled_time).toLocaleTimeString(tt.locale, {
-                  hour: '2-digit', minute: '2-digit'
-                })}
-              </p>
-            </div>
-            <span className="flex-shrink-0 text-[10px] font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
-              {tt.confirmed}
-            </span>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Price row */}
         {consultationPrice != null && (

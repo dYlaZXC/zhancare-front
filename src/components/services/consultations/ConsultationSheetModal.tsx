@@ -9,6 +9,7 @@ import {
   MessageSquare, FlaskConical, Loader2, Download,
 } from "lucide-react";
 import type { Consultation } from "@/types/consultation";
+import { formatClinicDate, formatClinicTime } from "@/utils/clinicTime";
 
 interface Referral {
   name: string;
@@ -28,6 +29,7 @@ interface SheetDocument {
 interface SheetData {
   patientName: string;
   dateLabel?: string;
+  clinicTimezone?: string | null;
   complaints?: string;
   anamnesis?: string;
   diagnostics?: string;
@@ -73,11 +75,9 @@ function formatFileSize(bytes?: number | null) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
 }
 
-function formatDateTime(value?: string) {
+function formatDateTime(value?: string, clinicTz?: string | null) {
   if (!value) return null;
-  return new Date(value).toLocaleString("ru-RU", {
-    day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
-  });
+  return `${formatClinicDate(value, clinicTz, { day: "2-digit", month: "long", year: "numeric" })}, ${formatClinicTime(value, clinicTz)}`;
 }
 
 /**
@@ -110,6 +110,7 @@ export default function ConsultationSheetModal({
           setData({
             patientName: d.patient_name || consultation.patient_name || "Пациент",
             dateLabel: d.appointment_time,
+            clinicTimezone: d.clinic_timezone,
             description: d.description,
             conclusion: d.conclusion,
             documents: d.documents,
@@ -122,6 +123,7 @@ export default function ConsultationSheetModal({
           setData({
             patientName: d.patient_name || consultation.patient_name || "Пациент",
             dateLabel: d.appointment_time,
+            clinicTimezone: d.clinic_timezone,
             ...parsed,
           });
         } else if (consultation.meeting_id) {
@@ -132,6 +134,7 @@ export default function ConsultationSheetModal({
             patientName: [d.patient_first_name, d.patient_last_name].filter(Boolean).join(" ")
               || d.patient_name || consultation.patient_name || "Пациент",
             dateLabel: d.scheduled_at,
+            clinicTimezone: d.clinic_timezone,
             complaints: d.complaints,
             anamnesis: d.anamnesis,
             diagnostics: d.diagnostics,
@@ -196,7 +199,7 @@ export default function ConsultationSheetModal({
                 Консультационный лист{data ? `: ${data.patientName}` : ""}
               </h2>
               {data?.dateLabel && (
-                <p className="text-sm text-white/80">{formatDateTime(data.dateLabel)}</p>
+                <p className="text-sm text-white/80">{formatDateTime(data.dateLabel, data.clinicTimezone)}</p>
               )}
             </div>
           </div>
@@ -272,7 +275,10 @@ export default function ConsultationSheetModal({
                           <span className="font-medium">{r.name}</span>
                           {r.booked_at && (
                             <span className="text-cyan-500">
-                              — запись: {new Date(r.booked_at).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                              {/* Approximated with the parent consultation's own clinic
+                                  timezone — a referral's own clinic_timezone isn't threaded
+                                  through here, and is almost always the same clinic anyway. */}
+                              — запись: {formatClinicDate(r.booked_at, data?.clinicTimezone, { day: "2-digit", month: "2-digit", year: undefined })}, {formatClinicTime(r.booked_at, data?.clinicTimezone)}
                             </span>
                           )}
                         </div>

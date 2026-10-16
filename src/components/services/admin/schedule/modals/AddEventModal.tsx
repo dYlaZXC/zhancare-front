@@ -304,6 +304,19 @@ export default function AddEventModal({
       .finally(() => setLoadingDiagServices(false));
   }, [consultationType]);
 
+  // Default the payment type whenever the chosen diagnostics service changes —
+  // services have no per-service payment preference (unlike a doctor's own
+  // online/offline preference), so this always defaults to pay_at_clinic
+  // (or free for a zero/unset price), same as book_diagnostics_appointment's
+  // own pay-at-clinic-when-not-specified default. Admin can still override
+  // via PaymentSection below.
+  useEffect(() => {
+    if (consultationType !== 'diagnostics') return;
+    const price = selectedDiagService?.price ? Number(selectedDiagService.price) : 0;
+    setPaymentType(price > 0 ? 'pay_at_clinic' : 'free');
+    setPrepayAmount('');
+  }, [consultationType, selectedDiagService]);
+
   // Fetch real available slots for the selected diagnostics service/date — respects
   // the service's actual schedule (date-specific > weekday template), its own
   // duration_minutes, capacity_per_slot, already-booked times, past-time cutoff for
@@ -555,6 +568,10 @@ export default function AddEventModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (consultationType !== 'home' && paymentType === 'partial_prepay' && !prepayAmount) {
+      toast.error('Укажите сумму предоплаты');
+      return;
+    }
     setSubmitting(true);
 
     try {
@@ -565,6 +582,8 @@ export default function AddEventModal({
           doctor_id: formData.referring_doctor_id || undefined,
           scheduled_time: `${formData.date}T${formData.time}:00`,
           notes: formData.notes,
+          payment_type: paymentType,
+          ...(paymentType === 'partial_prepay' && prepayAmount ? { prepay_amount: prepayAmount } : {}),
         });
         onEventAdded();
         setCreatedInfo({});
@@ -804,8 +823,11 @@ export default function AddEventModal({
             </div>
           )}
 
-          {/* Payment Type (consultations only, after doctor is selected) */}
-          {(consultationType === 'online' || consultationType === 'offline') && formData.doctor_id && (
+          {/* Payment Type — consultations (after a doctor is picked) or any
+              diagnostics service (no doctor-preference concept there, so
+              doctorPreference is simply omitted). Home visits have no
+              payment concept at all, same as in AssignConsultationModal. */}
+          {((consultationType === 'online' || consultationType === 'offline') && formData.doctor_id) && (
             <PaymentSection
               paymentType={paymentType}
               onPaymentTypeChange={setPaymentType}
@@ -813,6 +835,15 @@ export default function AddEventModal({
               onPrepayAmountChange={setPrepayAmount}
               doctorPrice={doctorPrice}
               doctorPreference={doctorPaymentPreference}
+            />
+          )}
+          {consultationType === 'diagnostics' && selectedDiagService && (
+            <PaymentSection
+              paymentType={paymentType}
+              onPaymentTypeChange={setPaymentType}
+              prepayAmount={prepayAmount}
+              onPrepayAmountChange={setPrepayAmount}
+              doctorPrice={selectedDiagService.price ? Number(selectedDiagService.price) : 0}
             />
           )}
 

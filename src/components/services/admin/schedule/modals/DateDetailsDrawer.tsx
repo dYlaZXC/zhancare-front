@@ -30,6 +30,7 @@ import {
   UserSearch,
 } from "lucide-react";
 import { ScheduleEvent, PaymentHistoryEntry } from "../types/scheduleTypes";
+import { formatClinicDate, formatClinicTime } from "@/utils/clinicTime";
 import { getStatusColor, getPaymentStatusColor, PAYMENT_TYPE_LABELS } from "../utils/scheduleUtils";
 import { api } from "@/utils/api";
 import { toast } from "react-toastify";
@@ -606,10 +607,20 @@ function BookingRow({ event, onChanged }: { event: ScheduleEvent; onChanged?: ()
 
               {/* Payment info */}
               {event.payment_info && (() => {
-                const { payment_type, amount_due, amount_paid, currency } = event.payment_info;
+                const { payment_type, amount_due, amount_paid, prepay_amount, currency } = event.payment_info;
                 const pc = getPaymentStatusColor(paymentStatus);
                 const due = Number(amount_due);
                 const paid = Number(amount_paid);
+                // For a booking agreed as partial prepay, selecting
+                // "Частично" should suggest the amount actually agreed
+                // upfront, not the full price — entering the full `due`
+                // there would silently record it as fully paid instead of
+                // the real partial sum. "Оплачено" still suggests the full
+                // amount, since that status means paid in full.
+                const suggestedAmount = paymentStatus === 'partial' && payment_type === 'partial_prepay'
+                  && prepay_amount && Number(prepay_amount) > 0
+                  ? Number(prepay_amount)
+                  : due;
                 return (
                   <div className="rounded-xl border border-gray-100 bg-white overflow-hidden">
                     <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
@@ -682,7 +693,7 @@ function BookingRow({ event, onChanged }: { event: ScheduleEvent; onChanged?: ()
                             step="0.01"
                             value={paymentAmount}
                             onChange={e => setPaymentAmount(e.target.value)}
-                            placeholder={due > 0 ? String(due) : 'Сумма'}
+                            placeholder={suggestedAmount > 0 ? String(suggestedAmount) : 'Сумма'}
                             className="w-full text-xs text-gray-700 border border-gray-100 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-300 bg-gray-50"
                           />
                         </div>
@@ -722,9 +733,8 @@ function BookingRow({ event, onChanged }: { event: ScheduleEvent; onChanged?: ()
                             {paymentHistory.map((h, i) => {
                               const oldC = getPaymentStatusColor(h.old_status);
                               const newC = getPaymentStatusColor(h.new_status);
-                              const dt = new Date(h.created_at);
-                              const dateStr = dt.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' });
-                              const timeStr = dt.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+                              const dateStr = formatClinicDate(h.created_at, event.clinic_timezone, { day: '2-digit', month: 'short', year: undefined });
+                              const timeStr = formatClinicTime(h.created_at, event.clinic_timezone);
                               return (
                                 <div key={i} className="relative mb-3 last:mb-0">
                                   <div className="absolute -left-[11px] top-1 w-2 h-2 rounded-full border-2 border-white" style={{ backgroundColor: newC.dot }} />

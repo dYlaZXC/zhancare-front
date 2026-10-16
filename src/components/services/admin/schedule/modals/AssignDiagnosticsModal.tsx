@@ -5,12 +5,16 @@ import { motion } from "framer-motion";
 import { api } from "@/utils/api";
 import { toast } from "react-toastify";
 import {
-  Search, X, Clock, Check, Loader2, Plus, RefreshCw, Eye, EyeOff, Copy,
+  Search, X, Clock, Check, Loader2, Plus, Banknote,
   FlaskConical, ScanLine, Heart, Brain, Bone, Eye as EyeIcon, Baby,
   Microscope, ClipboardList, Stethoscope,
 } from "lucide-react";
 import { usePhoneVerification } from "@/components/services/admin/patient-management/hooks/usePatientVerificationCodes";
 import PhoneVerificationField from "@/components/services/admin/patient-management/components/PhoneVerificationField";
+import { PaymentSection } from "./add-event/components/PaymentSection";
+import type { PaymentTypeOption } from "./add-event/types/addEventTypes";
+import { useClinicCurrency } from "@/context/BrandContext";
+import { getCurrencySymbol } from "@/utils/currency";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   'flask-conical':  FlaskConical,
@@ -78,6 +82,27 @@ export default function AssignDiagnosticsModal({
   const patientSearchRef = useRef<HTMLDivElement>(null);
   const patientInputRef = useRef<HTMLInputElement>(null);
 
+  // Payment — this quick-book modal used to send no payment info at all, even
+  // though book_diagnostics_appointment (diagnostics/services.py) accepts a
+  // staff-chosen payment_type/prepay_amount same as consultations do. The
+  // services-day listing this modal's props come from doesn't include price,
+  // so fetch the one service's full record directly (same endpoint the
+  // services schedule-edit modal already uses).
+  const [servicePrice, setServicePrice] = useState<number>(0);
+  const [paymentType, setPaymentType] = useState<PaymentTypeOption>('pay_at_clinic');
+  const [prepayAmount, setPrepayAmount] = useState('');
+  const { clinicCurrency } = useClinicCurrency();
+
+  useEffect(() => {
+    if (!isOpen) return;
+    api.get(`/diagnostics/services/${serviceId}/`).then(res => {
+      const raw = res.data?.price;
+      const price = raw != null && raw !== '' ? Number(raw) : 0;
+      setServicePrice(price);
+      setPaymentType(price > 0 ? 'pay_at_clinic' : 'free');
+    }).catch(() => setServicePrice(0));
+  }, [isOpen, serviceId]);
+
   const handleCreatePatient = async () => {
     if (!newPatientForm.first_name.trim() || !newPatientForm.last_name.trim() || phoneVerification.status !== 'verified') {
       toast.error('Заполните имя, фамилию и подтвердите телефон'); return;
@@ -108,6 +133,7 @@ export default function AssignDiagnosticsModal({
     setShowNewPatientForm(false);
     setNewPatientForm({ first_name: '', last_name: '', phone: '' });
     phoneVerification.reset();
+    setPrepayAmount('');
 
     setPatientsLoading(true);
     api.get('/patients/?all=true')
@@ -138,6 +164,10 @@ export default function AssignDiagnosticsModal({
     e.preventDefault();
     if (!selectedPatient) { toast.error('Выберите пациента'); return; }
     if (!selectedSlot) { toast.error('Выберите время'); return; }
+    if (paymentType === 'partial_prepay' && !prepayAmount) {
+      toast.error('Укажите сумму предоплаты');
+      return;
+    }
     setSubmitting(true);
     try {
       await api.post('/diagnostics/appointments/', {
@@ -145,6 +175,8 @@ export default function AssignDiagnosticsModal({
         patient_id: selectedPatient.id,
         scheduled_time: `${date}T${selectedSlot.start}:00`,
         notes,
+        payment_type: paymentType,
+        ...(paymentType === 'partial_prepay' && prepayAmount ? { prepay_amount: prepayAmount } : {}),
       });
       toast.success('Запись успешно создана!');
       onAssigned();
@@ -402,6 +434,29 @@ export default function AssignDiagnosticsModal({
                 </>
               )}
             </div>
+
+            {/* Price summary + Payment Type */}
+            {servicePrice > 0 && (
+              <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border-2 border-emerald-200 bg-emerald-50">
+                <Banknote className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-emerald-600 font-medium truncate">{serviceName}</p>
+                  <p className="text-lg font-black text-emerald-700 leading-tight">
+                    {servicePrice.toLocaleString('ru-RU')} {getCurrencySymbol(clinicCurrency)}
+                  </p>
+                </div>
+                <span className="text-[10px] font-semibold text-emerald-500 bg-emerald-100 px-2 py-1 rounded-lg">
+                  Стоимость
+                </span>
+              </div>
+            )}
+            <PaymentSection
+              paymentType={paymentType}
+              onPaymentTypeChange={setPaymentType}
+              prepayAmount={prepayAmount}
+              onPrepayAmountChange={setPrepayAmount}
+              doctorPrice={servicePrice}
+            />
 
             {/* Notes */}
             <div>

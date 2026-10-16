@@ -27,6 +27,7 @@ import {
 import { useConsultationManager } from "./useConsultationManager";
 import type { Consultation } from "@/types/consultation";
 import { useAuth } from "@/context/AuthContext";
+import { formatClinicDate, formatClinicTime } from "@/utils/clinicTime";
 
 interface ConsultationsTableProps {
   consultations?: Consultation[];
@@ -78,15 +79,12 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
     }
 
     const now = new Date();
-    // Parse scheduled_at as local time by removing 'Z' suffix if present
-    // and ensuring it's treated as local time, not UTC
-    let scheduledTimeString = consultation.scheduled_at;
-    if (scheduledTimeString.endsWith('Z')) {
-      scheduledTimeString = scheduledTimeString.slice(0, -1);
-    }
-    // If the string doesn't contain timezone info, append 'T00:00:00' format to ensure local parsing
-    // For datetime strings like "2026-02-06T13:15:00", this will parse as local time
-    const scheduledTime = new Date(scheduledTimeString.replace('Z', ''));
+    // consultation.scheduled_at always carries an explicit UTC offset (DRF's
+    // default DateTimeField rendering) — parse it directly as an absolute
+    // instant. Stripping "Z" before parsing would instead make `new Date()`
+    // read the remaining digits as the BROWSER's own local time, silently
+    // shifting this countdown by whatever timezone the viewer happens to be in.
+    const scheduledTime = new Date(consultation.scheduled_at);
     const timeDiffMs = scheduledTime.getTime() - now.getTime();
     const timeDiffMinutes = Math.floor(timeDiffMs / (1000 * 60));
 
@@ -347,14 +345,12 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
     }
   };
 
-  const formatDate = (dateString: string) => {
+  // Pins this to the booking's own clinic time regardless of the viewing
+  // device's own clock — see DoctorConsultationsTable.tsx's formatDate/
+  // formatTime for why this matters. See src/utils/clinicTime.ts.
+  const formatDate = (dateString: string, clinicTz?: string | null) => {
     try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('ru-RU', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
+      return formatClinicDate(dateString, clinicTz);
     } catch {
       return dateString;
     }
@@ -823,15 +819,12 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
                           </div>
                           <div>
                             <div className="text-sm font-semibold text-gray-900">
-                              {consultation.created_at ? formatDate(consultation.created_at) : "Не указано"}
+                              {consultation.created_at ? formatDate(consultation.created_at, consultation.clinic_timezone) : "Не указано"}
                             </div>
                             <div className="text-xs text-gray-500 flex items-center gap-1">
                               <Clock className="w-3 h-3" />
                               {consultation.started_at 
-                                ? new Date(consultation.started_at).toLocaleTimeString('ru-RU', { 
-                                    hour: '2-digit', 
-                                    minute: '2-digit' 
-                                  })
+                                ? formatClinicTime(consultation.started_at, consultation.clinic_timezone)
                                 : "Не начата"
                               }
                             </div>
@@ -961,15 +954,12 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
                     <td className="p-4">
                       <div className="space-y-1">
                         <div className="text-sm font-semibold text-gray-900">
-                          {consultation.created_at ? formatDate(consultation.created_at) : "Не указано"}
+                          {consultation.created_at ? formatDate(consultation.created_at, consultation.clinic_timezone) : "Не указано"}
                         </div>
                         <div className="text-xs text-gray-500 flex items-center gap-1">
                           <Clock className="w-3 h-3" />
                           {consultation.started_at 
-                            ? new Date(consultation.started_at).toLocaleTimeString('ru-RU', { 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
-                              })
+                            ? formatClinicTime(consultation.started_at, consultation.clinic_timezone)
                             : "Не начата"
                           }
                         </div>
@@ -1036,15 +1026,12 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
                     <Calendar className="w-3 h-3 text-blue-500 flex-shrink-0" />
                     <div className="min-w-0">
                       <div className="font-medium text-gray-900 truncate">
-                        {consultation.created_at ? formatDate(consultation.created_at) : "Не указано"}
+                        {consultation.created_at ? formatDate(consultation.created_at, consultation.clinic_timezone) : "Не указано"}
                       </div>
                       <div className="text-gray-500 flex items-center gap-1">
                         <Clock className="w-2.5 h-2.5" />
                         {consultation.started_at 
-                          ? new Date(consultation.started_at).toLocaleTimeString('ru-RU', { 
-                              hour: '2-digit', 
-                              minute: '2-digit' 
-                            })
+                          ? formatClinicTime(consultation.started_at, consultation.clinic_timezone)
                           : "Не начата"
                         }
                       </div>

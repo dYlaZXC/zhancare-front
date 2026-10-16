@@ -86,6 +86,7 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
     doctor_name: string;
     doctor_type: string;
     booking_type: 'urgent' | 'scheduled';
+    clinic_timezone?: string | null;
   } | null>(null);
   const [pendingConsultationData, setPendingConsultationData] = useState<{
     scheduled_time: string;
@@ -794,7 +795,8 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
                           scheduled_time: consultationData.scheduled_at || consultationData.scheduled_time,
                           doctor_name: selectedDoctor.name,
                           doctor_type: selectedDoctor.doctor_type || selectedDoctor.specialization?.name_ru || 'Врач',
-                          booking_type: recommendedDoctor?.urgency === 'urgent' ? 'urgent' : 'scheduled'
+                          booking_type: recommendedDoctor?.urgency === 'urgent' ? 'urgent' : 'scheduled',
+                          clinic_timezone: selectedDoctor.clinic?.time_zone,
                         });
                       }
 
@@ -807,7 +809,8 @@ const VideoConsultation: React.FC<VideoConsultationProps> = ({ skipAI = false })
                           scheduled_time: consultationData.scheduled_at || consultationData.scheduled_time,
                           doctor_name: selectedDoctor.name,
                           doctor_type: selectedDoctor.doctor_type || selectedDoctor.specialization?.name_ru || 'Врач',
-                          booking_type: recommendedDoctor?.urgency === 'urgent' ? 'urgent' : 'scheduled'
+                          booking_type: recommendedDoctor?.urgency === 'urgent' ? 'urgent' : 'scheduled',
+                          clinic_timezone: selectedDoctor.clinic?.time_zone,
                         });
                       }
                       toast.success("✅ Консультация успешно создана!");

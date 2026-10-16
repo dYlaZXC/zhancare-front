@@ -19,6 +19,10 @@ export interface PaymentInfo {
   status: PaymentStatus;
   amount_due: string;
   amount_paid: string;
+  // The amount agreed at booking time, only meaningful for payment_type ===
+  // 'partial_prepay' — distinct from amount_due (full price) and amount_paid
+  // (actually collected so far).
+  prepay_amount?: string;
   currency: string;
   notes?: string;
   history?: PaymentHistoryEntry[];
@@ -77,6 +81,12 @@ export interface ScheduleEvent {
   // Scheduling
   date: string;
   time: string;
+  // The event's own clinic timezone (IANA name or bare "+HH:MM" offset) —
+  // `date`/`time` above are already rendered in it server-side, but this is
+  // needed wherever the FRONTEND re-derives a date/time from a raw
+  // timestamp elsewhere in the drawer (e.g. payment/reschedule history).
+  // See src/utils/clinicTime.ts.
+  clinic_timezone?: string | null;
   duration: number;
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   // Access (consultations)

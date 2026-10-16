@@ -12,6 +12,11 @@ export interface TreatmentPlanItem {
   diagnostics_appointment: number | null;
   consultation: number | null;
   clinic_appointment: number | null;
+  // Only meaningful when source === 'consultation' — Consultation itself
+  // covers both video and in-clinic visits (distinct from clinic_appointment,
+  // a separate booking path), so SOURCE_LABELS[source] alone can't tell them
+  // apart here. null for every other source.
+  consultation_type: "online" | "offline" | null;
   price: string;
   paid_amount: string;
   owed_amount: string;
@@ -108,6 +113,19 @@ export const SOURCE_LABELS: Record<PlanItemSource, string> = {
   consultation: "Видео-консультация",
   clinic_appointment: "Приём в клинике",
 };
+
+/**
+ * A `source: 'consultation'` item covers BOTH video and in-clinic visits
+ * (distinct from `clinic_appointment`, a separate booking path) — SOURCE_LABELS
+ * alone always says "Видео-консультация" regardless, so this is the one to use
+ * for display instead wherever an item's own `consultation_type` is available.
+ */
+export function itemSourceLabel(item: Pick<TreatmentPlanItem, "source" | "consultation_type">): string {
+  if (item.source === "consultation" && item.consultation_type === "offline") {
+    return "Приём в клинике";
+  }
+  return SOURCE_LABELS[item.source];
+}
 
 export const STATUS_LABELS: Record<PlanItemStatus, string> = {
   planned: "Запланировано",

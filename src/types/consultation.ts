@@ -35,6 +35,10 @@ export interface Consultation {
   is_urgent?: boolean;
   type?: "video" | "phone" | "chat" | "offline" | "home" | "diagnostics";
   consultation_type?: string;
+  // The booking's own clinic timezone (IANA name or bare "+HH:MM" offset) —
+  // see src/utils/clinicTime.ts. Display must always use this, never the
+  // viewing device's own clock, for an offline/in-clinic booking.
+  clinic_timezone?: string | null;
   // Clinic appointment extras
   clinic_name?: string;
   clinic_address?: string;
