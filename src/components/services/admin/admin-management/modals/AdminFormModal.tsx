@@ -70,7 +70,10 @@ const AdminFormModal = ({
         first_name: form.first_name.trim(),
         last_name: form.last_name.trim(),
         email: form.email.trim().toLowerCase(),
-        phone: form.phone.trim(),
+        // Phone is optional — send null rather than "" when left blank, so
+        // this never collides with another admin's own blank phone (phone
+        // has a unique DB constraint; null is exempt from it, "" isn't).
+        phone: form.phone.trim() || null,
         clinic_id: form.clinic_id ? Number(form.clinic_id) : null,
         admin_type: form.admin_type,
         can_manage_staff: form.can_manage_staff,
@@ -218,7 +221,7 @@ const AdminFormModal = ({
           {/* Phone */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Телефон
+              Телефон <span className="text-gray-400 font-normal">(необязательно)</span>
             </label>
             <PhoneInput
               value={form.phone}
