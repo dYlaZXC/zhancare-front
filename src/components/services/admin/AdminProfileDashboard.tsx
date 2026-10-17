@@ -21,6 +21,8 @@ import {
   Lock,
   Clock,
   AlignLeft,
+  AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBolt } from "@fortawesome/free-solid-svg-icons";
@@ -28,7 +30,7 @@ import { useAuth } from "@/context/AuthContext";
 import BannerPicker, { useBanner } from "@/components/profile/BannerPicker";
 import PhoneInput from "@/components/ui/PhoneInput";
 import { CURRENCIES } from "@/utils/currency";
-import { phoneEntryToString } from "@/utils/phoneFormat";
+import { phoneEntryToString, toE164 } from "@/utils/phoneFormat";
 import { useClinicCurrency } from "@/context/BrandContext";
 
 const BACKEND = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') ?? 'http://127.0.0.1:8000';
@@ -71,10 +73,10 @@ interface ClinicStats {
 }
 
 const InputField = ({
-  label, value, onChange, icon: Icon, placeholder, type = "text"
+  label, value, onChange, icon: Icon, placeholder, type = "text", disabled = false
 }: {
   label: string; value: string; onChange: (v: string) => void;
-  icon: React.ElementType; placeholder?: string; type?: string;
+  icon: React.ElementType; placeholder?: string; type?: string; disabled?: boolean;
 }) => (
   <div className="flex flex-col gap-1.5">
     <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">{label}</label>
@@ -84,8 +86,9 @@ const InputField = ({
         type={type}
         value={value}
         placeholder={placeholder}
+        disabled={disabled}
         onChange={e => onChange(e.target.value)}
-        className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-300 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all duration-200 shadow-sm hover:border-gray-300"
+        className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-300 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all duration-200 shadow-sm hover:border-gray-300 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
       />
     </div>
   </div>
@@ -107,6 +110,8 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
   const [clinicForm, setClinicForm] = useState({ name: "", description: "", address: "", working_hours: "", phone: "", city_name: "", currency: "KZT" });
   const [savingClinic, setSavingClinic] = useState(false);
   const [savedClinic, setSavedClinic] = useState(false);
+  const [clinicLoading, setClinicLoading] = useState(true);
+  const [clinicLoadError, setClinicLoadError] = useState(false);
   const [clinicLogo, setClinicLogo] = useState<string | null>(null);
   const [clinicLogoBroken, setClinicLogoBroken] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -134,13 +139,17 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
   useEffect(() => { fetchClinicStats(); }, []);
 
   const fetchClinicStats = async () => {
+    setClinicLoading(true);
+    setClinicLoadError(false);
     try {
       const res = await api.get("/clinic-stats/");
       setStats(res.data);
       if (res.data.clinic_info) {
         const ci = res.data.clinic_info;
+        // Stored phones aren't always E.164 (e.g. "87001501244", no "+") —
+        // PhoneInput needs E.164 to recognize/display the value at all.
         const firstPhone = Array.isArray(ci.phones) && ci.phones.length > 0
-          ? phoneEntryToString(ci.phones[0])
+          ? toE164(phoneEntryToString(ci.phones[0]))
           : '';
         setClinicForm({
           name: ci.name || "",
@@ -155,7 +164,12 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
         setClinicLogo(ci.logo || null);
       }
     } catch {
-      setStats({ is_super_admin: false, clinic_info: { id: 1, name: "Демо Клиника", description: "", address: "Алматы, ул. Демонстрационная 123", city: "Алматы", working_hours: "", phones: [], rating: 4.8 } });
+      // Leaving clinicForm untouched here used to look identical to "this
+      // clinic genuinely has no data yet" — clinicLoadError makes the real
+      // cause (the request itself failed) visible, with a retry.
+      setClinicLoadError(true);
+    } finally {
+      setClinicLoading(false);
     }
   };
 
@@ -455,7 +469,7 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
       </motion.div>
 
       {/* ── CLINIC INFO ───────────────────────────────────────── */}
-      {stats && !stats.is_super_admin && stats.clinic_info && (
+      {(clinicLoading || clinicLoadError || (stats && !stats.is_super_admin && stats.clinic_info)) && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
           className="relative bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
 
@@ -472,6 +486,33 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
                 <p className="text-xs text-gray-400">Управление информацией о клинике</p>
               </div>
             </div>
+
+            {clinicLoading && (
+              <div className="flex items-center justify-center gap-2 py-10 text-sm text-gray-400">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Загрузка данных клиники...
+              </div>
+            )}
+
+            {!clinicLoading && clinicLoadError && (
+              <div className="flex items-start gap-3 p-4 rounded-2xl border border-amber-200 bg-amber-50">
+                <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-amber-800">Не удалось загрузить данные клиники</p>
+                  <p className="text-xs text-amber-700 mt-0.5">Проверьте соединение и попробуйте ещё раз — форма ниже не показывается, чтобы случайно не затереть сохранённые данные пустыми значениями.</p>
+                </div>
+                <button
+                  onClick={fetchClinicStats}
+                  className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-amber-700 bg-white border border-amber-300 hover:bg-amber-100 transition-all"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Повторить
+                </button>
+              </div>
+            )}
+
+            {!clinicLoading && !clinicLoadError && (
+              <>
 
             {/* Clinic logo upload */}
             <div className="flex items-center gap-5 mb-6 p-4 rounded-2xl border border-gray-100 bg-gray-50">
@@ -609,6 +650,8 @@ export default function AdminProfileDashboard({ user }: AdminProfileDashboardPro
                 {savedClinic ? "Сохранено!" : "Сохранить"}
               </motion.button>
             </div>
+              </>
+            )}
           </div>
         </motion.div>
       )}
