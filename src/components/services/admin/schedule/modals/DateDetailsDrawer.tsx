@@ -644,6 +644,15 @@ function BookingRow({ event, onChanged }: { event: ScheduleEvent; onChanged?: ()
                           <span className="text-xs font-semibold text-gray-700">{due.toLocaleString('ru-RU')} {currency}</span>
                         </div>
                       )}
+                      {/* Agreed deposit — otherwise invisible until someone
+                          manually switches status to "Частично", even
+                          though it was already settled at booking time. */}
+                      {payment_type === 'partial_prepay' && Number(prepay_amount) > 0 && (
+                        <div className="flex items-center gap-2 px-4 py-2">
+                          <span className="text-xs text-gray-400 w-28 flex-shrink-0">Предоплата</span>
+                          <span className="text-xs font-semibold text-amber-600">{Number(prepay_amount).toLocaleString('ru-RU')} {currency}</span>
+                        </div>
+                      )}
                       {paid > 0 && (
                         <div className="flex items-center gap-2 px-4 py-2">
                           <span className="text-xs text-gray-400 w-28 flex-shrink-0">Оплачено</span>

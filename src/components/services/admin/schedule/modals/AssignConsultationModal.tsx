@@ -266,10 +266,10 @@ export default function AssignConsultationModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 10 }}
         transition={{ duration: 0.2 }}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto scrollbar-hide"
       >
         {/* Header */}
-        <div className="px-6 py-5 border-b border-gray-100 flex items-start justify-between">
+        <div className="px-6 py-5 border-b border-gray-100 flex items-start justify-between sticky top-0 bg-white z-10 rounded-t-2xl">
           <div>
             <h3 className="text-lg font-bold" style={{ color: '#1e263e' }}>Новая запись</h3>
             <p className="text-sm text-gray-400 mt-0.5">{formattedDate}</p>
@@ -628,7 +628,7 @@ export default function AssignConsultationModal({
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
+          <div className="px-6 py-4 border-t border-gray-100 flex gap-3 sticky bottom-0 bg-white z-10 rounded-b-2xl">
             <button
               type="button"
               onClick={onClose}

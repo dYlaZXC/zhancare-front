@@ -1,13 +1,26 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Warehouse, Hammer } from "lucide-react";
+import { useState } from "react";
+import { History, Truck, Warehouse } from "lucide-react";
+import ItemsTab from "./warehouse/components/ItemsTab";
+import TransactionsTab from "./warehouse/components/TransactionsTab";
+import SuppliersTab from "./warehouse/components/SuppliersTab";
+
+type Tab = "items" | "transactions" | "suppliers";
+
+const TABS: { id: Tab; label: string; icon: typeof Warehouse }[] = [
+  { id: "items", label: "Остатки", icon: Warehouse },
+  { id: "transactions", label: "Приход/Расход", icon: History },
+  { id: "suppliers", label: "Поставщики", icon: Truck },
+];
 
 export function WarehouseView() {
+  const [tab, setTab] = useState<Tab>("items");
+
   return (
     <div className="w-full">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2" style={{ color: '#1e263e' }}>
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold mb-2" style={{ color: "#1e263e" }}>
           Склад
         </h1>
         <p className="text-gray-600">
@@ -15,25 +28,28 @@ export function WarehouseView() {
         </p>
       </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col items-center justify-center py-24 rounded-3xl border-2 border-dashed border-gray-200 bg-gray-50/50"
-      >
-        <div
-          className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6"
-          style={{ background: 'linear-gradient(135deg, #78716c 0%, #57534e 100%)' }}
-        >
-          <Warehouse className="w-10 h-10 text-white" />
-        </div>
-        <h2 className="text-xl font-bold mb-2" style={{ color: '#1e263e' }}>
-          Раздел в разработке
-        </h2>
-        <p className="text-gray-500 max-w-md text-center flex items-center gap-2 justify-center">
-          <Hammer className="w-4 h-4 flex-shrink-0" />
-          Скоро здесь появится учёт склада клиники
-        </p>
-      </motion.div>
+      <div className="flex items-center gap-1 mb-6 border-b border-gray-200">
+        {TABS.map((t) => {
+          const Icon = t.icon;
+          const active = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors -mb-px ${
+                active ? "border-gray-700 text-gray-900" : "border-transparent text-gray-400 hover:text-gray-600"
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {tab === "items" && <ItemsTab />}
+      {tab === "transactions" && <TransactionsTab />}
+      {tab === "suppliers" && <SuppliersTab />}
     </div>
   );
 }

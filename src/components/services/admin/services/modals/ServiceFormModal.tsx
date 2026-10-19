@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import { api } from "@/utils/api";
 import {
-  X, Loader2, CheckCircle2, Save, ChevronDown, ClipboardList,
+  X, Loader2, CheckCircle2, Save, ChevronDown, ClipboardList, Boxes,
 } from "lucide-react";
 import type {
   Service, ServiceCategory, StaffMember, ServiceFormData, CategorySettings, InheritableField,
@@ -16,6 +16,7 @@ import {
   PriceDurationFields, CurrencySelector, ScheduleSourceToggle, DoctorMultiSelect, CapacityCard, ClinicCard,
   InheritHint,
 } from "../components/ServiceFormFields";
+import ConsumptionRulesSection from "../../warehouse/components/ConsumptionRulesSection";
 
 // ─── Following the category ─────────────────────────────────────────────────
 // A field the admin has NOT set on this service follows its category (this
@@ -100,6 +101,7 @@ export function ServiceFormModal({
         currency: initial.currency || "", schedule_source: initial.schedule_source ?? "own",
         doctor_ids: initial.doctor_ids ?? [],
         capacity_per_slot: initial.capacity_per_slot ?? null,
+        warehouse_auto_deduct_enabled: initial.warehouse_auto_deduct_enabled ?? true,
       };
     }
     const first = categories[0];
@@ -162,6 +164,7 @@ export function ServiceFormModal({
         currency: form.currency || clinicCurrency,
         doctor_ids: form.doctor_ids,
         capacity_per_slot: form.schedule_source === "doctor" ? null : form.capacity_per_slot,
+        warehouse_auto_deduct_enabled: form.warehouse_auto_deduct_enabled,
         // What this service set itself; the server applies the category to the rest.
         own_fields: Array.from(own),
       };
@@ -328,6 +331,34 @@ export function ServiceFormModal({
                 onChange={v => setOwnField("capacity_per_slot", { capacity_per_slot: v })}
                 extra={hint("capacity_per_slot")}
               />
+            )}
+
+            {mode === "edit" && initial && (
+              <div className="rounded-2xl border-2 border-gray-200 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                    <Boxes className="w-4 h-4 text-amber-600" />
+                    Автоматически списывать со склада
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, warehouse_auto_deduct_enabled: !f.warehouse_auto_deduct_enabled }))}
+                    className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${
+                      form.warehouse_auto_deduct_enabled ? "bg-amber-600" : "bg-gray-300"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                        form.warehouse_auto_deduct_enabled ? "translate-x-5" : ""
+                      }`}
+                    />
+                  </button>
+                </div>
+                <ConsumptionRulesSection
+                  diagnosticsServiceId={initial.id}
+                  disabled={!form.warehouse_auto_deduct_enabled}
+                />
+              </div>
             )}
 
             <ClinicCard

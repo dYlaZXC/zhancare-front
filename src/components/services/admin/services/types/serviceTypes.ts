@@ -118,6 +118,7 @@ export interface Service {
   doctor_names: string[];
   /** Which inheritable fields THIS service set itself; the rest follow its category. */
   own_fields?: InheritableField[];
+  warehouse_auto_deduct_enabled?: boolean;
 }
 
 /** The service fields a category can supply (the service form's own fields). */
@@ -135,11 +136,13 @@ export interface ServiceFormData {
   schedule_source: ScheduleSource;
   doctor_ids: number[];
   capacity_per_slot: number | null;
+  warehouse_auto_deduct_enabled: boolean;
 }
 
 export const EMPTY_SERVICE_FORM: ServiceFormData = {
   name: "", description: "", price: "", duration_minutes: 30, category: "",
   currency: "", schedule_source: "own", doctor_ids: [], capacity_per_slot: null,
+  warehouse_auto_deduct_enabled: true,
 };
 
 export interface CategoryFormData {
