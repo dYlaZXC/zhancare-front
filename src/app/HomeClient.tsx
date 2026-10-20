@@ -17,6 +17,7 @@ import { useAuth } from "@/context/AuthContext";
 import { DoctorsCarousel } from "@/sections/DoctorsCarousel";
 import { ChatSection } from "@/sections/ChatSection";
 import { Traction } from "@/sections/Traction";
+import { api } from "@/utils/api";
 
 function getDeviceInfo(): string {
   if (typeof window === "undefined") return "Unknown Device";
@@ -36,10 +37,6 @@ function getDeviceInfo(): string {
 
 async function sendVisitorNotification() {
   try {
-    const TELEGRAM_BOT_TOKEN = "8364913089:AAG5rK07-jHVgf1Uspgyf1sgXnkrKXH0ngw";
-    const TELEGRAM_CHAT_ID = "@zhancareai";
-    const VISITS_TOPIC_ID = 20;
-
     const referrer = document.referrer || "Прямой переход";
     const currentUrl = window.location.href;
 
@@ -56,26 +53,13 @@ async function sendVisitorNotification() {
       }
     } catch {}
 
-    const message = `
-👁 *Новый посетитель*
-
-🖥 *Устройство:* ${getDeviceInfo()}
-🌍 *Локация:* ${locationInfo}
-🔗 *IP:* ${ipAddress}
-🌐 *Страница:* ${currentUrl}
-📍 *Откуда:* ${referrer}
-⏰ *Время:* ${new Date().toLocaleString("ru-RU")}
-    `.trim();
-
-    await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: TELEGRAM_CHAT_ID,
-        text: message,
-        parse_mode: "Markdown",
-        message_thread_id: VISITS_TOPIC_ID,
-      }),
+    await api.post("/tg/site-notify/", {
+      type: "visitor",
+      device: getDeviceInfo(),
+      location: locationInfo,
+      ip: ipAddress,
+      url: currentUrl,
+      referrer,
     });
   } catch {}
 }

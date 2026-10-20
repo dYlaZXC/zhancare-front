@@ -8,6 +8,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useBrand } from "@/context/BrandContext";
 import { Mail, User, MessageSquare, Send, ArrowRight as ArrowRightIcon } from "lucide-react";
 import { toast } from "react-toastify";
+import { api } from "@/utils/api";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import en from "@/locales/en.json";
@@ -59,46 +60,14 @@ export const CallToAction = () => {
     setIsSubmitting(true);
 
     try {
-      // Telegram Bot API configuration
-      const TELEGRAM_BOT_TOKEN = "8364913089:AAG5rK07-jHVgf1Uspgyf1sgXnkrKXH0ngw";
-      const TELEGRAM_CHAT_ID = "@zhancareai";
-
-      // Format message for Telegram
-      const message = `
-🆕 *Новое сообщение с сайта ZhanCare.AI*
-
-👤 *Имя:* ${formData.name}
-📧 *Email:* ${formData.email}
-💬 *Сообщение:*
-${formData.message}
-
-⏰ *Время:* ${new Date().toLocaleString('ru-RU')}
-      `.trim();
-
-      // Send to Telegram
-      const telegramUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-
-      const response = await fetch(telegramUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chat_id: TELEGRAM_CHAT_ID,
-          text: message,
-          parse_mode: 'Markdown',
-          message_thread_id: 6, // Topic 6 = Interested
-        }),
+      await api.post("/tg/site-notify/", {
+        type: "lead",
+        name: formData.name,
+        email: formData.email,
+        message: formData.message,
       });
-
-      if (response.ok) {
-        toast.success(translations.alertMessage);
-        setFormData({ name: "", email: "", message: "" });
-      } else {
-        const errorData = await response.json();
-        console.error('Telegram API Error:', errorData);
-        throw new Error('Failed to send message');
-      }
+      toast.success(translations.alertMessage);
+      setFormData({ name: "", email: "", message: "" });
     } catch (error) {
       console.error('Error sending message to Telegram:', error);
       toast.error('Ошибка отправки. Попробуйте позже.');

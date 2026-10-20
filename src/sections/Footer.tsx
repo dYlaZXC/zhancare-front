@@ -8,6 +8,7 @@ import SocialPin from "@/assets/social-pin.svg";
 import SocialYoutube from "@/assets/social-youtube.svg";
 import Image from "next/image";
 import { motion, useAnimationControls } from "framer-motion";
+import { api } from "@/utils/api";
 import { MapPin, Mail, Phone, ArrowUpRight, Heart, Send, TrendingUp, Users, Stethoscope, CheckCircle, FileText } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { toast } from "react-toastify";
@@ -151,41 +152,9 @@ export const Footer = () => {
     setIsSubmitting(true);
 
     try {
-      // Telegram Bot API configuration
-      const TELEGRAM_BOT_TOKEN = "8364913089:AAG5rK07-jHVgf1Uspgyf1sgXnkrKXH0ngw";
-      const TELEGRAM_CHAT_ID = "@zhancareai";
-
-      // Format message for Telegram
-      const message = `
-📧 *Новая подписка на рассылку*
-
-✉️ *Email:* ${email}
-📍 *Источник:* Footer Newsletter
-⏰ *Время:* ${new Date().toLocaleString('ru-RU')}
-      `.trim();
-
-      // Send to Telegram
-      const telegramUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-
-      const response = await fetch(telegramUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chat_id: TELEGRAM_CHAT_ID,
-          text: message,
-          parse_mode: 'Markdown',
-          message_thread_id: 5, // Topic 5 = Newsletter
-        }),
-      });
-
-      if (response.ok) {
-        toast.success(translations.newsletter.successMessage);
-        setEmail("");
-      } else {
-        throw new Error('Failed to send message');
-      }
+      await api.post("/tg/site-notify/", { type: "newsletter", email });
+      toast.success(translations.newsletter.successMessage);
+      setEmail("");
     } catch (error) {
       console.error('Error sending to Telegram:', error);
       toast.error('Ошибка отправки. Попробуйте позже.');
