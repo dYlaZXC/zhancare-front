@@ -20,6 +20,7 @@ import {
   faChevronRight,
   faBriefcaseMedical,
   faFileLines,
+  faRobot,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useState, useEffect, useRef } from "react";
@@ -52,6 +53,7 @@ const doctorMenu: MenuItem[] = [
   },
   { id: "schedule", icon: faCalendarAlt, title: "Расписание", color: "#059669", href: "/doctor/schedule" },
   { id: "analytics", icon: faChartLine, title: "Аналитика", color: "#8b5cf6", href: "/doctor/analytics" },
+  { id: "ai-assistant", icon: faRobot, title: "ИИ Ассистент", color: "#0ea5e9", href: "/doctor/ai-assistant" },
 ];
 
 export interface DoctorSidebarProps {

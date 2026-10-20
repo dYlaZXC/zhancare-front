@@ -15,7 +15,8 @@ import {
   faClipboardList,
   faUser,
   faChartLine,
-  faFileLines
+  faFileLines,
+  faRobot
 } from "@fortawesome/free-solid-svg-icons";
 
 interface DoctorBreadcrumbItem {
@@ -59,6 +60,12 @@ export const DoctorBreadcrumb = ({
       title: "Аналитика",
       icon: <FontAwesomeIcon icon={faChartLine} className="w-4 h-4" />,
       href: "/doctor/analytics",
+    },
+    "ai-assistant": {
+      key: "ai-assistant",
+      title: "ИИ Ассистент",
+      icon: <FontAwesomeIcon icon={faRobot} className="w-4 h-4" />,
+      href: "/doctor/ai-assistant",
     },
     schedule: {
       key: "schedule",
