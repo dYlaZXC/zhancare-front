@@ -48,7 +48,10 @@ import { toast } from "react-toastify";
 import Link from "next/link";
 
 type SubMenuItem = { id: string; icon: any; title: string; color: string; href: string; superOnly?: boolean; brandIcon?: "whatsapp" | "telegram" };
-type MenuItem = { id: string; icon: any; title: string; color: string; href?: string; superOnly?: boolean; children?: SubMenuItem[] };
+// clinicOnly: hidden for super admins — these pages operate on "the
+// admin's own clinic", which a super admin (clinic: null) doesn't have,
+// so the page would just render empty for them.
+type MenuItem = { id: string; icon: any; title: string; color: string; href?: string; superOnly?: boolean; clinicOnly?: boolean; children?: SubMenuItem[] };
 
 const WhatsAppIcon = ({ className, style }: { className?: string; style?: CSSProperties }) => (
   <svg viewBox="0 0 24 24" className={className} style={style} fill="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -83,12 +86,30 @@ const adminMenu: MenuItem[] = [
   },
   { id: "profile", icon: faUser, title: "Профиль", color: "#3772ff", href: "/admin/profile" },
   { id: "tasks", icon: faListCheck, title: "Задачи", color: "#059669", href: "/admin/tasks" },
-  { id: "path-of-patient", icon: faHandshake, title: "Путь пациента", color: "#3772ff", href: "/admin/path-of-patient" },
+  { id: "path-of-patient", icon: faHandshake, title: "Путь пациента", color: "#3772ff", href: "/admin/path-of-patient", clinicOnly: true },
   {
+    // Platform-wide management — clinics across the whole system and the
+    // admin accounts that run them. Always super-admin-only (was already
+    // true per-item before; now also a clear group of its own instead of
+    // being buried inside "Управление" alongside single-clinic ops).
+    id: "platform",
+    icon: faHospital,
+    title: "Платформа",
+    color: "#10b981",
+    superOnly: true,
+    children: [
+      { id: "clinics", icon: faHospital, title: "Клиники", color: "#10b981", href: "/admin/clinics" },
+      { id: "admins", icon: faUserShield, title: "Администраторы", color: "#f59e0b", href: "/admin/admins" },
+    ],
+  },
+  {
+    // Single-clinic day-to-day operations — meaningless for a super admin
+    // (no clinic of their own), so this whole group is clinicOnly.
     id: "management",
     icon: faUsers,
     title: "Управление",
     color: "#8b5cf6",
+    clinicOnly: true,
     children: [
       { id: "staff", icon: faUsers, title: "Персонал", color: "#8b5cf6", href: "/admin/staff" },
       { id: "services", icon: faClipboardList, title: "Услуги", color: "#0ea5e9", href: "/admin/services" },
@@ -97,8 +118,6 @@ const adminMenu: MenuItem[] = [
       { id: "patients", icon: faUserMd, title: "Пациенты", color: "#10b981", href: "/admin/patients" },
       { id: "schedule", icon: faCalendarCheck, title: "Расписание", color: "#295bbf", href: "/admin/schedule" },
       { id: "warehouse", icon: faWarehouse, title: "Склад", color: "#78716c", href: "/admin/warehouse" },
-      { id: "admins", icon: faUserShield, title: "Администраторы", color: "#f59e0b", href: "/admin/admins", superOnly: true },
-      { id: "clinics", icon: faHospital, title: "Клиники", color: "#10b981", href: "/admin/clinics", superOnly: true },
     ],
   },
   {
@@ -180,7 +199,7 @@ export const AdminSidebar = ({
   if (!user) return null;
 
   const visibleMenu = adminMenu
-    .filter(item => !item.superOnly || isSuperAdmin)
+    .filter(item => (!item.superOnly || isSuperAdmin) && (!item.clinicOnly || !isSuperAdmin))
     .map(item =>
       item.children
         ? { ...item, children: item.children.filter(c => !c.superOnly || isSuperAdmin) }
