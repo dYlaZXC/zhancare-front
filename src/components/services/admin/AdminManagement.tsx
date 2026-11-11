@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-toastify";
 import { api } from "@/utils/api";
+import { KPICard } from "./dashboardUI";
 import {
   Users,
   UserPlus,
@@ -134,33 +135,25 @@ export default function AdminManagement() {
       label: "Всего",
       value: admins.length,
       icon: Users,
-      color: "#93c5fd",
-      bg: "#1e3a6e",
-      border: "#2d52a0",
+      color: "#3772ff",
     },
     {
       label: "Активных",
       value: admins.filter((a) => a.is_active).length,
       icon: CheckCircle,
-      color: "#6ee7b7",
-      bg: "#064e3b",
-      border: "#0d6e52",
+      color: "#10b981",
     },
     {
       label: "Клиник",
       value: new Set(admins.filter((a) => a.clinic).map((a) => a.clinic!.id)).size,
       icon: Building2,
-      color: "#c4b5fd",
-      bg: "#3b1f6e",
-      border: "#5b3aa0",
+      color: "#8b5cf6",
     },
     {
       label: "Менеджеров",
       value: admins.filter((a) => a.admin_type === "manager").length,
       icon: Lock,
-      color: "#fcd34d",
-      bg: "#78350f",
-      border: "#a35c15",
+      color: "#f59e0b",
     },
   ];
 
@@ -226,24 +219,14 @@ export default function AdminManagement() {
 
           {/* Stats strip */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {stats.map((stat, i) => (
-              <motion.div
+            {stats.map((stat) => (
+              <KPICard
                 key={stat.label}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.07 }}
-                className="rounded-2xl px-4 py-3 flex items-center gap-3"
-                style={{ background: stat.bg, border: `1px solid ${stat.border}` }}
-              >
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                     style={{ background: "rgba(0,0,0,0.2)" }}>
-                  <stat.icon className="w-4 h-4" style={{ color: stat.color }} />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-white leading-none">{stat.value}</div>
-                  <div className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.55)" }}>{stat.label}</div>
-                </div>
-              </motion.div>
+                label={stat.label}
+                value={String(stat.value)}
+                icon={stat.icon}
+                color={stat.color}
+              />
             ))}
           </div>
         </div>
@@ -406,7 +389,7 @@ export default function AdminManagement() {
               <div className="flex gap-1 shrink-0">
                 {stats.slice(0, 3).map((s) => (
                   <span key={s.label} className="text-xs px-2 py-0.5 rounded-full font-medium"
-                        style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
+                        style={{ background: `${s.color}15`, color: s.color }}>
                     {s.label}: {s.value}
                   </span>
                 ))}

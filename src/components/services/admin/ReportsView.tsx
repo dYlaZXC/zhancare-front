@@ -274,13 +274,7 @@ export default function ReportsView({ user }: { user: any }) {
             { label: "Активных сейчас", value: stats.active_consultations, icon: Activity, color: "#10b981" },
             { label: "Рейтинг клиники", value: stats.average_rating ? `${stats.average_rating.toFixed(1)} ★` : "—", icon: Star, color: "#f59e0b" },
           ] as const).map(item => (
-            <div key={item.label} className="bg-white rounded-xl border border-gray-100 px-4 py-3 flex items-center gap-3 shadow-sm">
-              <item.icon className="w-5 h-5 flex-shrink-0" style={{ color: item.color }} />
-              <div>
-                <p className="text-lg font-black text-gray-900">{item.value}</p>
-                <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">{item.label}</p>
-              </div>
-            </div>
+            <KPICard key={item.label} label={item.label} value={String(item.value)} icon={item.icon} color={item.color} />
           ))}
         </div>
       )}

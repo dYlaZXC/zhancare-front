@@ -41,13 +41,29 @@ export const ChartTip = ({ active, payload, label }: any) => {
   );
 };
 
+// Pre-mixes `color` with opaque white in JS rather than using CSS alpha
+// (`${color}15`), which is translucent and blends with whatever sits BEHIND
+// the card — fine on a plain white page, but reads dark/muddy on the dark
+// gradient hero headers (Клиники, Администраторы). An explicit opaque pastel
+// looks identical everywhere regardless of what it's placed on top of.
+function lightenHex(hex: string, amount = 0.88): string {
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex);
+  if (!m) return `${hex}15`; // fallback for a non-hex color value
+  const num = parseInt(m[1], 16);
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  const mix = (c: number) => Math.round(c + (255 - c) * amount);
+  return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
+}
+
 export function KPICard({ label, value, sub, icon: Icon, change, color = BLUE }: {
   label: string; value: string; sub?: string;
   icon: any; change?: number | null; color?: string;
 }) {
   return (
     <div className="rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow"
-      style={{ backgroundColor: `${color}15` }}>
+      style={{ backgroundColor: lightenHex(color) }}>
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm text-gray-600 mb-1">{label}</p>

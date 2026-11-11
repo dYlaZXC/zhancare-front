@@ -16,7 +16,7 @@ import { STAGES } from "@/components/services/admin/pipeline/constants/pipelineC
 import { PriorityBadge } from "@/components/services/admin/pipeline/components/PriorityBadge";
 import { StageBadge } from "@/components/services/admin/pipeline/components/StageBadge";
 import { ClinicAvatar } from "@/components/services/admin/pipeline/components/ClinicAvatar";
-import { StatCard } from "@/components/services/admin/pipeline/components/StatCard";
+import { KPICard } from "@/components/services/admin/dashboardUI";
 import { ClinicKanbanCard } from "@/components/services/admin/pipeline/components/ClinicKanbanCard";
 import { ImportModal } from "@/components/services/admin/pipeline/modals/ImportModal";
 import { PipelineMapView } from "@/components/services/admin/pipeline/views/PipelineMapView";
@@ -309,10 +309,10 @@ export default function PipelinePage() {
       {/* ── Stat cards ── */}
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatCard label="Всего клиник"      value={stats.total}                icon={<Building2 className="w-4 h-4" />}   gradient="from-slate-600 to-slate-700" />
-          <StatCard label="A-приоритет"        value={stats.by_priority?.A ?? 0} icon={<Zap className="w-4 h-4" />}          gradient="from-red-500 to-rose-600"    sub="Высокий" />
-          <StatCard label="Есть Instagram"    value={stats.has_instagram}        icon={<Instagram className="w-4 h-4" />}   gradient="from-pink-500 to-rose-500"   sub={`${Math.round((stats.has_instagram / stats.total) * 100)}%`} />
-          <StatCard label="Частные клиники"   value={stats.is_private}           icon={<Users className="w-4 h-4" />}        gradient="from-indigo-500 to-blue-600" sub={`${Math.round((stats.is_private / stats.total) * 100)}%`} />
+          <KPICard label="Всего клиник"      value={String(stats.total)}                icon={Building2} color="#64748b" />
+          <KPICard label="A-приоритет"        value={String(stats.by_priority?.A ?? 0)} icon={Zap}        color="#ef4444" sub="Высокий" />
+          <KPICard label="Есть Instagram"    value={String(stats.has_instagram)}        icon={Instagram}   color="#ec4899" sub={`${Math.round((stats.has_instagram / stats.total) * 100)}%`} />
+          <KPICard label="Частные клиники"   value={String(stats.is_private)}           icon={Users}        color="#6366f1" sub={`${Math.round((stats.is_private / stats.total) * 100)}%`} />
         </div>
       )}
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/api";
+import { KPICard } from "./dashboardUI";
 import {
   Activity, Clock, UserPlus, Edit, Trash2,
   CheckCircle, XCircle, AlertCircle, Loader2,
@@ -176,15 +177,12 @@ export default function ActivityView({ user }: { user: any }) {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Всего событий", value: total, color: "#3772ff", bg: "#ebf1ff" },
-          { label: "Сегодня",       value: todayCount, color: "#8b5cf6", bg: "#f3e8ff" },
-          { label: "Успешных",      value: successCount, color: "#10b981", bg: "#d1fae5" },
-          { label: "Предупреждений", value: warningCount, color: "#f59e0b", bg: "#fef3c7" },
+          { label: "Всего событий", value: total, icon: Activity, color: "#3772ff" },
+          { label: "Сегодня",       value: todayCount, icon: Clock, color: "#8b5cf6" },
+          { label: "Успешных",      value: successCount, icon: CheckCircle, color: "#10b981" },
+          { label: "Предупреждений", value: warningCount, icon: AlertCircle, color: "#f59e0b" },
         ].map(s => (
-          <div key={s.label} className="rounded-2xl p-4 border border-gray-100 shadow-sm" style={{ backgroundColor: s.bg }}>
-            <p className="text-sm text-gray-600 mb-1">{s.label}</p>
-            <p className="text-2xl font-bold" style={{ color: s.color }}>{s.value}</p>
-          </div>
+          <KPICard key={s.label} label={s.label} value={String(s.value)} icon={s.icon} color={s.color} />
         ))}
       </div>
 

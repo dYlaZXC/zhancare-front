@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, UserPlus, Loader2, AlertCircle } from "lucide-react";
+import { Users, UserPlus, Loader2, AlertCircle, CheckCircle, XCircle } from "lucide-react";
 
 import PatientDocumentsDrawer from "./PatientDocumentsDrawer";
 import { api } from "@/utils/api";
+import { KPICard } from "./dashboardUI";
 
 import type { Patient, Clinic, FoundPatient } from "./patient-management/types/patientTypes";
 import { PAGE_SIZE } from "./patient-management/types/patientTypes";
-import { StatsCards } from "./patient-management/components/StatsCards";
 import { PatientToolbar } from "./patient-management/components/PatientToolbar";
 import { PatientCard } from "./patient-management/components/PatientCard";
 import { PatientFormModal } from "./patient-management/modals/PatientFormModal";
@@ -184,7 +184,11 @@ export default function PatientManagement({ user }: PatientManagementProps) {
           </motion.button>
         </div>
 
-        <StatsCards total={stats.total} active={stats.active} inactive={stats.inactive} />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <KPICard label="Всего" value={String(stats.total)} icon={Users} color="#10b981" />
+          <KPICard label="Активных" value={String(stats.active)} icon={CheckCircle} color="#059669" />
+          <KPICard label="Неактивных" value={String(stats.inactive)} icon={XCircle} color="#6b7280" />
+        </div>
 
         <PatientToolbar
           searchQuery={searchQuery}

@@ -4,12 +4,12 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "react-toastify";
 import { api } from "@/utils/api";
-import { UserPlus, Loader2, AlertCircle } from "lucide-react";
+import { UserPlus, Loader2, AlertCircle, Users, Stethoscope, Heart, CheckCircle } from "lucide-react";
 
 import StaffScheduleModal from "./StaffScheduleModal";
+import { KPICard } from "./dashboardUI";
 
 import type { StaffMember, Clinic } from "./staff-management/types/staffTypes";
-import { StatsCards } from "./staff-management/components/StatsCards";
 import { StaffToolbar } from "./staff-management/components/StaffToolbar";
 import { StaffActivityGrid } from "./staff-management/components/StaffActivityGrid";
 import { StaffPaginationControls } from "./staff-management/components/StaffPaginationControls";
@@ -315,7 +315,12 @@ export default function StaffManagement({ user }: StaffManagementProps) {
           </motion.button>
         </div>
 
-        <StatsCards total={stats.total} doctors={stats.doctors} nurses={stats.nurses} available={stats.available} />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <KPICard label="Всего" value={String(stats.total)} icon={Users} color="#3772ff" />
+          <KPICard label="Докторов" value={String(stats.doctors)} icon={Stethoscope} color="#3267e6" />
+          <KPICard label="Медсестер" value={String(stats.nurses)} icon={Heart} color="#8b5cf6" />
+          <KPICard label="Доступных" value={String(stats.available)} icon={CheckCircle} color="#10b981" />
+        </div>
 
         <StaffToolbar
           searchQuery={searchQuery}
