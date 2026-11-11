@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-toastify";
 import { api } from "@/utils/api";
 import { phoneEntryToString } from "@/utils/phoneFormat";
+import ClinicModulesPanel from "./ClinicModulesPanel";
 import {
   Search,
   Edit,
@@ -405,6 +406,10 @@ const ClinicFormModal = ({
               />
             </div>
           </div>
+
+          {/* Modules — only meaningful once the clinic exists (toggle keys
+              off existing per-clinic config rows), so edit mode only. */}
+          {mode === "edit" && initial && <ClinicModulesPanel clinicId={initial.id} />}
 
           {/* Actions */}
           <div className="flex gap-3 pt-2">
