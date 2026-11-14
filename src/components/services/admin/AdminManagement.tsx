@@ -13,7 +13,6 @@ import {
   CheckCircle,
   Loader2,
   AlertCircle,
-  ShieldCheck,
   ChevronLeft,
   ChevronRight,
   RefreshCw,
@@ -158,101 +157,67 @@ export default function AdminManagement() {
   ];
 
   return (
-    <div className="min-h-screen -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)]" style={{ background: "#f8fafc" }}>
-
-      {/* ── Gradient Hero Header ──────────────────────────────────────── */}
-      <div
-        className="relative overflow-hidden"
-        style={{
-          background: "linear-gradient(135deg, #12263a 0%, #1e263e 30%, #29358f 70%, #3772ff 100%)",
-        }}
-      >
-        {/* Decorative blobs */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full blur-3xl opacity-20"
-               style={{ background: "radial-gradient(circle, #3772ff 0%, transparent 70%)" }} />
-          <div className="absolute bottom-0 left-1/3 w-48 h-48 rounded-full blur-2xl opacity-10"
-               style={{ background: "radial-gradient(circle, #8b5cf6 0%, transparent 70%)" }} />
-        </div>
-
-        <div className="relative z-10 px-6 pt-8 pb-6 lg:px-10">
-          {/* Title row */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
-                   style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.2)" }}>
-                <ShieldCheck className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-extrabold text-white leading-tight">
-                  Администраторы клиник
-                </h1>
-                <p className="text-sm mt-0.5" style={{ color: "rgba(255,255,255,0.6)" }}>
-                  Управление учётными записями и правами доступа
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <button
-                onClick={fetchAdmins}
-                className="p-2.5 rounded-xl transition-all"
-                style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)" }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.2)")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
-                title="Обновить"
-              >
-                <RefreshCw className="w-4 h-4 text-white" />
-              </button>
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setShowCreate(true)}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-semibold shadow-lg transition-all"
-                style={{ background: "rgba(255,255,255,0.95)", color: "#1e263e" }}
-              >
-                <UserPlus className="w-4 h-4" />
-                Создать администратора
-              </motion.button>
-            </div>
+    <div className="w-full">
+      {/* ── Header, same plain-light pattern as TasksView/ClinicManagement ── */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold mb-2" style={{ color: "#1e263e" }}>
+              Администраторы клиник
+            </h1>
+            <p className="text-gray-600">Управление учётными записями и правами доступа</p>
           </div>
-
-          {/* Stats strip */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {stats.map((stat) => (
-              <KPICard
-                key={stat.label}
-                label={stat.label}
-                value={String(stat.value)}
-                icon={stat.icon}
-                color={stat.color}
-              />
-            ))}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={fetchAdmins}
+              className="p-2.5 rounded-xl border-2 border-gray-200 hover:bg-gray-50 transition-colors"
+              title="Обновить"
+            >
+              <RefreshCw className="w-4 h-4 text-gray-600" />
+            </button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowCreate(true)}
+              className="flex items-center gap-2 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+              style={{ background: "linear-gradient(135deg, #3772ff 0%, #2956bf 100%)" }}
+            >
+              <UserPlus className="w-5 h-5" />
+              Создать администратора
+            </motion.button>
           </div>
         </div>
-      </div>
 
-      {/* ── Filters Bar ───────────────────────────────────────────────── */}
-      <div className="px-6 lg:px-10 py-4 bg-white border-b border-gray-100 shadow-sm">
+        {/* Stats strip */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          {stats.map((stat) => (
+            <KPICard
+              key={stat.label}
+              label={stat.label}
+              value={String(stat.value)}
+              icon={stat.icon}
+              color={stat.color}
+            />
+          ))}
+        </div>
+
+        {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3">
-          {/* Search */}
           <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Поиск по имени, email, клинике..."
-              className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-2xl text-sm focus:outline-none focus:border-blue-400 transition-colors"
+              className="w-full pl-12 pr-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
             />
           </div>
 
-          {/* Type filter */}
           <div className="min-w-[200px]">
             <FilterTypeDropdown value={filterType} onChange={setFilterType} />
           </div>
 
-          {/* Clinic filter */}
           {clinics.length > 0 && (
             <div className="min-w-[220px]">
               <ClinicSearchDropdown
@@ -267,7 +232,7 @@ export default function AdminManagement() {
       </div>
 
       {/* ── Table Area ────────────────────────────────────────────────── */}
-      <div className="px-6 lg:px-10 py-6">
+      <div>
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24 gap-3">
             <Loader2 className="w-10 h-10 animate-spin" style={{ color: "#3772ff" }} />

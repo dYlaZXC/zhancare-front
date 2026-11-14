@@ -12,8 +12,7 @@ import uz from "@/locales/uz.json";
 import LanguageSwitcher from "./LanguageSwitcher";
 import UserDropdown from "./UserDropdown";
 import MobileMenu from "./MobileMenu";
-import Link from "next/link";
-import { Rocket, TrendingUp } from "lucide-react";
+import { Rocket } from "lucide-react";
 
 // Constants
 const SCROLL_THRESHOLD = 50;
@@ -195,11 +194,11 @@ export default function Header() {
   );
 
   const tractionDropdownLabels = useMemo(() => {
-    const map: Record<string, { journey: string; pipeline: string }> = {
-      ru: { journey: 'Наш путь',        pipeline: 'Pipeline клиник' },
-      en: { journey: 'Our Journey',     pipeline: 'Clinic Pipeline' },
-      kz: { journey: 'Біздің жол',      pipeline: 'Клиника Pipeline' },
-      uz: { journey: "Bizning yo'l",    pipeline: 'Klinika Pipeline' },
+    const map: Record<string, { journey: string }> = {
+      ru: { journey: 'Наш путь' },
+      en: { journey: 'Our Journey' },
+      kz: { journey: 'Біздің жол' },
+      uz: { journey: "Bizning yo'l" },
     };
     return map[language] ?? map.ru;
   }, [language]);
@@ -299,25 +298,6 @@ export default function Header() {
                           </div>
                         </div>
                       </button>
-
-                      <div className="h-px mx-3 bg-white/10" />
-
-                      {/* Item 2 — Investor pipeline (public, read-only) */}
-                      <Link
-                        href="/investors"
-                        onClick={() => setTractionOpen(false)}
-                        className="flex items-center gap-3 px-4 py-3 text-sm text-white/90 hover:bg-white/10 transition-colors"
-                      >
-                        <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-[#10b981] to-[#059669] flex items-center justify-center"><TrendingUp size={14} className="text-white" /></span>
-                        <div>
-                          <div className="font-semibold leading-tight">
-                            {language === 'ru' ? 'Для инвесторов' : language === 'kz' ? 'Инвесторларға' : language === 'uz' ? "Investorlar uchun" : 'For Investors'}
-                          </div>
-                          <div className="text-xs text-white/50 mt-0.5">
-                            {language === 'ru' ? 'Статусы клиник' : language === 'kz' ? 'Клиника статустары' : language === 'uz' ? "Klinika holatlari" : 'Clinic statuses'}
-                          </div>
-                        </div>
-                      </Link>
                     </div>
                   )}
                 </div>

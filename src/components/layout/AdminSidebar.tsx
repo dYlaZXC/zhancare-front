@@ -19,7 +19,6 @@ import {
   faUser,
   faRobot,
   faChevronRight,
-  faFunnelDollar,
   faUserShield,
   faHospital,
   faComments,
@@ -73,17 +72,7 @@ const TelegramIcon = ({ className }: { className?: string }) => (
 );
 
 const adminMenu: MenuItem[] = [
-  {
-    id: "overview",
-    icon: faGaugeHigh,
-    title: "Обзор",
-    color: "#a855f7",
-    superOnly: true,
-    children: [
-      { id: "dashboard", icon: faGaugeHigh, title: "Дашборд", color: "#a855f7", href: "/admin/dashboard" },
-      { id: "pipeline", icon: faFunnelDollar, title: "Pipeline клиник", color: "#10b981", href: "/admin/pipeline" },
-    ],
-  },
+  { id: "dashboard", icon: faGaugeHigh, title: "Дашборд", color: "#a855f7", href: "/admin/dashboard", superOnly: true },
   { id: "profile", icon: faUser, title: "Профиль", color: "#3772ff", href: "/admin/profile" },
   { id: "tasks", icon: faListCheck, title: "Задачи", color: "#059669", href: "/admin/tasks" },
   { id: "path-of-patient", icon: faHandshake, title: "Путь пациента", color: "#3772ff", href: "/admin/path-of-patient", clinicOnly: true },
@@ -145,6 +134,19 @@ const adminMenu: MenuItem[] = [
   },
 ];
 
+// Maps a top-level adminMenu item id to the clinic-navigation flag that can
+// hide it for that clinic's own admins (see ClinicNavigationPanel.tsx).
+// "profile" is intentionally absent — always visible, it's the admin's own
+// account page.
+const NAV_FLAG_BY_ID: Record<string, string> = {
+  tasks: "nav_tasks_enabled",
+  "path-of-patient": "nav_path_of_patient_enabled",
+  management: "nav_management_enabled",
+  analytics: "nav_analytics_enabled",
+  "ai-agents": "nav_ai_agents_enabled",
+  messengers: "nav_messengers_enabled",
+};
+
 export interface AdminSidebarProps {
     isOpen: boolean;
     onClose: () => void;
@@ -198,8 +200,22 @@ export const AdminSidebar = ({
 
   if (!user) return null;
 
+  // Per-clinic sidebar visibility, set by a super admin per clinic (see
+  // ClinicNavigationPanel.tsx / GET /clinics/<id>/navigation/). Only applies
+  // to clinic-scoped admins — super admins have no `clinic` here, so this
+  // lookup is always undefined for them and they keep seeing everything via
+  // the existing superOnly logic. Missing/undefined defaults to visible
+  // (matches the backend's default=True and covers sessions fetched before
+  // this field existed).
+  const clinicNav = (user?.profiles?.admin as any)?.clinic as Record<string, boolean> | null | undefined;
+  const isNavEnabled = (id: string) => {
+    const field = NAV_FLAG_BY_ID[id];
+    if (!field || !clinicNav) return true;
+    return clinicNav[field] !== false;
+  };
+
   const visibleMenu = adminMenu
-    .filter(item => (!item.superOnly || isSuperAdmin) && (!item.clinicOnly || !isSuperAdmin))
+    .filter(item => (!item.superOnly || isSuperAdmin) && (!item.clinicOnly || !isSuperAdmin) && isNavEnabled(item.id))
     .map(item =>
       item.children
         ? { ...item, children: item.children.filter(c => !c.superOnly || isSuperAdmin) }

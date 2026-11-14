@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import { api } from "@/utils/api";
 import { phoneEntryToString } from "@/utils/phoneFormat";
 import ClinicModulesPanel from "./ClinicModulesPanel";
+import ClinicNavigationPanel from "./ClinicNavigationPanel";
 import { KPICard } from "./dashboardUI";
 import {
   Search,
@@ -203,6 +204,10 @@ const ClinicFormModal = ({
     return { ...EMPTY_FORM };
   });
   const [saving, setSaving] = useState(false);
+  // Tabs only make sense in edit mode — create has nothing to put on a
+  // second tab yet (modules/navigation toggle a clinic that doesn't exist
+  // until after the first save).
+  const [activeTab, setActiveTab] = useState<"info" | "access">("info");
 
   const set = <K extends keyof ClinicFormData>(k: K, v: ClinicFormData[K]) =>
     setForm((prev) => ({ ...prev, [k]: v }));
@@ -285,8 +290,33 @@ const ClinicFormModal = ({
           </button>
         </div>
 
+        {/* Tabs (edit mode only — see activeTab's comment) */}
+        {mode === "edit" && (
+          <div className="flex gap-1 px-6 pt-4 border-b border-gray-100">
+            {([
+              { key: "info", label: "Основная информация" },
+              { key: "access", label: "Модули и доступы" },
+            ] as const).map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveTab(tab.key)}
+                className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                  activeTab === tab.key
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {(mode === "create" || activeTab === "info") && (
+          <>
           {/* Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -407,10 +437,19 @@ const ClinicFormModal = ({
               />
             </div>
           </div>
+          </>
+          )}
 
-          {/* Modules — only meaningful once the clinic exists (toggle keys
-              off existing per-clinic config rows), so edit mode only. */}
-          {mode === "edit" && initial && <ClinicModulesPanel clinicId={initial.id} />}
+          {/* Modules/navigation — only meaningful once the clinic exists
+              (toggle keys off existing per-clinic config rows), so edit
+              mode only. Each panel saves itself on every toggle — no
+              submit button needed on this tab. */}
+          {mode === "edit" && activeTab === "access" && initial && (
+            <>
+              <ClinicModulesPanel clinicId={initial.id} />
+              <ClinicNavigationPanel clinicId={initial.id} />
+            </>
+          )}
 
           {/* Actions */}
           <div className="flex gap-3 pt-2">
@@ -419,22 +458,24 @@ const ClinicFormModal = ({
               onClick={onClose}
               className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
             >
-              Отмена
+              {mode === "edit" && activeTab === "access" ? "Закрыть" : "Отмена"}
             </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex-1 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {saving ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : mode === "create" ? (
-                <Building2 className="w-4 h-4" />
-              ) : (
-                <CheckCircle className="w-4 h-4" />
-              )}
-              {saving ? "Сохранение..." : mode === "create" ? "Создать" : "Сохранить"}
-            </button>
+            {(mode === "create" || activeTab === "info") && (
+              <button
+                type="submit"
+                disabled={saving}
+                className="flex-1 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {saving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : mode === "create" ? (
+                  <Building2 className="w-4 h-4" />
+                ) : (
+                  <CheckCircle className="w-4 h-4" />
+                )}
+                {saving ? "Сохранение..." : mode === "create" ? "Создать" : "Сохранить"}
+              </button>
+            )}
           </div>
         </form>
       </motion.div>
@@ -755,124 +796,65 @@ export default function ClinicManagement() {
   ];
 
   return (
-    <div
-      className="min-h-screen -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)]"
-      style={{ background: "#f8fafc" }}
-    >
-      {/* ── Gradient Hero Header ──────────────────────────────────────── */}
-      <div
-        className="relative overflow-hidden"
-        style={{
-          background:
-            "linear-gradient(135deg, #12263a 0%, #1e263e 30%, #29358f 70%, #3772ff 100%)",
-        }}
-      >
-        {/* Decorative blobs */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div
-            className="absolute -top-16 -right-16 w-64 h-64 rounded-full blur-3xl opacity-20"
-            style={{
-              background: "radial-gradient(circle, #3772ff 0%, transparent 70%)",
-            }}
-          />
-          <div
-            className="absolute bottom-0 left-1/3 w-48 h-48 rounded-full blur-2xl opacity-10"
-            style={{
-              background: "radial-gradient(circle, #8b5cf6 0%, transparent 70%)",
-            }}
-          />
-        </div>
-
-        <div className="relative z-10 px-6 pt-8 pb-6 lg:px-10">
-          {/* Title row */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-4">
-              <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
-                style={{
-                  background: "rgba(255,255,255,0.15)",
-                  border: "1px solid rgba(255,255,255,0.2)",
-                }}
-              >
-                <Building2 className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-extrabold text-white leading-tight">
-                  Управление клиниками
-                </h1>
-                <p
-                  className="text-sm mt-0.5"
-                  style={{ color: "rgba(255,255,255,0.6)" }}
-                >
-                  Создание и редактирование клиник
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <button
-                onClick={fetchClinics}
-                className="p-2.5 rounded-xl transition-all"
-                style={{
-                  background: "rgba(255,255,255,0.1)",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = "rgba(255,255,255,0.2)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "rgba(255,255,255,0.1)")
-                }
-                title="Обновить"
-              >
-                <RefreshCw className="w-4 h-4 text-white" />
-              </button>
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setShowCreate(true)}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-semibold shadow-lg transition-all"
-                style={{ background: "rgba(255,255,255,0.95)", color: "#1e263e" }}
-              >
-                <Plus className="w-4 h-4" />
-                Создать клинику
-              </motion.button>
-            </div>
+    <div className="w-full">
+      {/* ── Header, same plain-light pattern as TasksView ───────────────── */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold mb-2" style={{ color: "#1e263e" }}>
+              Управление клиниками
+            </h1>
+            <p className="text-gray-600">Создание и редактирование клиник</p>
           </div>
-
-          {/* Stats strip */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {stats.map((stat) => (
-              <KPICard
-                key={stat.label}
-                label={stat.label}
-                value={String(stat.value)}
-                icon={stat.icon}
-                color={stat.color}
-              />
-            ))}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={fetchClinics}
+              className="p-2.5 rounded-xl border-2 border-gray-200 hover:bg-gray-50 transition-colors"
+              title="Обновить"
+            >
+              <RefreshCw className="w-4 h-4 text-gray-600" />
+            </button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowCreate(true)}
+              className="flex items-center gap-2 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+              style={{ background: "linear-gradient(135deg, #3772ff 0%, #2956bf 100%)" }}
+            >
+              <Plus className="w-5 h-5" />
+              Создать клинику
+            </motion.button>
           </div>
         </div>
-      </div>
 
-      {/* ── Filters Bar ───────────────────────────────────────────────── */}
-      <div className="px-6 lg:px-10 py-4 bg-white border-b border-gray-100 shadow-sm">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Поиск по названию или адресу..."
-              className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-2xl text-sm focus:outline-none focus:border-blue-400 transition-colors"
+        {/* Stats strip */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          {stats.map((stat) => (
+            <KPICard
+              key={stat.label}
+              label={stat.label}
+              value={String(stat.value)}
+              icon={stat.icon}
+              color={stat.color}
             />
-          </div>
+          ))}
+        </div>
+
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Поиск по названию или адресу..."
+            className="w-full pl-12 pr-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+          />
         </div>
       </div>
 
       {/* ── Table Area ────────────────────────────────────────────────── */}
-      <div className="px-6 lg:px-10 py-6">
+      <div>
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24 gap-3">
             <Loader2

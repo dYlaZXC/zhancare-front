@@ -92,24 +92,22 @@ export default function SuperAdminDashboard({ user }: { user: User }) {
   return (
     <div className="space-y-6 pb-12">
 
-      {/* Header */}
-      <div className="rounded-2xl p-6 text-white" style={{ background: BRAND }}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-black">Платформа ZhanCare.AI</h1>
-            <p className="text-blue-200 text-sm mt-0.5">
-              Обновлено: {lastUpdated ? lastUpdated.toLocaleTimeString("ru-RU") : "—"} · автообновление 30с
-            </p>
-          </div>
-          <button
-            onClick={() => load(true)}
-            disabled={refreshing}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 hover:bg-white/20 transition-colors text-sm font-medium text-white"
-          >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
-            Обновить
-          </button>
+      {/* Header, same plain-light pattern as TasksView/ClinicManagement */}
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <h1 className="text-3xl font-bold mb-2" style={{ color: "#1e263e" }}>Платформа ZhanCare.AI</h1>
+          <p className="text-gray-600">
+            Обновлено: {lastUpdated ? lastUpdated.toLocaleTimeString("ru-RU") : "—"} · автообновление 30с
+          </p>
         </div>
+        <button
+          onClick={() => load(true)}
+          disabled={refreshing}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-gray-200 hover:bg-gray-50 transition-colors text-sm font-medium text-gray-600 disabled:opacity-60"
+        >
+          <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+          Обновить
+        </button>
       </div>
 
       {/* KPI Cards */}
