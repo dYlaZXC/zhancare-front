@@ -13,6 +13,7 @@ import {
   faCalendar,
   faFileMedical,
   faHistory,
+  faIdCard,
   faSignOutAlt,
   faTimes,
   faBolt,
@@ -37,25 +38,25 @@ type MenuItem = { id: string; icon: any; title: string; color: string; href?: st
 
 const SIDEBAR_TEXT = {
   ru: {
-    profile: "Профиль", documents: "Документы", video: "Услуги", activity: "Активность",
+    profile: "Профиль", documents: "Документы", video: "Услуги", activity: "Активность", subscriptions: "Абонементы",
     closeMenu: "Закрыть меню навигации", logout: "Выйти", logoutAria: "Выйти из системы",
     loggedOutToast: "Вы успешно вышли!",
     roles: { admin: "Администратор", academy_admin: "Администратор академии", doctor: "Доктор", nurse: "Медсестра", teacher: "Преподаватель", patient: "Пациент", student: "Студент" },
   },
   kz: {
-    profile: "Профиль", documents: "Құжаттар", video: "Қызметтер", activity: "Белсенділік",
+    profile: "Профиль", documents: "Құжаттар", video: "Қызметтер", activity: "Белсенділік", subscriptions: "Абонементтер",
     closeMenu: "Навигация мәзірін жабу", logout: "Шығу", logoutAria: "Жүйеден шығу",
     loggedOutToast: "Сіз сәтті шықтыңыз!",
     roles: { admin: "Әкімші", academy_admin: "Академия әкімшісі", doctor: "Дәрігер", nurse: "Медбике", teacher: "Оқытушы", patient: "Пациент", student: "Студент" },
   },
   en: {
-    profile: "Profile", documents: "Documents", video: "Services", activity: "Activity",
+    profile: "Profile", documents: "Documents", video: "Services", activity: "Activity", subscriptions: "Subscriptions",
     closeMenu: "Close navigation menu", logout: "Log out", logoutAria: "Log out of the system",
     loggedOutToast: "You have successfully logged out!",
     roles: { admin: "Administrator", academy_admin: "Academy Administrator", doctor: "Doctor", nurse: "Nurse", teacher: "Teacher", patient: "Patient", student: "Student" },
   },
   uz: {
-    profile: "Profil", documents: "Hujjatlar", video: "Xizmatlar", activity: "Faollik",
+    profile: "Profil", documents: "Hujjatlar", video: "Xizmatlar", activity: "Faollik", subscriptions: "Obunalar",
     closeMenu: "Navigatsiya menyusini yopish", logout: "Chiqish", logoutAria: "Tizimdan chiqish",
     loggedOutToast: "Tizimdan muvaffaqiyatli chiqdingiz!",
     roles: { admin: "Administrator", academy_admin: "Akademiya administratori", doctor: "Shifokor", nurse: "Hamshira", teacher: "O'qituvchi", patient: "Bemor", student: "Talaba" },
@@ -80,6 +81,7 @@ export const Sidebar = ({
     { id: "documents", icon: faFileMedical, title: t.documents, color: "#12263a", href: "/patient/documents" },
     { id: "video",     icon: faStethoscope, title: t.video,     color: "#3267e6", href: "/patient/video"     },
     { id: "activity",  icon: faHistory,     title: t.activity,  color: "#29358f", href: "/patient/activity"  },
+    { id: "subscriptions", icon: faIdCard, title: t.subscriptions, color: "#ec4899", href: "/patient/subscriptions" },
   ];
   const userRole = computeRole(user?.roles);
   const pathname = usePathname();

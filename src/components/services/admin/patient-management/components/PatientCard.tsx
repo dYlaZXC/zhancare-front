@@ -4,7 +4,7 @@ import type { ComponentType } from "react";
 import { motion } from "framer-motion";
 import {
   Mail, Phone, MapPin, Building, Edit2, Trash2,
-  Stethoscope, Home, Clock, FolderOpen, Cake, Briefcase, Globe, Heart, User,
+  Stethoscope, Home, Clock, FolderOpen, Cake, Briefcase, Globe, Heart, User, IdCard,
 } from "lucide-react";
 import type { Patient } from "../types/patientTypes";
 import { ContactMenu } from "./ContactMenu";
@@ -57,6 +57,7 @@ export function PatientCard({
   onEdit,
   onDelete,
   onDocs,
+  onSubscriptions,
 }: {
   patient: Patient;
   initial: boolean;
@@ -64,6 +65,7 @@ export function PatientCard({
   onEdit: (patient: Patient) => void;
   onDelete: (patient: Patient) => void;
   onDocs: (patient: Patient) => void;
+  onSubscriptions?: (patient: Patient) => void;
 }) {
   return (
     <motion.div
@@ -193,6 +195,19 @@ export function PatientCard({
           >
             <FolderOpen className="w-5 h-5" />
           </motion.button>
+
+          {/* Subscriptions Button */}
+          {onSubscriptions && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => onSubscriptions(patient)}
+              className="p-2 rounded-xl bg-pink-100 text-pink-600 hover:bg-pink-200 transition-colors"
+              title="Абонементы"
+            >
+              <IdCard className="w-5 h-5" />
+            </motion.button>
+          )}
 
           {/* Edit Button */}
           <motion.button

@@ -15,6 +15,7 @@ import { PatientCard } from "./patient-management/components/PatientCard";
 import { PatientFormModal } from "./patient-management/modals/PatientFormModal";
 import { DeletePatientModal } from "./patient-management/modals/DeletePatientModal";
 import { PatientClinicLinkModal } from "./patient-management/modals/PatientClinicLinkModal";
+import { SellSubscriptionModal } from "./subscriptions/SellSubscriptionModal";
 
 interface PatientManagementProps {
   user: any;
@@ -31,6 +32,7 @@ export default function PatientManagement({ user }: PatientManagementProps) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [docsPatient, setDocsPatient] = useState<Patient | null>(null);
+  const [subscriptionsPatient, setSubscriptionsPatient] = useState<Patient | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [deletingPatient, setDeletingPatient] = useState<Patient | null>(null);
@@ -256,6 +258,7 @@ export default function PatientManagement({ user }: PatientManagementProps) {
                   onEdit={handleEditClick}
                   onDelete={handleDeleteClick}
                   onDocs={setDocsPatient}
+                  onSubscriptions={setSubscriptionsPatient}
                 />
               ))}
             </AnimatePresence>
@@ -336,6 +339,14 @@ export default function PatientManagement({ user }: PatientManagementProps) {
           patientName={`${docsPatient.first_name} ${docsPatient.last_name}`.trim()}
           isOpen={!!docsPatient}
           onClose={() => setDocsPatient(null)}
+        />
+      )}
+
+      {subscriptionsPatient && (
+        <SellSubscriptionModal
+          initialPatient={subscriptionsPatient}
+          onClose={() => setSubscriptionsPatient(null)}
+          onSold={() => setSubscriptionsPatient(null)}
         />
       )}
     </div>

@@ -32,6 +32,10 @@ import {
   faHandshake,
   faHistory,
   faChartBar,
+  faIdCard,
+  faIdBadge,
+  faTags,
+  faPeopleGroup,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useState, useEffect, useRef, type CSSProperties } from "react";
@@ -107,6 +111,21 @@ const adminMenu: MenuItem[] = [
       { id: "patients", icon: faUserMd, title: "Пациенты", color: "#10b981", href: "/admin/patients" },
       { id: "schedule", icon: faCalendarCheck, title: "Расписание", color: "#295bbf", href: "/admin/schedule" },
       { id: "warehouse", icon: faWarehouse, title: "Склад", color: "#78716c", href: "/admin/warehouse" },
+    ],
+  },
+  {
+    // Абонементы/групповые занятия — clinic-scoped, same rationale as
+    // "Управление" (a super admin has no clinic of their own to sell to).
+    id: "subscriptions",
+    icon: faIdCard,
+    title: "Абонементы",
+    color: "#ec4899",
+    clinicOnly: true,
+    children: [
+      { id: "subscriptions-overview", icon: faIdCard, title: "Обзор", color: "#ec4899", href: "/admin/subscriptions" },
+      { id: "subscription-plans", icon: faTags, title: "Тарифы", color: "#f59e0b", href: "/admin/subscriptions/plans" },
+      { id: "patient-subscriptions", icon: faIdBadge, title: "Абонементы пациентов", color: "#3772ff", href: "/admin/subscriptions/patients" },
+      { id: "class-sessions", icon: faPeopleGroup, title: "Занятия", color: "#10b981", href: "/admin/subscriptions/sessions" },
     ],
   },
   {
