@@ -36,6 +36,7 @@ import {
   faIdBadge,
   faTags,
   faPeopleGroup,
+  faQrcode,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useState, useEffect, useRef, type CSSProperties } from "react";
@@ -126,6 +127,7 @@ const adminMenu: MenuItem[] = [
       { id: "subscription-plans", icon: faTags, title: "Тарифы", color: "#f59e0b", href: "/admin/subscriptions/plans" },
       { id: "patient-subscriptions", icon: faIdBadge, title: "Абонементы пациентов", color: "#3772ff", href: "/admin/subscriptions/patients" },
       { id: "class-sessions", icon: faPeopleGroup, title: "Занятия", color: "#10b981", href: "/admin/subscriptions/sessions" },
+      { id: "subscriptions-checkin", icon: faQrcode, title: "QR Check-in", color: "#0ea5e9", href: "/admin/subscriptions/checkin" },
     ],
   },
   {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Check, XCircle, UserPlus } from "lucide-react";
+import { X, Check, XCircle, UserPlus, QrCode } from "lucide-react";
 import { api } from "@/utils/api";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -83,7 +83,12 @@ export function ClassSessionDetailModal({
         <div className="space-y-1.5 mb-4">
           {active.map((p: any) => (
             <div key={p.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50">
-              <span className="text-sm text-gray-800">{p.patient_name}</span>
+              <span className="text-sm text-gray-800 flex items-center gap-1.5">
+                {p.patient_name}
+                {p.checked_in && (
+                  <QrCode className="w-3.5 h-3.5 text-emerald-500" aria-label="Отметился по QR" />
+                )}
+              </span>
               {!isDone ? (
                 <div className="flex gap-1.5">
                   <button

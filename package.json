@@ -51,6 +51,7 @@
     "marked": "^16.1.2",
     "next": "^16.1.1",
     "prismjs": "^1.30.0",
+    "qrcode.react": "^4.2.0",
     "react": "^18",
     "react-countup": "^6.5.3",
     "react-dom": "^18",
