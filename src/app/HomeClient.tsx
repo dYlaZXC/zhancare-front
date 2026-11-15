@@ -17,6 +17,7 @@ import { useAuth } from "@/context/AuthContext";
 import { DoctorsCarousel } from "@/sections/DoctorsCarousel";
 import { ChatSection } from "@/sections/ChatSection";
 import { Traction } from "@/sections/Traction";
+import InstallAppSection from "@/sections/InstallAppSection";
 import { api } from "@/utils/api";
 
 function getDeviceInfo(): string {
@@ -88,6 +89,7 @@ export default function HomeClient() {
   return (
     <div>
       <Hero />
+      <InstallAppSection />
       {/* <ChatSection /> */}
       <Services />
       <Features />

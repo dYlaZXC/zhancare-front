@@ -434,5 +434,26 @@
         }
       ]
     }
+  },
+  "installApp": {
+    "badge": "Install the app",
+    "title": "ZhanCare.AI on your phone",
+    "subtitle": "Quick access without a browser, an icon on your home screen, and it works just like a regular app — installing takes under a minute.",
+    "installNow": "Install now",
+    "alreadyInstalled": "The app is already installed on this device",
+    "androidTabLabel": "Android",
+    "iosTabLabel": "iPhone",
+    "androidSteps": [
+      "Open the site in Chrome on your phone.",
+      "Tap the ⋮ icon (three dots) in the top-right corner.",
+      "Choose \"Install app\" or \"Add to Home screen\".",
+      "Confirm — the ZhanCare.AI icon will appear on your home screen."
+    ],
+    "iosSteps": [
+      "Open the site in Safari on your iPhone — other browsers can't install it.",
+      "Tap the Share icon (square with an arrow up) at the bottom of the screen.",
+      "Scroll down and choose \"Add to Home Screen\".",
+      "Tap \"Add\" in the top-right corner."
+    ]
   }
 }

@@ -434,5 +434,26 @@
         }
       ]
     }
+  },
+  "installApp": {
+    "badge": "Ilovani o'rnating",
+    "title": "Telefoningizdagi ZhanCare.AI",
+    "subtitle": "Brauzersiz tezkor kirish, bosh ekranda belgi va oddiy ilova kabi ishlash — o'rnatish bir daqiqadan kam vaqt oladi.",
+    "installNow": "Hozir o'rnatish",
+    "alreadyInstalled": "Ilova bu qurilmaga allaqachon o'rnatilgan",
+    "androidTabLabel": "Android",
+    "iosTabLabel": "iPhone",
+    "androidSteps": [
+      "Saytni telefoningizda Chrome orqali oching.",
+      "Yuqori o'ng burchakdagi ⋮ (uch nuqta) belgisini bosing.",
+      "«Ilovani o'rnatish» yoki «Bosh ekranga qo'shish»ni tanlang.",
+      "Tasdiqlang — ZhanCare.AI belgisi bosh ekranda paydo bo'ladi."
+    ],
+    "iosSteps": [
+      "Saytni iPhone'da Safari orqali oching — boshqa brauzerlar o'rnatishni qo'llab-quvvatlamaydi.",
+      "Ekranning pastki qismidagi «Ulashish» belgisini (yuqoriga strelkali kvadrat) bosing.",
+      "Pastga tushib, «Bosh ekranga qo'shish»ni tanlang.",
+      "Yuqori o'ng burchakdagi «Qo'shish» tugmasini bosing."
+    ]
   }
 }
