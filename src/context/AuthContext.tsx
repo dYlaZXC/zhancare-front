@@ -164,11 +164,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setSessions([]);
     setAuthHeader(null);
     document.cookie = "zha_auth=; path=/; max-age=0";
-    // Defense in depth: the service worker's runtime caches never hold
-    // personal data by construction (see src/sw.ts), but force-clear them
-    // anyway so that invariant isn't the only thing standing between a
-    // shared/public device and the previous user's cached responses.
-    navigator.serviceWorker?.controller?.postMessage({ type: "ZC_CLEAR_RUNTIME_CACHES" });
+    // Deliberately NOT clearing the service worker's caches here: they only
+    // ever hold public, versioned static assets (JS/CSS/fonts/icons — see
+    // src/sw.ts's runtimeCaching allowlist), never a personalized response,
+    // so there is nothing to clean up on logout and doing it anyway would
+    // just force a full re-download of the app shell on every next login.
     window.location.href = "/login";
   }, [setAuthHeader]);
 

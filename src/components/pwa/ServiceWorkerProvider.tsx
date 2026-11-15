@@ -27,7 +27,12 @@ function UpdatePrompt() {
       if (toastShownRef.current) return;
       toastShownRef.current = true;
       toast.info(
-        "📲 Доступна новая версия приложения. Обновить сейчас?",
+        // skipWaiting() activates the new worker for every open tab in this
+        // scope at once, not just the one that confirms — including a tab
+        // mid-consultation. There's no way to scope it to "this tab only",
+        // so for this first version the toast just says so and lets the
+        // person decide when it's safe, rather than updating silently.
+        "📲 Доступна новая версия приложения. Обновление применится во всех открытых вкладках — если где-то идёт консультация, лучше обновить после её завершения. Обновить сейчас?",
         {
           autoClose: false,
           closeOnClick: false,

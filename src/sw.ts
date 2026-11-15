@@ -19,10 +19,13 @@
  * network fetch — true NetworkOnly by construction, not by a strategy
  * that still has to be trusted to behave.
  *
- * Precaching of prerendered HTML is also disabled at build time
- * (`precachePrerendered: false` in next.config.mjs) for the same reason:
- * a precached entry is served cache-first regardless of runtimeCaching
- * rules, so it is the one thing that must never include a page.
+ * Precaching (self.__SW_MANIFEST below) only ever contains the webpack
+ * client build's own emitted assets (JS/CSS/media under /_next/static/) —
+ * verified by inspecting the built public/sw.js: no page HTML, RSC or API
+ * route ever ends up in it, since those aren't part of that asset graph in
+ * the first place. next.config.mjs additionally excludes imported
+ * marketing images/video from it (see the `exclude` option there) so a
+ * first install doesn't have to pull the whole landing page's media.
  */
 import {
   CacheableResponsePlugin,
@@ -100,21 +103,3 @@ const serwist = new Serwist({
 });
 
 serwist.addEventListeners();
-
-// Defense in depth for logout (see AuthContext.clearLocalSessionAndRedirect):
-// the runtime caches above never hold personal data by construction, but
-// this still lets the page force-clear them on logout without relying on
-// that invariant never changing.
-self.addEventListener("message", (event: ExtendableMessageEvent) => {
-  if (event.data?.type === "ZC_CLEAR_RUNTIME_CACHES") {
-    event.waitUntil(
-      caches.keys().then((names) =>
-        Promise.all(
-          names
-            .filter((name) => name.startsWith("zc-"))
-            .map((name) => caches.delete(name))
-        )
-      )
-    );
-  }
-});
