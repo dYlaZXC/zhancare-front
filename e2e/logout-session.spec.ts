@@ -46,6 +46,22 @@ async function loginViaApi(email: string) {
   return res.json() as Promise<{ access_token: string; refresh_token: string; user: unknown }>;
 }
 
+/** Revokes a session server-side via the real /auth/logout/ endpoint without
+ * going through the browser — used to simulate "this session died on the
+ * server" (expired/invalidated elsewhere) while the browser still has the
+ * now-stale tokens sitting in localStorage, as opposed to the user clicking
+ * logout themselves. */
+async function revokeViaApi(data: { access_token: string; refresh_token: string }) {
+  await fetch(`${BACKEND_URL}/auth/logout/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${data.access_token}`,
+    },
+    body: JSON.stringify({ refresh_token: data.refresh_token }),
+  });
+}
+
 /** Opens a new tab already authenticated as the given API login response —
  * mirrors what AuthContext.loginUser() writes to localStorage/cookies, so
  * the page hydrates as logged-in on first paint without going through the
@@ -144,5 +160,27 @@ test.describe("Logout / session revocation", () => {
     // /login) or restores a frozen snapshot (bfcache), the authenticated
     // sidebar/logout control must not be visible again.
     await expect(logoutButton(page)).not.toBeVisible({ timeout: 5_000 });
+  });
+
+  test("a session revoked elsewhere (expired/invalidated) auto-logs-out to /login", async ({
+    context,
+  }) => {
+    const data = await loginViaApi(PATIENT_EMAIL);
+    // Simulate the session dying on its own (expiry, revoked from another
+    // device, admin-forced logout, etc.) — NOT the user clicking logout in
+    // this browser. The tokens below are now stale from this tab's point of
+    // view, exactly like a long-idle tab whose refresh token finally expired.
+    await revokeViaApi(data);
+
+    const page = await openAuthenticatedTab(context, data);
+    // AuthContext's init effect fetches /user-profile/profile/ with the
+    // stale access token, gets 401, the interceptor's refresh attempt with
+    // the revoked refresh token fails too, and dispatches `auth:logout` —
+    // which must now redirect here (P1.1), not just blank out the sidebar.
+    await page.goto("/patient/profile", { waitUntil: "load" });
+    await page.waitForURL(/\/login/, { timeout: 15_000 });
+
+    // Must not leave the cabinet mounted waiting to be noticed.
+    await expect(logoutButton(page)).not.toBeVisible();
   });
 });

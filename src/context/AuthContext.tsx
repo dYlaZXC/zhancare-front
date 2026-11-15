@@ -151,43 +151,59 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, []);
 
-  // Listen for logout events from API interceptor
+  // Shared tail end of every "this session is over" path (manual logout,
+  // another tab logging out, or the interceptor discovering the refresh
+  // token itself is dead) — clear React state, drop the middleware's
+  // presence cookie, and hard-navigate to /login. Never calls the server:
+  // callers that still have a live session to revoke do that themselves
+  // first (see logoutUser()); the other two paths above only ever run once
+  // there is nothing left to revoke.
+  const clearLocalSessionAndRedirect = useCallback(() => {
+    setUser(null);
+    setToken(null);
+    setSessions([]);
+    setAuthHeader(null);
+    document.cookie = "zha_auth=; path=/; max-age=0";
+    window.location.href = "/login";
+  }, [setAuthHeader]);
+
+  // Listen for logout events from the API interceptor's own refresh-failure
+  // path — fires when the refresh token itself is expired/invalid, i.e. a
+  // session that died on its own rather than a user clicking "Выйти". No
+  // server call belongs here: by the time this fires, refreshAccessToken()
+  // has already tried and failed, so there is no live session left to
+  // revoke. Still needs the same end state as a manual logout — otherwise a
+  // silently-expired session would leave the cabinet sitting open with
+  // whatever medical data it last fetched, waiting for the user to notice.
   useEffect(() => {
     const handleLogoutEvent = (event: CustomEvent) => {
-      setUser(null);
-      setToken(null);
-      setSessions([]);
-      setAuthHeader(null);
-
       if (event.detail?.message) {
         toast.warning(event.detail.message);
       }
+      clearLocalSessionAndRedirect();
     };
 
     window.addEventListener('auth:logout', handleLogoutEvent as EventListener);
     return () => window.removeEventListener('auth:logout', handleLogoutEvent as EventListener);
-  }, [setAuthHeader]);
+  }, [clearLocalSessionAndRedirect]);
 
   // Cross-tab logout sync. localStorage.removeItem() fires a native
   // `storage` event in every OTHER same-origin tab automatically (never in
   // the tab that made the change — the browser guarantees that), so a tab
   // that didn't initiate the logout learns about it here. It must NOT POST
-  // /auth/logout/ again — the tab that actually logged out already revoked
-  // the server-side session; this just mirrors local state and leaves.
+  // /auth/logout/ again — whichever tab (or the interceptor) triggered the
+  // real logout already revoked the server-side session, or found there was
+  // none left to revoke; this just mirrors local state and leaves.
   useEffect(() => {
     const handleStorageLogout = (event: StorageEvent) => {
       if (event.key === ACCESS_TOKEN_KEY && event.newValue === null) {
-        setUser(null);
-        setToken(null);
-        setSessions([]);
-        setAuthHeader(null);
-        window.location.href = "/login";
+        clearLocalSessionAndRedirect();
       }
     };
 
     window.addEventListener('storage', handleStorageLogout);
     return () => window.removeEventListener('storage', handleStorageLogout);
-  }, [setAuthHeader]);
+  }, [clearLocalSessionAndRedirect]);
 
   // Keep token React state in sync when api interceptor silently refreshes the token
   useEffect(() => {
@@ -282,14 +298,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.warn("logoutUser: server-side session revoke failed; clearing local session only", err);
     } finally {
       clearTokens();
-      setUser(null);
-      setToken(null);
-      setSessions([]);
-      setAuthHeader(null);
-      // Clear the non-httpOnly presence flag the middleware checks; the
-      // real httpOnly zha_access/zha_refresh cookies are cleared by the
-      // server response above.
-      document.cookie = "zha_auth=; path=/; max-age=0";
 
       if (showMessage) {
         toast[serverRevoked ? "success" : "warning"](
@@ -299,9 +307,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         );
       }
 
-      window.location.href = "/login";
+      // Clears React state, drops the non-httpOnly presence flag the
+      // middleware checks (the real httpOnly zha_access/zha_refresh cookies
+      // were cleared by the server response above), and hard-navigates to
+      // /login.
+      clearLocalSessionAndRedirect();
     }
-  }, [setAuthHeader]);
+  }, [clearLocalSessionAndRedirect]);
 
   // Fetch all sessions
   const fetchSessions = useCallback(async () => {
