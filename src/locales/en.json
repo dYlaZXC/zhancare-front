@@ -455,5 +455,23 @@
       "Scroll down and choose \"Add to Home Screen\".",
       "Tap \"Add\" in the top-right corner."
     ]
+  },
+  "popularQueries": {
+    "badge": "Popular queries",
+    "symptomsLabel": "Symptoms",
+    "specialistsLabel": "Specialists",
+    "symptoms": [
+      { "href": "/symptoms/golovnaya-bol", "label": "Headache" },
+      { "href": "/symptoms/bol-v-grudi", "label": "Chest pain" },
+      { "href": "/symptoms/temperatura", "label": "Fever" },
+      { "href": "/symptoms/bol-v-zhivote", "label": "Stomach pain" }
+    ],
+    "specialists": [
+      { "href": "/specialists/kardiolog", "label": "Cardiologist" },
+      { "href": "/specialists/pediatr", "label": "Pediatrician" },
+      { "href": "/specialists/terapevt", "label": "General practitioner" },
+      { "href": "/specialists/nevrolog", "label": "Neurologist" },
+      { "href": "/specialists/ginekolog", "label": "Gynecologist" }
+    ]
   }
 }

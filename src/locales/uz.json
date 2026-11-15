@@ -455,5 +455,23 @@
       "Pastga tushib, «Bosh ekranga qo'shish»ni tanlang.",
       "Yuqori o'ng burchakdagi «Qo'shish» tugmasini bosing."
     ]
+  },
+  "popularQueries": {
+    "badge": "Mashhur so'rovlar",
+    "symptomsLabel": "Simptomlar",
+    "specialistsLabel": "Mutaxassislar",
+    "symptoms": [
+      { "href": "/symptoms/golovnaya-bol", "label": "Bosh og'rig'i" },
+      { "href": "/symptoms/bol-v-grudi", "label": "Ko'krak og'rig'i" },
+      { "href": "/symptoms/temperatura", "label": "Harorat" },
+      { "href": "/symptoms/bol-v-zhivote", "label": "Qorin og'rig'i" }
+    ],
+    "specialists": [
+      { "href": "/specialists/kardiolog", "label": "Kardiolog" },
+      { "href": "/specialists/pediatr", "label": "Pediatr" },
+      { "href": "/specialists/terapevt", "label": "Terapevt" },
+      { "href": "/specialists/nevrolog", "label": "Nevrolog" },
+      { "href": "/specialists/ginekolog", "label": "Ginekolog" }
+    ]
   }
 }

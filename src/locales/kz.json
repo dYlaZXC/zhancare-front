@@ -455,5 +455,23 @@
       "Төмен түсіп, «Басты экранға қосу» дегенді таңдаңыз.",
       "Жоғарғы оң жақ бұрыштағы «Қосу» түймесін басыңыз."
     ]
+  },
+  "popularQueries": {
+    "badge": "Танымал сұраулар",
+    "symptomsLabel": "Симптомдар",
+    "specialistsLabel": "Мамандар",
+    "symptoms": [
+      { "href": "/symptoms/golovnaya-bol", "label": "Бас ауруы" },
+      { "href": "/symptoms/bol-v-grudi", "label": "Кеудедегі ауырсыну" },
+      { "href": "/symptoms/temperatura", "label": "Температура" },
+      { "href": "/symptoms/bol-v-zhivote", "label": "Іштегі ауырсыну" }
+    ],
+    "specialists": [
+      { "href": "/specialists/kardiolog", "label": "Кардиолог" },
+      { "href": "/specialists/pediatr", "label": "Педиатр" },
+      { "href": "/specialists/terapevt", "label": "Терапевт" },
+      { "href": "/specialists/nevrolog", "label": "Невролог" },
+      { "href": "/specialists/ginekolog", "label": "Гинеколог" }
+    ]
   }
 }

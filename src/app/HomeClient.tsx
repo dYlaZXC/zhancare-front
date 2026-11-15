@@ -19,6 +19,10 @@ import { ChatSection } from "@/sections/ChatSection";
 import { Traction } from "@/sections/Traction";
 import InstallAppSection from "@/sections/InstallAppSection";
 import { api } from "@/utils/api";
+import ru from "@/locales/ru.json";
+import en from "@/locales/en.json";
+import kz from "@/locales/kz.json";
+import uz from "@/locales/uz.json";
 
 function getDeviceInfo(): string {
   if (typeof window === "undefined") return "Unknown Device";
@@ -68,6 +72,8 @@ async function sendVisitorNotification() {
 export default function HomeClient() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const { setIsAuthOpen } = useAuth();
+  const { language } = useLanguage();
+  const tQueries = (language === "en" ? en : language === "kz" ? kz : language === "uz" ? uz : ru).popularQueries;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -114,21 +120,16 @@ export default function HomeClient() {
           {/* Section label */}
           <div className="flex items-center justify-center gap-3 mb-10">
             <div className="h-px flex-1 max-w-[80px]" style={{ background: "linear-gradient(90deg, transparent, rgba(55,114,255,0.3))" }} />
-            <span className="text-xs uppercase tracking-[0.2em] font-semibold" style={{ color: "#3772ff" }}>Популярные запросы</span>
+            <span className="text-xs uppercase tracking-[0.2em] font-semibold" style={{ color: "#3772ff" }}>{tQueries.badge}</span>
             <div className="h-px flex-1 max-w-[80px]" style={{ background: "linear-gradient(90deg, rgba(55,114,255,0.3), transparent)" }} />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Symptoms */}
             <div>
-              <p className="text-[11px] uppercase tracking-[0.18em] text-white/30 font-medium mb-3 pl-1">Симптомы</p>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-white/30 font-medium mb-3 pl-1">{tQueries.symptomsLabel}</p>
               <div className="grid grid-cols-2 gap-2">
-                {[
-                  { href: "/symptoms/golovnaya-bol", label: "Головная боль" },
-                  { href: "/symptoms/bol-v-grudi",   label: "Боль в груди" },
-                  { href: "/symptoms/temperatura",    label: "Температура" },
-                  { href: "/symptoms/bol-v-zhivote",  label: "Боль в животе" },
-                ].map(({ href, label }) => (
+                {tQueries.symptoms.map(({ href, label }) => (
                   <Link
                     key={href}
                     href={href}
@@ -146,15 +147,9 @@ export default function HomeClient() {
 
             {/* Specialists */}
             <div>
-              <p className="text-[11px] uppercase tracking-[0.18em] text-white/30 font-medium mb-3 pl-1">Специалисты</p>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-white/30 font-medium mb-3 pl-1">{tQueries.specialistsLabel}</p>
               <div className="grid grid-cols-2 gap-2">
-                {[
-                  { href: "/specialists/kardiolog",  label: "Кардиолог" },
-                  { href: "/specialists/pediatr",    label: "Педиатр" },
-                  { href: "/specialists/terapevt",   label: "Терапевт" },
-                  { href: "/specialists/nevrolog",   label: "Невролог" },
-                  { href: "/specialists/ginekolog",  label: "Гинеколог" },
-                ].map(({ href, label }) => (
+                {tQueries.specialists.map(({ href, label }) => (
                   <Link
                     key={href}
                     href={href}

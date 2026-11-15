@@ -455,5 +455,23 @@
       "Прокрутите вниз и выберите «На экран «Домой»».",
       "Нажмите «Добавить» в правом верхнем углу."
     ]
+  },
+  "popularQueries": {
+    "badge": "Популярные запросы",
+    "symptomsLabel": "Симптомы",
+    "specialistsLabel": "Специалисты",
+    "symptoms": [
+      { "href": "/symptoms/golovnaya-bol", "label": "Головная боль" },
+      { "href": "/symptoms/bol-v-grudi", "label": "Боль в груди" },
+      { "href": "/symptoms/temperatura", "label": "Температура" },
+      { "href": "/symptoms/bol-v-zhivote", "label": "Боль в животе" }
+    ],
+    "specialists": [
+      { "href": "/specialists/kardiolog", "label": "Кардиолог" },
+      { "href": "/specialists/pediatr", "label": "Педиатр" },
+      { "href": "/specialists/terapevt", "label": "Терапевт" },
+      { "href": "/specialists/nevrolog", "label": "Невролог" },
+      { "href": "/specialists/ginekolog", "label": "Гинеколог" }
+    ]
   }
 }
