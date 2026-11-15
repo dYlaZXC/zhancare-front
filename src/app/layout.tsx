@@ -66,7 +66,19 @@ export const metadata: Metadata = {
     images: ["/opengraph-zhancare.png"],
   },
   icons: {
-    apple: "/logo_icon.png",
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    title: "ZhanCare.AI",
+    statusBarStyle: "default",
+  },
+  other: {
+    "apple-mobile-web-app-capable": "yes",
   },
   robots: {
     index: true,
@@ -80,6 +92,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   userScalable: true,
+  themeColor: "#3772ff",
 };
 
 export default async function RootLayout({
