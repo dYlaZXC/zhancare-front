@@ -1,4 +1,5 @@
 import {withSentryConfig} from "@sentry/nextjs";
+import withSerwistInit from "@serwist/next";
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   poweredByHeader: false,
@@ -61,7 +62,22 @@ const nextConfig = {
   // Other Next.js config options (if any)
 };
 
-export default withSentryConfig(nextConfig, {
+const withSerwist = withSerwistInit({
+  swSrc: "src/sw.ts",
+  swDest: "public/sw.js",
+  // Never build (or register, see ServiceWorkerProvider.tsx) the service
+  // worker outside production — avoids any interference with dev-mode HMR
+  // and matches the approved rollout ("не активировать Service Worker в
+  // development").
+  disable: process.env.NODE_ENV !== "production",
+  // No offline fallback page in this first version — see src/sw.ts, there
+  // is deliberately no catch-all runtime route either.
+  additionalPrecacheEntries: [],
+  cacheOnNavigation: false,
+  reloadOnOnline: false,
+});
+
+export default withSerwist(withSentryConfig(nextConfig, {
 // For all available options, see:
 // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
@@ -91,4 +107,4 @@ disableLogger: true,
 // https://docs.sentry.io/product/crons/
 // https://vercel.com/docs/cron-jobs
 automaticVercelMonitors: true,
-});
+}));
