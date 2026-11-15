@@ -7,7 +7,10 @@ const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1
 export const baseURLImg = process.env.NEXT_PUBLIC_API_IMG_URL || "http://localhost:8000/api/v1";
 
 // Token storage keys
-const ACCESS_TOKEN_KEY = "access_token";
+// Exported so AuthContext's cross-tab `storage` listener can tell a real
+// logout (key removed) apart from a token-refresh (key updated) without
+// duplicating the key name.
+export const ACCESS_TOKEN_KEY = "access_token";
 const REFRESH_TOKEN_KEY = "refresh_token";
 const USER_KEY = "user";
 
@@ -201,24 +204,5 @@ axiosInstance.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-// Manual logout function
-export const logout = async () => {
-  try {
-    const refreshToken = getRefreshToken();
-    if (refreshToken) {
-      await axiosInstance.post("/auth/logout/", { refresh_token: refreshToken });
-    }
-  } catch (err) {
-    console.warn("🔐 Manual logout error or already logged out");
-  } finally {
-    clearTokens();
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent('auth:logout', {
-        detail: { message: '🚪 Вы вышли из системы.' }
-      }));
-    }
-  }
-};
 
 export const api = axiosInstance;

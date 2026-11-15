@@ -127,10 +127,7 @@ export const DoctorSidebar = ({
 
   const handleLogout = () => {
     toast.success("Вы успешно вышли!", { position: "top-right", autoClose: 1000 });
-    setTimeout(() => {
-      logoutUser();
-      window.location.href = "/";
-    }, 1200);
+    logoutUser(false); // revokes the server session, clears local state, navigates to /login
   };
 
   const handleTabChange = () => {

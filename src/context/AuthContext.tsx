@@ -1,8 +1,8 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "react-toastify";
-import { api, setTokens, clearTokens, getAccessToken } from "@/utils/api";
+import { api, setTokens, clearTokens, getAccessToken, getRefreshToken, ACCESS_TOKEN_KEY } from "@/utils/api";
 
 const _ROLE_PRIORITY = ["admin", "academy_admin", "doctor", "nurse", "teacher", "patient"] as const;
 
@@ -85,7 +85,7 @@ interface AuthContextProps {
   sessions: Session[];
   sessionsLoading: boolean;
   loginUser: (accessToken: string, refreshToken: string, userData: User) => void;
-  logoutUser: (showMessage?: boolean) => void;
+  logoutUser: (showMessage?: boolean) => Promise<void>;
   mustChangePassword: boolean;
   clearMustChangePassword: () => void;
   fetchSessions: () => Promise<void>;
@@ -111,7 +111,7 @@ const defaultAuthContext: AuthContextProps = {
   sessions: [],
   sessionsLoading: false,
   loginUser: () => {},
-  logoutUser: () => {},
+  logoutUser: async () => {},
   mustChangePassword: false,
   clearMustChangePassword: () => {},
   fetchSessions: async () => {},
@@ -166,6 +166,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     window.addEventListener('auth:logout', handleLogoutEvent as EventListener);
     return () => window.removeEventListener('auth:logout', handleLogoutEvent as EventListener);
+  }, [setAuthHeader]);
+
+  // Cross-tab logout sync. localStorage.removeItem() fires a native
+  // `storage` event in every OTHER same-origin tab automatically (never in
+  // the tab that made the change — the browser guarantees that), so a tab
+  // that didn't initiate the logout learns about it here. It must NOT POST
+  // /auth/logout/ again — the tab that actually logged out already revoked
+  // the server-side session; this just mirrors local state and leaves.
+  useEffect(() => {
+    const handleStorageLogout = (event: StorageEvent) => {
+      if (event.key === ACCESS_TOKEN_KEY && event.newValue === null) {
+        setUser(null);
+        setToken(null);
+        setSessions([]);
+        setAuthHeader(null);
+        window.location.href = "/login";
+      }
+    };
+
+    window.addEventListener('storage', handleStorageLogout);
+    return () => window.removeEventListener('storage', handleStorageLogout);
   }, [setAuthHeader]);
 
   // Keep token React state in sync when api interceptor silently refreshes the token
@@ -230,18 +251,55 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [setAuthHeader]);
 
-  // Logout
-  const logoutUser = useCallback((showMessage = true) => {
-    clearTokens();
-    setUser(null);
-    setToken(null);
-    setSessions([]);
-    setAuthHeader(null);
-    // Clear auth cookie
-    document.cookie = "zha_auth=; path=/; max-age=0";
+  // Logout — the single exit point for every role/cabinet. Revokes the
+  // session on the server FIRST (so the tokens/cookies being cleared below
+  // can't be replayed from another tab, a saved copy, or a shared device —
+  // see POST /auth/logout/ in zhancare-back, which blacklists the refresh
+  // token, marks the UserSession revoked, and clears the httpOnly cookies),
+  // then tears down all local state and does a full browser navigation to
+  // /login — never a soft SPA navigation, so no stale Next.js Router Cache
+  // segment or in-memory React state can survive for a subsequent Back.
+  const isLoggingOutRef = useRef(false);
+  const logoutUser = useCallback(async (showMessage = true) => {
+    if (isLoggingOutRef.current) return; // guard against double-invocation (double-click, re-entrant call)
+    isLoggingOutRef.current = true;
 
-    if (showMessage) {
-      toast.warning("⏳ Ваша сессия истекла. Пожалуйста, войдите снова.");
+    const refreshToken = getRefreshToken();
+    let serverRevoked = false;
+    try {
+      await api.post(
+        "/auth/logout/",
+        refreshToken ? { refresh_token: refreshToken } : {},
+        { withCredentials: true }
+      );
+      serverRevoked = true;
+    } catch (err) {
+      // Network/server failure — the server-side session cannot be assumed
+      // revoked. Local state is still cleared below (the user asked to
+      // leave this device), but this must not be reported as a clean
+      // revoke, since a copy of the refresh token/cookie could still work
+      // elsewhere until it naturally expires.
+      console.warn("logoutUser: server-side session revoke failed; clearing local session only", err);
+    } finally {
+      clearTokens();
+      setUser(null);
+      setToken(null);
+      setSessions([]);
+      setAuthHeader(null);
+      // Clear the non-httpOnly presence flag the middleware checks; the
+      // real httpOnly zha_access/zha_refresh cookies are cleared by the
+      // server response above.
+      document.cookie = "zha_auth=; path=/; max-age=0";
+
+      if (showMessage) {
+        toast[serverRevoked ? "success" : "warning"](
+          serverRevoked
+            ? "🚪 Вы вышли из системы."
+            : "🚪 Вы вышли из системы (не удалось подтвердить выход на сервере)."
+        );
+      }
+
+      window.location.href = "/login";
     }
   }, [setAuthHeader]);
 

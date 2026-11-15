@@ -59,13 +59,12 @@ export default function PatientLayout({
     return null; // Don't show loading screen, let auth popup handle it
   }
 
-  if (!user) {
-    // User will be redirected immediately, return null to avoid flash
-    return null;
-  }
-
-  // If no userProfile data yet, don't render
-  if (!userProfile) {
+  // Block render for unauthenticated users AND for any authenticated user
+  // whose role doesn't belong here (doctor/admin/nurse) — the redirect
+  // effect above already sends them to their own cabinet; this just stops
+  // this page's patient-only data-fetching children from mounting in the
+  // meantime, matching the stricter guard already used in doctor/layout.tsx.
+  if (!user || !userProfile || isDoctor || isAdmin || isNurse) {
     return null;
   }
 

@@ -139,10 +139,7 @@ export const Sidebar = ({
 
   const handleLogout = () => {
     toast.success(t.loggedOutToast, { position: "top-right", autoClose: 1000 });
-    setTimeout(() => {
-      logoutUser();
-      window.location.href = "/";
-    }, 1200);
+    logoutUser(false); // revokes the server session, clears local state, navigates to /login
   };
 
   const handleTabChange = () => {

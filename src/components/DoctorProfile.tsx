@@ -50,10 +50,7 @@ export default function DoctorProfile() {
 
   const handleLogout = () => {
     toast.success("Вы успешно вышли!", { position: "top-right", autoClose: 3000 });
-    setTimeout(() => {
-      logoutUser();
-      router.replace("/");
-    }, 1000);
+    logoutUser(false); // revokes the server session, clears local state, navigates to /login
   };
 
   const handleToggleSidebar = () => {

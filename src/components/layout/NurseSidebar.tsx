@@ -61,11 +61,7 @@ export const NurseSidebar = ({
 
   const handleLogout = () => {
     toast.success("Вы успешно вышли!", { position: "top-right", autoClose: 1000 });
-    setTimeout(() => {
-      logoutUser();
-      // Use window.location.href for reliable redirect to homepage
-      window.location.href = "/";
-    }, 1200);
+    logoutUser(false); // revokes the server session, clears local state, navigates to /login
   };
 
   const handleTabChange = () => {

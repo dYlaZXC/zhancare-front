@@ -144,11 +144,7 @@ export default function Header() {
   }, []);
 
   const handleLogout = useCallback(() => {
-    logoutUser();
-    // Redirect to homepage after logout
-    setTimeout(() => {
-      window.location.href = "/";
-    }, 500);
+    logoutUser(); // shows its own toast, revokes the server session, navigates to /login
   }, [logoutUser]);
 
 

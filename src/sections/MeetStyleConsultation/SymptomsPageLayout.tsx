@@ -617,7 +617,7 @@ export default function SymptomsPageLayout({ clinic }: { clinic?: ClinicContext 
                         {{ ru: "Личный кабинет", en: "My account", kz: "Жеке кабинет", uz: "Shaxsiy kabinet" }[language as "ru"|"en"|"kz"|"uz"] ?? "Личный кабинет"}
                       </button>
                       <button
-                        onClick={() => { setProfileOpen(false); logoutUser(); router.push("/"); }}
+                        onClick={() => { setProfileOpen(false); logoutUser(); }}
                         className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-left transition-colors hover:bg-red-50"
                         style={{ background: "transparent", border: "none", cursor: "pointer", color: "#dc2626" }}
                       >
