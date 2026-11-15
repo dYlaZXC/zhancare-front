@@ -12,34 +12,35 @@ const HOME_TEXT = {
   ru: {
     apt: "кв.", entrance: "подъезд", intercom: "домофон",
     paymentAccepted: "✅ Оплата принята, заявка создана!", callFailed: "❌ Не удалось создать вызов.", serverError: "Ошибка сервера.",
-    callData: "Данные вызова", payment: "Оплата", back: "Назад", step: "Шаг",
+    callData: "Данные вызова", chooseClinic: "Клиника", payment: "Оплата", back: "Назад", step: "Шаг",
     callNurseHome: "Вызов медсестры на дом", fillDataBelow: "Заполните данные ниже, чтобы оформить вызов",
     trackingCall: "Отслеживание вызова", request: "Заявка",
   },
   kz: {
     apt: "пәт.", entrance: "кіреберіс", intercom: "домофон",
     paymentAccepted: "✅ Төлем қабылданды, өтінім жасалды!", callFailed: "❌ Шақыруды жасау мүмкін болмады.", serverError: "Сервер қатесі.",
-    callData: "Шақыру деректері", payment: "Төлем", back: "Артқа", step: "Қадам",
+    callData: "Шақыру деректері", chooseClinic: "Клиника", payment: "Төлем", back: "Артқа", step: "Қадам",
     callNurseHome: "Медбикені үйге шақыру", fillDataBelow: "Шақыруды рәсімдеу үшін төмендегі деректерді толтырыңыз",
     trackingCall: "Шақыруды бақылау", request: "Өтінім",
   },
   en: {
     apt: "apt.", entrance: "entrance", intercom: "intercom",
     paymentAccepted: "✅ Payment accepted, request created!", callFailed: "❌ Could not create the call.", serverError: "Server error.",
-    callData: "Call details", payment: "Payment", back: "Back", step: "Step",
+    callData: "Call details", chooseClinic: "Clinic", payment: "Payment", back: "Back", step: "Step",
     callNurseHome: "Call a nurse home", fillDataBelow: "Fill in the details below to request a visit",
     trackingCall: "Tracking the call", request: "Request",
   },
   uz: {
     apt: "kv.", entrance: "kirish", intercom: "domofon",
     paymentAccepted: "✅ To'lov qabul qilindi, ariza yaratildi!", callFailed: "❌ Chaqiruvni yaratib bo'lmadi.", serverError: "Server xatosi.",
-    callData: "Chaqiruv ma'lumotlari", payment: "To'lov", back: "Orqaga", step: "Qadam",
+    callData: "Chaqiruv ma'lumotlari", chooseClinic: "Klinika", payment: "To'lov", back: "Orqaga", step: "Qadam",
     callNurseHome: "Hamshirani uyga chaqirish", fillDataBelow: "Chaqiruvni rasmiylashtirish uchun quyidagi ma'lumotlarni to'ldiring",
     trackingCall: "Chaqiruvni kuzatish", request: "Ariza",
   },
 };
 
 import Step1 from "./homeAppointments/Step1";
+import ClinicStep from "./homeAppointments/ClinicStep";
 import PaymentStep from "./homeAppointments/PaymentStep";
 import AppointmentStatus from "./homeAppointments/AppointmentStatus";
 import TipsPanel from "./homeAppointments/TipsPanel";
@@ -55,7 +56,9 @@ const HomeAppointments: React.FC<HomeAppointmentsProps> = ({ onBack }) => {
   const { pay: payForConsultation } = useConsultationPayment();
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [clinicId, setClinicId] = useState<number | null>(null);
+  const [clinicName, setClinicName] = useState<string>("");
   const [appointmentTime, setAppointmentTime] = useState<string>(() => {
     const d = new Date(Date.now() + 60 * 60000);
     return d.toISOString().slice(0, 16);
@@ -90,6 +93,7 @@ const HomeAppointments: React.FC<HomeAppointmentsProps> = ({ onBack }) => {
         amount: 4950, // 50% prepay of 9 900 ₸
         description: `Вызов медсестры на дом — ${fullAddress}`,
         bookingData: {
+          clinic_id: clinicId,
           appointment_time: appointmentTime,
           address: fullAddress,
           symptoms: symptoms.trim() || null,
@@ -126,6 +130,8 @@ const HomeAppointments: React.FC<HomeAppointmentsProps> = ({ onBack }) => {
     setSymptoms("");
     setLatitude(null);
     setLongitude(null);
+    setClinicId(null);
+    setClinicName("");
     setError(null);
   };
 
@@ -148,10 +154,21 @@ const HomeAppointments: React.FC<HomeAppointmentsProps> = ({ onBack }) => {
     loading,
   };
 
+  const clinicStepProps = {
+    clinicId,
+    onSelectClinic: (id: number, name: string) => {
+      setClinicId(id);
+      setClinicName(name);
+    },
+    onNext: () => setStep(3),
+    onBack: () => setStep(1),
+    loading,
+  };
+
   const paymentProps = {
     address, apartment, entrance, intercom, addressComment,
-    appointmentTime, symptoms,
-    onBack: () => setStep(1),
+    appointmentTime, symptoms, clinicName,
+    onBack: () => setStep(2),
     onPay: handlePay,
     loading,
   };
@@ -186,17 +203,17 @@ const HomeAppointments: React.FC<HomeAppointmentsProps> = ({ onBack }) => {
           {/* Toolbar */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
             <span className="text-sm font-bold text-gray-800 flex-1">
-              {step === 1 ? tt.callData : tt.payment}
+              {step === 1 ? tt.callData : step === 2 ? tt.chooseClinic : tt.payment}
             </span>
-            {step === 2 && (
+            {step > 1 && (
               <button
-                onClick={() => setStep(1)}
+                onClick={() => setStep((step - 1) as 1 | 2)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-500 bg-gray-50 border border-gray-200 hover:bg-gray-100 transition-all"
               >
                 <ArrowLeft className="w-3.5 h-3.5" /> {tt.back}
               </button>
             )}
-            <span className="text-xs text-gray-400 flex-shrink-0">{tt.step} {step} / 2</span>
+            <span className="text-xs text-gray-400 flex-shrink-0">{tt.step} {step} / 3</span>
           </div>
 
           {error && (
@@ -208,12 +225,13 @@ const HomeAppointments: React.FC<HomeAppointmentsProps> = ({ onBack }) => {
           <div className="p-4">
             <AnimatePresence mode="wait">
               {step === 1 && <Step1 key="step1" {...step1Props} />}
-              {step === 2 && <PaymentStep key="payment" {...paymentProps} />}
+              {step === 2 && <ClinicStep key="clinic" {...clinicStepProps} />}
+              {step === 3 && <PaymentStep key="payment" {...paymentProps} />}
             </AnimatePresence>
           </div>
         </div>
 
-        <TipsPanel step={step as 1 | 2 | 3} compact />
+        <TipsPanel step={step} compact />
       </div>
     );
   }
@@ -250,7 +268,8 @@ const HomeAppointments: React.FC<HomeAppointmentsProps> = ({ onBack }) => {
                   <div className="flex justify-between items-center mb-2 px-1">
                     {[
                       { n: 1, label: tt.callData },
-                      { n: 2, label: tt.payment },
+                      { n: 2, label: tt.chooseClinic },
+                      { n: 3, label: tt.payment },
                     ].map(({ n, label }) => (
                       <div
                         key={n}
@@ -274,7 +293,7 @@ const HomeAppointments: React.FC<HomeAppointmentsProps> = ({ onBack }) => {
                   <div className="relative w-full h-2 bg-gray-200 rounded-full overflow-hidden">
                     <motion.div
                       className="h-full bg-gradient-to-r from-[#3772ff] to-[#2956bf] rounded-full"
-                      animate={{ width: step === 1 ? "50%" : "100%" }}
+                      animate={{ width: step === 1 ? "33%" : step === 2 ? "66%" : "100%" }}
                       transition={{ duration: 0.5 }}
                     />
                   </div>
@@ -319,6 +338,9 @@ const HomeAppointments: React.FC<HomeAppointmentsProps> = ({ onBack }) => {
                 <Step1 key="step1" {...step1Props} />
               )}
               {!appointmentId && step === 2 && (
+                <ClinicStep key="clinic" {...clinicStepProps} />
+              )}
+              {!appointmentId && step === 3 && (
                 <PaymentStep key="payment" {...paymentProps} />
               )}
               {appointmentId && statusProps && (
@@ -330,7 +352,7 @@ const HomeAppointments: React.FC<HomeAppointmentsProps> = ({ onBack }) => {
           {/* Sidebar tips — only during form steps */}
           {!appointmentId && (
             <div className="w-full lg:w-80 xl:w-96 bg-gray-50 lg:bg-transparent p-3 sm:p-4 lg:p-6 border-t lg:border-t-0 lg:border-l border-gray-200">
-              <TipsPanel step={step as 1 | 2 | 3} />
+              <TipsPanel step={step} />
             </div>
           )}
         </div>

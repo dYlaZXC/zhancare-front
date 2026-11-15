@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { MapPin, Calendar, CreditCard, Shield, ArrowLeft, Loader2, Clock } from "lucide-react";
+import { MapPin, Calendar, CreditCard, Shield, ArrowLeft, Loader2, Clock, Building2 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useConsultationPayment } from "@/components/payment/useConsultationPayment";
 
@@ -11,7 +11,7 @@ const SERVICE_PRICE = 9900;
 const PAYMENT_TEXT = {
   ru: {
     apt: "кв.", entrance: "подъезд", intercom: "домофон",
-    callDetails: "Детали вызова", address: "Адрес", dateTime: "Дата и время", symptoms: "Симптомы",
+    callDetails: "Детали вызова", clinic: "Клиника", address: "Адрес", dateTime: "Дата и время", symptoms: "Симптомы",
     cost: "Стоимость", nurseHomeVisit: "Вызов медсестры на дом", consumables: "Расходные материалы", clarifiedOnSite: "уточняется на месте",
     prepay50: "Предоплата 50%", remainder: (amount: number) => `Остаток ${amount} ₸ — после визита`,
     trustBadge: "Заявка отправится медсёстрам сразу после подтверждения оплаты",
@@ -20,7 +20,7 @@ const PAYMENT_TEXT = {
   },
   kz: {
     apt: "пәт.", entrance: "кіреберіс", intercom: "домофон",
-    callDetails: "Шақыру деректері", address: "Мекенжай", dateTime: "Күні мен уақыты", symptoms: "Симптомдар",
+    callDetails: "Шақыру деректері", clinic: "Клиника", address: "Мекенжай", dateTime: "Күні мен уақыты", symptoms: "Симптомдар",
     cost: "Құны", nurseHomeVisit: "Медбикені үйге шақыру", consumables: "Шығыс материалдары", clarifiedOnSite: "жерде нақтыланады",
     prepay50: "50% алдын ала төлем", remainder: (amount: number) => `Қалғаны ${amount} ₸ — визиттен кейін`,
     trustBadge: "Өтінім төлем расталғаннан кейін бірден медбикелерге жіберіледі",
@@ -29,7 +29,7 @@ const PAYMENT_TEXT = {
   },
   en: {
     apt: "apt.", entrance: "entrance", intercom: "intercom",
-    callDetails: "Call details", address: "Address", dateTime: "Date and time", symptoms: "Symptoms",
+    callDetails: "Call details", clinic: "Clinic", address: "Address", dateTime: "Date and time", symptoms: "Symptoms",
     cost: "Cost", nurseHomeVisit: "Nurse home visit", consumables: "Consumables", clarifiedOnSite: "confirmed on site",
     prepay50: "50% prepayment", remainder: (amount: number) => `Remaining ${amount} ₸ — after the visit`,
     trustBadge: "The request is sent to nurses right after payment is confirmed",
@@ -38,7 +38,7 @@ const PAYMENT_TEXT = {
   },
   uz: {
     apt: "kv.", entrance: "kirish", intercom: "domofon",
-    callDetails: "Chaqiruv ma'lumotlari", address: "Manzil", dateTime: "Sana va vaqt", symptoms: "Simptomlar",
+    callDetails: "Chaqiruv ma'lumotlari", clinic: "Klinika", address: "Manzil", dateTime: "Sana va vaqt", symptoms: "Simptomlar",
     cost: "Narxi", nurseHomeVisit: "Hamshirani uyga chaqirish", consumables: "Sarf materiallari", clarifiedOnSite: "joyida aniqlashtiriladi",
     prepay50: "50% oldindan to'lov", remainder: (amount: number) => `Qolgan ${amount} ₸ — tashrifdan keyin`,
     trustBadge: "To'lov tasdiqlangandan so'ng ariza darhol hamshiralarga yuboriladi",
@@ -55,6 +55,7 @@ interface PaymentStepProps {
   addressComment: string;
   appointmentTime: string;
   symptoms: string;
+  clinicName?: string;
   onBack: () => void;
   onPay: () => void;
   loading?: boolean;
@@ -68,6 +69,7 @@ const PaymentStep: React.FC<PaymentStepProps> = ({
   addressComment,
   appointmentTime,
   symptoms,
+  clinicName,
   onBack,
   onPay,
   loading = false,
@@ -107,6 +109,18 @@ const PaymentStep: React.FC<PaymentStepProps> = ({
           <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">{tt.callDetails}</p>
         </div>
         <div className="p-4 space-y-3">
+          {clinicName && (
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-[#3772ff]/10 flex items-center justify-center flex-shrink-0">
+                <Building2 className="w-4 h-4 text-[#3772ff]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-400 mb-0.5">{tt.clinic}</p>
+                <p className="text-sm font-semibold text-gray-900">{clinicName}</p>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#3772ff]/10 flex items-center justify-center flex-shrink-0">
               <MapPin className="w-4 h-4 text-[#3772ff]" />

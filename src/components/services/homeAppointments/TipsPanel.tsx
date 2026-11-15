@@ -24,13 +24,12 @@ const TIPS_BY_STEP = {
       ],
     },
     2: {
-      title: "Советы при выборе врача и времени",
+      title: "Советы при выборе клиники",
       tips: [
-        "👨‍⚕️ Все специалисты имеют необходимую квалификацию и опыт",
-        "⏰ Выбирайте время с запасом минимум 30 минут",
-        "🏠 Убедитесь, что вы будете дома в выбранное время",
-        "📞 Врач может позвонить за 10-15 минут до прибытия",
-        "💰 Стоимость визита уточняется после подтверждения",
+        "🏥 Заявка уйдёт медсёстрам именно этой клиники",
+        "📍 Выбирайте клинику поближе — так визит состоится быстрее",
+        "☎️ Номер клиники можно уточнить в списке перед выбором",
+        "🔄 Клинику можно сменить, пока не нажали «Продолжить»",
       ],
     },
     3: {
@@ -57,13 +56,12 @@ const TIPS_BY_STEP = {
       ],
     },
     2: {
-      title: "Дәрігер мен уақытты таңдау бойынша кеңестер",
+      title: "Клиниканы таңдау бойынша кеңестер",
       tips: [
-        "👨‍⚕️ Барлық мамандар қажетті біліктілік пен тәжірибеге ие",
-        "⏰ Кемінде 30 минут қор қалдырып уақыт таңдаңыз",
-        "🏠 Таңдалған уақытта үйде болатыныңызға көз жеткізіңіз",
-        "📞 Дәрігер келуден 10-15 минут бұрын қоңырау шалуы мүмкін",
-        "💰 Визит құны растаудан кейін нақтыланады",
+        "🏥 Өтінім дәл осы клиниканың медбикелеріне жіберіледі",
+        "📍 Жақынырақ клиниканы таңдаңыз — визит тезірек болады",
+        "☎️ Клиниканың нөмірін таңдаудан бұрын тізімнен көре аласыз",
+        "🔄 «Жалғастыру» баспағанша клиниканы ауыстыруға болады",
       ],
     },
     3: {
@@ -90,13 +88,12 @@ const TIPS_BY_STEP = {
       ],
     },
     2: {
-      title: "Tips for choosing a doctor and time",
+      title: "Tips for choosing a clinic",
       tips: [
-        "👨‍⚕️ All specialists have the necessary qualifications and experience",
-        "⏰ Choose a time with at least 30 minutes of buffer",
-        "🏠 Make sure you'll be home at the selected time",
-        "📞 The doctor may call 10-15 minutes before arrival",
-        "💰 The visit cost is confirmed after booking",
+        "🏥 The request goes straight to that clinic's own nurses",
+        "📍 Pick a clinic nearby — the visit will happen sooner",
+        "☎️ You can check the clinic's phone number in the list before choosing",
+        "🔄 You can change the clinic until you press \"Continue\"",
       ],
     },
     3: {
@@ -123,13 +120,12 @@ const TIPS_BY_STEP = {
       ],
     },
     2: {
-      title: "Shifokor va vaqtni tanlash bo'yicha maslahatlar",
+      title: "Klinikani tanlash bo'yicha maslahatlar",
       tips: [
-        "👨‍⚕️ Barcha mutaxassislar zarur malaka va tajribaga ega",
-        "⏰ Kamida 30 daqiqa zahira bilan vaqtni tanlang",
-        "🏠 Tanlangan vaqtda uyda bo'lishingizga ishonch hosil qiling",
-        "📞 Shifokor kelishidan 10-15 daqiqa oldin qo'ng'iroq qilishi mumkin",
-        "💰 Tashrif narxi tasdiqlangandan keyin aniqlashtiriladi",
+        "🏥 Ariza aynan shu klinikaning hamshiralariga yuboriladi",
+        "📍 Yaqinroq klinikani tanlang — tashrif tezroq bo'ladi",
+        "☎️ Klinika raqamini tanlashdan oldin ro'yxatda ko'rishingiz mumkin",
+        "🔄 «Davom etish» tugmasini bosmaguningizcha klinikani almashtirish mumkin",
       ],
     },
     3: {
