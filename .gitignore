@@ -39,7 +39,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Sentry Config File
+# env files (leaked secrets were purged from git history; never track again)
+.env
 .env.sentry-build-plugin
 .env.local
 
