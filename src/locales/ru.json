@@ -473,5 +473,20 @@
       { "href": "/specialists/nevrolog", "label": "Невролог" },
       { "href": "/specialists/ginekolog", "label": "Гинеколог" }
     ]
+  },
+  "bottomNav": {
+    "home": "Главная",
+    "seeDoctor": "Зайти к врачу",
+    "history": "История",
+    "documents": "Документы",
+    "profile": "Профиль",
+    "specialists": "Специалисты",
+    "login": "Войти"
+  },
+  "standaloneWelcome": {
+    "tagline": "Онлайн-консультация врача за 5 минут",
+    "login": "Войти",
+    "register": "Зарегистрироваться",
+    "continueAsGuest": "Продолжить без входа"
   }
 }

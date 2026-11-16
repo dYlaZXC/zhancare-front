@@ -473,5 +473,20 @@
       { "href": "/specialists/nevrolog", "label": "Neurologist" },
       { "href": "/specialists/ginekolog", "label": "Gynecologist" }
     ]
+  },
+  "bottomNav": {
+    "home": "Home",
+    "seeDoctor": "See a doctor",
+    "history": "History",
+    "documents": "Documents",
+    "profile": "Profile",
+    "specialists": "Specialists",
+    "login": "Log in"
+  },
+  "standaloneWelcome": {
+    "tagline": "Online doctor consultation in 5 minutes",
+    "login": "Log in",
+    "register": "Sign up",
+    "continueAsGuest": "Continue without an account"
   }
 }

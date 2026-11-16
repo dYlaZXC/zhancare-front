@@ -473,5 +473,20 @@
       { "href": "/specialists/nevrolog", "label": "Nevrolog" },
       { "href": "/specialists/ginekolog", "label": "Ginekolog" }
     ]
+  },
+  "bottomNav": {
+    "home": "Bosh sahifa",
+    "seeDoctor": "Shifokorga kirish",
+    "history": "Tarix",
+    "documents": "Hujjatlar",
+    "profile": "Profil",
+    "specialists": "Mutaxassislar",
+    "login": "Kirish"
+  },
+  "standaloneWelcome": {
+    "tagline": "5 daqiqada onlayn shifokor konsultatsiyasi",
+    "login": "Kirish",
+    "register": "Ro'yxatdan o'tish",
+    "continueAsGuest": "Kirmasdan davom etish"
   }
 }

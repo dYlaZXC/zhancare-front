@@ -473,5 +473,20 @@
       { "href": "/specialists/nevrolog", "label": "Невролог" },
       { "href": "/specialists/ginekolog", "label": "Гинеколог" }
     ]
+  },
+  "bottomNav": {
+    "home": "Басты бет",
+    "seeDoctor": "Дәрігерге кіру",
+    "history": "Тарих",
+    "documents": "Құжаттар",
+    "profile": "Профиль",
+    "specialists": "Мамандар",
+    "login": "Кіру"
+  },
+  "standaloneWelcome": {
+    "tagline": "5 минутта онлайн дәрігер консультациясы",
+    "login": "Кіру",
+    "register": "Тіркелу",
+    "continueAsGuest": "Кірмей жалғастыру"
   }
 }

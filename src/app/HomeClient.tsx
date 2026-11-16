@@ -18,6 +18,7 @@ import { DoctorsCarousel } from "@/sections/DoctorsCarousel";
 import { ChatSection } from "@/sections/ChatSection";
 import { Traction } from "@/sections/Traction";
 import InstallAppSection from "@/sections/InstallAppSection";
+import StandaloneWelcomeGate from "@/components/pwa/StandaloneWelcomeGate";
 import { api } from "@/utils/api";
 import ru from "@/locales/ru.json";
 import en from "@/locales/en.json";
@@ -93,6 +94,7 @@ export default function HomeClient() {
   }, [setIsAuthOpen]);
 
   return (
+    <StandaloneWelcomeGate>
     <div>
       <Hero />
       <InstallAppSection />
@@ -176,5 +178,6 @@ export default function HomeClient() {
       {isChatOpen && <ChatComponent onClose={() => setIsChatOpen(false)} />}
       <Footer />
     </div>
+    </StandaloneWelcomeGate>
   );
 }
