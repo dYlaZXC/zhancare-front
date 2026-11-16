@@ -434,5 +434,59 @@
         }
       ]
     }
+  },
+  "installApp": {
+    "badge": "Қолданбаны орнатыңыз",
+    "title": "Телефоныңыздағы ZhanCare.AI",
+    "subtitle": "Браузерсіз жылдам қатынас, басты экрандағы белгіше және әдеттегі қолданба сияқты жұмыс — орнату бір минуттан аз уақыт алады.",
+    "installNow": "Қазір орнату",
+    "alreadyInstalled": "Қолданба осы құрылғыға бұрыннан орнатылған",
+    "androidTabLabel": "Android",
+    "iosTabLabel": "iPhone",
+    "androidSteps": [
+      "Сайтты телефонда Chrome арқылы ашыңыз.",
+      "Жоғарғы оң жақ бұрыштағы ⋮ (үш нүкте) белгішесін басыңыз.",
+      "«Қолданбаны орнату» немесе «Басты экранға қосу» дегенді таңдаңыз.",
+      "Растаңыз — ZhanCare.AI белгішесі басты экранда пайда болады."
+    ],
+    "iosSteps": [
+      "Сайтты iPhone-да Safari арқылы ашыңыз — басқа браузерлер орнатуды қолдамайды.",
+      "Экранның төменгі жағындағы «Бөлісу» белгішесін (жоғары көрсеткісі бар шаршы) басыңыз.",
+      "Төмен түсіп, «Басты экранға қосу» дегенді таңдаңыз.",
+      "Жоғарғы оң жақ бұрыштағы «Қосу» түймесін басыңыз."
+    ]
+  },
+  "popularQueries": {
+    "badge": "Танымал сұраулар",
+    "symptomsLabel": "Симптомдар",
+    "specialistsLabel": "Мамандар",
+    "symptoms": [
+      { "href": "/symptoms/golovnaya-bol", "label": "Бас ауруы" },
+      { "href": "/symptoms/bol-v-grudi", "label": "Кеудедегі ауырсыну" },
+      { "href": "/symptoms/temperatura", "label": "Температура" },
+      { "href": "/symptoms/bol-v-zhivote", "label": "Іштегі ауырсыну" }
+    ],
+    "specialists": [
+      { "href": "/specialists/kardiolog", "label": "Кардиолог" },
+      { "href": "/specialists/pediatr", "label": "Педиатр" },
+      { "href": "/specialists/terapevt", "label": "Терапевт" },
+      { "href": "/specialists/nevrolog", "label": "Невролог" },
+      { "href": "/specialists/ginekolog", "label": "Гинеколог" }
+    ]
+  },
+  "bottomNav": {
+    "home": "Басты бет",
+    "seeDoctor": "Дәрігерге кіру",
+    "history": "Тарих",
+    "documents": "Құжаттар",
+    "profile": "Профиль",
+    "specialists": "Мамандар",
+    "login": "Кіру"
+  },
+  "standaloneWelcome": {
+    "tagline": "5 минутта онлайн дәрігер консультациясы",
+    "login": "Кіру",
+    "register": "Тіркелу",
+    "continueAsGuest": "Кірмей жалғастыру"
   }
 }

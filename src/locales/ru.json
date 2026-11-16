@@ -434,5 +434,59 @@
         }
       ]
     }
+  },
+  "installApp": {
+    "badge": "Установите приложение",
+    "title": "ZhanCare.AI на вашем телефоне",
+    "subtitle": "Быстрый доступ без браузера, значок на главном экране и работа как у обычного приложения — установка занимает меньше минуты.",
+    "installNow": "Установить сейчас",
+    "alreadyInstalled": "Приложение уже установлено на этом устройстве",
+    "androidTabLabel": "Android",
+    "iosTabLabel": "iPhone",
+    "androidSteps": [
+      "Откройте сайт в Chrome на телефоне.",
+      "Нажмите на значок ⋮ (три точки) в правом верхнем углу.",
+      "Выберите «Установить приложение» или «Добавить на главный экран».",
+      "Подтвердите — иконка ZhanCare.AI появится на рабочем столе."
+    ],
+    "iosSteps": [
+      "Откройте сайт в Safari на iPhone — другие браузеры не поддерживают установку.",
+      "Нажмите на значок «Поделиться» (квадрат со стрелкой вверх) внизу экрана.",
+      "Прокрутите вниз и выберите «На экран «Домой»».",
+      "Нажмите «Добавить» в правом верхнем углу."
+    ]
+  },
+  "popularQueries": {
+    "badge": "Популярные запросы",
+    "symptomsLabel": "Симптомы",
+    "specialistsLabel": "Специалисты",
+    "symptoms": [
+      { "href": "/symptoms/golovnaya-bol", "label": "Головная боль" },
+      { "href": "/symptoms/bol-v-grudi", "label": "Боль в груди" },
+      { "href": "/symptoms/temperatura", "label": "Температура" },
+      { "href": "/symptoms/bol-v-zhivote", "label": "Боль в животе" }
+    ],
+    "specialists": [
+      { "href": "/specialists/kardiolog", "label": "Кардиолог" },
+      { "href": "/specialists/pediatr", "label": "Педиатр" },
+      { "href": "/specialists/terapevt", "label": "Терапевт" },
+      { "href": "/specialists/nevrolog", "label": "Невролог" },
+      { "href": "/specialists/ginekolog", "label": "Гинеколог" }
+    ]
+  },
+  "bottomNav": {
+    "home": "Главная",
+    "seeDoctor": "Зайти к врачу",
+    "history": "История",
+    "documents": "Документы",
+    "profile": "Профиль",
+    "specialists": "Специалисты",
+    "login": "Войти"
+  },
+  "standaloneWelcome": {
+    "tagline": "Онлайн-консультация врача за 5 минут",
+    "login": "Войти",
+    "register": "Зарегистрироваться",
+    "continueAsGuest": "Продолжить без входа"
   }
 }

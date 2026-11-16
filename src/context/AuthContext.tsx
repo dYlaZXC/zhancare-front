@@ -164,6 +164,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setSessions([]);
     setAuthHeader(null);
     document.cookie = "zha_auth=; path=/; max-age=0";
+    // Deliberately NOT clearing the service worker's caches here: they only
+    // ever hold public, versioned static assets (JS/CSS/fonts/icons — see
+    // src/sw.ts's runtimeCaching allowlist), never a personalized response,
+    // so there is nothing to clean up on logout and doing it anyway would
+    // just force a full re-download of the app shell on every next login.
     window.location.href = "/login";
   }, [setAuthHeader]);
 

@@ -434,5 +434,59 @@
         }
       ]
     }
+  },
+  "installApp": {
+    "badge": "Ilovani o'rnating",
+    "title": "Telefoningizdagi ZhanCare.AI",
+    "subtitle": "Brauzersiz tezkor kirish, bosh ekranda belgi va oddiy ilova kabi ishlash — o'rnatish bir daqiqadan kam vaqt oladi.",
+    "installNow": "Hozir o'rnatish",
+    "alreadyInstalled": "Ilova bu qurilmaga allaqachon o'rnatilgan",
+    "androidTabLabel": "Android",
+    "iosTabLabel": "iPhone",
+    "androidSteps": [
+      "Saytni telefoningizda Chrome orqali oching.",
+      "Yuqori o'ng burchakdagi ⋮ (uch nuqta) belgisini bosing.",
+      "«Ilovani o'rnatish» yoki «Bosh ekranga qo'shish»ni tanlang.",
+      "Tasdiqlang — ZhanCare.AI belgisi bosh ekranda paydo bo'ladi."
+    ],
+    "iosSteps": [
+      "Saytni iPhone'da Safari orqali oching — boshqa brauzerlar o'rnatishni qo'llab-quvvatlamaydi.",
+      "Ekranning pastki qismidagi «Ulashish» belgisini (yuqoriga strelkali kvadrat) bosing.",
+      "Pastga tushib, «Bosh ekranga qo'shish»ni tanlang.",
+      "Yuqori o'ng burchakdagi «Qo'shish» tugmasini bosing."
+    ]
+  },
+  "popularQueries": {
+    "badge": "Mashhur so'rovlar",
+    "symptomsLabel": "Simptomlar",
+    "specialistsLabel": "Mutaxassislar",
+    "symptoms": [
+      { "href": "/symptoms/golovnaya-bol", "label": "Bosh og'rig'i" },
+      { "href": "/symptoms/bol-v-grudi", "label": "Ko'krak og'rig'i" },
+      { "href": "/symptoms/temperatura", "label": "Harorat" },
+      { "href": "/symptoms/bol-v-zhivote", "label": "Qorin og'rig'i" }
+    ],
+    "specialists": [
+      { "href": "/specialists/kardiolog", "label": "Kardiolog" },
+      { "href": "/specialists/pediatr", "label": "Pediatr" },
+      { "href": "/specialists/terapevt", "label": "Terapevt" },
+      { "href": "/specialists/nevrolog", "label": "Nevrolog" },
+      { "href": "/specialists/ginekolog", "label": "Ginekolog" }
+    ]
+  },
+  "bottomNav": {
+    "home": "Bosh sahifa",
+    "seeDoctor": "Shifokorga kirish",
+    "history": "Tarix",
+    "documents": "Hujjatlar",
+    "profile": "Profil",
+    "specialists": "Mutaxassislar",
+    "login": "Kirish"
+  },
+  "standaloneWelcome": {
+    "tagline": "5 daqiqada onlayn shifokor konsultatsiyasi",
+    "login": "Kirish",
+    "register": "Ro'yxatdan o'tish",
+    "continueAsGuest": "Kirmasdan davom etish"
   }
 }
