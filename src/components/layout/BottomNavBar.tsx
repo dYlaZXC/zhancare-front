@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Stethoscope, History, FileText, UserRound, LogIn } from "lucide-react";
+import { motion } from "framer-motion";
+import { Home, Stethoscope, History, FileText, UserRound, LogIn, Users } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { isStandalone, isMobileUserAgent, STANDALONE_GATE_DISMISSED_EVENT } from "@/lib/pwaDetect";
@@ -18,7 +19,11 @@ import uz from "@/locales/uz.json";
 // would just duplicate its "Войти" action.
 const WELCOME_DISMISS_KEY = "zhancare_standalone_welcome_dismissed";
 
-const ACCENT = "#3772ff";
+// Same gradient family as brandConfig's sidebarGradient/StandaloneWelcomeGate
+// so the floating bar reads as one brand surface rather than a one-off.
+const BAR_BACKGROUND =
+  "linear-gradient(135deg, rgba(18,38,58,0.94) 0%, rgba(30,38,62,0.94) 25%, rgba(41,53,143,0.94) 75%, rgba(55,114,255,0.94) 100%)";
+const FAB_BACKGROUND = "linear-gradient(135deg, #4A6BFF 0%, #3772ff 55%, #29358f 100%)";
 
 // Dashboards doctor/nurse/admin already have their own sidebar nav (out of
 // scope here — this bar is specifically the patient/guest mobile scenario),
@@ -33,6 +38,38 @@ const HIDDEN_PREFIXES = [
   "/video",
   "/telegram-auth",
 ];
+
+type SideTab = { key: string; href: string; label: string; Icon: typeof Home };
+
+function SideTabLink({ tab, active }: { tab: SideTab; active: boolean }) {
+  return (
+    <Link
+      href={tab.href}
+      className="relative flex flex-1 flex-col items-center justify-center gap-1 py-3 min-w-0"
+    >
+      {active && (
+        <motion.div
+          layoutId="bottomNavActivePill"
+          className="absolute inset-x-2 inset-y-1 rounded-2xl bg-white/15"
+          transition={{ type: "spring", stiffness: 500, damping: 35 }}
+        />
+      )}
+      <motion.span whileTap={{ scale: 0.88 }} className="relative z-10 flex flex-col items-center gap-0.5">
+        <tab.Icon
+          className="w-5 h-5"
+          strokeWidth={active ? 2.5 : 2}
+          style={{ color: active ? "#ffffff" : "rgba(255,255,255,0.5)" }}
+        />
+        <span
+          className="text-[10px] font-medium truncate px-0.5 max-w-[4.5rem]"
+          style={{ color: active ? "#ffffff" : "rgba(255,255,255,0.5)" }}
+        >
+          {tab.label}
+        </span>
+      </motion.span>
+    </Link>
+  );
+}
 
 export default function BottomNavBar() {
   const pathname = usePathname();
@@ -63,53 +100,89 @@ export default function BottomNavBar() {
   // tabs below, so this isn't covered by the isPatient check above.
   if (isDoctor || isNurse || isAdmin) return null;
 
-  const tabs = user
+  // The "see a doctor" action is the app's single primary CTA (it's the
+  // first button on the homepage hero) — it gets its own raised FAB in the
+  // middle of the bar instead of sitting flush as just another tab.
+  const primaryHref = "/consultation/symptoms";
+  const primaryActive = pathname.startsWith(primaryHref);
+
+  const leftTabs: SideTab[] = user
     ? [
-        { href: "/", label: t.home, Icon: Home },
-        { href: "/consultation/symptoms", label: t.seeDoctor, Icon: Stethoscope },
-        { href: "/patient/history", label: t.history, Icon: History },
-        { href: "/patient/documents", label: t.documents, Icon: FileText },
-        { href: "/patient/profile", label: t.profile, Icon: UserRound },
+        { key: "home", href: "/", label: t.home, Icon: Home },
+        { key: "history", href: "/patient/history", label: t.history, Icon: History },
       ]
-    : [
-        { href: "/", label: t.home, Icon: Home },
-        { href: "/consultation/symptoms", label: t.seeDoctor, Icon: Stethoscope },
-        { href: "/specialists", label: t.specialists, Icon: FileText },
-      ];
+    : [{ key: "home", href: "/", label: t.home, Icon: Home }];
+
+  const rightTabs: SideTab[] = user
+    ? [
+        { key: "documents", href: "/patient/documents", label: t.documents, Icon: FileText },
+        { key: "profile", href: "/patient/profile", label: t.profile, Icon: UserRound },
+      ]
+    : [{ key: "specialists", href: "/specialists", label: t.specialists, Icon: Users }];
+
+  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
   return (
     <>
       {/* Spacer so fixed-position content below doesn't cover page content —
           renders only when the bar itself does, since they share this
           component's early returns above. */}
-      <div className="md:hidden" style={{ height: `calc(4rem + env(safe-area-inset-bottom))` }} aria-hidden />
+      <div className="md:hidden" style={{ height: `calc(5.25rem + env(safe-area-inset-bottom))` }} aria-hidden />
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex bg-white border-t border-gray-200"
-        style={{ paddingBottom: "env(safe-area-inset-bottom)", boxShadow: "0 -2px 12px rgba(0,0,0,0.06)" }}
+        className="md:hidden fixed left-3 right-3 z-50 flex items-stretch rounded-[28px] border border-white/10 backdrop-blur-xl"
+        style={{
+          bottom: `calc(0.75rem + env(safe-area-inset-bottom))`,
+          background: BAR_BACKGROUND,
+          boxShadow:
+            "0 10px 32px rgba(10,20,45,0.45), 0 0 0 1px rgba(255,255,255,0.04) inset, 0 0 28px rgba(55,114,255,0.22)",
+        }}
       >
-        {tabs.map(({ href, label, Icon }) => {
-          const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
-          return (
-            <Link
-              key={href}
-              href={href}
-              className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-w-0"
-              style={{ color: active ? ACCENT : "#8a8f99" }}
+        {leftTabs.map((tab) => (
+          <SideTabLink key={tab.key} tab={tab} active={isActive(tab.href)} />
+        ))}
+
+        {/* Elevated center FAB — primary CTA */}
+        <div className="relative flex flex-1 flex-col items-center justify-end min-w-0">
+          <Link href={primaryHref} className="relative -mt-7 flex flex-col items-center gap-1">
+            {!primaryActive && (
+              <motion.div
+                className="absolute top-0 w-14 h-14 rounded-full border-2 border-white/25"
+                animate={{ scale: [1, 1.25, 1], opacity: [0.45, 0, 0.45] }}
+                transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+              />
+            )}
+            <motion.div
+              whileTap={{ scale: 0.9 }}
+              className="flex items-center justify-center w-14 h-14 rounded-full"
+              style={{
+                background: FAB_BACKGROUND,
+                boxShadow: primaryActive
+                  ? "0 6px 18px rgba(55,114,255,0.65), 0 0 0 3px rgba(255,255,255,0.55)"
+                  : "0 6px 18px rgba(55,114,255,0.55), 0 0 0 3px rgba(12,20,42,0.9)",
+              }}
             >
-              <Icon className="w-5 h-5" strokeWidth={active ? 2.5 : 2} />
-              <span className="text-[11px] font-medium truncate px-0.5">{label}</span>
-            </Link>
-          );
-        })}
+              <Stethoscope className="w-6 h-6 text-white" strokeWidth={2.3} />
+            </motion.div>
+            <span className="text-[10px] font-semibold text-white whitespace-nowrap">{t.seeDoctor}</span>
+          </Link>
+        </div>
+
+        {rightTabs.map((tab) => (
+          <SideTabLink key={tab.key} tab={tab} active={isActive(tab.href)} />
+        ))}
+
         {!user && (
           <button
             type="button"
             onClick={() => openAuth("login")}
-            className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-w-0"
-            style={{ color: "#8a8f99" }}
+            className="relative flex flex-1 flex-col items-center justify-center gap-1 py-3 min-w-0"
           >
-            <LogIn className="w-5 h-5" strokeWidth={2} />
-            <span className="text-[11px] font-medium truncate px-0.5">{t.login}</span>
+            <motion.span whileTap={{ scale: 0.88 }} className="flex flex-col items-center gap-0.5">
+              <LogIn className="w-5 h-5" strokeWidth={2} style={{ color: "rgba(255,255,255,0.5)" }} />
+              <span className="text-[10px] font-medium truncate px-0.5" style={{ color: "rgba(255,255,255,0.5)" }}>
+                {t.login}
+              </span>
+            </motion.span>
           </button>
         )}
       </nav>

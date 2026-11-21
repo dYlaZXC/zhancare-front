@@ -174,7 +174,7 @@ export default function HomeClient() {
       </section>
 
       <LogoTicker />
-      <ChatButton onToggle={() => setIsChatOpen((prev) => !prev)} />
+      {/* <ChatButton onToggle={() => setIsChatOpen((prev) => !prev)} /> */}
       {isChatOpen && <ChatComponent onClose={() => setIsChatOpen(false)} />}
       <Footer />
     </div>
