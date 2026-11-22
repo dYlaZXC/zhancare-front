@@ -15,6 +15,7 @@ import {
   Loader2,
   AlertCircle,
   Users,
+  Users2,
   Archive,
   DoorOpen,
 } from "lucide-react";
@@ -27,10 +28,11 @@ import { DoctorsScheduleContent } from "./schedule/views/DoctorsScheduleContent"
 import { ReferralsContent } from "./schedule/views/ReferralsContent";
 import { ServicesScheduleContent } from "./schedule/views/ServicesScheduleContent";
 import { RoomsScheduleContent } from "./schedule/views/RoomsScheduleContent";
+import { ClassSessionDetailModal } from "./subscriptions/ClassSessionDetailModal";
 
 interface ScheduleEvent {
   id: string;
-  type: 'consultation' | 'appointment' | 'diagnostics';
+  type: 'consultation' | 'appointment' | 'diagnostics' | 'class';
   consultation_type?: 'online' | 'offline';
   patient_id: number;
   patient_name: string;
@@ -51,15 +53,58 @@ interface ScheduleEvent {
   address?: string;
   specialization?: string;
   notes?: string;
+  // Group class only (type === 'class')
+  class_session_id?: number;
+  instructor_names?: string;
+  capacity?: number;
+  booked_count?: number;
 }
+
+type ScheduleViewMode = 'week' | 'month' | 'doctors' | 'services' | 'rooms' | 'referrals';
 
 interface ScheduleViewProps {
   user: any;
+  initialTab?: ScheduleViewMode;
 }
 
-export default function ScheduleView({ user }: ScheduleViewProps) {
+// Lightweight stand-in for EventCard on a 'class' event — EventCard's
+// patient_name/doctor_name/delete-reschedule-via-/schedule/{id}/ assumptions
+// don't fit a group class (many patients, no single one of them "the"
+// booking), so it gets its own compact, read-only card instead of being
+// forced through that patient-centric component.
+function ClassEventCard({ event, onClick, compact }: { event: ScheduleEvent; onClick: () => void; compact?: boolean }) {
+  return (
+    <motion.div
+      whileHover={{ y: -1, boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)' }}
+      initial={{ boxShadow: '0 0 0 0 rgb(0 0 0 / 0)' }}
+      onClick={onClick}
+      className="rounded-xl border cursor-pointer overflow-hidden bg-white"
+      style={{ borderColor: '#f9a8d4' }}
+    >
+      <div className="h-1 w-full" style={{ backgroundColor: '#db2777' }} />
+      <div className={compact ? 'p-2' : 'p-2.5 md:p-3'}>
+        <div className={`flex items-center gap-1 ${compact ? 'mb-1' : 'mb-1.5'}`}>
+          <div className={`${compact ? 'w-5 h-5' : 'w-6 h-6'} rounded-lg flex items-center justify-center flex-shrink-0`} style={{ backgroundColor: '#fce7f3' }}>
+            <Users2 className={compact ? 'w-2.5 h-2.5' : 'w-3 h-3'} style={{ color: '#db2777' }} />
+          </div>
+          <span className={`${compact ? 'text-xs' : 'text-xs md:text-sm'} font-bold`} style={{ color: '#db2777' }}>
+            {event.time}
+          </span>
+        </div>
+        <p className={`${compact ? 'text-[11px]' : 'text-xs md:text-sm'} font-semibold truncate`} style={{ color: '#1e263e' }}>
+          {event.patient_name}
+        </p>
+        {event.instructor_names && (
+          <p className="text-[10px] text-gray-400 truncate mt-0.5">{event.instructor_names}</p>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+export default function ScheduleView({ user, initialTab }: ScheduleViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<'week' | 'month' | 'doctors' | 'services' | 'rooms' | 'referrals'>('month');
+  const [viewMode, setViewMode] = useState<ScheduleViewMode>(initialTab || 'month');
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,13 +112,14 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
   const [showDateDetailsDrawer, setShowDateDetailsDrawer] = useState(false);
   const [showArchiveDrawer, setShowArchiveDrawer] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [classDetail, setClassDetail] = useState<any | null>(null);
   // Mirrors AddEventModal's own "Тип консультации" while it's open alongside
   // the drawer, so "Свободные врачи"'s Видео/В клинике toggle can follow
   // along too — same idea as selectedDate above. Home visit/diagnostics have
   // no equivalent there, so those two just leave the toggle wherever it was.
   const [modalConsultationType, setModalConsultationType] = useState<'online' | 'offline' | 'home' | 'diagnostics' | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterType, setFilterType] = useState<'all' | 'consultation' | 'appointment' | 'diagnostics'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'consultation' | 'appointment' | 'diagnostics' | 'class'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'scheduled' | 'in_progress' | 'completed' | 'cancelled'>('all');
 
   // Doctors / services view date
@@ -89,7 +135,10 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
   });
 
   useEffect(() => {
-    if (viewMode === 'doctors' || viewMode === 'referrals') return;
+    // Referrals has its own data; everything else renders /schedule/ events.
+    // Must clear the initial loading=true, or opening ?tab=referrals
+    // directly leaves the spinner up forever.
+    if (viewMode === 'referrals') { setLoading(false); return; }
     fetchSchedule();
   }, [currentDate, viewMode]);
 
@@ -216,6 +265,19 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
     setShowDateDetailsDrawer(true);
   };
 
+  // A 'class' event in month/week view carries only a summary (capacity,
+  // booked_count, no roster) — fetch the full session (participants,
+  // per-instructor assignment) before opening ClassSessionDetailModal,
+  // same as ClassSessionsCalendarView's own openDetail.
+  const openClassDetail = async (classSessionId: number) => {
+    try {
+      const { data } = await api.get(`/subscriptions/class-sessions/${classSessionId}/`);
+      setClassDetail(data);
+    } catch (err) {
+      console.error("Failed to load class session:", err);
+    }
+  };
+
   // Render Week View
   const renderWeekView = () => {
     const weekDays = getWeekDays();
@@ -287,14 +349,22 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
           {/* Events for selected day — fills remaining height, scrolls if needed */}
           <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
             {selectedDayEvents.length > 0 ? (
-              selectedDayEvents.map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  onChanged={fetchSchedule}
-                  onClick={() => openDayDetails(effectiveDay)}
-                />
-              ))
+              selectedDayEvents.map((event) =>
+                event.type === 'class' ? (
+                  <ClassEventCard
+                    key={event.id}
+                    event={event}
+                    onClick={() => event.class_session_id && openClassDetail(event.class_session_id)}
+                  />
+                ) : (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    onChanged={fetchSchedule}
+                    onClick={() => openDayDetails(effectiveDay)}
+                  />
+                )
+              )
             ) : (
               <div className="h-full flex flex-col items-center justify-center gap-3 text-gray-300 select-none">
                 <CalendarIcon className="w-14 h-14 opacity-30" />
@@ -343,15 +413,24 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
                 {/* Events — scrollable, fills remaining height */}
                 <div className="flex-1 overflow-y-auto space-y-1.5">
                   {dayEvents.length > 0
-                    ? dayEvents.map((event) => (
-                        <EventCard
-                          key={event.id}
-                          event={event}
-                          onChanged={fetchSchedule}
-                          compact
-                          onClick={() => openDayDetails(dateString)}
-                        />
-                      ))
+                    ? dayEvents.map((event) =>
+                        event.type === 'class' ? (
+                          <ClassEventCard
+                            key={event.id}
+                            event={event}
+                            compact
+                            onClick={() => event.class_session_id && openClassDetail(event.class_session_id)}
+                          />
+                        ) : (
+                          <EventCard
+                            key={event.id}
+                            event={event}
+                            onChanged={fetchSchedule}
+                            compact
+                            onClick={() => openDayDetails(dateString)}
+                          />
+                        )
+                      )
                     : (
                       <div className="h-full flex flex-col items-center justify-center gap-2 text-gray-300 select-none">
                         <CalendarIcon className="w-8 h-8 opacity-40" />
@@ -487,11 +566,13 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
                       const videoCount = dayEvents.filter(e => e.type === 'consultation' && e.consultation_type !== 'offline').length;
                       const clinicCount = dayEvents.filter(e => e.type === 'consultation' && e.consultation_type === 'offline').length;
                       const diagCount = dayEvents.filter(e => e.type === 'diagnostics').length;
-                      const otherCount = dayEvents.filter(e => e.type !== 'consultation' && e.type !== 'diagnostics').length;
+                      const classCount = dayEvents.filter(e => e.type === 'class').length;
+                      const otherCount = dayEvents.filter(e => e.type !== 'consultation' && e.type !== 'diagnostics' && e.type !== 'class').length;
                       const pills = [
                         videoCount > 0 && { count: videoCount, Icon: Video, bg: '#ebf1ff', color: '#3772ff', label: 'Видео' },
                         clinicCount > 0 && { count: clinicCount, Icon: Home, bg: '#dcfce7', color: '#059669', label: 'Приём' },
                         diagCount > 0 && { count: diagCount, Icon: FlaskConical, bg: '#cffafe', color: '#0891b2', label: 'Диагностика' },
+                        classCount > 0 && { count: classCount, Icon: Users2, bg: '#fce7f3', color: '#db2777', label: 'Занятия' },
                         otherCount > 0 && { count: otherCount, Icon: Home, bg: '#f3e8ff', color: '#8b5cf6', label: 'Выезд' },
                       ].filter(Boolean) as { count: number; Icon: React.ElementType; bg: string; color: string; label: string }[];
                       return (
@@ -693,6 +774,7 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
                       { id: 'consultation', label: 'Видеоконсультация' },
                       { id: 'appointment', label: 'Приём в клинике' },
                       { id: 'diagnostics', label: 'Диагностика' },
+                      { id: 'class', label: 'Групповые занятия' },
                     ]}
                     value={filterType}
                     onChange={(val) => setFilterType((val || 'all') as any)}
@@ -793,7 +875,9 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
         onClose={() => setShowDateDetailsDrawer(false)}
         selectedDate={selectedDate}
         onEventChanged={fetchSchedule}
-        events={selectedDate ? events.filter(e => e.date === selectedDate) : []}
+        events={selectedDate ? events.filter(e => e.date === selectedDate && e.type !== 'class') : []}
+        classEvents={selectedDate ? events.filter(e => e.date === selectedDate && e.type === 'class') : []}
+        onOpenClass={openClassDetail}
         onOpenFullForm={() => setShowAddModal(true)}
         hideBackdrop={showAddModal}
         // "Свободные врачи" now has a toggle for every type AddEventModal
@@ -807,6 +891,20 @@ export default function ScheduleView({ user }: ScheduleViewProps) {
         onClose={() => setShowArchiveDrawer(false)}
         onRestored={fetchSchedule}
       />
+
+      {/* Group class detail — reached by clicking a 'class' event from the
+          week/month view or the day details drawer. Full management lives
+          in Абонементы → Занятия (/admin/subscriptions/classes). */}
+      {classDetail && (
+        <ClassSessionDetailModal
+          session={classDetail}
+          onClose={() => setClassDetail(null)}
+          onUpdated={() => {
+            openClassDetail(classDetail.id);
+            fetchSchedule();
+          }}
+        />
+      )}
     </div>
   );
 }

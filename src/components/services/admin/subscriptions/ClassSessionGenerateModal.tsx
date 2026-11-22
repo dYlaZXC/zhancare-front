@@ -3,11 +3,12 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { api } from "@/utils/api";
+import SearchSelect from "../schedule/components/SearchSelect";
+import { InstructorPicker, StaffOption } from "./InstructorPicker";
 
 const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
 interface ServiceOption { id: number; name: string; duration_minutes: number; capacity_per_slot: number | null; }
-interface StaffOption { id: number; first_name: string; last_name: string; role: string; }
 
 export function ClassSessionGenerateModal({ onClose, onGenerated }: { onClose: () => void; onGenerated: () => void }) {
   const [services, setServices] = useState<ServiceOption[]>([]);
@@ -24,7 +25,15 @@ export function ClassSessionGenerateModal({ onClose, onGenerated }: { onClose: (
   const [result, setResult] = useState<{ created: number[]; failed: any[] } | null>(null);
 
   useEffect(() => {
-    api.get("/diagnostics/services/").then(res => setServices(res.data.results || res.data));
+    // Group-class services first (Абонементы → Услуги занятий); if the
+    // clinic hasn't flagged any yet, fall back to the whole catalog.
+    api.get("/diagnostics/services/", { params: { is_group_class: "true" } })
+      .then(res => {
+        const list = res.data.results || res.data;
+        if (list.length > 0) return list;
+        return api.get("/diagnostics/services/").then(r => r.data.results || r.data);
+      })
+      .then(setServices);
     api.get("/staff/").then(res => {
       const list = Array.isArray(res.data) ? res.data : (res.data.results ?? []);
       setStaff(list.filter((m: StaffOption) => m.role === "doctor"));
@@ -32,10 +41,6 @@ export function ClassSessionGenerateModal({ onClose, onGenerated }: { onClose: (
   }, []);
 
   const toggleWeekday = (d: number) => setWeekdays(ws => ws.includes(d) ? ws.filter(x => x !== d) : [...ws, d]);
-  const toggleInstructor = (id: number) => {
-    setInstructorIds(ids => ids.includes(id) ? ids.filter(i => i !== id) : [...ids, id]);
-    if (primaryId === null) setPrimaryId(id);
-  };
 
   const service = services.find(s => s.id === serviceId) || null;
 
@@ -84,17 +89,23 @@ export function ClassSessionGenerateModal({ onClose, onGenerated }: { onClose: (
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Услуга</label>
-                <select value={serviceId ?? ""} onChange={e => setServiceId(Number(e.target.value) || null)} className="w-full px-3 py-2 rounded-xl border-2 border-gray-200 text-sm">
-                  <option value="">Выберите услугу</option>
-                  {services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+                <SearchSelect
+                  options={services.map(s => ({
+                    id: s.id,
+                    label: s.name,
+                    subtitle: [`${s.duration_minutes} мин`, s.capacity_per_slot ? `до ${s.capacity_per_slot} чел.` : null].filter(Boolean).join(" · "),
+                  }))}
+                  value={serviceId ? String(serviceId) : ""}
+                  onChange={v => setServiceId(Number(v) || null)}
+                  placeholder="Выберите услугу"
+                />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-2">Дни недели</label>
                 <div className="flex gap-1.5">
                   {WEEKDAYS.map((label, i) => (
-                    <button key={i} onClick={() => toggleWeekday(i)} className={`w-9 h-9 rounded-lg text-xs font-semibold ${weekdays.includes(i) ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-500"}`}>
+                    <button key={i} onClick={() => toggleWeekday(i)} type="button" className={`flex-1 h-10 rounded-xl text-xs font-semibold transition-colors ${weekdays.includes(i) ? "bg-blue-600 text-white shadow-sm" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}>
                       {label}
                     </button>
                   ))}
@@ -103,30 +114,28 @@ export function ClassSessionGenerateModal({ onClose, onGenerated }: { onClose: (
 
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Время начала</label>
-                <input type="time" value={time} onChange={e => setTime(e.target.value)} className="w-full px-3 py-2 rounded-xl border-2 border-gray-200 text-sm" />
+                <input type="time" value={time} onChange={e => setTime(e.target.value)} className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 hover:border-gray-300 focus:border-blue-500 focus:outline-none text-sm transition-colors" />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">С даты</label>
-                  <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full px-3 py-2 rounded-xl border-2 border-gray-200 text-sm" />
+                  <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 hover:border-gray-300 focus:border-blue-500 focus:outline-none text-sm transition-colors" />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">По дату</label>
-                  <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full px-3 py-2 rounded-xl border-2 border-gray-200 text-sm" />
+                  <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 hover:border-gray-300 focus:border-blue-500 focus:outline-none text-sm transition-colors" />
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Инструкторы</label>
-                <div className="border-2 border-gray-200 rounded-xl p-2 max-h-32 overflow-y-auto space-y-1">
-                  {staff.map(m => (
-                    <label key={m.id} className="flex items-center gap-2 text-sm px-1 py-0.5">
-                      <input type="checkbox" checked={instructorIds.includes(m.id)} onChange={() => toggleInstructor(m.id)} />
-                      {m.first_name} {m.last_name}
-                    </label>
-                  ))}
-                </div>
+                <InstructorPicker
+                  staff={staff}
+                  instructorIds={instructorIds}
+                  primaryId={primaryId}
+                  onChange={(ids, primary) => { setInstructorIds(ids); setPrimaryId(primary); }}
+                />
               </div>
             </div>
 

@@ -86,6 +86,11 @@ export function ServiceCard({
               }`}>
                 {service.is_active ? '✓ Активна' : 'Неактивна'}
               </span>
+              {service.is_group_class && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-pink-50 text-pink-600 border border-pink-100">
+                  Групповое{service.capacity_per_slot ? ` · до ${service.capacity_per_slot} чел.` : ''}
+                </span>
+              )}
               {isDoctorMode ? (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-600 border border-indigo-100">
                   По графику врача

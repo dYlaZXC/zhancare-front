@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { api } from "@/utils/api";
+import SearchSelect from "../schedule/components/SearchSelect";
+import { InstructorPicker, StaffOption } from "./InstructorPicker";
 
 interface ServiceOption { id: number; name: string; duration_minutes: number; capacity_per_slot: number | null; }
-interface StaffOption { id: number; first_name: string; last_name: string; role: string; }
 
 export function CreateClassSessionModal({
   defaultDate, onClose, onCreated,
@@ -27,7 +28,15 @@ export function CreateClassSessionModal({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get("/diagnostics/services/").then(res => setServices((res.data.results || res.data)));
+    // Group-class services first (Абонементы → Услуги занятий); if the
+    // clinic hasn't flagged any yet, fall back to the whole catalog.
+    api.get("/diagnostics/services/", { params: { is_group_class: "true" } })
+      .then(res => {
+        const list = res.data.results || res.data;
+        if (list.length > 0) return list;
+        return api.get("/diagnostics/services/").then(r => r.data.results || r.data);
+      })
+      .then(setServices);
     api.get("/staff/").then(res => {
       const list = Array.isArray(res.data) ? res.data : (res.data.results ?? []);
       setStaff(list.filter((m: StaffOption) => m.role === "doctor"));
@@ -35,11 +44,6 @@ export function CreateClassSessionModal({
   }, []);
 
   const service = services.find(s => s.id === serviceId) || null;
-
-  const toggleInstructor = (id: number) => {
-    setInstructorIds(ids => ids.includes(id) ? ids.filter(i => i !== id) : [...ids, id]);
-    if (!instructorIds.includes(id) && primaryId === null) setPrimaryId(id);
-  };
 
   const submit = async () => {
     if (!service || instructorIds.length === 0) return;
@@ -75,20 +79,26 @@ export function CreateClassSessionModal({
         <div className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1">Услуга</label>
-            <select value={serviceId ?? ""} onChange={e => setServiceId(Number(e.target.value) || null)} className="w-full px-3 py-2 rounded-xl border-2 border-gray-200 text-sm">
-              <option value="">Выберите услугу</option>
-              {services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
+            <SearchSelect
+              options={services.map(s => ({
+                id: s.id,
+                label: s.name,
+                subtitle: [`${s.duration_minutes} мин`, s.capacity_per_slot ? `до ${s.capacity_per_slot} чел.` : null].filter(Boolean).join(" · "),
+              }))}
+              value={serviceId ? String(serviceId) : ""}
+              onChange={v => setServiceId(Number(v) || null)}
+              placeholder="Выберите услугу"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">Дата</label>
-              <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full px-3 py-2 rounded-xl border-2 border-gray-200 text-sm" />
+              <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 hover:border-gray-300 focus:border-blue-500 focus:outline-none text-sm transition-colors" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">Время</label>
-              <input type="time" value={time} onChange={e => setTime(e.target.value)} className="w-full px-3 py-2 rounded-xl border-2 border-gray-200 text-sm" />
+              <input type="time" value={time} onChange={e => setTime(e.target.value)} className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 hover:border-gray-300 focus:border-blue-500 focus:outline-none text-sm transition-colors" />
             </div>
           </div>
 
@@ -97,37 +107,26 @@ export function CreateClassSessionModal({
               <label className="block text-xs font-semibold text-gray-600 mb-1">Длительность, мин</label>
               <input
                 type="number" value={duration} placeholder={service ? String(service.duration_minutes) : ""}
-                onChange={e => setDuration(Number(e.target.value) || "")} className="w-full px-3 py-2 rounded-xl border-2 border-gray-200 text-sm"
+                onChange={e => setDuration(Number(e.target.value) || "")} className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 hover:border-gray-300 focus:border-blue-500 focus:outline-none text-sm transition-colors"
               />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">Вместимость</label>
               <input
                 type="number" value={capacity} placeholder={service?.capacity_per_slot ? String(service.capacity_per_slot) : "1"}
-                onChange={e => setCapacity(Number(e.target.value) || "")} className="w-full px-3 py-2 rounded-xl border-2 border-gray-200 text-sm"
+                onChange={e => setCapacity(Number(e.target.value) || "")} className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 hover:border-gray-300 focus:border-blue-500 focus:outline-none text-sm transition-colors"
               />
             </div>
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1">Инструкторы</label>
-            <div className="border-2 border-gray-200 rounded-xl p-2 max-h-40 overflow-y-auto space-y-1">
-              {staff.map(m => (
-                <div key={m.id} className="flex items-center justify-between px-1 py-0.5">
-                  <label className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" checked={instructorIds.includes(m.id)} onChange={() => toggleInstructor(m.id)} />
-                    {m.first_name} {m.last_name}
-                  </label>
-                  {instructorIds.includes(m.id) && (
-                    <label className="flex items-center gap-1 text-xs text-gray-500">
-                      <input type="radio" name="primary" checked={primaryId === m.id} onChange={() => setPrimaryId(m.id)} />
-                      Основной
-                    </label>
-                  )}
-                </div>
-              ))}
-              {staff.length === 0 && <p className="text-xs text-gray-400 px-1">Нет врачей</p>}
-            </div>
+            <InstructorPicker
+              staff={staff}
+              instructorIds={instructorIds}
+              primaryId={primaryId}
+              onChange={(ids, primary) => { setInstructorIds(ids); setPrimaryId(primary); }}
+            />
           </div>
         </div>
 

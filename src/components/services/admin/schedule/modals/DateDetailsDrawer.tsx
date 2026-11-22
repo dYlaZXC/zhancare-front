@@ -56,6 +56,14 @@ interface DateDetailsDrawerProps {
    * врачи" tab's Видео/В клинике/На дом/Диагностика toggle, so they don't
    * silently disagree about which type's availability is being shown. */
   syncConsultationType?: 'online' | 'offline' | 'home' | 'diagnostics' | null;
+  /** This date's group-class occurrences — kept OUT of `events` above (and
+   * so out of PatientGroupCard/BookingRow entirely): those assume a single
+   * patient per booking and delete/reschedule via `/schedule/{id}/`, neither
+   * of which fits a class with many participants and its own dedicated
+   * endpoints. Rendered as its own small section instead. */
+  classEvents?: ScheduleEvent[];
+  /** Opens ClassSessionDetailModal for one of the above. */
+  onOpenClass?: (classSessionId: number) => void;
 }
 
 function CopyButton({ value, label }: { value: string; label: string }) {
@@ -879,6 +887,8 @@ export default function DateDetailsDrawer({
   onOpenFullForm,
   hideBackdrop = false,
   syncConsultationType = null,
+  classEvents = [],
+  onOpenClass,
 }: DateDetailsDrawerProps) {
   const [search, setSearch] = useState("");
   // "Записи" is the useful default when the day already has bookings to
@@ -1010,6 +1020,32 @@ export default function DateDetailsDrawer({
             />
           ) : (
             <>
+          {/* Group classes — own small section, separate from the
+              patient-centric list below (see classEvents prop docstring). */}
+          {classEvents.length > 0 && (
+            <div className="px-5 pt-4 pb-1 flex flex-col gap-2">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">
+                {classEvents.length} {classEvents.length === 1 ? 'групповое занятие' : 'групповых занятия'}
+              </p>
+              {[...classEvents].sort((a, b) => a.time.localeCompare(b.time)).map(ce => (
+                <button
+                  key={ce.id}
+                  onClick={() => ce.class_session_id && onOpenClass?.(ce.class_session_id)}
+                  className="w-full flex items-center justify-between gap-3 bg-pink-50/60 border border-pink-200 rounded-xl px-4 py-3 hover:bg-pink-100/60 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-xs font-bold text-pink-700 flex-shrink-0">{ce.time}</span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{ce.patient_name}</p>
+                      {ce.instructor_names && <p className="text-[11px] text-gray-500 truncate">{ce.instructor_names}</p>}
+                    </div>
+                  </div>
+                  <StatusBadge status={ce.status} />
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Search */}
           {sorted.length > 0 && (
             <div className="px-5 py-3 border-b border-gray-100 bg-white">

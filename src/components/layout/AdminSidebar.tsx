@@ -126,7 +126,8 @@ const adminMenu: MenuItem[] = [
       { id: "subscriptions-overview", icon: faIdCard, title: "Обзор", color: "#ec4899", href: "/admin/subscriptions" },
       { id: "subscription-plans", icon: faTags, title: "Тарифы", color: "#f59e0b", href: "/admin/subscriptions/plans" },
       { id: "patient-subscriptions", icon: faIdBadge, title: "Абонементы пациентов", color: "#3772ff", href: "/admin/subscriptions/patients" },
-      { id: "class-sessions", icon: faPeopleGroup, title: "Занятия", color: "#10b981", href: "/admin/subscriptions/sessions" },
+      { id: "class-sessions", icon: faPeopleGroup, title: "Занятия", color: "#10b981", href: "/admin/subscriptions/classes" },
+      { id: "class-services", icon: faClipboardList, title: "Услуги занятий", color: "#db2777", href: "/admin/subscriptions/services" },
       { id: "subscriptions-checkin", icon: faQrcode, title: "QR Check-in", color: "#0ea5e9", href: "/admin/subscriptions/checkin" },
     ],
   },
@@ -246,7 +247,11 @@ export const AdminSidebar = ({
   const activeTab = (() => {
     for (const item of visibleMenu) {
       if (item.children) {
-        const match = item.children.find(child => pathname?.startsWith(child.href));
+        // Longest href wins, so "/admin/subscriptions/classes" highlights
+        // "Занятия" rather than its "/admin/subscriptions" parent "Обзор".
+        const match = item.children
+          .filter(child => pathname?.startsWith(child.href))
+          .sort((a, b) => b.href.length - a.href.length)[0];
         if (match) return match.id;
       } else if (item.href && pathname?.startsWith(item.href)) {
         return item.id;

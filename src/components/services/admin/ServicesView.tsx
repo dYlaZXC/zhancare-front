@@ -31,7 +31,12 @@ interface ListQuery {
 }
 const INITIAL_QUERY: ListQuery = { page: 1, category: "all", status: "all", search: "" };
 
-export function ServicesView({ user }: { user: any }) {
+/**
+ * `groupClassesOnly` — the Абонементы → Услуги занятий page: the same list,
+ * narrowed to is_group_class services, with new services created as group
+ * classes. Categories/Excel import stay on the main Услуги page.
+ */
+export function ServicesView({ user, groupClassesOnly = false }: { user: any; groupClassesOnly?: boolean }) {
   const [query, setQuery] = useState<ListQuery>(INITIAL_QUERY);
   const [services, setServices] = useState<Service[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -79,6 +84,7 @@ export function ServicesView({ user }: { user: any }) {
       if (query.category !== "all") params.category = query.category;
       if (query.status !== "all") params.is_active = query.status === "active" ? "true" : "false";
       if (query.search) params.search = query.search;
+      if (groupClassesOnly) params.is_group_class = "true";
 
       const res = await api.get("/diagnostics/services/", { params });
       if (seq !== requestSeq.current) return;
@@ -98,7 +104,7 @@ export function ServicesView({ user }: { user: any }) {
     } finally {
       if (seq === requestSeq.current) setLoading(false);
     }
-  }, [query]);
+  }, [query, groupClassesOnly]);
 
   useEffect(() => {
     api.get('/clinic-stats/').then(res => {
@@ -198,11 +204,16 @@ export function ServicesView({ user }: { user: any }) {
           onOpenBulkUpload={() => setShowBulkUploadModal(true)}
           onOpenCreateCategory={() => setCategoryModal(null)}
           tab={activeTab}
+          {...(groupClassesOnly && {
+            title: "Услуги занятий",
+            subtitle: "Услуги, которые проводятся как групповые занятия по абонементам",
+            hideBulkUpload: true,
+          })}
         />
 
         {/* Tabs — Услуги and Категории are two views of the same catalog,
             not a main page plus a settings popup. */}
-        <div className="flex items-center gap-1 border-b-2 border-gray-100 mb-6">
+        {!groupClassesOnly && <div className="flex items-center gap-1 border-b-2 border-gray-100 mb-6">
           {TABS.map(({ key, label, Icon, count }) => (
             <button
               key={key}
@@ -223,11 +234,14 @@ export function ServicesView({ user }: { user: any }) {
               </span>
             </button>
           ))}
-        </div>
+        </div>}
 
         {activeTab === 'services' && (
           <>
-            <ServicesStatsCards total={stats.total} active={stats.active} inactive={stats.inactive} />
+            <ServicesStatsCards
+              total={stats.total} active={stats.active} inactive={stats.inactive}
+              totalLabel={groupClassesOnly ? "Услуг занятий" : undefined}
+            />
 
             <ServicesToolbar
               categories={categories}
@@ -261,10 +275,12 @@ export function ServicesView({ user }: { user: any }) {
         ) : services.length === 0 ? (
           <div className="text-center py-16 text-gray-400">
             <ClipboardList className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p className="font-semibold">{hasFilters ? "Ничего не найдено" : "Услуг пока нет"}</p>
+            <p className="font-semibold">{hasFilters ? "Ничего не найдено" : groupClassesOnly ? "Услуг для занятий пока нет" : "Услуг пока нет"}</p>
             <p className="text-sm mt-1">
               {hasFilters
                 ? "Попробуйте изменить фильтры или поисковый запрос"
+                : groupClassesOnly
+                ? "Нажмите «Добавить услугу» или включите «Групповое занятие» у существующей услуги в разделе Услуги"
                 : "Нажмите «Добавить услугу» чтобы создать первую"}
             </p>
           </div>
@@ -304,6 +320,7 @@ export function ServicesView({ user }: { user: any }) {
             staff={staff}
             clinicCurrency={clinicCurrency}
             user={user}
+            defaultGroupClass={groupClassesOnly}
             onClose={() => setShowModal(false)}
             onSaved={() => {
               // A new/renamed service can land on any page (the list is

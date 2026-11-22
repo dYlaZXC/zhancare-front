@@ -30,7 +30,16 @@ export interface PaymentInfo {
 
 export interface ScheduleEvent {
   id: string;
-  type: 'consultation' | 'appointment' | 'diagnostics';
+  type: 'consultation' | 'appointment' | 'diagnostics' | 'class';
+  // Group-class occurrence (type === 'class' only) — one event per
+  // ClassSession, not per participant. patient_id/patient_name are still
+  // populated (patient_id = the ClassSession's own id, patient_name = a
+  // "Service (booked/capacity)" label) so every other event-list code path
+  // that keys off those two fields keeps working unmodified.
+  class_session_id?: number;
+  instructor_names?: string;
+  capacity?: number;
+  booked_count?: number;
   consultation_type?: 'online' | 'offline';
   payment_info?: PaymentInfo | null;
   // Patient
@@ -101,7 +110,7 @@ export interface ScheduleEvent {
 
 export type ViewMode = 'week' | 'month' | 'doctors';
 
-export type FilterType = 'all' | 'consultation' | 'appointment' | 'diagnostics';
+export type FilterType = 'all' | 'consultation' | 'appointment' | 'diagnostics' | 'class';
 
 export type FilterStatus = 'all' | 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
 

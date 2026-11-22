@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import { api } from "@/utils/api";
 import {
-  X, Loader2, CheckCircle2, Save, ChevronDown, ClipboardList, Boxes,
+  X, Loader2, CheckCircle2, Save, ChevronDown, ClipboardList, Boxes, Users2,
 } from "lucide-react";
 import type {
   Service, ServiceCategory, StaffMember, ServiceFormData, CategorySettings, InheritableField,
@@ -78,6 +78,7 @@ export function ServiceFormModal({
   user,
   onClose,
   onSaved,
+  defaultGroupClass = false,
 }: {
   mode: "create" | "edit";
   initial: Service | null;
@@ -87,11 +88,15 @@ export function ServiceFormModal({
   user: any;
   onClose: () => void;
   onSaved: (service: Service) => void;
+  /** New services start flagged as group classes (Абонементы → Услуги занятий). */
+  defaultGroupClass?: boolean;
 }) {
   // Fields this service sets itself (edit: as saved; create: none yet — every
   // field follows the category until the admin types in it).
   const [own, setOwn] = useState<Set<InheritableField>>(
-    () => new Set(mode === "edit" ? (initial?.own_fields ?? []) : []),
+    // Group-class page: the group size is the service's own from the start,
+    // so neither a category switch nor the server's category sync resets it.
+    () => new Set(mode === "edit" ? (initial?.own_fields ?? []) : defaultGroupClass ? ["capacity_per_slot"] : []),
   );
   const [form, setForm] = useState<ServiceFormData>(() => {
     if (mode === "edit" && initial) {
@@ -102,11 +107,21 @@ export function ServiceFormModal({
         doctor_ids: initial.doctor_ids ?? [],
         capacity_per_slot: initial.capacity_per_slot ?? null,
         warehouse_auto_deduct_enabled: initial.warehouse_auto_deduct_enabled ?? true,
+        is_group_class: initial.is_group_class ?? false,
       };
     }
     const first = categories[0];
-    return followCategory({ ...EMPTY_SERVICE_FORM, category: first?.slug ?? "" }, new Set(), undefined, first, false);
+    const base = followCategory({ ...EMPTY_SERVICE_FORM, category: first?.slug ?? "", is_group_class: defaultGroupClass }, new Set(), undefined, first, false);
+    return defaultGroupClass && base.capacity_per_slot === null ? { ...base, capacity_per_slot: 10 } : base;
   });
+  // On Абонементы → Услуги занятий a NEW service is a group class by
+  // definition — show that as a fact instead of a switch.
+  const lockedGroup = mode === "create" && defaultGroupClass;
+  // A group needs a size: switching to group with no limit set starts at 10.
+  const toggleGroupClass = (on: boolean) => {
+    setForm(f => ({ ...f, is_group_class: on }));
+    if (on && form.capacity_per_slot === null) setOwnField("capacity_per_slot", { capacity_per_slot: 10 });
+  };
   const [saving, setSaving] = useState(false);
   const [modalMouseDownTarget, setModalMouseDownTarget] = useState<EventTarget | null>(null);
   const [catDropdownOpen, setCatDropdownOpen] = useState(false);
@@ -325,12 +340,52 @@ export function ServiceFormModal({
             </div>
 
             {/* Slot limit — meaningless in doctor-mode, capacity is decided by which assigned doctors are free */}
-            {form.schedule_source === "own" && (
+            {lockedGroup ? (
+              <div className="rounded-2xl border-2 border-pink-200 bg-pink-50 p-4 flex items-center gap-3">
+                <Users2 className="w-5 h-5 text-pink-600 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-pink-700">Будет добавлена как групповое занятие</p>
+                  <p className="text-xs text-pink-500 mt-0.5">Появится в «Услуги занятий» и в выборе услуги при создании занятия.</p>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-2xl border-2 border-gray-200 p-4 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                    <Users2 className="w-4 h-4 text-pink-600" />
+                    Групповое занятие
+                  </label>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Услуга появится в «Абонементы → Услуги занятий» и в выборе услуги при создании занятия.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => toggleGroupClass(!form.is_group_class)}
+                  className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${
+                    form.is_group_class ? "bg-pink-600" : "bg-gray-300"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                      form.is_group_class ? "translate-x-5" : ""
+                    }`}
+                  />
+                </button>
+              </div>
+            )}
+
+            {form.schedule_source === "own" ? (
               <CapacityCard
                 value={form.capacity_per_slot}
                 onChange={v => setOwnField("capacity_per_slot", { capacity_per_slot: v })}
                 extra={hint("capacity_per_slot")}
+                groupMode={form.is_group_class}
               />
+            ) : form.is_group_class && (
+              <p className="text-xs text-gray-400 -mt-2">
+                При расписании «По графику врача» вместимость группы задаётся при создании каждого занятия.
+              </p>
             )}
 
             {mode === "edit" && initial && (

@@ -15,7 +15,8 @@ import {
   faHistory,
   faBolt,
   faUser,
-  faClipboardList
+  faClipboardList,
+  faIdCard
 } from "@fortawesome/free-solid-svg-icons";
 
 interface AdminBreadcrumbItem {
@@ -71,6 +72,12 @@ export const AdminBreadcrumb = ({
       title: "Расписание",
       icon: <FontAwesomeIcon icon={faCalendarCheck} className="w-4 h-4" />,
       href: "/admin/schedule",
+    },
+    subscriptions: {
+      key: "subscriptions",
+      title: "Абонементы",
+      icon: <FontAwesomeIcon icon={faIdCard} className="w-4 h-4" />,
+      href: "/admin/subscriptions",
     },
     reports: {
       key: "reports",

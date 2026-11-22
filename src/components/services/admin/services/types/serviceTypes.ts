@@ -119,6 +119,8 @@ export interface Service {
   /** Which inheritable fields THIS service set itself; the rest follow its category. */
   own_fields?: InheritableField[];
   warehouse_auto_deduct_enabled?: boolean;
+  /** Shown under Абонементы → Услуги занятий and offered for group classes. */
+  is_group_class?: boolean;
 }
 
 /** The service fields a category can supply (the service form's own fields). */
@@ -137,12 +139,13 @@ export interface ServiceFormData {
   doctor_ids: number[];
   capacity_per_slot: number | null;
   warehouse_auto_deduct_enabled: boolean;
+  is_group_class: boolean;
 }
 
 export const EMPTY_SERVICE_FORM: ServiceFormData = {
   name: "", description: "", price: "", duration_minutes: 30, category: "",
   currency: "", schedule_source: "own", doctor_ids: [], capacity_per_slot: null,
-  warehouse_auto_deduct_enabled: true,
+  warehouse_auto_deduct_enabled: true, is_group_class: false,
 };
 
 export interface CategoryFormData {

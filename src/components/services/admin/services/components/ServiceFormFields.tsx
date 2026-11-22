@@ -236,13 +236,29 @@ export function DoctorMultiSelect({
 
 // ── Slot limit ──────────────────────────────────────────────────────────────
 export function CapacityCard({
-  value, onChange, extra,
+  value, onChange, extra, groupMode = false,
 }: {
   value: number | null;
   onChange: (v: number | null) => void;
   extra?: ReactNode;
+  /** Group class: always limited, worded as the group's size. */
+  groupMode?: boolean;
 }) {
   const limited = value !== null;
+  if (groupMode) {
+    return (
+      <div className="p-4 rounded-2xl border-2 bg-pink-50 border-pink-200">
+        <p className="text-sm font-semibold mb-0.5 text-pink-700">Вместимость группы{extra}</p>
+        <p className="text-xs text-pink-500">Сколько пациентов можно записать на одно занятие — по умолчанию для новых занятий</p>
+        <div className="flex items-center gap-2 mt-3">
+          <input type="number" min="1" max="999" value={value ?? ''}
+            onChange={e => onChange(Math.max(1, Number(e.target.value) || 1))}
+            className="w-20 text-center px-2 py-1.5 rounded-lg border-2 border-pink-300 text-sm font-bold text-pink-700 outline-none focus:border-pink-500 transition-colors bg-white" />
+          <span className="text-sm text-pink-500">человек в группе</span>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className={`p-4 rounded-2xl border-2 transition-all ${limited ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}>
       <div className="flex items-center gap-3">

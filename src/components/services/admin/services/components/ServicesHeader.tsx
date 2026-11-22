@@ -8,6 +8,9 @@ export function ServicesHeader({
   onOpenBulkUpload,
   onOpenCreateCategory,
   tab = 'services',
+  title = 'Услуги Клиники',
+  subtitle = 'Управление диагностическими услугами клиники',
+  hideBulkUpload = false,
 }: {
   onOpenCreate: () => void;
   onOpenBulkUpload: () => void;
@@ -15,15 +18,18 @@ export function ServicesHeader({
   /** Each tab gets its own primary action — "Добавить услугу"/"Загрузить из
    * Excel" would be misleading on Категории, and vice versa. */
   tab?: 'services' | 'categories';
+  title?: string;
+  subtitle?: string;
+  hideBulkUpload?: boolean;
 }) {
   return (
     <div className="flex items-center justify-between mb-6">
       <div>
         <h1 className="text-3xl font-bold mb-2" style={{ color: '#1e263e' }}>
-          Услуги Клиники
+          {title}
         </h1>
         <p className="text-gray-600">
-          Управление диагностическими услугами клиники
+          {subtitle}
         </p>
       </div>
       {tab === 'categories' ? (
@@ -38,7 +44,7 @@ export function ServicesHeader({
           Добавить категорию
         </motion.button>
       ) : <div className="flex items-center gap-2">
-        <motion.button
+        {!hideBulkUpload && <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={onOpenBulkUpload}
@@ -46,7 +52,7 @@ export function ServicesHeader({
         >
           <FileSpreadsheet className="w-5 h-5" />
           Загрузить из Excel
-        </motion.button>
+        </motion.button>}
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
