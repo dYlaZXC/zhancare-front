@@ -4,6 +4,7 @@ import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   LiveKitRoom,
   VideoConference,
+  useRemoteParticipants,
 } from "@livekit/components-react";
 import { RoomOptions, VideoPresets } from "livekit-client";
 import "@livekit/components-styles";
@@ -11,16 +12,39 @@ import { api } from "@/utils/api";
 import { Loader2, RefreshCw } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faHeartbeat,
-  faSignal,
-  faRecordVinyl
+  faRecordVinyl,
+  faUserClock
 } from "@fortawesome/free-solid-svg-icons";
+
+// Must render inside <LiveKitRoom> — useRemoteParticipants reads the room
+// context. Shows nothing once the patient's participant actually joins the
+// room (camera-off is a separate state, already handled by LiveKit's own
+// participant tile — this only covers "hasn't connected at all yet").
+const WaitingForPatientOverlay: React.FC<{ patientName: string }> = ({ patientName }) => {
+  const remoteParticipants = useRemoteParticipants();
+  if (remoteParticipants.length > 0) return null;
+
+  return (
+    <div className="absolute inset-0 z-[5] flex items-center justify-center bg-gradient-to-br from-emerald-900/40 via-gray-900/60 to-teal-900/40 backdrop-blur-sm pointer-events-none">
+      <div className="text-center px-6">
+        <div className="mb-5 inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-600/20 border-2 border-emerald-400/30 backdrop-blur-sm">
+          <FontAwesomeIcon icon={faUserClock} className="text-2xl text-emerald-300" />
+        </div>
+        <h3 className="text-lg font-semibold text-white mb-2">Ожидаем пациента</h3>
+        <p className="text-sm text-emerald-200/80 mb-4">{patientName} ещё не подключился к звонку</p>
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
+          <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+          <span className="text-xs text-white/70">Ожидание подключения...</span>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 interface DoctorVideoFrameProps {
   meetingId: string;
   safeUserName: string;
   userEmail: string;
-  otherPartyJoined: boolean;
   onDisconnect: () => void;
   isRecording: boolean;
   patientName: string;
@@ -33,18 +57,76 @@ const MedicalPlaceholder: React.FC<{
   sub: React.ReactNode;
   isRecording: boolean;
   meetingId: string;
-}> = ({ icon, headline, sub, isRecording, meetingId }) => (
-  <div className="relative w-full h-full min-h-[600px] rounded-2xl overflow-hidden">
-    <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/20 to-teal-900/20 flex items-center justify-center">
-      <div className="text-center max-w-md p-8">
-        {icon}
-        <h2 className="text-xl font-semibold text-white mb-3">{headline}</h2>
-        <div className="text-emerald-300 text-sm">{sub}</div>
-        <div className="mt-4 text-xs text-white/70">Meeting ID: {meetingId}</div>
+  type?: 'loading' | 'error';
+}> = ({ icon, headline, sub, isRecording, meetingId, type = 'loading' }) => (
+  <div className="relative w-full h-full min-h-[400px] sm:min-h-[500px] md:min-h-[600px] rounded-2xl overflow-hidden">
+    {/* Animated gradient background */}
+    <div className={`absolute inset-0 ${
+      type === 'error'
+        ? 'bg-gradient-to-br from-red-900/30 via-gray-900/40 to-orange-900/30'
+        : 'bg-gradient-to-br from-emerald-900/30 via-teal-900/40 to-green-900/30'
+    } flex items-center justify-center`}>
+
+      {/* Animated circles background */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className={`absolute top-1/4 left-1/4 w-96 h-96 ${
+          type === 'error' ? 'bg-red-500/10' : 'bg-emerald-500/10'
+        } rounded-full blur-3xl animate-pulse`}></div>
+        <div className={`absolute bottom-1/4 right-1/4 w-96 h-96 ${
+          type === 'error' ? 'bg-orange-500/10' : 'bg-teal-500/10'
+        } rounded-full blur-3xl animate-pulse delay-1000`}></div>
+      </div>
+
+      {/* Content card */}
+      <div className="relative z-10 text-center max-w-md mx-auto p-8">
+        <div className={`mb-6 inline-flex items-center justify-center w-20 h-20 rounded-2xl ${
+          type === 'error'
+            ? 'bg-red-600/20 border-2 border-red-400/30'
+            : 'bg-emerald-600/20 border-2 border-emerald-400/30'
+        } backdrop-blur-sm`}>
+          {icon}
+        </div>
+
+        <h2 className="text-2xl font-bold text-white mb-4 leading-tight">{headline}</h2>
+
+        <div className="text-base text-emerald-200 mb-6 leading-relaxed">{sub}</div>
+
+        {/* Meeting ID Badge */}
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
+          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+          <span className="text-sm text-white/90 font-medium">ID: {meetingId}</span>
+        </div>
+
+        {/* Decorative line */}
+        <div className="mt-8 flex items-center justify-center gap-2">
+          <div className={`h-1 w-12 rounded-full ${
+            type === 'error' ? 'bg-red-400/30' : 'bg-emerald-400/30'
+          }`}></div>
+          <div className={`h-1 w-1 rounded-full ${
+            type === 'error' ? 'bg-red-400/50' : 'bg-emerald-400/50'
+          }`}></div>
+          <div className={`h-1 w-12 rounded-full ${
+            type === 'error' ? 'bg-red-400/30' : 'bg-emerald-400/30'
+          }`}></div>
+        </div>
       </div>
     </div>
+
+    {/* Grid overlay */}
+    <div className="absolute inset-0 opacity-5 pointer-events-none">
+      <div className="w-full h-full"
+           style={{
+             backgroundImage: `
+               linear-gradient(rgba(16, 185, 129, 0.1) 1px, transparent 1px),
+               linear-gradient(90deg, rgba(16, 185, 129, 0.1) 1px, transparent 1px)
+             `,
+             backgroundSize: '24px 24px'
+           }}>
+      </div>
+    </div>
+
     {isRecording && (
-      <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-2 bg-red-600/90 backdrop-blur-sm rounded-lg border border-red-400">
+      <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-2 bg-red-600/90 backdrop-blur-sm rounded-lg border border-red-400 z-30">
         <FontAwesomeIcon icon={faRecordVinyl} className="text-white animate-pulse" />
         <span className="text-white text-sm font-medium">REC</span>
       </div>
@@ -56,7 +138,6 @@ const DoctorVideoFrame: React.FC<DoctorVideoFrameProps> = ({
   meetingId,
   safeUserName,
   userEmail,
-  otherPartyJoined,
   onDisconnect,
   isRecording,
   patientName
@@ -69,23 +150,35 @@ const DoctorVideoFrame: React.FC<DoctorVideoFrameProps> = ({
   const [retryCount, setRetryCount] = useState(0);
 
 
-  // LiveKit room options with explicit audio configuration
+  // LiveKit room options with HIGH QUALITY video configuration
   const roomOptions = useMemo<RoomOptions>(() => ({
-    adaptiveStream: true,
-    dynacast: true,
+    adaptiveStream: true, // Automatically adjusts quality based on network
+    dynacast: true, // Dynamic broadcasting for better performance
     publishDefaults: {
       audioPreset: {
-        maxBitrate: 20_000,
+        maxBitrate: 64_000, // Increased from 20_000 for better audio quality
       },
-      videoPreset: VideoPresets.h720,
+      videoPreset: VideoPresets.h1080, // Upgraded to 1080p (Full HD)
+      // Alternative options:
+      // VideoPresets.h720 - 720p HD (current)
+      // VideoPresets.h1080 - 1080p Full HD (recommended)
+      // VideoPresets.h1440 - 1440p 2K (very high quality, requires good network)
+      // VideoPresets.h2160 - 2160p 4K (ultra quality, requires excellent network)
+      videoEncoding: {
+        maxBitrate: 3_000_000, // 3 Mbps for crisp 1080p video
+        maxFramerate: 30, // Smooth 30 fps
+      },
     },
     videoCaptureDefaults: {
-      resolution: VideoPresets.h720.resolution,
+      resolution: VideoPresets.h1080.resolution, // Match video preset
+      deviceId: undefined, // Use default camera
     },
     audioCaptureDefaults: {
       autoGainControl: true,
       echoCancellation: true,
       noiseSuppression: true,
+      sampleRate: 48000, // High quality audio sampling
+      channelCount: 1, // Mono for voice calls
     },
   }), []);
 
@@ -100,19 +193,12 @@ const DoctorVideoFrame: React.FC<DoctorVideoFrameProps> = ({
     })
   }), [safeUserName]);
 
-  // UI states
-  const [patientVitals, setPatientVitals] = useState({
-    heartRate: 72,
-    bloodPressure: "120/80",
-    temperature: "36.6"
-  });
-
   // Consistent identity generation for LiveKit (prevents multiple device connections)
   const identity = useMemo(() => {
-    const clean = safeUserName.toLowerCase().replace(/[^a-z0-9]/g, "") || "doctor";
-    const emailHash = userEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, "");
-    return `${meetingId}-doctor-${clean}-${emailHash}`;
-  }, [meetingId, safeUserName, userEmail]);
+    // const emailHash = userEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+    const emailHash = "Доктор";
+    return emailHash;
+  }, []);
 
 
   // Token fetching logic
@@ -150,31 +236,7 @@ const DoctorVideoFrame: React.FC<DoctorVideoFrameProps> = ({
     }
   }, [token, loading]);
 
-  // Mock vital signs updates for demo
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPatientVitals({
-        heartRate: Math.floor(Math.random() * 20) + 65,
-        bloodPressure: `${Math.floor(Math.random() * 30) + 110}/${Math.floor(Math.random() * 20) + 70}`,
-        temperature: (Math.random() * 2 + 36).toFixed(1)
-      });
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
   // Loading states
-  if (!otherPartyJoined) {
-    return (
-      <MedicalPlaceholder
-        icon={<Loader2 className="animate-spin w-8 h-8 mb-4 text-emerald-500" />}
-        headline="⏳ Ожидание пациента..."
-        sub="Мы уведомили пациента. Пожалуйста, оставайтесь на линии."
-        isRecording={isRecording}
-        meetingId={meetingId}
-      />
-    );
-  }
-
   if (!token || !livekitUrl) {
     return error ? (
       <MedicalPlaceholder
@@ -206,39 +268,44 @@ const DoctorVideoFrame: React.FC<DoctorVideoFrameProps> = ({
   }
 
   return (
-    <div className="relative w-full h-full min-h-[600px] rounded-2xl overflow-hidden group">
+    <div className="relative w-full h-full rounded-2xl overflow-hidden group bg-gray-800">
       {/* LiveKit Video Conference with PiP Layout */}
-      <div className="relative w-full h-full">
-        <LiveKitRoom
-          token={token}
-          serverUrl={livekitUrl}
-          connect={true}
-          video={true}
-          audio={true}
-          options={roomOptions}
-          connectOptions={connectOptions}
-          onDisconnected={(reason) => {
-            console.warn("🚨 Doctor disconnected:", reason);
-            setToken(null); // trigger retry
-            onDisconnect?.();
-          }}
-          onConnected={() => {
-            console.log("✅ Doctor connected to LiveKit room");
-          }}
-          onError={(error) => {
-            console.error("❌ Doctor LiveKit room error:", error);
-            setError(`LiveKit error: ${error.message}`);
-          }}
-          data-lk-theme="default"
-          style={{
-            height: "100%",
-            width: "100%",
-            position: "absolute",
-            top: 0,
-            left: 0
-          }}
-        >
+      <LiveKitRoom
+        token={token}
+        serverUrl={livekitUrl}
+        connect={true}
+        video={true}
+        audio={true}
+        options={roomOptions}
+        connectOptions={connectOptions}
+        onDisconnected={(reason) => {
+          console.warn("🚨 Doctor disconnected:", reason);
+          setToken(null); // trigger retry
+          onDisconnect?.();
+        }}
+        onConnected={() => {
+          // console.log("✅ Doctor connected to LiveKit room");
+        }}
+        onError={(error) => {
+          // Don't log client-initiated disconnects as errors
+          if (error.message?.includes('Client initiated disconnect')) {
+            console.log("ℹ️ Doctor client disconnected normally");
+            return;
+          }
+
+          // Only log actual errors
+          console.error("❌ Doctor LiveKit room error:", error);
+          setError(`LiveKit error: ${error.message}`);
+        }}
+        data-lk-theme="default"
+        style={{
+          height: "100%",
+          width: "100%",
+        }}
+      >
           <VideoConference />
+
+          <WaitingForPatientOverlay patientName={patientName} />
 
           {/* Responsive CSS for Doctor View: Patient Large, Doctor Small */}
           <style dangerouslySetInnerHTML={{
@@ -266,11 +333,23 @@ const DoctorVideoFrame: React.FC<DoctorVideoFrameProps> = ({
               /* Mobile and small screens */
               @media (max-width: 640px) {
                 .lk-video-conference .lk-participant-tile[data-lk-local-participant="true"] {
-                  top: 0.5rem !important;
+                  top: 6rem !important;
                   right: 0.5rem !important;
-                  width: 6rem !important;
-                  height: 4.5rem !important;
-                  border-radius: 0.375rem !important;
+                  width: 8rem !important;
+                  height: 6rem !important;
+                  border-radius: 0.5rem !important;
+                  max-width: 40vw !important;
+                  max-height: 30vh !important;
+                }
+
+                /* Ensure main video doesn't overflow */
+                .lk-video-conference .lk-participant-tile[data-lk-local-participant="false"] {
+                  overflow: hidden !important;
+                }
+
+                .lk-video-conference video {
+                  max-width: 100% !important;
+                  max-height: 100% !important;
                 }
               }
 
@@ -279,8 +358,8 @@ const DoctorVideoFrame: React.FC<DoctorVideoFrameProps> = ({
                 .lk-video-conference .lk-participant-tile[data-lk-local-participant="true"] {
                   top: 0.75rem !important;
                   right: 0.75rem !important;
-                  width: 8rem !important;
-                  height: 6rem !important;
+                  width: 12rem !important;
+                  height: 9rem !important;
                   border-radius: 0.5rem !important;
                 }
               }
@@ -290,14 +369,27 @@ const DoctorVideoFrame: React.FC<DoctorVideoFrameProps> = ({
                 .lk-video-conference .lk-participant-tile[data-lk-local-participant="true"] {
                   top: 1rem !important;
                   right: 1rem !important;
-                  width: 12rem !important;
-                  height: 9rem !important;
-                  border-radius: 0.5rem !important;
+                  width: 16rem !important;
+                  height: 12rem !important;
+                  border-radius: 0.75rem !important;
                 }
               }
 
               .lk-video-conference .lk-grid-layout {
                 position: relative !important;
+              }
+
+              /* Keep the control bar (mic/camera/share/chat) above the
+                 "waiting for patient" overlay's backdrop-blur, so it never
+                 renders blurred/washed-out before the patient connects. */
+              .lk-video-conference .lk-control-bar {
+                position: relative !important;
+                z-index: 20 !important;
+              }
+
+              /* Fix video object-fit to prevent different zooming on different screens */
+              .lk-video-conference video {
+                object-fit: contain !important;
               }
 
               /* Hide leave button from LiveKit interface */
@@ -311,68 +403,22 @@ const DoctorVideoFrame: React.FC<DoctorVideoFrameProps> = ({
               }
             `
           }} />
-        </LiveKitRoom>
+      </LiveKitRoom>
 
-        {/* Medical Overlays - Outside LiveKit context */}
-        {/* Recording Indicator */}
-        {isRecording && (
-          <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-2 bg-red-600/90 backdrop-blur-sm rounded-lg border border-red-400 z-30">
-            <FontAwesomeIcon icon={faRecordVinyl} className="text-white animate-pulse" />
-            <span className="text-white text-sm font-medium">REC</span>
-          </div>
-        )}
-
-        {/* Connection Quality Indicator */}
-        <div className="absolute top-4 right-4 flex items-center gap-2 px-3 py-2 bg-emerald-600/90 backdrop-blur-sm rounded-lg border border-emerald-400 z-30">
-          <FontAwesomeIcon icon={faSignal} className="text-white" />
-          <span className="text-white text-sm font-medium">HD</span>
+      {/* Medical Overlays - Outside LiveKit context */}
+      {/* Recording Indicator */}
+      {isRecording && (
+        <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-2 bg-red-600/90 backdrop-blur-sm rounded-lg border border-red-400 z-30">
+          <FontAwesomeIcon icon={faRecordVinyl} className="text-white animate-pulse" />
+          <span className="text-white text-sm font-medium">REC</span>
         </div>
+      )}
 
-        {/* Audio Debug Overlay */}
-        {/* <div className="absolute bottom-4 right-4 bg-black/80 backdrop-blur-sm rounded-lg p-3 border border-emerald-400/30 z-30 max-w-sm">
-          <h4 className="text-emerald-300 font-semibold text-xs mb-2 flex items-center gap-2">
-            🎵 Audio Debug
-          </h4>
-          <div className="space-y-1 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="text-white/70">Permission:</span>
-              <span className={`font-mono ${audioPermissionGranted === true ? 'text-green-400' : audioPermissionGranted === false ? 'text-red-400' : 'text-yellow-400'}`}>
-                {audioPermissionGranted === true ? '✅ Granted' : audioPermissionGranted === false ? '❌ Denied' : '⏳ Checking...'}
-              </span>
-            </div>
-            {debugInfo.map((log, index) => (
-              <div key={index} className="text-emerald-300 text-xs font-mono">
-                {log}
-              </div>
-            ))}
-          </div>
-        </div> */}
-
-        {/* Patient Vitals Overlay */}
-        {/* {otherPartyJoined && (
-          <div className="absolute bottom-4 left-4 bg-black/70 backdrop-blur-sm rounded-xl p-4 border border-emerald-400/30 z-30">
-            <h4 className="text-emerald-300 font-semibold text-sm mb-3 flex items-center gap-2">
-              <FontAwesomeIcon icon={faHeartbeat} className="animate-pulse" />
-              Показатели пациента
-            </h4>
-            <div className="space-y-2 text-xs">
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-white/70">Пульс:</span>
-                <span className="text-emerald-300 font-mono">{patientVitals.heartRate} уд/мин</span>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-white/70">Давление:</span>
-                <span className="text-emerald-300 font-mono">{patientVitals.bloodPressure}</span>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-white/70">Температура:</span>
-                <span className="text-emerald-300 font-mono">{patientVitals.temperature}°C</span>
-              </div>
-            </div>
-          </div>
-        )} */}
-
-      </div>
+      {/* Connection Quality Indicator */}
+      {/* <div className="absolute top-4 right-4 flex items-center gap-2 px-3 py-2 bg-emerald-600/90 backdrop-blur-sm rounded-lg border border-emerald-400 z-30">
+        <FontAwesomeIcon icon={faSignal} className="text-white" />
+        <span className="text-white text-sm font-medium">HD</span>
+      </div> */}
 
       {/* Subtle Medical Grid Overlay */}
       <div className="absolute inset-0 opacity-5 pointer-events-none">

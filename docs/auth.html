@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZhanCare AI — Система авторизации JWT</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="layout">
+
+  <nav class="sidebar">
+    <div class="brand"><span class="dot"></span><strong>ZhanCare AI · Auth</strong></div>
+    <a class="home-link" href="index.html">← Главная</a>
+
+    <div class="group-title">Обзор</div>
+    <ul>
+      <li><a href="#overview">1. Архитектура системы</a></li>
+    </ul>
+
+    <div class="group-title">Backend (Django)</div>
+    <ul>
+      <li><a href="#jwt-settings">2. Настройки SIMPLE_JWT</a></li>
+      <li><a href="#custom-auth">3. CustomJWTAuthentication</a></li>
+      <li><a href="#sessions">4. Модель UserSession</a></li>
+      <li><a href="#login">5. Логин</a></li>
+      <li><a href="#refresh">6. Обновление токена</a></li>
+      <li><a href="#logout">7. Логаут и blacklist</a></li>
+      <li><a href="#register">8. Регистрация</a></li>
+      <li><a href="#password-reset">9. Сброс пароля</a></li>
+      <li><a href="#magic-link">10. Magic Link (гостевой доступ)</a></li>
+      <li><a href="#websocket">11. WebSocket-авторизация</a></li>
+      <li><a href="#urls">12. Список эндпоинтов</a></li>
+    </ul>
+
+    <div class="group-title">Frontend (Next.js)</div>
+    <ul>
+      <li><a href="#storage">13. Хранение токенов</a></li>
+      <li><a href="#interceptors">14. Axios-интерсепторы</a></li>
+      <li><a href="#authcontext">15. AuthContext</a></li>
+      <li><a href="#middleware">16. Middleware и защита роутов</a></li>
+      <li><a href="#rbac">17. Роли и доступ</a></li>
+    </ul>
+
+    <div class="group-title">Прочее</div>
+    <ul>
+      <li><a href="#security">18. Безопасность и риски</a></li>
+      <li><a href="#summary">19. Сводная таблица</a></li>
+      <li><a href="#files">20. Карта файлов</a></li>
+    </ul>
+  </nav>
+
+  <main>
+
+    <div class="hero">
+      <h1>Система авторизации JWT</h1>
+      <p>
+        Подробное техническое описание того, как ZhanCare AI аутентифицирует пользователей:
+        от логина и хранения токенов до автоматического рефреша, мультидевайсных сессий,
+        гостевых magic-link консультаций и ролевого доступа.
+      </p>
+      <div class="badges">
+        <span class="badge">Django REST Framework</span>
+        <span class="badge">rest_framework_simplejwt</span>
+        <span class="badge">Next.js Middleware</span>
+        <span class="badge">Axios Interceptors</span>
+        <span class="badge">Multi-role</span>
+        <span class="badge">Multi-device sessions</span>
+        <span class="badge">Redis Session Cache</span>
+        <span class="badge">httpOnly Cookies</span>
+        <span class="badge">Django Channels JWT</span>
+      </div>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat"><div class="label">Access token</div><div class="value">15 минут</div></div>
+      <div class="stat"><div class="label">Refresh token</div><div class="value">7 дней</div></div>
+      <div class="stat"><div class="label">Ротация refresh</div><div class="value">Включена</div></div>
+      <div class="stat"><div class="label">Blacklist</div><div class="value">После ротации</div></div>
+      <div class="stat"><div class="label">Login rate limit</div><div class="value">5/мин</div></div>
+      <div class="stat"><div class="label">Session cache TTL</div><div class="value">45 сек</div></div>
+    </div>
+
+    <div class="card" style="border-color: var(--green); background: rgba(25,195,125,0.06);">
+      <h3 style="margin-top:0;color:var(--green)">✓ Обновление безопасности — реализовано</h3>
+      <p style="font-size:13.5px;color:var(--text-dim); margin-bottom:14px;">
+        Все 5 пунктов из раздела «Стоит улучшить» (см. раздел 18) закрыты. Все изменения — additive/dual-mode:
+        ничего из старого поведения (заголовок <code>Authorization</code>, токены в localStorage) не убрано —
+        обязательно для Tauri-приложения на <code>zhancare.app</code>/<code>tauri.localhost</code>, которое не может
+        получить cookie, привязанную к домену <code>.zhan.care</code>.
+      </p>
+      <table style="margin:0">
+        <tr><th>Фикс</th><th>Что изменилось</th><th>Где</th></tr>
+        <tr>
+          <td>Rate limiting</td>
+          <td><code>ScopedRateThrottle</code> на login/register (5/мин) и forgot-password/verify-reset-code (3/мин)</td>
+          <td><code>common/views/auth.py</code></td>
+        </tr>
+        <tr>
+          <td>Magic-link hardening</td>
+          <td>Токен с <code>access_type=magic_link</code> больше не проходит как bearer-токен на других эндпоинтах</td>
+          <td><code>common/authentication.py</code></td>
+        </tr>
+        <tr>
+          <td>Redis-кэш сессий</td>
+          <td>Проверка <code>UserSession</code> кэшируется на 45с — БД бьётся раз в окно, а не на каждый запрос</td>
+          <td><code>common/authentication.py</code>, <code>mchs_back/settings.py</code></td>
+        </tr>
+        <tr>
+          <td>httpOnly cookies</td>
+          <td><code>zha_access</code>/<code>zha_refresh</code> — dual-mode рядом с JSON-токенами</td>
+          <td><code>common/views/auth.py</code>, оба фронтенда</td>
+        </tr>
+        <tr>
+          <td>WebSocket → JWT</td>
+          <td>Аутентификация по cookie до <code>accept()</code>, легаси <code>Token</code> и <code>verify_exp=False</code> убраны</td>
+          <td><code>common/websockets/</code>, <code>mchs_back/asgi.py</code></td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="overview">
+      <h2><span class="num">1</span>Архитектура системы</h2>
+      <p class="section-intro">
+        Авторизация построена на классическом паттерне <strong>access + refresh JWT</strong>,
+        но с двумя нестандартными добавками: привязкой токена к записи сессии
+        (<code>UserSession</code>) для возможности видеть и отзывать устройства,
+        и отдельным механизмом одноразовых magic-link токенов для гостевого
+        доступа к видеоконсультациям без полноценной регистрации.
+      </p>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3 style="margin-top:0">Backend — Django</h3>
+          <p style="font-size:13.5px;color:var(--text-dim)">
+            <code>rest_framework_simplejwt</code> выпускает access/refresh токены.
+            Каждый refresh-токен регистрируется как отдельная строка <code>UserSession</code>
+            (устройство, IP, user-agent). Кастомный класс аутентификации проверяет,
+            что сессия ещё активна при каждом запросе.
+          </p>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0">Frontend — Next.js</h3>
+          <p style="font-size:13.5px;color:var(--text-dim)">
+            Токены лежат в <code>localStorage</code>. Axios-интерсептор подвешивает
+            <code>Authorization: Bearer</code> на каждый запрос и автоматически
+            обновляет access-токен при 401, используя единый <code>refreshPromise</code>,
+            чтобы не плодить параллельные запросы на рефреш.
+          </p>
+        </div>
+      </div>
+
+      <div class="callout info">
+        <strong>Ключевая идея:</strong> JWT сам по себе stateless, но ZhanCare добавляет
+        слой состояния через <code>UserSession</code> — это позволяет реализовать
+        «выйти со всех устройств», отследить, с какого IP/устройства был логин,
+        и мгновенно инвалидировать сессию без ожидания истечения токена.
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="jwt-settings">
+      <h2><span class="num">2</span>Настройки SIMPLE_JWT</h2>
+      <div class="filepath">zhancare-back/mchs_back/settings.py</div>
+      <pre><code><span class="kw">SIMPLE_JWT</span> = {
+    <span class="com"># Время жизни токенов</span>
+    <span class="str">'ACCESS_TOKEN_LIFETIME'</span>: timedelta(minutes=<span class="num-lit">15</span>),
+    <span class="str">'REFRESH_TOKEN_LIFETIME'</span>: timedelta(days=<span class="num-lit">7</span>),
+
+    <span class="com"># Ротация — при каждом рефреше выдаётся новый refresh-токен,</span>
+    <span class="com"># старый сразу попадает в blacklist</span>
+    <span class="str">'ROTATE_REFRESH_TOKENS'</span>: <span class="kw">True</span>,
+    <span class="str">'BLACKLIST_AFTER_ROTATION'</span>: <span class="kw">True</span>,
+
+    <span class="str">'ALGORITHM'</span>: <span class="str">'HS256'</span>,
+    <span class="str">'SIGNING_KEY'</span>: SECRET_KEY,
+
+    <span class="str">'AUTH_HEADER_TYPES'</span>: (<span class="str">'Bearer'</span>, <span class="str">'Token'</span>),
+    <span class="str">'USER_ID_FIELD'</span>: <span class="str">'id'</span>,
+    <span class="str">'USER_ID_CLAIM'</span>: <span class="str">'user_id'</span>,
+}</code></pre>
+
+      <p>Зарегистрированные приложения для работы JWT и blacklist'а:</p>
+      <pre><code><span class="str">"rest_framework_simplejwt"</span>,
+<span class="str">"rest_framework_simplejwt.token_blacklist"</span>,  <span class="com"># таблица OutstandingToken / BlacklistedToken</span></code></pre>
+
+      <p>Класс аутентификации, подключённый ко всем REST-запросам:</p>
+      <pre><code><span class="str">'DEFAULT_AUTHENTICATION_CLASSES'</span>: (
+    <span class="str">'common.authentication.CustomJWTAuthentication'</span>,
+    <span class="str">'rest_framework.authentication.TokenAuthentication'</span>,  <span class="com"># легаси, для WebSocket</span>
+),</code></pre>
+
+      <div class="callout warn">
+        <strong>Почему 15 минут, а не час?</strong> Проект медицинский — короткий access token
+        снижает окно атаки при краже токена из localStorage (см. раздел
+        <a href="#security">«Безопасность»</a>). Цена — более частые silent-refresh запросы,
+        которые скрыты от пользователя axios-интерсептором.
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="custom-auth">
+      <h2><span class="num">3</span>CustomJWTAuthentication</h2>
+      <div class="filepath">zhancare-back/common/authentication.py</div>
+      <p class="section-intro">
+        Стандартный <code>JWTAuthentication</code> из simplejwt проверяет только подпись
+        и срок жизни токена. ZhanCare расширяет его проверкой <em>сессии</em> — если
+        пользователь нажал «выйти со всех устройств» или сессию отозвал админ,
+        токен технически ещё валиден по подписи, но запрос всё равно будет отклонён.
+      </p>
+      <pre><code><span class="kw">class</span> <span class="fn">CustomJWTAuthentication</span>(JWTAuthentication):
+    <span class="kw">def</span> <span class="fn">get_validated_token</span>(self, raw_token):
+        validated_token = super().get_validated_token(raw_token)
+
+        <span class="com"># Magic-link токены (см. раздел 10) никогда не принимаются как</span>
+        <span class="com"># обычный bearer-токен — иначе их можно было бы переиграть на любой эндпоинт.</span>
+        <span class="kw">if</span> validated_token.get(<span class="str">'access_type'</span>) == <span class="str">'magic_link'</span>:
+            <span class="kw">raise</span> InvalidToken(<span class="str">'Magic-link tokens cannot be used as bearer tokens'</span>)
+
+        session_jti = validated_token.get(<span class="str">'session_jti'</span>)
+
+        <span class="kw">if</span> session_jti:
+            cache_key = session_cache_key(session_jti)
+
+            <span class="com"># Кэш-хит — доверяем без обращения к БД</span>
+            <span class="kw">if</span> cache.get(cache_key):
+                <span class="kw">return</span> validated_token
+
+            <span class="kw">try</span>:
+                session = UserSession.objects.get(
+                    refresh_token_jti=session_jti,
+                    is_revoked=<span class="kw">False</span>,
+                    is_deleted=<span class="kw">False</span>
+                )
+                <span class="com"># last_activity обновляется только на кэш-мисс — естественно</span>
+                <span class="com"># раз в SESSION_CACHE_TTL, а не на каждый запрос</span>
+                session.last_activity = timezone.now()
+                session.save(update_fields=[<span class="str">'last_activity'</span>, <span class="str">'updated_at'</span>])
+                cache.set(cache_key, <span class="kw">True</span>, timeout=SESSION_CACHE_TTL)  <span class="com"># 45 сек</span>
+
+            <span class="kw">except</span> UserSession.DoesNotExist:
+                <span class="kw">raise</span> InvalidToken(<span class="str">'Session has been revoked or expired'</span>)
+
+        <span class="kw">return</span> validated_token
+
+    <span class="kw">def</span> <span class="fn">authenticate</span>(self, request):
+        <span class="kw">try</span>:
+            result = super().authenticate(request)  <span class="com"># заголовок Authorization</span>
+        <span class="kw">except</span> (InvalidToken, AuthenticationFailed):
+            result = <span class="kw">None</span>
+
+        <span class="kw">if</span> result <span class="kw">is not</span> <span class="kw">None</span>:
+            <span class="kw">return</span> result
+
+        <span class="com"># Заголовка нет/невалиден → fallback на httpOnly cookie zha_access</span>
+        raw_token = request.COOKIES.get(settings.AUTH_ACCESS_COOKIE_NAME)
+        <span class="kw">if not</span> raw_token:
+            <span class="kw">return</span> <span class="kw">None</span>
+
+        <span class="kw">try</span>:
+            validated_token = self.get_validated_token(raw_token)
+            <span class="kw">return</span> self.get_user(validated_token), validated_token
+        <span class="kw">except</span> (InvalidToken, AuthenticationFailed):
+            <span class="kw">return</span> <span class="kw">None</span></code></pre>
+
+      <div class="callout ok">
+        <strong>Что изменилось:</strong> раньше проверка сессии делала запрос к БД на
+        <em>каждый</em> авторизованный вызов. Теперь результат кэшируется на 45 секунд
+        (<code>cache.set</code>/<code>cache.get</code>, backend — Redis через
+        <code>django-redis</code>, если задан <code>REDIS_URL</code>, иначе локальный
+        in-memory кэш). Кэш явно инвалидируется при <code>logout()</code> (раздел 7) и при
+        ротации refresh-токена (раздел 6), так что отзыв сессии видим практически
+        мгновенно, а не только по истечении TTL.
+      </div>
+
+      <div class="callout info">
+        <strong>Dual-mode авторизация:</strong> <code>authenticate()</code> сначала
+        пробует заголовок <code>Authorization: Bearer</code> — этот путь остаётся
+        рабочим навсегда, он обязателен для desktop-приложения на Tauri
+        (<code>zhancare.app</code> / <code>tauri.localhost</code>), которое не может
+        получить cookie с доменом <code>.zhan.care</code> (другой регистрируемый домен).
+        Если заголовка нет — пробует httpOnly cookie <code>zha_access</code>, выставляемую
+        при логине/рефреше (раздел 13).
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="sessions">
+      <h2><span class="num">4</span>Модель UserSession и привязка токена к устройству</h2>
+      <div class="filepath">zhancare-back/common/models/user_session.py</div>
+      <pre><code><span class="kw">class</span> <span class="fn">UserSession</span>(BaseModel):
+    user = models.ForeignKey(<span class="str">'User'</span>, related_name=<span class="str">'sessions'</span>, ...)
+    refresh_token_jti = models.CharField(max_length=<span class="num-lit">255</span>, unique=<span class="kw">True</span>, db_index=<span class="kw">True</span>)
+    device_name  = models.CharField(max_length=<span class="num-lit">255</span>, null=<span class="kw">True</span>, blank=<span class="kw">True</span>)
+    device_type  = models.CharField(choices=DEVICE_TYPE_CHOICES, default=<span class="str">'unknown'</span>)
+    user_agent   = models.TextField(null=<span class="kw">True</span>, blank=<span class="kw">True</span>)
+    ip_address   = models.GenericIPAddressField(null=<span class="kw">True</span>, blank=<span class="kw">True</span>)
+    last_activity = models.DateTimeField(auto_now=<span class="kw">True</span>)
+    is_revoked   = models.BooleanField(default=<span class="kw">False</span>)
+    revoked_at   = models.DateTimeField(null=<span class="kw">True</span>, blank=<span class="kw">True</span>)</code></pre>
+
+      <p>
+        Каждый refresh-токен = отдельная строка в этой таблице. Поэтому у одного
+        пользователя может быть N активных сессий (телефон, ноутбук, планшет) —
+        каждая со своим <code>refresh_token_jti</code>, IP и user-agent.
+        В профиле пользователь видит список «Активные устройства» и может
+        отозвать любое из них точечно, не разлогинивая себя на текущем.
+      </p>
+
+      <h3>Создание токенов при логине</h3>
+      <div class="filepath">zhancare-back/common/serializers/user_session.py</div>
+      <pre><code><span class="kw">def</span> <span class="fn">create_jwt_tokens_for_user</span>(user, request=<span class="kw">None</span>, device_name=<span class="kw">None</span>):
+    device_type, auto_device_name = parse_device_info(user_agent_string)
+    ip_address = get_client_ip(request)
+
+    refresh = RefreshToken.for_user(user)
+    refresh_jti = str(refresh[<span class="str">'jti'</span>])
+
+    session = UserSession.objects.create(
+        user=user,
+        refresh_token_jti=refresh_jti,
+        device_name=device_name <span class="kw">or</span> auto_device_name,
+        device_type=device_type,
+        user_agent=user_agent_string,
+        ip_address=ip_address,
+    )
+
+    access = refresh.access_token
+    access[<span class="str">'session_jti'</span>] = refresh_jti  <span class="com"># ← кастомный claim, см. раздел 3</span>
+
+    <span class="kw">return</span> {
+        <span class="str">'access_token'</span>: str(access),
+        <span class="str">'refresh_token'</span>: str(refresh),
+        <span class="str">'session_id'</span>: session.id,
+    }</code></pre>
+
+      <div class="callout info">
+        Связь устроена через <strong>JTI refresh-токена</strong> (JSON Token ID, уникальный
+        идентификатор внутри payload) — он одновременно служит первичным ключом
+        записи <code>UserSession</code> и значением claim'а <code>session_jti</code>
+        внутри access-токена. Так access-токен «знает», к какой сессии он принадлежит,
+        без лишнего запроса к refresh-токену.
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="login">
+      <h2><span class="num">5</span>Логин</h2>
+      <div class="filepath">POST /api/v1/auth/login/ — common/views/auth.py</div>
+
+      <div class="flow">
+        <div class="flow-step">
+          <div class="dot">1</div>
+          <div class="content">
+            <div class="who">Клиент</div>
+            <p>Отправляет <code>{ email | phone, password, device_name }</code></p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="dot">2</div>
+          <div class="content">
+            <div class="who">Backend</div>
+            <p>Ищет пользователя по email (<code>iexact</code>) или нормализованному телефону, сверяет пароль через <code>user.check_password()</code>, проверяет <code>is_active</code></p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="dot">3</div>
+          <div class="content">
+            <div class="who">Backend</div>
+            <p>Вызывает <code>create_jwt_tokens_for_user()</code> → создаёт <code>UserSession</code> + пару токенов</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="dot">4</div>
+          <div class="content">
+            <div class="who">Backend</div>
+            <p>Сериализует полный профиль через <code>UserProfileSerializer</code> (роли, профили клиники, мед. данные) и возвращает вместе с токенами</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="dot">5</div>
+          <div class="content">
+            <div class="who">Клиент</div>
+            <p>Сохраняет <code>access_token</code>/<code>refresh_token</code> в <code>localStorage</code>, ставит куку <code>zha_auth=1</code> для middleware</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Ответ сервера</h3>
+      <pre><code>{
+  <span class="str">"message"</span>: <span class="str">"Login successful!"</span>,
+  <span class="str">"user"</span>: { <span class="com">/* id, roles[], profiles{}, мед.данные, ... */</span> },
+  <span class="str">"access_token"</span>: <span class="str">"eyJ0eXAiOiJKV1Qi..."</span>,
+  <span class="str">"refresh_token"</span>: <span class="str">"eyJ0eXAiOiJKV1Qi..."</span>,
+  <span class="str">"session_id"</span>: <span class="num-lit">123</span>
+}</code></pre>
+
+      <div class="callout info">
+        Поле <code>roles</code> — массив (пользователь может одновременно быть
+        и врачом, и пациентом), поэтому фронтенд использует <code>isDoctor</code>,
+        <code>isAdmin</code> и т.д. вместо единого устаревшего поля <code>role</code>.
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="refresh">
+      <h2><span class="num">6</span>Обновление токена (refresh) и ротация</h2>
+      <div class="filepath">POST /api/v1/auth/token/refresh/ — common/views/auth.py::token_refresh_view</div>
+
+      <div class="callout danger">
+        <strong>Найденный и исправленный баг:</strong> этот эндпоинт раньше был
+        зарегистрирован на <strong>стоковый</strong> <code>rest_framework_simplejwt.views.TokenRefreshView</code>,
+        который ничего не знает про <code>UserSession</code>. После первого же рефреша
+        <code>UserSession.refresh_token_jti</code> навсегда указывал на уже заблокированный
+        (blacklisted) JTI, а новый access-токен вообще не получал claim <code>session_jti</code> —
+        то есть проверка отзыва сессии (раздел 3) молча пропускалась до конца жизни токена.
+        Теперь эндпоинт — тонкая обёртка над <code>refresh_jwt_tokens()</code>, которая
+        действительно синхронизирует сессию.
+      </div>
+
+      <pre><code><span class="kw">def</span> <span class="fn">refresh_jwt_tokens</span>(refresh_token_string):
+    old_refresh = RefreshToken(refresh_token_string)
+    old_jti = str(old_refresh[<span class="str">'jti'</span>])
+
+    session = UserSession.objects.get(
+        refresh_token_jti=old_jti, is_revoked=<span class="kw">False</span>, is_deleted=<span class="kw">False</span>
+    )  <span class="com"># бросит ValidationError, если сессия отозвана</span>
+
+    old_refresh.blacklist()  <span class="com"># старый refresh сразу недействителен</span>
+
+    new_refresh = RefreshToken.for_user(session.user)
+    new_jti = str(new_refresh[<span class="str">'jti'</span>])
+
+    session.refresh_token_jti = new_jti   <span class="com"># сессия "переезжает" на новый JTI</span>
+    session.last_activity = timezone.now()
+    session.save(update_fields=[<span class="str">'refresh_token_jti'</span>, <span class="str">'last_activity'</span>, <span class="str">'updated_at'</span>])
+
+    invalidate_session_cache(old_jti)  <span class="com"># старый JTI мёртв — не ждать TTL кэша (раздел 3)</span>
+
+    new_access = new_refresh.access_token
+    new_access[<span class="str">'session_jti'</span>] = new_jti
+
+    <span class="kw">return</span> {<span class="str">'access_token'</span>: str(new_access), <span class="str">'refresh_token'</span>: str(new_refresh)}
+
+<span class="kw">def</span> <span class="fn">token_refresh_view</span>(request):
+    <span class="com"># Берёт refresh либо из тела запроса, либо из httpOnly cookie zha_refresh</span>
+    refresh_token_str = request.data.get(<span class="str">'refresh'</span>) <span class="kw">or</span> request.COOKIES.get(settings.AUTH_REFRESH_COOKIE_NAME)
+    tokens = refresh_jwt_tokens(refresh_token_str)
+
+    response = Response({<span class="str">'access'</span>: tokens[<span class="str">'access_token'</span>], <span class="str">'refresh'</span>: tokens[<span class="str">'refresh_token'</span>]})
+    _set_auth_cookies(response, tokens[<span class="str">'access_token'</span>], tokens[<span class="str">'refresh_token'</span>])  <span class="com"># dual-mode, раздел 13</span>
+    <span class="kw">return</span> response</code></pre>
+
+      <div class="callout warn">
+        <strong>Почему старый refresh blacklist'ится немедленно?</strong> Это защита от
+        повторного использования украденного refresh-токена (replay attack):
+        если злоумышленник перехватил старый токен и легитимный клиент уже
+        обновился — старый токен больше не сработает ни у кого, что сигнализирует
+        о компрометации.
+      </div>
+
+      <h3>Запрос/ответ</h3>
+      <pre><code><span class="com">// Запрос (или просто пустое тело, если refresh уже лежит в cookie zha_refresh)</span>
+POST /api/v1/auth/token/refresh/
+{ <span class="str">"refresh"</span>: <span class="str">"eyJ0eXAiOiJKV1Qi..."</span> }
+
+<span class="com">// Ответ (ROTATE_REFRESH_TOKENS=True → возвращается и новый refresh)</span>
+<span class="com">// + Set-Cookie: zha_access=...; Set-Cookie: zha_refresh=... (httpOnly, dual-mode)</span>
+{ <span class="str">"access"</span>: <span class="str">"eyJ..."</span>, <span class="str">"refresh"</span>: <span class="str">"eyJ..."</span> }</code></pre>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="logout">
+      <h2><span class="num">7</span>Логаут и blacklist</h2>
+      <div class="filepath">POST /api/v1/auth/logout/ — common/views/auth.py</div>
+      <pre><code><span class="kw">def</span> <span class="fn">logout</span>(self, request):
+    <span class="com"># refresh_token берётся из тела ИЛИ из httpOnly cookie zha_refresh</span>
+    refresh_token = request.data.get(<span class="str">"refresh_token"</span>) <span class="kw">or</span> request.COOKIES.get(settings.AUTH_REFRESH_COOKIE_NAME)
+    <span class="kw">if</span> refresh_token:
+        token = RefreshToken(refresh_token)
+        jti = str(token[<span class="str">'jti'</span>])
+
+        UserSession.objects.filter(refresh_token_jti=jti).update(
+            is_revoked=<span class="kw">True</span>, revoked_at=timezone.now()
+        )
+        invalidate_session_cache(jti)  <span class="com"># ← новое: не ждать TTL кэша, отзыв виден сразу (раздел 3)</span>
+        token.blacklist()
+
+    response = Response({<span class="str">"message"</span>: <span class="str">"Logged out successfully"</span>})
+    _clear_auth_cookies(response)  <span class="com"># ← новое: чистит zha_access/zha_refresh</span>
+    <span class="kw">return</span> response</code></pre>
+      <p>Три независимых механизма отзыва срабатывают одновременно:</p>
+      <table>
+        <tr><th>Механизм</th><th>Что делает</th><th>Где проверяется</th></tr>
+        <tr><td><code>UserSession.is_revoked</code></td><td>Помечает сессию как неактивную</td><td><code>CustomJWTAuthentication</code>, при кэш-миссе</td></tr>
+        <tr><td><code>cache.delete(session_cache_key)</code></td><td>Сбрасывает закэшированный «валиден» статус</td><td>Следующий запрос сразу видит отзыв, не ждёт 45с TTL</td></tr>
+        <tr><td><code>token.blacklist()</code></td><td>Добавляет JTI в таблицу <code>BlacklistedToken</code></td><td>Стандартный механизм simplejwt при попытке refresh</td></tr>
+      </table>
+      <div class="callout ok">
+        Дублирование намеренное: blacklist simplejwt защищает конкретно refresh-эндпоинт,
+        а проверка сессии (теперь с кэшем) защищает <em>все</em> авторизованные эндпоинты
+        сразу — даже если у атакующего остался валидный по подписи access-токен на
+        оставшиеся ~15 минут жизни.
+      </div>
+      <div class="callout warn">
+        <strong>Известный edge case (не зафиксировано в этом проходе):</strong> если клиент
+        передаёт некорректный/обрезанный <code>refresh_token</code>, <code>RefreshToken(...)</code>
+        бросает исключение, которое ловится широким <code>except Exception</code> — ответ всё
+        равно 200 и cookie очищаются на клиенте, но отзыва сессии на сервере не происходит.
+        Узкий, но реальный риск, если у жертвы протух/потерялся refresh-токен в момент,
+        когда она пытается выйти. Не входило в одобренный объём этой задачи.
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="register">
+      <h2><span class="num">8</span>Регистрация</h2>
+      <div class="filepath">POST /api/v1/auth/register/</div>
+      <p class="section-intro">
+        Регистрация <strong>не выдаёт токены</strong> — пользователь должен залогиниться
+        отдельным запросом после создания аккаунта (намеренное разделение, упрощает
+        обработку дублей/валидации без риска выдать токен наполовину созданному юзеру).
+      </p>
+      <pre><code><span class="kw">def</span> <span class="fn">register</span>(self, request):
+    serializer = self.get_serializer(data=request.data)
+    <span class="kw">if</span> serializer.is_valid():
+        <span class="kw">if</span> User.objects.filter(Q(email=email) | Q(phone=phone)).exists():
+            <span class="kw">return</span> Response({<span class="str">"error"</span>: <span class="str">"..."</span>}, status=<span class="num-lit">409</span>)
+
+        serializer.validated_data[<span class="str">"password"</span>] = make_password(...)
+        user = serializer.save()
+
+        user.verified_at = timezone.now()
+        user.verification_method = <span class="str">"registration"</span>
+        user.save(...)
+
+        <span class="com"># Авто-создание профилей по умолчанию</span>
+        <span class="kw">if</span> user.is_teacher():
+            TeacherProfile.objects.get_or_create(user=user)
+        PatientProfile.objects.get_or_create(user=user)
+
+        <span class="kw">return</span> Response({<span class="str">"message"</span>: <span class="str">"Registration successful!"</span>, ...}, status=<span class="num-lit">201</span>)</code></pre>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="password-reset">
+      <h2><span class="num">9</span>Сброс пароля</h2>
+      <p class="section-intro">Трёхшаговый flow через одноразовый 6-значный код с TTL 15 минут.</p>
+
+      <div class="flow">
+        <div class="flow-step">
+          <div class="dot">1</div>
+          <div class="content">
+            <div class="who">POST /auth/forgot-password/</div>
+            <p>Генерирует <code>reset_code</code> (6 символов A–Z0–9), пишет <code>reset_code_created_at</code>, отправляет на email</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="dot">2</div>
+          <div class="content">
+            <div class="who">POST /auth/verify-reset-code/</div>
+            <p>Проверяет совпадение кода и что <code>reset_code_created_at</code> не старше 15 минут</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="dot">3</div>
+          <div class="content">
+            <div class="who">POST /auth/reset-password/</div>
+            <p>Устанавливает новый пароль через <code>set_password()</code>, очищает <code>reset_code</code></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout warn">
+        <strong>Слабое место:</strong> 6 символов из 36 (A–Z + 0–9) ≈ 2.2 млрд комбинаций —
+        формально много, но если на эндпоинте <code>verify-reset-code</code> нет
+        rate-limiting, код можно брутфорсить в течение 15-минутного окна. Рекомендация —
+        ограничить число попыток на email/IP (см. <a href="#security">раздел 18</a>).
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="magic-link">
+      <h2><span class="num">10</span>Magic Link — гостевой доступ к консультациям</h2>
+      <p class="section-intro">
+        Для видеоконсультаций пациент может зайти по ссылке из email/SMS без пароля.
+        Модель <code>Consultation</code> хранит одноразовый <code>access_code</code>
+        и метку <code>magic_link_used_at</code>, чтобы ссылку нельзя было использовать повторно.
+      </p>
+      <div class="filepath">zhancareai/src/hooks/useMagicLinkAuth.ts</div>
+
+      <div class="flow">
+        <div class="flow-step">
+          <div class="dot">1</div>
+          <div class="content">
+            <div class="who">Пациент</div>
+            <p>Открывает <code>/consultation?token=...</code> из письма</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="dot">2</div>
+          <div class="content">
+            <div class="who">Frontend</div>
+            <p><strong>Сразу</strong> чистит токен из URL через <code>history.replaceState</code> — даже если запрос ниже упадёт, токен не останется в истории браузера</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="dot">3</div>
+          <div class="content">
+            <div class="who">Frontend → Backend</div>
+            <p><code>POST /consultations/auto-login/ { token }</code> — backend проверяет токен, создаёт/находит гостевую сессию, возвращает JWT-пару + данные консультации</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="dot">4</div>
+          <div class="content">
+            <div class="who">Frontend</div>
+            <p>Кладёт токены в <code>sessionStorage</code> (стирается при закрытии вкладки — важно для медицинской приватности на чужом устройстве) + дублирует в <code>localStorage</code> для совместимости</p>
+          </div>
+        </div>
+      </div>
+
+      <pre><code><span class="kw">function</span> <span class="fn">cleanTokenFromUrl</span>() {
+  <span class="kw">const</span> cleanUrl = <span class="kw">new</span> URL(window.location.href);
+  cleanUrl.searchParams.delete(<span class="str">'token'</span>);
+  window.history.replaceState({}, document.title, cleanUrl.pathname + cleanUrl.search);
+}
+
+<span class="kw">if</span> (token) {
+  cleanTokenFromUrl();  <span class="com">// ← до запроса к API, не после</span>
+
+  <span class="kw">try</span> {
+    <span class="kw">const</span> { data } = <span class="kw">await</span> axios.post(<span class="fn">`${baseURL}/consultations/auto-login/`</span>, { token });
+
+    sessionStorage.setItem(<span class="str">'access_token'</span>, data.access_token);
+    sessionStorage.setItem(<span class="str">'refresh_token'</span>, data.refresh_token);
+    sessionStorage.setItem(<span class="str">'consultation'</span>, JSON.stringify(data.consultation));
+  } <span class="kw">catch</span> (error) {
+    <span class="com">// человекочитаемые сообщения: "ссылка использована", "истекла", "отменена"</span>
+  }
+}</code></pre>
+
+      <div class="callout ok">
+        <strong>Уточнение (предыдущая версия документа здесь ошибалась):</strong> TTL у
+        magic-link токена есть — это самодостаточный <code>AccessToken</code> с
+        <code>exp</code> claim'ом на <strong>2 часа</strong>
+        (<code>common/utils/email_utils.py::generate_magic_link_token</code>), и срок жизни
+        проверяется автоматически конструктором simplejwt (<code>AccessToken(token_string)</code>)
+        внутри <code>auto_login()</code> — отдельной ручной проверки не нужно.
+      </div>
+
+      <pre><code><span class="kw">def</span> <span class="fn">generate_magic_link_token</span>(consultation):
+    token = AccessToken()
+    token.set_exp(lifetime=timedelta(hours=<span class="num-lit">2</span>))  <span class="com"># истекает через 2 часа</span>
+    token[<span class="str">'consultation_id'</span>] = consultation.id
+    token[<span class="str">'patient_id'</span>] = consultation.patient.id
+    token[<span class="str">'access_type'</span>] = <span class="str">'magic_link'</span>  <span class="com"># ← реальный пробел был здесь, см. ниже</span>
+    <span class="kw">return</span> str(token)</code></pre>
+
+      <div class="callout danger">
+        <strong>Реальный пробел (исправлен):</strong> ничто не запрещало взять валидный
+        magic-link токен из письма и подставить его как обычный
+        <code>Authorization: Bearer</code> на <em>любой</em> другой эндпоинт API —
+        <code>CustomJWTAuthentication</code> проверял только подпись и сессию, но не
+        claim <code>access_type</code>. Теперь <code>get_validated_token()</code>
+        (раздел 3) явно отклоняет любой токен с <code>access_type == 'magic_link'</code>
+        до того, как дойдёт до проверки сессии — такой токен годится только для
+        одного вызова <code>/consultations/auto-login/</code>.
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="websocket">
+      <h2><span class="num">11</span>WebSocket-авторизация (видеоконсультации, чаты, admin-инбоксы)</h2>
+      <div class="filepath">zhancare-back/mchs_back/asgi.py, common/websockets/{jwt_auth,middleware}.py</div>
+
+      <div class="callout ok">
+        <strong>Полностью переделано.</strong> Раньше WS-каналы авторизовались легаси
+        моделью <code>rest_framework.authtoken.Token</code> через query-параметр
+        <code>?token=</code> или сообщение <code>{type:"authenticate"}</code>
+        <em>после</em> того, как соединение уже было принято (<code>accept()</code>) —
+        то есть до явной аутентификации канал был открыт кому угодно. Хуже того,
+        WhatsApp/Telegram admin-инбоксы декодировали JWT с
+        <code>options={"verify_exp": False}</code> — просроченный токен работал
+        против них вечно. Оба недостатка устранены.
+      </div>
+
+      <h3>Новая схема: middleware на уровне ASGI-роутера</h3>
+      <pre><code><span class="com"># mchs_back/asgi.py</span>
+application = ProtocolTypeRouter({
+    <span class="str">"http"</span>: get_asgi_application(),
+    <span class="com"># AllowedOriginValidator — снаружи: отклоняет handshake с любым</span>
+    <span class="com"># Origin, не входящим в ALLOWED_HOSTS, ещё до аутентификации</span>
+    <span class="str">"websocket"</span>: AllowedOriginValidator(
+        JWTCookieAuthMiddlewareStack(
+            URLRouter(consultation_patterns + common_patterns)
+        ),
+        allowed_hosts=settings.ALLOWED_HOSTS,
+    ),
+})</code></pre>
+
+      <pre><code><span class="com"># common/websockets/middleware.py</span>
+<span class="kw">class</span> <span class="fn">JWTCookieAuthMiddleware</span>:
+    <span class="kw">async def</span> <span class="fn">__call__</span>(self, scope, receive, send):
+        scope = dict(scope)
+        raw_token = get_cookie(scope, settings.AUTH_ACCESS_COOKIE_NAME)  <span class="com"># из заголовка Cookie</span>
+        user = <span class="kw">await</span> database_sync_to_async(resolve_user_from_jwt)(raw_token)
+        scope[<span class="str">'user'</span>] = user <span class="kw">or</span> AnonymousUser()
+        <span class="kw">return</span> <span class="kw">await</span> self.inner(scope, receive, send)</code></pre>
+
+      <p>
+        <code>resolve_user_from_jwt()</code> (<code>common/websockets/jwt_auth.py</code>)
+        зеркалит <code>CustomJWTAuthentication.get_validated_token()</code> из раздела 3:
+        проверяет подпись/срок через <code>AccessToken(raw_token)</code>, отклоняет
+        magic-link токены, проверяет ревокацию сессии через тот же Redis-кэш.
+      </p>
+
+      <h3>Аутентификация до accept() в самом consumer'е</h3>
+      <div class="filepath">consultations/consumers_optimized.py</div>
+      <pre><code><span class="kw">async def</span> <span class="fn">connect</span>(self):
+    user = self.scope.get(<span class="str">'user'</span>)  <span class="com"># уже резолвлен middleware'ом выше</span>
+    <span class="kw">if not</span> user <span class="kw">or</span> isinstance(user, AnonymousUser):
+        <span class="kw">await</span> self.close(code=<span class="num-lit">4001</span>)  <span class="com"># отказ ДО accept — раньше принимали всех</span>
+        <span class="kw">return</span>
+
+    self.user = user
+    self.user_role = <span class="kw">await</span> self._resolve_role(user)
+    self.user_id = user.id
+
+    <span class="kw">await</span> self.join_user_groups()
+    <span class="kw">await</span> self.accept()</code></pre>
+
+      <p>Тот же паттерн применён к <code>SocketIOConsumer</code>, <code>WhatsAppAdminConsumer</code> и
+      <code>TelegramAdminConsumer</code> — больше никакого <code>?token=</code> в URL и
+      никакого ручного <code>jwt.decode(verify_exp=False)</code>. На фронтенде браузер
+      просто прикладывает httpOnly cookie <code>zha_access</code> к WS-handshake'у
+      автоматически (тот же registrable domain), отдельная передача токена не нужна.</p>
+
+      <div class="callout danger">
+        <strong>Удалён мёртвый легаси-роут:</strong> <code>ws/consultations/legacy/</code> →
+        <code>consultations/consumers.py</code> принимал <em>любое</em> WS-соединение без
+        проверки вообще и сразу добавлял его в broadcast-группу <code>consultations</code>.
+        Никто на фронтенде на него не ссылался — файл и роут удалены целиком, а не
+        просто захардены, чтобы не оставлять неиспользуемую дырку.
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="urls">
+      <h2><span class="num">12</span>Список auth-эндпоинтов</h2>
+      <table>
+        <tr><th>Метод</th><th>URL</th><th>Возвращает</th><th>Rate limit</th></tr>
+        <tr><td>POST</td><td><code>/api/v1/auth/register/</code></td><td>Данные пользователя (без токенов)</td><td>5/мин (scope <code>auth_login</code>)</td></tr>
+        <tr><td>POST</td><td><code>/api/v1/auth/login/</code></td><td><code>access_token</code>, <code>refresh_token</code>, <code>session_id</code>, <code>user</code> + <code>Set-Cookie: zha_access, zha_refresh</code></td><td>5/мин</td></tr>
+        <tr><td>POST</td><td><code>/api/v1/auth/logout/</code></td><td>Сообщение об успехе, отзыв сессии + очистка кук</td><td>—</td></tr>
+        <tr><td>POST</td><td><code>/api/v1/auth/token/refresh/</code></td><td>Новая пара <code>access</code> / <code>refresh</code> + обновлённые куки</td><td>—</td></tr>
+        <tr><td>POST</td><td><code>/api/v1/auth/forgot-password/</code></td><td>Отправка кода на email</td><td>3/мин (scope <code>auth_password_reset</code>)</td></tr>
+        <tr><td>POST</td><td><code>/api/v1/auth/verify-reset-code/</code></td><td>Подтверждение кода</td><td>3/мин</td></tr>
+        <tr><td>POST</td><td><code>/api/v1/auth/reset-password/</code></td><td>Установка нового пароля</td><td>—</td></tr>
+        <tr><td>POST</td><td><code>/api/v1/consultations/auto-login/</code></td><td>JWT-пара для гостя по magic-link токену</td><td>—</td></tr>
+        <tr><td>GET</td><td><code>/api/v1/auth/csrf/</code></td><td>Установка CSRF-куки</td><td>—</td></tr>
+      </table>
+      <div class="callout info">
+        Throttle-скоупы заданы через <code>get_throttles()</code> на <code>AuthViewSet</code>
+        (DRF <code>ScopedRateThrottle</code>, ключ — IP), а не глобальным
+        <code>DEFAULT_THROTTLE_CLASSES</code> — иначе под троттлинг случайно попали бы
+        несвязанные публичные эндпоинты. <code>logout</code>/<code>reset-password</code>
+        не троттлятся — для них уже нужен валидный код/токен, перебирать там нечего.
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="storage">
+      <h2><span class="num">13</span>Хранение токенов на фронтенде</h2>
+      <div class="filepath">zhancareai/src/utils/api.ts</div>
+      <pre><code><span class="kw">const</span> ACCESS_TOKEN_KEY  = <span class="str">"access_token"</span>;
+<span class="kw">const</span> REFRESH_TOKEN_KEY = <span class="str">"refresh_token"</span>;
+<span class="kw">const</span> USER_KEY          = <span class="str">"user"</span>;
+
+<span class="kw">export const</span> <span class="fn">getAccessToken</span> = (): string | <span class="kw">null</span> =>
+  <span class="kw">typeof</span> window === <span class="str">"undefined"</span> ? <span class="kw">null</span> : localStorage.getItem(ACCESS_TOKEN_KEY);
+
+<span class="kw">export const</span> <span class="fn">setTokens</span> = (accessToken: string, refreshToken: string) => {
+  localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+  localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+};
+
+<span class="kw">export const</span> <span class="fn">clearTokens</span> = () => {
+  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+};</code></pre>
+
+      <table>
+        <tr><th>Ключ</th><th>Хранилище</th><th>Назначение</th></tr>
+        <tr><td><code>access_token</code></td><td>localStorage</td><td>Подвешивается в заголовок Authorization (обязателен для Tauri-приложения)</td></tr>
+        <tr><td><code>refresh_token</code></td><td>localStorage</td><td>Используется только эндпоинтом обновления</td></tr>
+        <tr><td><code>user</code></td><td>localStorage</td><td>Кэш профиля для мгновенной гидратации UI без ожидания API</td></tr>
+        <tr><td><code>zha_auth</code></td><td>Cookie (не httpOnly)</td><td>Флаг для Next.js Middleware — сам по себе не несёт токена</td></tr>
+        <tr><td><code>zha_access</code></td><td><strong>httpOnly Cookie</strong> (новое)</td><td>Access-токен; недоступен из JS, недосягаем для XSS. <code>Secure</code> в проде, <code>SameSite=Lax</code>, <code>Domain=.zhan.care</code></td></tr>
+        <tr><td><code>zha_refresh</code></td><td><strong>httpOnly Cookie</strong> (новое)</td><td>Refresh-токен; <code>Path=/api/v1/auth/</code> — браузер шлёт его только на auth-эндпоинты</td></tr>
+        <tr><td><code>access_token</code> / <code>refresh_token</code></td><td>sessionStorage</td><td>Только для гостевых magic-link сессий — стирается при закрытии вкладки</td></tr>
+      </table>
+
+      <div class="callout ok">
+        <strong>Добавлен httpOnly cookie слой (dual-mode):</strong>
+        <code>login</code>/<code>logout</code>/<code>token/refresh</code> теперь
+        дополнительно выставляют/чистят <code>zha_access</code> и <code>zha_refresh</code>
+        рядом с прежним JSON-телом — ничего из localStorage-флоу не убрано.
+        <code>CustomJWTAuthentication.authenticate()</code> (раздел 3) сначала пробует
+        заголовок <code>Authorization</code>, и только если его нет — читает cookie.
+        Это значит: ZhanCare AI и Academy-фронтенд могут постепенно переходить на
+        cookie-аутентификацию (XSS больше не может украсть токен из JS), а Tauri-приложение
+        и <code>zhancare.app</code>/<code>tauri.localhost</code> (другой регистрируемый
+        домен, не может получить <code>.zhan.care</code>-cookie) продолжают работать через
+        заголовок без единой строчки изменений.
+      </div>
+      <div class="callout warn">
+        <strong>Почему localStorage не убран совсем:</strong> ~17 компонентов в коде читают
+        <code>localStorage.getItem('access_token')</code> напрямую, плюс есть второй,
+        полностью параллельный фронтенд (<code>zhancare-academy-refined</code>,
+        academy.zhan.care) с тем же паттерном. Полная миграция на cookie-only — отдельная
+        задача после того, как cookie-флоу подтвердит себя в проде несколько дней.
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="interceptors">
+      <h2><span class="num">14</span>Axios-интерсепторы и автоматический рефреш</h2>
+      <div class="filepath">zhancareai/src/utils/api.ts</div>
+
+      <h3>Request-интерсептор — подвешивает токен</h3>
+      <pre><code>axiosInstance.interceptors.request.use((config) => {
+  <span class="kw">const</span> isAuthEndpoint = config.url?.includes(<span class="str">"/auth/login"</span>)
+                       || config.url?.includes(<span class="str">"/auth/register"</span>);
+
+  <span class="kw">if</span> (!isAuthEndpoint) {
+    <span class="kw">const</span> token = getAccessToken();
+    <span class="kw">if</span> (token) config.headers.Authorization = <span class="fn">`Bearer ${token}`</span>;
+  }
+  config.withCredentials = <span class="kw">true</span>;
+  <span class="kw">return</span> config;
+});</code></pre>
+      <p style="font-size:13.5px;color:var(--text-dim)">
+        Логин/регистрация исключены сознательно — иначе протухший токен из прошлой
+        сессии полетит в заголовке нового логина и приведёт к ложному 401.
+      </p>
+
+      <h3>Response-интерсептор — рефреш при 401 без дублирования запросов</h3>
+      <pre><code><span class="kw">let</span> refreshPromise: Promise&lt;string&gt; | <span class="kw">null</span> = <span class="kw">null</span>;
+
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  <span class="kw">async</span> (error) => {
+    <span class="kw">const</span> originalRequest = error.config;
+    <span class="kw">const</span> isAuthRequest = <span class="com">/* .../auth/login|register|refresh */</span>;
+
+    <span class="kw">if</span> (error.response?.status === <span class="num-lit">401</span> && !isAuthRequest && !originalRequest._retry) {
+      originalRequest._retry = <span class="kw">true</span>;
+
+      <span class="kw">try</span> {
+        <span class="com">// если рефреш уже идёт от другого параллельного запроса — ждём его,</span>
+        <span class="com">// а не запускаем второй POST /token/refresh/</span>
+        <span class="kw">if</span> (!refreshPromise) refreshPromise = refreshAccessToken();
+
+        <span class="kw">const</span> newAccessToken = <span class="kw">await</span> refreshPromise;
+        refreshPromise = <span class="kw">null</span>;
+
+        originalRequest.headers.Authorization = <span class="fn">`Bearer ${newAccessToken}`</span>;
+        <span class="kw">return</span> axiosInstance(originalRequest);  <span class="com">// повторяем исходный запрос</span>
+
+      } <span class="kw">catch</span> (refreshError) {
+        refreshPromise = <span class="kw">null</span>;
+        clearTokens();
+        window.dispatchEvent(<span class="kw">new</span> CustomEvent(<span class="str">'auth:logout'</span>, {
+          detail: { message: <span class="str">'⏳ Ваша сессия истекла...'</span> }
+        }));
+        <span class="kw">return</span> Promise.reject(refreshError);
+      }
+    }
+    <span class="kw">return</span> Promise.reject(error);
+  }
+);</code></pre>
+
+      <div class="callout ok">
+        <strong>Решение race condition:</strong> если на странице параллельно летит
+        5 запросов и все получают 401 одновременно (токен истёк), только первый создаст
+        <code>refreshPromise</code> — остальные 4 просто <code>await</code> тот же промис
+        и переиспользуют новый токен. Без этого механизма backend получил бы 5
+        одновременных запросов на <code>/token/refresh/</code>, из которых из-за
+        <code>ROTATE_REFRESH_TOKENS</code> только первый завершился бы успешно,
+        а остальные 4 — ошибкой «токен уже в blacklist».
+      </div>
+
+      <h3>Сама функция обновления токена</h3>
+      <pre><code><span class="kw">async function</span> <span class="fn">refreshAccessToken</span>(): Promise&lt;string&gt; {
+  <span class="kw">const</span> refreshToken = getRefreshToken();
+  <span class="kw">if</span> (!refreshToken) <span class="kw">throw new</span> Error(<span class="str">"No refresh token found"</span>);
+
+  <span class="com">// axiosInstance, а не голый axios — иначе withCredentials:true не применяется</span>
+  <span class="com">// и httpOnly cookie zha_access/zha_refresh не уедут/не придут (см. ниже)</span>
+  <span class="kw">const</span> { data } = <span class="kw">await</span> axiosInstance.post(<span class="fn">`/auth/token/refresh/`</span>, { refresh: refreshToken });
+
+  localStorage.setItem(ACCESS_TOKEN_KEY, data.access);
+  <span class="kw">if</span> (data.refresh) localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh);  <span class="com">// ротация</span>
+
+  <span class="com">// синхронизируем React-состояние AuthContext с новым токеном</span>
+  window.dispatchEvent(<span class="kw">new</span> CustomEvent(<span class="str">'auth:token-refreshed'</span>, { detail: { access: data.access } }));
+
+  <span class="kw">return</span> data.access;
+}</code></pre>
+
+      <div class="callout danger">
+        <strong>Найденный и исправленный баг:</strong> эта функция раньше вызывала
+        <code>axios.post(...)</code> напрямую (не <code>axiosInstance</code>) — то есть
+        без <code>withCredentials: true</code>, который настроен на самом instance'е.
+        Если бы фронтенд переходил на cookie-based рефреш, эта функция тихо не отправляла
+        и не получала бы httpOnly cookies, в то время как остальной код проекта думал бы,
+        что cookie-флоу работает. Исправлено в этом же проходе вместе с разделом 13.
+      </div>
+
+      <div class="callout info">
+        Эквивалент в <code>zhancare-academy-refined/lib/api/base.ts</code> (второй,
+        параллельный фронтенд на <code>academy.zhan.care</code>) использует
+        <code>fetch()</code>, а не axios — там не было поля <code>withCredentials</code>
+        вообще, и нужно было явно добавить <code>credentials: "include"</code> на все три
+        вызова <code>fetch()</code> внутри <code>fetchWithAuth()</code>/<code>_doRefresh()</code>,
+        иначе <code>fetch</code> по умолчанию не шлёт cookies на cross-origin запросы.
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="authcontext">
+      <h2><span class="num">15</span>AuthContext — React-состояние авторизации</h2>
+      <div class="filepath">zhancareai/src/context/AuthContext.tsx</div>
+
+      <h3>Инициализация при загрузке приложения</h3>
+      <pre><code>useEffect(() => {
+  <span class="kw">const</span> init = <span class="kw">async</span> () => {
+    <span class="kw">const</span> storedAccessToken = getAccessToken();
+    <span class="kw">const</span> storedUser = localStorage.getItem(<span class="str">"user"</span>);
+
+    <span class="kw">if</span> (storedAccessToken && storedUser) {
+      setToken(storedAccessToken);
+      setUser(JSON.parse(storedUser));        <span class="com">// мгновенная гидратация из кэша</span>
+      setAuthHeader(storedAccessToken);
+      document.cookie = <span class="fn">`zha_auth=1; path=/; max-age=${60*60*24*7}; SameSite=Lax`</span>;
+
+      <span class="kw">try</span> {
+        <span class="com">// догружаем актуальный профиль (роли могли измениться на сервере)</span>
+        <span class="kw">const</span> res = <span class="kw">await</span> api.get(<span class="str">"/user-profile/profile/"</span>);
+        <span class="kw">const</span> freshUser = { ...res.data, role: computeRole(res.data.roles) };
+        setUser(freshUser);
+        localStorage.setItem(<span class="str">"user"</span>, JSON.stringify(freshUser));
+      } <span class="kw">catch</span> { <span class="com">/* остаёмся на кэшированных данных */</span> }
+    }
+    setLoading(<span class="kw">false</span>);
+  };
+  init();
+}, []);</code></pre>
+
+      <h3>Слушатели событий от axios-интерсептора</h3>
+      <p style="font-size:13.5px;color:var(--text-dim)">
+        AuthContext не вызывает axios напрямую для рефреша — вместо этого слушает
+        два кастомных DOM-события, которые диспатчит интерсептор. Это разрывает
+        циклическую зависимость (axios → context → axios) и держит логику обновления
+        токена в одном месте.
+      </p>
+      <pre><code><span class="com">// Токен обновился в фоне — синхронизируем React state</span>
+window.addEventListener(<span class="str">'auth:token-refreshed'</span>, (e) => {
+  setToken(e.detail.access);
+  setAuthHeader(e.detail.access);
+});
+
+<span class="com">// Рефреш не удался — сессия истекла окончательно</span>
+window.addEventListener(<span class="str">'auth:logout'</span>, (e) => {
+  setUser(<span class="kw">null</span>); setToken(<span class="kw">null</span>); setAuthHeader(<span class="kw">null</span>);
+  toast.warning(e.detail.message);
+});</code></pre>
+
+      <h3>Функции логина/логаута</h3>
+      <pre><code><span class="kw">const</span> loginUser = (accessToken, refreshToken, userData) => {
+  <span class="kw">const</span> enriched = { ...userData, role: computeRole(userData.roles) };
+  setToken(accessToken); setUser(enriched);
+  setTokens(accessToken, refreshToken);
+  localStorage.setItem(<span class="str">"user"</span>, JSON.stringify(enriched));
+  setAuthHeader(accessToken);
+  document.cookie = <span class="fn">`zha_auth=1; path=/; max-age=${60*60*24*7}; SameSite=Lax`</span>;
+};
+
+<span class="kw">const</span> logoutUser = (showMessage = <span class="kw">true</span>) => {
+  clearTokens(); setUser(<span class="kw">null</span>); setToken(<span class="kw">null</span>); setAuthHeader(<span class="kw">null</span>);
+  document.cookie = <span class="str">"zha_auth=; path=/; max-age=0"</span>;
+  <span class="kw">if</span> (showMessage) toast.warning(<span class="str">"⏳ Ваша сессия истекла..."</span>);
+};</code></pre>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="middleware">
+      <h2><span class="num">16</span>Middleware и защита роутов</h2>
+      <div class="filepath">zhancareai/src/middleware.ts</div>
+      <pre><code><span class="kw">const</span> PROTECTED_PREFIXES = [
+  <span class="str">"/admin"</span>, <span class="str">"/doctor"</span>, <span class="str">"/nurse"</span>, <span class="str">"/patient"</span>, <span class="str">"/profile"</span>,
+  <span class="str">"/video-call"</span>, <span class="str">"/appointments"</span>, <span class="str">"/documents"</span>, <span class="str">"/history"</span>, <span class="str">"/chat"</span>,
+];
+
+<span class="kw">export function</span> <span class="fn">middleware</span>(request: NextRequest) {
+  <span class="kw">const</span> { pathname } = request.nextUrl;
+  <span class="kw">const</span> isAuthenticated = !!request.cookies.get(<span class="str">"zha_auth"</span>)?.value;
+
+  <span class="kw">if</span> (pathname.startsWith(<span class="str">"/login"</span>) && isAuthenticated) {
+    <span class="kw">return</span> NextResponse.redirect(<span class="kw">new</span> URL(<span class="str">"/profile"</span>, request.url));
+  }
+
+  <span class="kw">if</span> (PROTECTED_PREFIXES.some(p => pathname.startsWith(p)) && !isAuthenticated) {
+    <span class="kw">const</span> loginUrl = <span class="kw">new</span> URL(<span class="str">"/login"</span>, request.url);
+    loginUrl.searchParams.set(<span class="str">"next"</span>, pathname);
+    <span class="kw">return</span> NextResponse.redirect(loginUrl);
+  }
+
+  <span class="kw">return</span> NextResponse.next();
+}</code></pre>
+
+      <div class="callout danger">
+        <strong>Это не реальная защита данных</strong> — middleware смотрит только на
+        наличие куки <code>zha_auth=1</code>, которая не содержит и не проверяет сам JWT.
+        Её единственная задача — UX (не показывать форму логина авторизованному
+        пользователю, редиректить неавторизованного до того, как страница начнёт
+        грузить данные). Реальная авторизация и проверка прав — всегда на backend,
+        через <code>CustomJWTAuthentication</code> + permission classes DRF.
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="rbac">
+      <h2><span class="num">17</span>Роли и контроль доступа (RBAC)</h2>
+      <p class="section-intro">
+        Пользователь хранит не одну роль, а массив <code>roles[]</code> — это позволяет,
+        например, врачу одновременно быть админом своей клиники.
+      </p>
+      <pre><code><span class="com">// AuthContext.tsx</span>
+isDoctor:  !!user?.roles?.includes(<span class="str">"doctor"</span>),
+isNurse:   !!user?.roles?.includes(<span class="str">"nurse"</span>),
+isAdmin:   !!user?.roles?.includes(<span class="str">"admin"</span>),
+isPatient: !!user?.roles?.includes(<span class="str">"patient"</span>),</code></pre>
+      <p>Возможные значения <code>roles[]</code>: <code>admin</code>, <code>academy_admin</code>, <code>doctor</code>, <code>nurse</code>, <code>teacher</code>, <code>patient</code>.</p>
+      <pre><code><span class="kw">const</span> { isAdmin, isDoctor, isPatient } = useAuth();
+
+{isAdmin   && &lt;AdminPanel /&gt;}
+{isDoctor  && &lt;DoctorSchedule /&gt;}
+{isPatient && &lt;PatientBookings /&gt;}</code></pre>
+      <div class="callout warn">
+        Условный рендеринг по ролям на фронтенде — это только UX-слой. Любой
+        чувствительный к роли эндпоинт обязан повторно проверять права на backend
+        (как сделано, например, в <code>DiagnosticsServiceViewSet.perform_create</code>,
+        где проверяется <code>request.user.is_admin()</code> и принадлежность клинике)
+        — иначе скрытая в DOM кнопка не защита, а просьба.
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="security">
+      <h2><span class="num">18</span>Безопасность: что сделано хорошо и что стоит улучшить</h2>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3 style="margin-top:0;color:var(--green)">✓ Сделано хорошо</h3>
+          <ul style="font-size:13.5px;color:var(--text-dim);padding-left:18px">
+            <li>Короткий access token (15 мин) ограничивает окно атаки</li>
+            <li>Ротация refresh-токена + немедленный blacklist старого</li>
+            <li>Сессии привязаны к устройству — можно отозвать конкретный девайс</li>
+            <li>Magic-link токен чистится из URL до запроса к API</li>
+            <li>sessionStorage для гостевых консультаций (не остаётся после закрытия вкладки)</li>
+            <li>Серилизация конкурентных refresh-запросов (единый <code>refreshPromise</code>)</li>
+            <li><strong>(новое)</strong> Rate limiting на login/register (5/мин) и password-reset (3/мин)</li>
+            <li><strong>(новое)</strong> Magic-link токен не принимается как обычный bearer-токен</li>
+            <li><strong>(новое)</strong> Проверка сессии кэшируется в Redis на 45с, с явной инвалидацией на logout/refresh</li>
+            <li><strong>(новое)</strong> httpOnly cookies для access/refresh — dual-mode рядом с localStorage</li>
+            <li><strong>(новое)</strong> WebSocket аутентифицируется по JWT-cookie до <code>accept()</code>, с <code>AllowedOriginValidator</code></li>
+            <li><strong>(новое)</strong> Удалён мёртвый неаутентифицированный legacy WS-консьюмер</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0;color:var(--amber)">⚠ Осталось улучшить</h3>
+          <ul style="font-size:13.5px;color:var(--text-dim);padding-left:18px">
+            <li>localStorage всё ещё первичен для ~17 компонентов и второго фронтенда (academy) — полная миграция на cookie-only впереди, после нескольких дней стабильной работы dual-mode в проде</li>
+            <li><code>logout()</code> молча не отзывает сессию на сервере при некорректном <code>refresh_token</code> от клиента (узкий edge case, см. раздел 7)</li>
+            <li>Throttle-скоуп <code>auth_login</code> общий для login и register — burst регистраций с одного IP может затроттлить и логины оттуда же</li>
+            <li>Явной CSRF-проверки на DRF-эндпоинтах нет (DRF оборачивает все view в <code>csrf_exempt</code>) — защита от CSRF держится на <code>SameSite=Lax</code> у новых cookie, а не на токене в заголовке</li>
+            <li><strong>Вне рамок этой задачи, но важно:</strong> найдены захардкоженные секреты в <code>settings.py</code> (включая <code>SECRET_KEY</code>, который подписывает JWT), уже закоммиченные в git — требуют ротации и отдельного решения</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="summary">
+      <h2><span class="num">19</span>Сводная таблица</h2>
+      <table>
+        <tr><th>Компонент</th><th>Backend</th><th>Frontend</th></tr>
+        <tr><td>Хранение токена</td><td>—</td><td><code>localStorage</code> + <strong>httpOnly cookie</strong> dual-mode (<code>sessionStorage</code> для гостей)</td></tr>
+        <tr><td>Время жизни</td><td>15 мин access / 7 дней refresh</td><td>Авто-рефреш на 401</td></tr>
+        <tr><td>Ротация</td><td>Включена, blacklist старого + сброс кэша сессии</td><td>Автоматически сохраняет новый refresh, cookie обновляются сервером</td></tr>
+        <tr><td>Кастомный claim</td><td><code>session_jti</code>, <code>access_type</code></td><td>—</td></tr>
+        <tr><td>Валидация сессии</td><td><strong>Redis-кэш на 45с</strong>, БД только на кэш-мисс, по <code>is_revoked</code></td><td>Кука <code>zha_auth</code> для UX-редиректов</td></tr>
+        <tr><td>Логаут</td><td>Blacklist + revoke сессии + сброс кэша + очистка cookie</td><td>Очистка localStorage + событие</td></tr>
+        <tr><td>Мультиустройство</td><td>Своя сессия на каждый refresh-токен</td><td>Список сессий в профиле</td></tr>
+        <tr><td>Мультироль</td><td><code>roles[]</code> на пользователе</td><td><code>isDoctor</code>/<code>isAdmin</code>/...</td></tr>
+        <tr><td>Гостевой доступ</td><td>Одноразовый <code>access_code</code> + 2ч TTL + bearer-token rejection</td><td><code>useMagicLinkAuth</code> + auto-login</td></tr>
+        <tr><td>Rate limiting</td><td><code>ScopedRateThrottle</code>: 5/мин login, 3/мин password-reset</td><td>—</td></tr>
+        <tr><td>WebSocket</td><td>JWT из httpOnly cookie, проверка ДО <code>accept()</code>, <code>AllowedOriginValidator</code></td><td>Cookie уезжает с handshake автоматически — никакого токена в URL/сообщениях</td></tr>
+      </table>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="files">
+      <h2><span class="num">20</span>Карта файлов</h2>
+
+      <h3>Backend</h3>
+      <table>
+        <tr><th>Файл</th><th>Назначение</th></tr>
+        <tr><td><code>mchs_back/settings.py</code></td><td>SIMPLE_JWT, AUTHENTICATION_CLASSES, <code>DEFAULT_THROTTLE_RATES</code>, <code>CACHES</code> (Redis), cookie-настройки</td></tr>
+        <tr><td><code>common/authentication.py</code></td><td>CustomJWTAuthentication — проверка сессии с кэшем, magic-link rejection, cookie fallback, <code>invalidate_session_cache()</code></td></tr>
+        <tr><td><code>common/views/auth.py</code></td><td>login / logout / register / forgot-password / reset-password / <code>token_refresh_view</code>, throttle scopes, <code>_set_auth_cookies</code>/<code>_clear_auth_cookies</code></td></tr>
+        <tr><td><code>common/serializers/user_session.py</code></td><td>create_jwt_tokens_for_user, refresh_jwt_tokens (теперь сбрасывает кэш старой сессии)</td></tr>
+        <tr><td><code>common/models/user_session.py</code></td><td>Модель UserSession</td></tr>
+        <tr><td><code>common/urls.py</code></td><td>Роутинг auth-эндпоинтов</td></tr>
+        <tr><td><code>common/utils/email_utils.py</code></td><td>generate_magic_link_token — задокументирован механизм TTL</td></tr>
+        <tr><td><code>common/websockets/jwt_auth.py</code></td><td><strong>(новый)</strong> resolve_user_from_jwt — общая JWT-валидация для Channels</td></tr>
+        <tr><td><code>common/websockets/middleware.py</code></td><td><strong>(новый)</strong> JWTCookieAuthMiddleware — аутентификация WS по cookie на уровне ASGI</td></tr>
+        <tr><td><code>common/websockets/consumers.py</code></td><td>SocketIOConsumer, WhatsAppAdminConsumer, TelegramAdminConsumer — аутентификация до accept()</td></tr>
+        <tr><td><code>consultations/consumers_optimized.py</code></td><td>Основной WS-консьюмер консультаций — аутентификация до accept()</td></tr>
+        <tr><td><code>consultations/consumers.py</code></td><td><strong>(удалён)</strong> — был мёртвым неаутентифицированным legacy-роутом</td></tr>
+        <tr><td><code>mchs_back/asgi.py</code></td><td><code>AllowedOriginValidator</code> + <code>JWTCookieAuthMiddlewareStack</code> вместо <code>channels.auth.AuthMiddlewareStack</code></td></tr>
+        <tr><td><code>consultations/models.py</code></td><td>access_code, magic_link_used_at на Consultation</td></tr>
+        <tr><td><code>consultations/tests.py</code>, <code>common/tests.py</code></td><td><strong>(новые тесты)</strong> magic-link rejection, throttling, инвалидация кэша при logout</td></tr>
+      </table>
+
+      <h3>Frontend (zhancareai + zhancare-academy-refined)</h3>
+      <table>
+        <tr><th>Файл</th><th>Назначение</th></tr>
+        <tr><td><code>src/utils/api.ts</code></td><td>Axios instance, интерсепторы, хранение токенов; <code>refreshAccessToken()</code> теперь через <code>axiosInstance</code> (withCredentials)</td></tr>
+        <tr><td><code>src/context/AuthContext.tsx</code></td><td>React-состояние авторизации, роли, события</td></tr>
+        <tr><td><code>src/hooks/useMagicLinkAuth.ts</code></td><td>Гостевой вход по magic-link токену</td></tr>
+        <tr><td><code>src/middleware.ts</code></td><td>UX-редиректы для защищённых роутов</td></tr>
+        <tr><td><code>src/hooks/useWebSocket.ts</code>, <code>src/services/{websocketService,consultationWebSocket}.ts</code></td><td>WS-клиенты — убран <code>?token=</code> и сообщение <code>authenticate</code></td></tr>
+        <tr><td><code>src/components/services/admin/{WhatsAppInbox,TelegramInbox}.tsx</code></td><td>Admin WS-инбоксы — то же + гейт на <code>useAuth().user</code> вместо чтения localStorage</td></tr>
+        <tr><td><code>zhancare-academy-refined/lib/api/base.ts</code></td><td>Второй фронтенд (academy.zhan.care) — добавлен <code>credentials:"include"</code> на все fetch()</td></tr>
+      </table>
+    </section>
+
+    <footer>
+      ZhanCare AI — внутренняя техническая документация. Сгенерировано на основе анализа кодовой базы
+      <code>zhancare-back</code>, <code>zhancareai</code> и <code>zhancare-academy-refined</code>.
+      Обновлено после реализации security hardening (rate limiting, magic-link rejection,
+      Redis session cache, httpOnly cookies, WebSocket JWT-via-cookie) и прохождения
+      security-reviewer/code-reviewer проверок.
+    </footer>
+
+  </main>
+</div>
+</body>
+</html>

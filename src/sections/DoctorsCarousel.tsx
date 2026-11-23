@@ -9,6 +9,7 @@ import "swiper/css/pagination";
 import { useState } from "react";
 import Image from "next/image";
 import { useLanguage } from "@/context/LanguageContext";
+import { useBrand } from "@/context/BrandContext";
 
 // Import all doctor images
 import doctorImg from "@/assets/doctor-img/doctor-img.jpeg";
@@ -32,9 +33,21 @@ import doctorImg18 from "@/assets/doctor-img/doctor-img18.jpeg";
 import doctorImg19 from "@/assets/doctor-img/doctor-img19.jpeg";
 import doctorImg20 from "@/assets/doctor-img/doctor-img20.jpeg";
 import doctorImg21 from "@/assets/doctor-img/doctor-img21.jpeg";
+import doctorImg22 from "@/assets/doctor-img/doctor-img22.jpeg";
+import doctorImg23 from "@/assets/doctor-img/doctor-img23.jpeg";
+import doctorImg24 from "@/assets/doctor-img/doctor-img24.jpeg";
+import doctorImg25 from "@/assets/doctor-img/doctor-img25.jpeg";
+import doctorImg26 from "@/assets/doctor-img/doctor-img26.jpeg";
+import doctorImg27 from "@/assets/doctor-img/doctor-img27.jpeg";
+import doctorImg28 from "@/assets/doctor-img/doctor-img28.jpeg";
+import doctorImg29 from "@/assets/doctor-img/doctor-img29.jpeg";
+import doctorImg30 from "@/assets/doctor-img/doctor-img30.jpeg";
+import doctorImg31 from "@/assets/doctor-img/doctor-img31.jpeg";
+import doctorImg32 from "@/assets/doctor-img/doctor-img32.jpeg";
 
 export const DoctorsCarousel = () => {
   const { language } = useLanguage();
+  const { brand } = useBrand();
   const [selectedDoctor, setSelectedDoctor] = useState<null | any>(null);
   const [activeCategory, setActiveCategory] = useState<string>("all");
 
@@ -64,6 +77,8 @@ export const DoctorsCarousel = () => {
           profileButton: "Профиль",
           experience: "опыта",
           yearsExp: "лет",
+          status: "Статус",
+          bookAppointment: "Записаться на прием",
           altTexts: {
             doctorPhoto: "Фотография врача",
             doctorProfilePhoto: "Профильная фотография врача"
@@ -87,6 +102,8 @@ export const DoctorsCarousel = () => {
           profileButton: "Профиль",
           experience: "тәжірибесі",
           yearsExp: "жыл",
+          status: "Мәртебесі",
+          bookAppointment: "Қабылдауға жазылу",
           altTexts: {
             doctorPhoto: "Дәрігердің фотосуреті",
             doctorProfilePhoto: "Дәрігердің профиль фотосуреті"
@@ -110,9 +127,36 @@ export const DoctorsCarousel = () => {
           profileButton: "Profile",
           experience: "experience",
           yearsExp: "years",
+          status: "Status",
+          bookAppointment: "Book Appointment",
           altTexts: {
             doctorPhoto: "Doctor's photo",
             doctorProfilePhoto: "Doctor's profile photo"
+          }
+        };
+      case "uz":
+        return {
+          title: "Bizning mutaxassislar",
+          categories: {
+            all: "Barchasi",
+            gp: "Umumiy amaliyot",
+            nursing: "Feldsher/Hamshira",
+            pediatrics: "Pediatriya",
+            ophthalmology: "Oftalmologiya",
+            dermatology: "Dermatologiya",
+            surgery: "Jarrohlik",
+            massage: "Massaj",
+            radiology: "Radiologiya"
+          },
+          experiencedDoctor: "Tajribali shifokor",
+          profileButton: "Profil",
+          experience: "tajriba",
+          yearsExp: "yil",
+          status: "Holati",
+          bookAppointment: "Qabulga yozilish",
+          altTexts: {
+            doctorPhoto: "Shifokor surati",
+            doctorProfilePhoto: "Shifokorning profil surati"
           }
         };
       default:
@@ -133,6 +177,8 @@ export const DoctorsCarousel = () => {
           profileButton: "Profile",
           experience: "experience",
           yearsExp: "years",
+          status: "Status",
+          bookAppointment: "Book Appointment",
           altTexts: {
             doctorPhoto: "Doctor's photo",
             doctorProfilePhoto: "Doctor's profile photo"
@@ -146,26 +192,20 @@ export const DoctorsCarousel = () => {
   // Doctor data with multilingual names and specialties
   const getDoctors = () => {
     const baseData = [
-      { nameRu: "Рахимов Есдаулет Толебайұлы", nameKz: "Рахимов Есдәулет Төлебайұлы", nameEn: "Rakhimov Yesdaulet Tolebayuly", specialty: { ru: "Врач ПМСП / ВОП / Участковый", kz: "ПМКК дәрігері / ЖДД / Учаскелік", en: "Primary Care Doctor / GP / District" }, experience: "10", image: doctorImg15, category: "gp" },
-      { nameRu: "Арыстанбаева Жансая Абзаловна", nameKz: "Арыстанбаева Жансая Абзалқызы", nameEn: "Arystanbayeva Zhansaya Abzalovna", specialty: { ru: "Фельдшер", kz: "Фельдшер", en: "Paramedic" }, experience: "10", image: doctorImg11, category: "nursing" },
-      { nameRu: "Саутова Алия Мейрамовна", nameKz: "Саутова Алия Мейрамқызы", nameEn: "Sautova Aliya Meiramovna", specialty: { ru: "Терапевт", kz: "Терапевт", en: "Therapist" }, experience: "10", image: doctorImg14, category: "gp" },
-      { nameRu: "Ауельбекова Ултуган Тулегеновна", nameKz: "Әуелбекова Ұлтуған Төлегенқызы", nameEn: "Auyelbekova Ultugan Tulegenovna", specialty: { ru: "Массажист", kz: "Массажист", en: "Massage Therapist" }, experience: "25", image: doctorImg7, category: "massage" },
-      { nameRu: "Умирбекова Айнур Едиловна", nameKz: "Үмірбекова Айнұр Еділқызы", nameEn: "Umirbekova Ainur Yedilovna", specialty: { ru: "Сестринское дело", kz: "Мейірбике ісі", en: "Nursing" }, experience: "26", image: doctorImg19, category: "nursing" },
-      { nameRu: "Ержанова Эльмира Токтарбаевна", nameKz: "Ержанова Эльмира Тоқтарбайқызы", nameEn: "Yerzhanova Elmira Toktarbayeva", specialty: { ru: "Врач", kz: "Дәрігер", en: "Doctor" }, experience: "15", image: doctorImg9, category: "gp" },
-      { nameRu: "Сейтенова Дурия Каратаевна", nameKz: "Сейтенова Дурия Қаратайқызы", nameEn: "Seitenova Duriya Karatayeva", specialty: { ru: "Педиатрия", kz: "Педиатрия", en: "Pediatrics" }, experience: "38", image: doctorImg17, category: "pediatrics" },
-      { nameRu: "Абдигаипова Зарина Елтаевна", nameKz: "Абдығаипова Зарина Елтайқызы", nameEn: "Abdigaipova Zarina Yeltayeva", specialty: { ru: "Медколледж", kz: "Медколледж", en: "Medical College" }, experience: "11", image: doctorImg6, category: "nursing" },
-      { nameRu: "Оспанова Масиха Султановна", nameKz: "Оспанова Масиха Сұлтанқызы", nameEn: "Ospanova Masiha Sultanova", specialty: { ru: "Педиатр", kz: "Педиатр", en: "Pediatrician" }, experience: "39", image: doctorImg20, category: "pediatrics" },
-      { nameRu: "Тынысбекова Гульшат Андешевна", nameKz: "Тынысбекова Гүлшат Андешқызы", nameEn: "Tynysbekova Gulshat Andeshevna", specialty: { ru: "Дерматокосметолог", kz: "Дерматокосметолог", en: "Dermatocosmetologist" }, experience: "25", image: doctorImg13, category: "dermatology" },
-      { nameRu: "Уразымбетова Венера Жиенбаевна", nameKz: "Уразымбетова Венера Жиенбайқызы", nameEn: "Urazymbekova Venera Zhiyenbayeva", specialty: { ru: "Сестринское дело", kz: "Мейірбике ісі", en: "Nursing" }, experience: "15", image: doctorImg10, category: "nursing" },
-      { nameRu: "Абилкадирова Гульнара Аскербековна", nameKz: "Әбілқадырова Гүлнара Аскербекқызы", nameEn: "Abilkadirova Gulnara Askerbekovna", specialty: { ru: "Медицинское училище", kz: "Медициналық училище", en: "Medical School" }, experience: "38", image: doctorImg5, category: "nursing" },
-      { nameRu: "Сеитова Гульнара Нуруллаевна", nameKz: "Сейітова Гүлнара Нұрұллақызы", nameEn: "Seitova Gulnara Nurullayeva", specialty: { ru: "Офтальмолог", kz: "Офтальмолог", en: "Ophthalmologist" }, experience: "15", image: doctorImg8, category: "ophthalmology" },
-      { nameRu: "Ержанова Алтын Омаркановна", nameKz: "Ержанова Алтын Омарқанқызы", nameEn: "Yerzhanova Altyn Omarkanova", specialty: { ru: "Дерматокосметолог/Хирург", kz: "Дерматокосметолог/Хирург", en: "Dermatocosmetologist/Surgeon" }, experience: "18", image: doctorImg12, category: "surgery" },
-      { nameRu: "Бегимова Алина Болатовна", nameKz: "Бегімова Алина Болатқызы", nameEn: "Begimova Alina Bolatovna", specialty: { ru: "Врач общей практики", kz: "Жалпы дәрігер", en: "General Practitioner" }, experience: "3", image: doctorImg21, category: "gp" },
-      { nameRu: "Койбакова Сәуле", nameKz: "Қойбақова Сәуле", nameEn: "Koibakova Saule", specialty: { ru: "Сестринское дело", kz: "Мейірбике ісі", en: "Nursing" }, experience: "16", image: doctorImg2, category: "nursing" },
-      { nameRu: "Бейсенбекова Асемгуль", nameKz: "Бейсенбекова Асемгүл", nameEn: "Beisenbekova Asemgul", specialty: { ru: "Фельдшер", kz: "Фельдшер", en: "Paramedic" }, experience: "3", image: doctorImg18, category: "nursing" },
-      { nameRu: "Амирханова Акбота Кайратовна", nameKz: "Әмірханова Ақбота Қайратқызы", nameEn: "Amirkhanova Akbota Kairatovna", specialty: { ru: "Врач-косметолог/дерматовенеролог", kz: "Косметолог дәрігер/дерматовенеролог", en: "Cosmetologist/Dermatovenereologist" }, experience: "3", image: doctorImg, category: "dermatology" },
-      { nameRu: "Мырзахметова Гульнара Асильевна", nameKz: "Мырзахметова Гүлнара Әсілқызы", nameEn: "Myrzakhmetova Gulnara Asilievna", specialty: { ru: "Дерматокосметолог/Гирудотерапевт", kz: "Дерматокосметолог/Гирудотерапевт", en: "Dermatocosmetologist/Hirudotherapist" }, experience: "1", image: doctorImg4, category: "dermatology" },
-      { nameRu: "Мекенбаева Нигина Бобуровна", nameKz: "Мекенбаева Нигина Бобұрқызы", nameEn: "Mekenbayeva Nigina Boburovna", specialty: { ru: "Радиолог", kz: "Радиолог", en: "Radiologist" }, experience: "1", image: doctorImg16, category: "radiology" },
+      { nameRu: "Наурызбаева Баглан Назымбеккызы", nameKz: "Наурызбаева Бағлан Назымбекқызы", nameEn: "Nauryzbayeva Baglan Nazymbek kyzy", specialty: { ru: "Неонатолог, интегративная и превентивная педиатрия, реабилитолог высшей категории", kz: "Жоғары санатты неонатолог, интегративті және превентивті педиатрия, реабилитолог", en: "Neonatologist, Integrative & Preventive Pediatrics, Rehabilitation, Highest Category", uz: "Neonatolog, integrativ va preventiv pediatriya, reabilitolog, oliy toifa" }, experience: "26", image: doctorImg19, category: "pediatrics" },
+      { nameRu: "Приходько Татьяна Михайловна", nameKz: "Приходько Татьяна Михайловна", nameEn: "Prikhodko Tatyana Mikhailovna", specialty: { ru: "Реабилитолог высшей категории", kz: "Жоғары санатты реабилитолог", en: "Rehabilitation Specialist, Highest Category", uz: "Reabilitolog, oliy toifa" }, experience: "26", image: doctorImg20, category: "gp" },
+      { nameRu: "Кажитаев Алмас Муралович", nameKz: "Кажитаев Алмас Муралович", nameEn: "Kazhitaev Almas Muralovich", specialty: { ru: "Заведующий отделения урологии и андрологии МОБ2", kz: "МОБ2 урология және андрология бөлімінің меңгерушісі", en: "Head of Urology and Andrology Department MOB2", uz: "MOB2 urologiya va andrologiya boʻlimi mudiri" }, experience: "30", image: doctorImg21, category: "surgery" },
+      { nameRu: "Жаканбетов Азат Кунанбаевич", nameKz: "Жақанбетов Азат Құнанбайұлы", nameEn: "Zhakanbetov Azat Kunanbayevich", specialty: { ru: "Отоларинголог (ЛОР), 1 категории", kz: "Отоларинголог (ЛОР), 1 санат", en: "Otolaryngologist (ENT), 1st category", uz: "Otolaringolog (LOR), 1-toifa" }, experience: "10", image: doctorImg22, category: "gp" },
+      { nameRu: "Изтлеуова Нургуль Кубашевна", nameKz: "Изтлеуова Нұргүл Құбашқызы", nameEn: "Iztleuova Nurgul Kubashevna", specialty: { ru: "Инфекционист высшей категории", kz: "Жоғары санатты инфекционист", en: "Infectious Disease Specialist, Highest Category", uz: "Yuqumli kasalliklar mutaxassisi, oliy toifa" }, experience: "37", image: doctorImg23, category: "gp" },
+      { nameRu: "Ниязбаев Талгат Толешевич", nameKz: "Ниязбаев Талғат Төлешұлы", nameEn: "Niyazbaev Talgat Toleshevich", specialty: { ru: "Уролог-Андролог высшей категории", kz: "Жоғары санатты уролог-андролог", en: "Urologist-Andrologist, Highest Category", uz: "Urolog-androlog, oliy toifa" }, experience: "25", image: doctorImg24, category: "surgery" },
+      { nameRu: "Смагулова Еркежан Есепбаевна", nameKz: "Смағұлова Еркежан Есепбайқызы", nameEn: "Smagulova Yerkezhan Yesepbayevna", specialty: { ru: "Кардиолог высшей категории", kz: "Жоғары санатты кардиолог", en: "Cardiologist, Highest Category", uz: "Kardiolog, oliy toifa" }, experience: "22", image: doctorImg25, category: "gp" },
+      { nameRu: "Рябчевская Тамара Георгиевна", nameKz: "Рябчевская Тамара Георгиевна", nameEn: "Ryabchevskaya Tamara Georgievna", specialty: { ru: "Педиатр высшей категории", kz: "Жоғары санатты педиатр", en: "Pediatrician, Highest Category", uz: "Pediatr, oliy toifa" }, experience: "48", image: doctorImg26, category: "pediatrics" },
+      { nameRu: "Муканова Роза Шайдулловна", nameKz: "Мұқанова Роза Шайдуллақызы", nameEn: "Mukanova Roza Shaidullovna", specialty: { ru: "УЗИ, лучевая диагностика высшей категории", kz: "Жоғары санатты УДЗ, сәулелік диагностика", en: "Ultrasound, Radiology, Highest Category", uz: "UTT, nurli diagnostika, oliy toifa" }, experience: "23", image: doctorImg27, category: "radiology" },
+      { nameRu: "Султан Риза Алибековна", nameKz: "Сұлтан Риза Әлібекқызы", nameEn: "Sultan Riza Alibekovna", specialty: { ru: "Терапевт, педиатр, невропатолог высшей категории", kz: "Жоғары санатты терапевт, педиатр, невропатолог", en: "Therapist, Pediatrician, Neurologist, Highest Category", uz: "Terapevt, pediatr, nevropatolog, oliy toifa" }, experience: "18", image: doctorImg28, category: "gp" },
+      { nameRu: "Чекменева Наталья Иосифовна", nameKz: "Чекменева Наталья Иосифовна", nameEn: "Chekmeneva Natalya Iosifovna", specialty: { ru: "Акушер-гинеколог", kz: "Акушер-гинеколог", en: "Obstetrician-Gynecologist", uz: "Akusher-ginekolog" }, experience: "39", image: doctorImg29, category: "gp" },
+      { nameRu: "Сиразитдинов Рустам Раисович", nameKz: "Сиразитдинов Рұстам Раисұлы", nameEn: "Sirazitdinov Rustam Raisovich", specialty: { ru: "Хирург, травматолог, детский хирург высшей категории", kz: "Жоғары санатты хирург, травматолог, балалар хирургі", en: "Surgeon, Traumatologist, Pediatric Surgeon, Highest Category", uz: "Jarroh, travmatolog, bolalar jarrohi, oliy toifa" }, experience: "25", image: doctorImg30, category: "surgery" },
+      { nameRu: "Джайнаров Нургиса Ершораевич", nameKz: "Джайнаров Нұрғиса Ершорайұлы", nameEn: "Dzhaynarov Nurgisa Yershorayevich", specialty: { ru: "Стоматолог высшей категории", kz: "Жоғары санатты стоматолог", en: "Dentist, Highest Category", uz: "Stomatolog, oliy toifa" }, experience: "10", image: doctorImg31, category: "gp" },
+      { nameRu: "Мусин Жанат Сартаевич", nameKz: "Мусин Жанат Сартайұлы", nameEn: "Musin Zhanat Sartayevich", specialty: { ru: "Хирург", kz: "Хирург", en: "Surgeon", uz: "Jarroh" }, experience: "36", image: doctorImg32, category: "surgery" },
     ];
 
     return baseData.map(doctor => ({
@@ -194,9 +234,10 @@ export const DoctorsCarousel = () => {
     : doctors.filter((doc) => doc.category === activeCategory);
 
   return (
-    <section id="specialists" className="py-20 bg-gradient-to-b from-white to-[#d2dcff] text-center overflow-hidden">
+    <section id="specialists" className="py-20 bg-gradient-to-b from-white to-[#d2dcff] text-center overflow-x-hidden">
       <motion.h2
-        className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl laptop-hd:text-4xl desktop-fhd:text-5xl desktop-qhd:text-6xl desktop-4k:text-7xl font-extrabold tracking-tight text-[#001E80] mb-4 sm:mb-6 lg:mb-8"
+        className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl laptop-hd:text-4xl desktop-fhd:text-5xl desktop-qhd:text-6xl desktop-4k:text-7xl font-extrabold tracking-tight mb-4 sm:mb-6 lg:mb-8"
+        style={{ color: brand.secondary }}
         initial={{ opacity: 0, y: -30 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
@@ -206,26 +247,72 @@ export const DoctorsCarousel = () => {
       </motion.h2>
 
       {/* Categories */}
-      <div className="flex flex-wrap justify-center gap-4 mb-10 relative z-10">
-        {categories.map((category) => (
-          <button
+      <div className="flex flex-wrap justify-center gap-3 mb-12 px-4 relative z-10">
+        {categories.map((category, index) => (
+          <motion.button
             key={category.key}
             type="button"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.05 }}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               handleCategoryChange(category.key);
             }}
-            className={`px-5 py-2 rounded-full border cursor-pointer select-none relative z-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-              ${activeCategory === category.key 
-                ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-transparent shadow-lg" 
-                : "border-blue-400 text-blue-700 hover:bg-blue-100 transition-all duration-200 bg-white"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className={`relative px-6 py-3 rounded-2xl font-semibold cursor-pointer select-none transition-all duration-300 overflow-hidden group
+              ${activeCategory === category.key
+                ? "text-white shadow-xl"
+                : "text-gray-700 bg-white/80 backdrop-blur-sm border border-gray-200 hover:border-indigo-300 hover:shadow-md"
               }`
             }
             style={{ pointerEvents: 'auto' }}
           >
-            {category.label}
-          </button>
+            {/* Active background gradient */}
+            {activeCategory === category.key && (
+              <motion.div
+                layoutId="activeCategory"
+                className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600"
+                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+              />
+            )}
+
+            {/* Hover gradient effect for inactive buttons */}
+            {activeCategory !== category.key && (
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-indigo-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            )}
+
+            {/* Icon and text with active indicator */}
+            <span className="relative z-10 flex items-center gap-2">
+              {/* Active indicator dot - left side of text */}
+              {activeCategory === category.key && (
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="w-2 h-2 bg-green-400 rounded-full shadow-lg"
+                />
+              )}
+
+              {category.key === "all" && (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+              )}
+              {category.key === "surgery" && (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z" />
+                </svg>
+              )}
+              {category.key === "pediatrics" && (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
+              {category.label}
+            </span>
+          </motion.button>
         ))}
       </div>
 
@@ -241,47 +328,84 @@ export const DoctorsCarousel = () => {
           768: { slidesPerView: 2 },
           1024: { slidesPerView: 3 },
         }}
-        className="max-w-7xl mx-auto px-6"
+        className="max-w-7xl mx-auto px-6 pb-4"
       >
         {filteredDoctors.map((doc, index) => (
           <SwiperSlide key={index}>
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: index * 0.1 }}
-              className="bg-white rounded-2xl shadow-xl hover:shadow-2xl p-8 flex flex-col items-center w-[300px] h-[540px] mx-auto transition-all duration-300 hover:scale-105 relative"
+              transition={{ duration: 0.5, delay: index * 0.08 }}
+              className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl overflow-hidden w-[320px] mx-auto transition-all duration-500 hover:-translate-y-2 relative border border-gray-100"
             >
-              <div className="relative w-36 h-36 mb-6">
-                <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-[#00cfff] to-[#0079ff] p-1">
-                  <div className="relative w-full h-full bg-white rounded-full overflow-hidden">
-                    <Image
-                      src={doc.image}
-                      alt={`${translations.altTexts.doctorPhoto} - ${doc.name}, ${doc.specialtyText}`}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 100vw, 33vw"
-                    />
+              {/* Photo Section with overlay gradient */}
+              <div className="relative w-full h-80 overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50">
+                <Image
+                  src={doc.image}
+                  alt={`${translations.altTexts.doctorPhoto} - ${doc.name}, ${doc.specialtyText}`}
+                  fill
+                  className="object-cover object-top group-hover:scale-105 transition-transform duration-700"
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                />
+                {/* Subtle gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent opacity-40"></div>
+
+                {/* Experience badge on photo */}
+                {parseInt(doc.experience) >= 20 && (
+                  <div className="absolute top-4 right-4 bg-gradient-to-r from-amber-400 to-yellow-500 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                    {doc.experience}+ {translations.yearsExp}
                   </div>
+                )}
+
+                {/* Status indicator */}
+                <div className="absolute bottom-4 left-4 bg-green-500/90 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 shadow-lg">
+                  <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                  {translations.experiencedDoctor}
                 </div>
               </div>
 
-              <h3 className="text-2xl font-bold text-[#001E80]">{doc.name}</h3>
-              <p className="text-gray-500 mt-2">{doc.specialtyText}</p>
-              <p className="text-gray-400 mt-1 text-sm">{doc.experience} {translations.yearsExp}</p>
+              {/* Info Section */}
+              <div className="p-6 space-y-3">
+                {/* Name */}
+                <p className="text-xl font-bold text-gray-900 leading-tight min-h-[56px] line-clamp-2">
+                  {doc.name}
+                </p>
 
-              {parseInt(doc.experience) >= 10 && (
-                <span className="mt-2 inline-block bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full">
-                  {translations.experiencedDoctor}
-                </span>
-              )}
+                {/* Specialty */}
+                <p className="text-sm text-gray-600 leading-relaxed min-h-[40px] line-clamp-2">
+                  {doc.specialtyText}
+                </p>
 
-              <button
-                onClick={() => setSelectedDoctor(doc)}
-                className="mt-6 bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-2 px-5 rounded-full hover:opacity-90 transition"
-              >
-                {translations.profileButton}
-              </button>
+                {/* Experience bar */}
+                <div className="flex items-center gap-2 pt-2">
+                  <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all duration-1000"
+                      style={{ width: `${Math.min(parseInt(doc.experience) * 2, 100)}%` }}
+                    ></div>
+                  </div>
+                  <span className="text-xs font-semibold text-indigo-600">
+                    {doc.experience} {translations.yearsExp}
+                  </span>
+                </div>
+
+                {/* Action Button */}
+                <motion.button
+                  onClick={() => setSelectedDoctor(doc)}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-3 px-6 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 group/btn"
+                >
+                  <span>{translations.profileButton}</span>
+                  <svg className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </motion.button>
+              </div>
             </motion.div>
           </SwiperSlide>
         ))}
@@ -291,39 +415,106 @@ export const DoctorsCarousel = () => {
       <AnimatePresence>
         {selectedDoctor && (
           <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md px-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setSelectedDoctor(null)}
           >
             <motion.div
-              className="bg-white rounded-2xl p-8 w-full max-w-md relative"
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              transition={{ duration: 0.3 }}
+              className="bg-white rounded-3xl overflow-hidden w-full max-w-lg relative shadow-2xl"
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: "spring", duration: 0.5 }}
               onClick={(e) => e.stopPropagation()}
             >
+              {/* Close button */}
               <button
                 onClick={() => setSelectedDoctor(null)}
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 text-2xl"
+                className="absolute top-4 right-4 z-10 w-10 h-10 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full flex items-center justify-center text-gray-600 hover:text-gray-900 transition-all shadow-lg"
               >
-                ✕
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
 
-              <div className="flex flex-col items-center">
-                <div className="relative w-32 h-32 mb-4">
-                  <Image
-                    src={selectedDoctor.image}
-                    alt={`${translations.altTexts.doctorProfilePhoto} - ${selectedDoctor.name}, ${selectedDoctor.specialtyText}`}
-                    fill
-                    className="rounded-full object-cover"
-                  />
+              {/* Photo Section - Full height without gradient fade */}
+              <div className="relative w-full h-96 bg-gradient-to-br from-blue-50 to-indigo-50">
+                <Image
+                  src={selectedDoctor.image}
+                  alt={`${translations.altTexts.doctorProfilePhoto} - ${selectedDoctor.name}, ${selectedDoctor.specialtyText}`}
+                  fill
+                  className="object-cover object-center"
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                  priority
+                />
+                {/* Subtle bottom gradient only */}
+                <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white/60 to-transparent"></div>
+
+                {/* Experience badge */}
+                {parseInt(selectedDoctor.experience) >= 20 && (
+                  <div className="absolute top-4 left-4 bg-gradient-to-r from-amber-400 to-yellow-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-xl flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                    {selectedDoctor.experience}+ {translations.yearsExp}
+                  </div>
+                )}
+              </div>
+
+              {/* Info Section */}
+              <div className="p-8 space-y-6">
+                <div>
+                  <h3 className="text-3xl font-bold text-gray-900 mb-2">{selectedDoctor.name}</h3>
+                  <p className="text-lg text-gray-600">{selectedDoctor.specialtyText}</p>
                 </div>
-                <h3 className="text-2xl font-bold text-[#001E80]">{selectedDoctor.name}</h3>
-                <p className="text-gray-500 mt-2">{selectedDoctor.specialtyText}</p>
-                <p className="text-gray-400 mt-1 text-sm">{selectedDoctor.experience} {translations.yearsExp} {translations.experience}</p>
+
+                {/* Stats */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-sm font-semibold text-gray-700">{translations.experience}</span>
+                    </div>
+                    <p className="text-2xl font-bold text-indigo-700">{selectedDoctor.experience} {translations.yearsExp}</p>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <span className="text-sm font-semibold text-gray-700">{translations.status || "Статус"}</span>
+                    </div>
+                    <p className="text-sm font-bold text-green-700 flex items-center gap-1">
+                      <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                      {translations.experiencedDoctor}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex gap-3">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-4 px-6 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
+                  >
+                    {translations.bookAppointment || "Записаться на прием"}
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-12 h-12 bg-gray-100 hover:bg-gray-200 rounded-xl flex items-center justify-center transition-colors"
+                  >
+                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                  </motion.button>
+                </div>
               </div>
             </motion.div>
           </motion.div>

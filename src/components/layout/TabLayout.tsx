@@ -14,7 +14,7 @@ interface TabLayoutProps {
 }
 
 const TabLayout = ({ children }: TabLayoutProps) => {
-  const { user, loading } = useAuth();
+  const { user, loading, isDoctor } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -22,10 +22,12 @@ const TabLayout = ({ children }: TabLayoutProps) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Map pathnames to tab IDs
-  const getActiveTabFromPath = (pathname: string): string => {
+  const getActiveTabFromPath = (pathname: string | null): string => {
+    if (!pathname) return 'profile';
     const path = pathname.split('/').pop() || '';
     switch (path) {
       case 'profile': return 'profile';
+      case 'smart-consultation': return 'smart-consultation';
       case 'video': return 'video';
       case 'appointments': return 'appointments';
       case 'history': return 'history';
@@ -47,10 +49,10 @@ const TabLayout = ({ children }: TabLayoutProps) => {
   };
 
   useEffect(() => {
-    if (!loading && user?.role === "doctor") {
-      router.replace("/doctor-profile");
+    if (!loading && isDoctor) {
+      router.replace("/doctor/consultations");
     }
-  }, [loading, user, router]);
+  }, [loading, user, isDoctor, router]);
 
   if (loading) {
     return null; // Don't show loading screen
@@ -64,8 +66,6 @@ const TabLayout = ({ children }: TabLayoutProps) => {
     <div className="flex min-h-screen bg-gray-100">
       {/* Sidebar with control */}
       <Sidebar
-        activeTab={activeTab}
-        setActiveTab={handleTabChange}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         isCollapsed={sidebarCollapsed}
@@ -84,7 +84,7 @@ const TabLayout = ({ children }: TabLayoutProps) => {
         <div className="flex-1 overflow-y-auto">
           <main className="flex-1 p-4 sm:p-6 bg-gray-50">
             {/* Breadcrumbs */}
-            <Breadcrumb activeTab={activeTab} />
+            <Breadcrumb />
 
             {/* Animated Content */}
             <MainContent activeTab={activeTab}>{children}</MainContent>

@@ -4,14 +4,13 @@ import { useLanguage } from "@/context/LanguageContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import en from "@/locales/en.json";
+import uz from "@/locales/uz.json";
 import { ChatHeader } from "./ChatHeader";
 import { ChatMessages } from "./ChatMessages";
 import { ChatInput } from "./ChatInput";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-
-const API_KEY = "QqkMxELY0YVGkCx17Vya04Sq9nGvCahu";
-const ENDPOINT = "https://api.mistral.ai/v1/chat/completions";
+import { isInjectionAttempt, CHAT_ENDPOINT } from "@/lib/ai";
 
 export const ChatComponent = ({ onClose }: { onClose: () => void }) => {
   const [userInput, setUserInput] = useState("");
@@ -42,6 +41,8 @@ export const ChatComponent = ({ onClose }: { onClose: () => void }) => {
         return en.chat;
       case "kz":
         return kz.chat;
+      case "uz":
+        return uz.chat;
       default:
         return ru.chat; // Fallback to Russian
     }
@@ -51,14 +52,27 @@ export const ChatComponent = ({ onClose }: { onClose: () => void }) => {
     if (!userInput.trim()) return;
     const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
+    if (isInjectionAttempt(userInput)) {
+      const blocked = language === "ru"
+        ? "Я медицинский ассистент. Пожалуйста, задайте медицинский вопрос."
+        : language === "kz"
+        ? "Мен медициналық көмекшімін. Медициналық сұрақ қойыңыз."
+        : language === "uz"
+        ? "Men tibbiy yordamchiman. Iltimos, tibbiy savol bering."
+        : "I am a medical assistant. Please ask a medical question.";
+      setMessages(prev => [...prev, { user: userInput, response: blocked, timestamp }]);
+      setUserInput("");
+      return;
+    }
+
     const newMessage = { user: userInput, response: "", timestamp };
     setMessages((prev) => [...prev, newMessage]);
     setLoading(true);
     setError("");
 
     // Check if user wants to play the AI game
-    const gameKeywords = ["давай поиграем", "поиграем", "хочу играть", "можно поиграть", "let's play", "want to play", "can we play", "ойнайық", "ойын ойнау"];
-    const medicalKeywords = ["болит", "боль", "ушибла", "ушиб", "травма", "hurt", "pain", "injury", "bruise", "ауырады", "жарақат"];
+    const gameKeywords = ["давай поиграем", "поиграем", "хочу играть", "можно поиграть", "let's play", "want to play", "can we play", "ойнайық", "ойын ойнау", "o'ynaymiz", "o'ynashni xohlayman"];
+    const medicalKeywords = ["болит", "боль", "ушибла", "ушиб", "травма", "hurt", "pain", "injury", "bruise", "ауырады", "жарақат", "og'riq", "og'riydi", "jarohat"];
     
     const isGameRequest = gameKeywords.some(keyword => 
       userInput.toLowerCase().includes(keyword.toLowerCase())
@@ -85,30 +99,17 @@ export const ChatComponent = ({ onClose }: { onClose: () => void }) => {
     }
 
     try {
-      const payload = {
-        model: "open-mistral-nemo",
-        temperature: 0.3,
-        top_p: 1,
-        max_tokens: 500,
-        messages: [
-          { role: "system", content: translations.assistantInstruction },
-          { role: "user", content: userInput },
-        ],
-      };
-
-      const res = await fetch(ENDPOINT, {
+      const res = await fetch(CHAT_ENDPOINT, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${API_KEY}`,
-        },
-        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ message: userInput, language }),
       });
 
       if (!res.ok) throw new Error(translations.fetchError);
 
       const data = await res.json();
-      const aiText = data.choices[0].message.content;
+      const aiText: string = data.text || translations.genericError;
 
       let index = 0;
       setStreamedResponse("");

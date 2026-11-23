@@ -146,7 +146,7 @@ const VideoFrame: React.FC<VideoFrameProps> = ({
           onDisconnect?.();
         }}
         onConnected={() => {
-          console.log("✅ Connected to LiveKit room");
+          // console.log("✅ Connected to LiveKit room");
         }}
         onError={(error) => {
           console.error("❌ LiveKit room error:", error);
@@ -235,7 +235,7 @@ const VideoFrame: React.FC<VideoFrameProps> = ({
         .lk-participant-tile video {
           width: 100% !important;
           height: 100% !important;
-          object-fit: cover !important;
+          object-fit: contain !important;
           background: #000 !important;
           display: block !important;
           opacity: 1 !important;

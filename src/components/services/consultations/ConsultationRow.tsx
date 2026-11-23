@@ -8,6 +8,8 @@ const statusTranslations: Record<Consultation["status"], string> = {
   missed: "🔕 Пропущено",
   scheduled: "📅 Запланировано",
   planned: "📋 Запланированна",
+  confirmed: "✅ Подтверждено",
+  in_progress: "🟢 В процессе",
 };
 
 

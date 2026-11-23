@@ -5,7 +5,7 @@ interface ConsultationFlowState {
   urgency?: 'urgent' | 'non_urgent';
   selectedDoctorId?: number;
   consultationId?: number;
-  step: 'symptoms' | 'doctor_selection' | 'timeslot_booking' | 'waiting' | 'in_call';
+  step: 'symptoms' | 'doctor_selection' | 'slot_booking' | 'waiting' | 'in_call';
   error?: string;
   loading: boolean;
 }
@@ -41,7 +41,7 @@ export const useConsultationFlow = (): UseConsultationFlowReturn => {
       const response = await fetch('/api/consultations/ai-process/', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Authorization': `Token ${localStorage.getItem('access_token')}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -71,9 +71,9 @@ export const useConsultationFlow = (): UseConsultationFlowReturn => {
           step: 'waiting',
         });
       } else {
-        // Non-urgent, proceed to timeslot selection
+        // Non-urgent, proceed to slot selection
         updateState({
-          step: 'timeslot_booking',
+          step: 'slot_booking',
         });
       }
 
@@ -88,7 +88,7 @@ export const useConsultationFlow = (): UseConsultationFlowReturn => {
     }
   }, [updateState]);
 
-  // Book a scheduled consultation with timeslot
+  // Book a scheduled consultation with a slot
   const bookScheduledConsultation = useCallback(async (timeslotId: number) => {
     updateState({ loading: true, error: undefined });
 
@@ -96,11 +96,11 @@ export const useConsultationFlow = (): UseConsultationFlowReturn => {
       const response = await fetch('/api/consultations/book-scheduled/', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Authorization': `Token ${localStorage.getItem('access_token')}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          timeslot_id: timeslotId,
+          slot_id: timeslotId,
           ai_recommendation_id: state.aiRecommendationId,
         }),
       });

@@ -12,7 +12,6 @@ import {
   Shield,
   Info,
   AlertCircle,
-  ArrowLeft,
   Phone,
   Calendar,
   FileText,
@@ -30,6 +29,151 @@ import {
   Activity,
   Loader2
 } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
+import { formatDualTime } from "@/utils/clinicTime";
+
+const STEP3_TEXT = {
+  ru: {
+    checkSymptoms: "Анализ симптомов", checkConnection: "Проверка соединения", checkCamera: "Тестирование камеры",
+    checkMic: "Проверка микрофона", checkSecurity: "Настройка безопасности", checkDoctor: "Готовность врача",
+    rescanning: "Пересканирование...",
+    issuesFound: "Обнаружены проблемы", checkDoneWarnings: "Проверка завершена с предупреждениями", aiCheckDone: "ИИ проверка завершена",
+    fix: "Исправить", details: "Детали",
+    connStable: "стабильна", connFair: "средняя", connPoor: "слабая",
+    connLabel: "Связь:", cameraLabel: "Камера:", micLabel: "Микрофон:",
+    cameraReady: "готова", cameraBlocked: "заблокирована", micReady: "готов", micBlocked: "заблокирован",
+    actionRequired: "Требуется действие:", allowCameraMic: "Разрешите доступ к камере и микрофону для видеоконсультации",
+    aiChecking: "ИИ выполняет проверку...",
+    checkOf: "Проверка", of2: "из", donePercent: "завершено",
+    descriptionSymptoms: "Описание симптомов", symptomsTransferred: "Ваши жалобы переданы врачу",
+    chooseSpecialist: "Выбор специалиста", doctorMatched: "Врач подобран по вашим симптомам",
+    videoConsultation: "Видеоконсультация", readyToStart: "Готово к началу консультации",
+    equipmentCheck: "Проверка оборудования",
+    camera: "Камера", microphone: "Микрофон", internet: "Интернет",
+    allowed: "Разрешена", micAllowed: "Разрешен", noAccess: "Нет доступа",
+    excellent: "Отлично", good: "Хорошо", weak: "Слабо",
+    accessRequired: "Требуется доступ", allowInBrowserSettings: "Разрешите доступ к камере и микрофону в настройках браузера для видеоконсультации",
+    checkAgain: "Проверить снова",
+    allReady: "Всё готово", checkDataAndAssign: "Проверьте данные и назначьте консультацию",
+    connShort: "Связь", cameraShort: "Камера", micShort: "Микро",
+    years: "лет",
+    appointment: "Запись", confirmed: "Подтверждено", clinicTime: "Время клиники",
+    symptoms: "Симптомы",
+    preparing: "Подготовка...", connecting: "Подключение...", waitingTime: (t: string) => `Ожидание (${t})`,
+    assignConsultation: "Назначить консультацию",
+    waitingDoctor: (t: string) => `Ожидаем врача · ${t}`, willConnectSoon: "скоро подключится",
+    cancel2: "Отменить",
+    assignQuestion: "Назначить консультацию?", withDoctorAt: (name: string) => `С доктором ${name} в выбранное время`,
+    cancel: "Отмена", confirm: "Подтвердить",
+    consultationCost: "Стоимость консультации",
+    locale: "ru-RU",
+  },
+  kz: {
+    checkSymptoms: "Симптомдарды талдау", checkConnection: "Байланысты тексеру", checkCamera: "Камераны тестілеу",
+    checkMic: "Микрофонды тексеру", checkSecurity: "Қауіпсіздікті баптау", checkDoctor: "Дәрігердің дайындығы",
+    rescanning: "Қайта сканерлеу...",
+    issuesFound: "Мәселелер табылды", checkDoneWarnings: "Тексеру ескертулермен аяқталды", aiCheckDone: "AI тексеруі аяқталды",
+    fix: "Түзету", details: "Толығырақ",
+    connStable: "тұрақты", connFair: "орташа", connPoor: "әлсіз",
+    connLabel: "Байланыс:", cameraLabel: "Камера:", micLabel: "Микрофон:",
+    cameraReady: "дайын", cameraBlocked: "бөгелген", micReady: "дайын", micBlocked: "бөгелген",
+    actionRequired: "Әрекет қажет:", allowCameraMic: "Бейне кеңес үшін камера мен микрофонға қатынасты рұқсат етіңіз",
+    aiChecking: "AI тексеру жүргізіп жатыр...",
+    checkOf: "Тексеру", of2: "ішінен", donePercent: "аяқталды",
+    descriptionSymptoms: "Симптомдар сипаттамасы", symptomsTransferred: "Шағымдарыңыз дәрігерге жіберілді",
+    chooseSpecialist: "Маманды таңдау", doctorMatched: "Дәрігер симптомдарыңызға сай таңдалды",
+    videoConsultation: "Бейне кеңес", readyToStart: "Кеңесті бастауға дайын",
+    equipmentCheck: "Жабдықты тексеру",
+    camera: "Камера", microphone: "Микрофон", internet: "Интернет",
+    allowed: "Рұқсат етілген", micAllowed: "Рұқсат етілген", noAccess: "Қатынас жоқ",
+    excellent: "Тамаша", good: "Жақсы", weak: "Әлсіз",
+    accessRequired: "Қатынас қажет", allowInBrowserSettings: "Бейне кеңес үшін браузер баптауларында камера мен микрофонға қатынасты рұқсат етіңіз",
+    checkAgain: "Қайта тексеру",
+    allReady: "Бәрі дайын", checkDataAndAssign: "Деректерді тексеріп, кеңесті тағайындаңыз",
+    connShort: "Байланыс", cameraShort: "Камера", micShort: "Микро",
+    years: "жыл",
+    appointment: "Жазылу", confirmed: "Расталды", clinicTime: "Клиника уақыты",
+    symptoms: "Симптомдар",
+    preparing: "Дайындық...", connecting: "Қосылу...", waitingTime: (t: string) => `Күту (${t})`,
+    assignConsultation: "Кеңесті тағайындау",
+    waitingDoctor: (t: string) => `Дәрігерді күтеміз · ${t}`, willConnectSoon: "жақында қосылады",
+    cancel2: "Бас тарту",
+    assignQuestion: "Кеңес тағайындау керек пе?", withDoctorAt: (name: string) => `${name} дәрігермен таңдалған уақытта`,
+    cancel: "Бас тарту", confirm: "Растау",
+    consultationCost: "Кеңес құны",
+    locale: "kk-KZ",
+  },
+  en: {
+    checkSymptoms: "Symptom analysis", checkConnection: "Connection check", checkCamera: "Camera testing",
+    checkMic: "Microphone check", checkSecurity: "Security setup", checkDoctor: "Doctor readiness",
+    rescanning: "Rescanning...",
+    issuesFound: "Issues found", checkDoneWarnings: "Check completed with warnings", aiCheckDone: "AI check complete",
+    fix: "Fix", details: "Details",
+    connStable: "stable", connFair: "fair", connPoor: "weak",
+    connLabel: "Connection:", cameraLabel: "Camera:", micLabel: "Microphone:",
+    cameraReady: "ready", cameraBlocked: "blocked", micReady: "ready", micBlocked: "blocked",
+    actionRequired: "Action required:", allowCameraMic: "Allow camera and microphone access for the video consultation",
+    aiChecking: "AI is running a check...",
+    checkOf: "Check", of2: "of", donePercent: "complete",
+    descriptionSymptoms: "Symptom description", symptomsTransferred: "Your complaints have been sent to the doctor",
+    chooseSpecialist: "Choosing a specialist", doctorMatched: "A doctor has been matched to your symptoms",
+    videoConsultation: "Video consultation", readyToStart: "Ready to start the consultation",
+    equipmentCheck: "Equipment check",
+    camera: "Camera", microphone: "Microphone", internet: "Internet",
+    allowed: "Allowed", micAllowed: "Allowed", noAccess: "No access",
+    excellent: "Excellent", good: "Good", weak: "Weak",
+    accessRequired: "Access required", allowInBrowserSettings: "Allow camera and microphone access in your browser settings for the video consultation",
+    checkAgain: "Check again",
+    allReady: "All set", checkDataAndAssign: "Review the details and schedule the consultation",
+    connShort: "Connection", cameraShort: "Camera", micShort: "Mic",
+    years: "yrs",
+    appointment: "Appointment", confirmed: "Confirmed", clinicTime: "Clinic time",
+    symptoms: "Symptoms",
+    preparing: "Preparing...", connecting: "Connecting...", waitingTime: (t: string) => `Waiting (${t})`,
+    assignConsultation: "Schedule consultation",
+    waitingDoctor: (t: string) => `Waiting for the doctor · ${t}`, willConnectSoon: "will join soon",
+    cancel2: "Cancel",
+    assignQuestion: "Schedule the consultation?", withDoctorAt: (name: string) => `With Dr. ${name} at the selected time`,
+    cancel: "Cancel", confirm: "Confirm",
+    consultationCost: "Consultation cost",
+    locale: "en-US",
+  },
+  uz: {
+    checkSymptoms: "Simptomlarni tahlil qilish", checkConnection: "Aloqani tekshirish", checkCamera: "Kamerani sinash",
+    checkMic: "Mikrofonni tekshirish", checkSecurity: "Xavfsizlikni sozlash", checkDoctor: "Shifokorning tayyorligi",
+    rescanning: "Qayta tekshirilmoqda...",
+    issuesFound: "Muammolar topildi", checkDoneWarnings: "Tekshirish ogohlantirishlar bilan yakunlandi", aiCheckDone: "AI tekshiruvi yakunlandi",
+    fix: "Tuzatish", details: "Tafsilotlar",
+    connStable: "barqaror", connFair: "o'rtacha", connPoor: "zaif",
+    connLabel: "Aloqa:", cameraLabel: "Kamera:", micLabel: "Mikrofon:",
+    cameraReady: "tayyor", cameraBlocked: "bloklangan", micReady: "tayyor", micBlocked: "bloklangan",
+    actionRequired: "Harakat talab qilinadi:", allowCameraMic: "Video konsultatsiya uchun kamera va mikrofonga ruxsat bering",
+    aiChecking: "AI tekshirish o'tkazmoqda...",
+    checkOf: "Tekshiruv", of2: "dan", donePercent: "yakunlandi",
+    descriptionSymptoms: "Simptomlar tavsifi", symptomsTransferred: "Shikoyatlaringiz shifokorga yuborildi",
+    chooseSpecialist: "Mutaxassisni tanlash", doctorMatched: "Simptomlaringizga mos shifokor tanlandi",
+    videoConsultation: "Video konsultatsiya", readyToStart: "Konsultatsiyani boshlashga tayyor",
+    equipmentCheck: "Uskunani tekshirish",
+    camera: "Kamera", microphone: "Mikrofon", internet: "Internet",
+    allowed: "Ruxsat berilgan", micAllowed: "Ruxsat berilgan", noAccess: "Kirish yo'q",
+    excellent: "A'lo", good: "Yaxshi", weak: "Zaif",
+    accessRequired: "Kirish talab qilinadi", allowInBrowserSettings: "Video konsultatsiya uchun brauzer sozlamalarida kamera va mikrofonga ruxsat bering",
+    checkAgain: "Qayta tekshirish",
+    allReady: "Hammasi tayyor", checkDataAndAssign: "Ma'lumotlarni tekshirib, konsultatsiyani belgilang",
+    connShort: "Aloqa", cameraShort: "Kamera", micShort: "Mikro",
+    years: "yosh",
+    appointment: "Yozilish", confirmed: "Tasdiqlandi", clinicTime: "Klinika vaqti",
+    symptoms: "Simptomlar",
+    preparing: "Tayyorlanmoqda...", connecting: "Ulanmoqda...", waitingTime: (t: string) => `Kutilmoqda (${t})`,
+    assignConsultation: "Konsultatsiyani belgilash",
+    waitingDoctor: (t: string) => `Shifokorni kutamiz · ${t}`, willConnectSoon: "tez orada ulanadi",
+    cancel2: "Bekor qilish",
+    assignQuestion: "Konsultatsiya belgilansinmi?", withDoctorAt: (name: string) => `${name} shifokor bilan tanlangan vaqtda`,
+    cancel: "Bekor qilish", confirm: "Tasdiqlash",
+    consultationCost: "Konsultatsiya narxi",
+    locale: "uz-UZ",
+  },
+};
 
 // AI Live Checker Component
 const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micPermission, connectionQuality }: { 
@@ -39,19 +183,21 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
   micPermission: 'granted' | 'denied' | 'checking';
   connectionQuality: 'good' | 'fair' | 'poor';
 }) => {
+  const { language: uiLanguage } = useLanguage();
+  const tt = STEP3_TEXT[uiLanguage as keyof typeof STEP3_TEXT] ?? STEP3_TEXT.ru;
   const [currentCheck, setCurrentCheck] = useState(0);
   const [isCompleted, setIsCompleted] = useState(false);
   const [checkResults, setCheckResults] = useState<{[key: string]: 'success' | 'error' | 'warning'}>({});
   const [isRechecking, setIsRechecking] = useState(false);
-  
+
   const checks = useMemo(() => [
-    { id: 'symptoms', label: "Анализ симптомов", icon: Brain, duration: 1200 },
-    { id: 'connection', label: "Проверка соединения", icon: Wifi, duration: 800 },
-    { id: 'camera', label: "Тестирование камеры", icon: Camera, duration: 1000 },
-    { id: 'microphone', label: "Проверка микрофона", icon: Volume2, duration: 600 },
-    { id: 'security', label: "Настройка безопасности", icon: Shield, duration: 900 },
-    { id: 'doctor', label: "Готовность врача", icon: Activity, duration: 1500 }
-  ], []);
+    { id: 'symptoms', label: tt.checkSymptoms, icon: Brain, duration: 1200 },
+    { id: 'connection', label: tt.checkConnection, icon: Wifi, duration: 800 },
+    { id: 'camera', label: tt.checkCamera, icon: Camera, duration: 1000 },
+    { id: 'microphone', label: tt.checkMic, icon: Volume2, duration: 600 },
+    { id: 'security', label: tt.checkSecurity, icon: Shield, duration: 900 },
+    { id: 'doctor', label: tt.checkDoctor, icon: Activity, duration: 1500 }
+  ], [tt]);
 
   // Monitor permission changes and recheck if needed
   useEffect(() => {
@@ -125,7 +271,7 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
             >
               <div className="flex items-center gap-2 sm:gap-3">
                 <Loader2 className="animate-spin text-blue-600 w-4 h-4 sm:w-5 sm:h-5" />
-                <span className="text-blue-700 font-medium text-sm sm:text-base md:text-lg">Пересканирование...</span>
+                <span className="text-blue-700 font-medium text-sm sm:text-base md:text-lg">{tt.rescanning}</span>
               </div>
             </motion.div>
           ) : (
@@ -157,11 +303,11 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
                     ? 'text-yellow-700' 
                     : 'text-green-700'
                 }`}>
-                  {hasErrors 
-                    ? 'Обнаружены проблемы' 
-                    : hasWarnings 
-                    ? 'Проверка завершена с предупреждениями' 
-                    : 'ИИ проверка завершена'
+                  {hasErrors
+                    ? tt.issuesFound
+                    : hasWarnings
+                    ? tt.checkDoneWarnings
+                    : tt.aiCheckDone
                   }
                 </span>
                 {!hasErrors && !hasWarnings && (
@@ -175,7 +321,7 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
                 className="text-blue-600 hover:text-blue-700 text-xs md:text-sm font-medium flex items-center gap-1"
               >
                 <Settings size={14} />
-                {hasErrors || hasWarnings ? 'Исправить' : 'Детали'}
+                {hasErrors || hasWarnings ? tt.fix : tt.details}
               </button>
             </motion.div>
           )}
@@ -199,7 +345,7 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
                   transition={{ duration: 0.3 }}
                 />
                 <span className="text-gray-600 text-xs">
-                  Связь: {connectionQuality === 'good' ? 'стабильна' : connectionQuality === 'fair' ? 'средняя' : 'слабая'}
+                  {tt.connLabel} {connectionQuality === 'good' ? tt.connStable : connectionQuality === 'fair' ? tt.connFair : tt.connPoor}
                 </span>
               </div>
               <div className="flex items-center gap-1">
@@ -211,7 +357,7 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
                   transition={{ duration: 0.3 }}
                 />
                 <span className="text-gray-600 text-xs">
-                  Камера: {cameraPermission === 'granted' ? 'готова' : 'заблокирована'}
+                  {tt.cameraLabel} {cameraPermission === 'granted' ? tt.cameraReady : tt.cameraBlocked}
                 </span>
               </div>
               <div className="flex items-center gap-1">
@@ -223,7 +369,7 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
                   transition={{ duration: 0.3 }}
                 />
                 <span className="text-gray-600 text-xs">
-                  Микрофон: {micPermission === 'granted' ? 'готов' : 'заблокирован'}
+                  {tt.micLabel} {micPermission === 'granted' ? tt.micReady : tt.micBlocked}
                 </span>
               </div>
             </motion.div>
@@ -236,7 +382,7 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
             animate={{ opacity: 1, height: 'auto' }}
             className="p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700"
           >
-            <strong>Требуется действие:</strong> Разрешите доступ к камере и микрофону для видеоконсультации
+            <strong>{tt.actionRequired}</strong> {tt.allowCameraMic}
           </motion.div>
         )}
       </motion.div>
@@ -252,7 +398,7 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
       <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
         <div className="flex items-center gap-2 mb-2">
           <Bot className="text-blue-600" size={16} />
-          <span className="text-blue-700 font-medium text-sm md:text-base">ИИ выполняет проверку...</span>
+          <span className="text-blue-700 font-medium text-sm md:text-base">{tt.aiChecking}</span>
         </div>
         
         <div className="space-y-2">
@@ -314,10 +460,10 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
         
         <div className="mt-3 flex items-center justify-between">
           <div className="text-xs text-gray-600">
-            Проверка {currentCheck + 1} из {checks.length}
+            {tt.checkOf} {currentCheck + 1} {tt.of2} {checks.length}
           </div>
           <div className="text-xs text-blue-600 font-medium">
-            {Math.round(((currentCheck) / checks.length) * 100)}% завершено
+            {Math.round(((currentCheck) / checks.length) * 100)}% {tt.donePercent}
           </div>
         </div>
       </div>
@@ -325,7 +471,7 @@ const AILiveChecker = ({ onComplete, onOpenDetailedCheck, cameraPermission, micP
   );
 };
 
-interface Step3Props {
+export interface Step3Props {
   symptoms: string;
   doctors: {
     id: number;
@@ -342,6 +488,7 @@ interface Step3Props {
   onCancel: () => void;
   loading: boolean;
   waiting: boolean;
+  connecting?: boolean;
   activeStep?: number;
   recommendedDoctor?: {
     id: number;
@@ -357,12 +504,14 @@ interface Step3Props {
     doctor_name: string;
     doctor_type: string;
     booking_type: 'urgent' | 'scheduled';
+    clinic_timezone?: string | null;
   } | null;
   pendingConsultationData?: {
     scheduled_time: string;
     doctor_id: number;
     ai_recommendation_id: number;
   } | null;
+  consultationPrice?: number | null;
 }
 
 const steps = [
@@ -399,11 +548,15 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
   onCancel,
   loading,
   waiting,
+  connecting = false,
   activeStep = 3,
   recommendedDoctor,
   scheduledConsultation,
   pendingConsultationData,
+  consultationPrice,
 }) => {
+  const { language: uiLanguage } = useLanguage();
+  const tt = STEP3_TEXT[uiLanguage as keyof typeof STEP3_TEXT] ?? STEP3_TEXT.ru;
   const [waitingTime, setWaitingTime] = useState(0);
   const [cameraPermission, setCameraPermission] = useState<'granted' | 'denied' | 'checking'>('checking');
   const [micPermission, setMicPermission] = useState<'granted' | 'denied' | 'checking'>('checking');
@@ -412,7 +565,9 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const doctor = doctors.find((d) => d.id === selectedDoctorId);
-  const isUrgent = recommendedDoctor?.urgency === 'urgent';
+  // REMOVED: Urgent consultation logic - all consultations now require time slot selection
+  // const isUrgent = recommendedDoctor?.urgency === 'urgent';
+  const isUrgent = false; // Always false now
 
   // Check permissions on mount
   useEffect(() => {
@@ -495,7 +650,7 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-lg md:text-xl font-bold text-gray-900">Проверка оборудования</h3>
+              <h3 className="text-lg md:text-xl font-bold text-gray-900">{tt.equipmentCheck}</h3>
               <button 
                 onClick={() => setShowTechCheck(false)}
                 className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
@@ -508,40 +663,40 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-3">
                   {cameraPermission === 'granted' ? <Camera className="text-green-500" /> : <CameraOff className="text-red-500" />}
-                  <span className="font-medium text-sm md:text-base">Камера</span>
+                  <span className="font-medium text-sm md:text-base">{tt.camera}</span>
                 </div>
                 <span className={`text-xs md:text-sm px-2 py-1 rounded-full ${
                   cameraPermission === 'granted' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                 }`}>
-                  {cameraPermission === 'granted' ? 'Разрешена' : 'Нет доступа'}
+                  {cameraPermission === 'granted' ? tt.allowed : tt.noAccess}
                 </span>
               </div>
 
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-3">
                   {micPermission === 'granted' ? <Volume2 className="text-green-500" /> : <VolumeX className="text-red-500" />}
-                  <span className="font-medium text-sm md:text-base">Микрофон</span>
+                  <span className="font-medium text-sm md:text-base">{tt.microphone}</span>
                 </div>
                 <span className={`text-xs md:text-sm px-2 py-1 rounded-full ${
                   micPermission === 'granted' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                 }`}>
-                  {micPermission === 'granted' ? 'Разрешен' : 'Нет доступа'}
+                  {micPermission === 'granted' ? tt.micAllowed : tt.noAccess}
                 </span>
               </div>
 
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-3">
                   {getConnectionIcon()}
-                  <span className="font-medium text-sm md:text-base">Интернет</span>
+                  <span className="font-medium text-sm md:text-base">{tt.internet}</span>
                 </div>
                 <span className={`text-xs md:text-sm px-2 py-1 rounded-full ${
-                  connectionQuality === 'good' 
-                    ? 'bg-green-100 text-green-700' 
-                    : connectionQuality === 'fair' 
-                    ? 'bg-yellow-100 text-yellow-700' 
+                  connectionQuality === 'good'
+                    ? 'bg-green-100 text-green-700'
+                    : connectionQuality === 'fair'
+                    ? 'bg-yellow-100 text-yellow-700'
                     : 'bg-red-100 text-red-700'
                 }`}>
-                  {connectionQuality === 'good' ? 'Отлично' : connectionQuality === 'fair' ? 'Хорошо' : 'Слабо'}
+                  {connectionQuality === 'good' ? tt.excellent : connectionQuality === 'fair' ? tt.good : tt.weak}
                 </span>
               </div>
             </div>
@@ -551,9 +706,9 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
                 <div className="flex items-start gap-2">
                   <AlertCircle className="text-yellow-600 flex-shrink-0 mt-0.5" size={16} />
                   <div className="text-sm">
-                    <p className="font-medium text-yellow-800 mb-1 text-sm md:text-base">Требуется доступ</p>
+                    <p className="font-medium text-yellow-800 mb-1 text-sm md:text-base">{tt.accessRequired}</p>
                     <p className="text-yellow-700 text-xs md:text-sm">
-                      Разрешите доступ к камере и микрофону в настройках браузера для видеоконсультации
+                      {tt.allowInBrowserSettings}
                     </p>
                   </div>
                 </div>
@@ -564,7 +719,7 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
               onClick={checkMediaPermissions}
               className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm md:text-base"
             >
-              Проверить снова
+              {tt.checkAgain}
             </button>
           </motion.div>
         </motion.div>
@@ -574,360 +729,208 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-blue-50 flex flex-col">
-      <motion.div
-        className="flex-1 p-3 sm:p-4 md:p-6 lg:p-8 space-y-3 sm:space-y-4 md:space-y-6 w-full"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
+    <motion.div
+      className="space-y-3 pb-4"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35 }}
+    >
+      {/* ── Compact status bar ── */}
+      <div
+        className="relative overflow-hidden rounded-2xl px-5 py-4 flex items-center gap-4"
+        style={{ background: 'linear-gradient(135deg, #3772ff 0%, #1d4ed8 100%)' }}
       >
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="text-center space-y-2 sm:space-y-3"
-        >
-          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3">
-            <div className="p-2 sm:p-2.5 md:p-3 rounded-xl md:rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg">
-              <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
-            </div>
-            <span className="leading-tight">Все готово для консультации</span>
-          </h2>
-          <p className="text-gray-600 text-sm sm:text-base md:text-lg leading-relaxed max-w-2xl mx-auto px-4">
-            Проверьте информацию и начните видеоконсультацию с врачом
-          </p>
-        </motion.div>
-
-      {/* Progress Steps */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="bg-white border border-gray-200 rounded-xl sm:rounded-2xl lg:rounded-3xl p-4 sm:p-5 md:p-6 lg:p-8 shadow-xl"
-      >
-        <h3 className="font-semibold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2 text-sm sm:text-base md:text-lg lg:text-xl">
-          <FileText className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
-          Сводка консультации
-        </h3>
-
-        <div className="space-y-3 sm:space-y-4 md:space-y-6">
-          {steps.map((step, index) => {
-            const Icon = step.icon;
-            const status = getStepStatus(step.id);
-
-            return (
-              <motion.div
-                key={step.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 + index * 0.1 }}
-                className="flex items-start gap-3 sm:gap-4 md:gap-5"
-              >
-                <div className={`flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-lg sm:rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg ${
-                  status === "completed"
-                    ? "bg-gradient-to-br from-green-100 to-green-200 text-green-600"
-                    : status === "current"
-                    ? "bg-gradient-to-br from-blue-100 to-blue-200 text-blue-600"
-                    : "bg-gradient-to-br from-gray-100 to-gray-200 text-gray-400"
-                }`}>
-                  {status === "completed" ? (
-                    <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
-                  ) : (
-                    <Icon className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
-                  )}
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
-                    <h4 className="font-medium text-gray-900 text-sm sm:text-base md:text-lg">{step.label}</h4>
-                    {status === "current" && (
-                      <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs sm:text-sm rounded-full font-medium self-start">
-                        Активный шаг
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs sm:text-sm md:text-base text-gray-600 mb-2 sm:mb-3 leading-relaxed">{step.description}</p>
-                  
-                  <div className="text-sm">
-                    {step.key === "symptoms" && (
-                      <div className="p-3 sm:p-4 md:p-5 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg sm:rounded-xl border border-gray-200">
-                        <p className="text-gray-700 line-clamp-3 text-sm sm:text-base md:text-lg leading-relaxed">{symptoms}</p>
-                      </div>
-                    )}
-                    {step.key === "doctor" && doctor && (
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 md:p-5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg sm:rounded-xl border border-blue-200">
-                        <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg flex-shrink-0">
-                          <span className="text-sm sm:text-base md:text-lg">
-                            {doctor.avatar || doctor.name.charAt(0)}
-                          </span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-bold text-gray-900 text-base sm:text-lg md:text-xl mb-1">{doctor.name}</p>
-                          <p className="text-sm sm:text-base md:text-lg text-blue-600 font-medium mb-2">{doctor.doctor_type}</p>
-                          {doctor.rating && (
-                            <div className="flex items-center gap-1 sm:gap-2">
-                              <div className="flex items-center gap-1">
-                                <Star className="fill-yellow-400 text-yellow-400 w-3 h-3 sm:w-4 sm:h-4" />
-                                <span className="text-xs sm:text-sm md:text-base text-gray-600 font-medium">{doctor.rating}</span>
-                              </div>
-                              {doctor.experience && (
-                                <span className="text-xs sm:text-sm md:text-base text-gray-500">• {doctor.experience} лет опыта</span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Scheduled Consultation Information */}
-                    {step.key === "doctor" && scheduledConsultation && (
-                      <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center flex-shrink-0">
-                            <Calendar className="w-5 h-5 text-white" />
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900 mb-2">
-                              {scheduledConsultation.booking_type === 'urgent' ? 'Экстренная консультация' : 'Запланированная консультация'}
-                            </h4>
-                            <div className="space-y-2 text-sm">
-                              <div className="flex items-center gap-2">
-                                <Clock className="w-4 h-4 text-green-600" />
-                                <span className="text-gray-700">
-                                  {scheduledConsultation.booking_type === 'urgent'
-                                    ? 'Консультация начнется немедленно'
-                                    : `Запланировано на ${new Date(scheduledConsultation.scheduled_time).toLocaleDateString('ru-RU', {
-                                        weekday: 'long',
-                                        year: 'numeric',
-                                        month: 'long',
-                                        day: 'numeric'
-                                      })} в ${new Date(scheduledConsultation.scheduled_time).toLocaleTimeString('ru-RU', {
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                      })}`
-                                  }
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <User className="w-4 h-4 text-green-600" />
-                                <span className="text-gray-700">
-                                  Врач: {scheduledConsultation.doctor_name} ({scheduledConsultation.doctor_type})
-                                </span>
-                              </div>
-                              {scheduledConsultation.booking_type === 'scheduled' && (
-                                <div className="flex items-center gap-2 mt-3 p-2 bg-blue-50 rounded-lg">
-                                  <Info className="w-4 h-4 text-blue-600" />
-                                  <span className="text-blue-700 text-xs">
-                                    Вы можете начать консультацию в назначенное время. Врач получит уведомление.
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {step.key === "connect" && (
-                      <AILiveChecker 
-                        onComplete={() => {}}
-                        onOpenDetailedCheck={() => setShowTechCheck(true)}
-                        cameraPermission={cameraPermission}
-                        micPermission={micPermission}
-                        connectionQuality={connectionQuality}
-                      />
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
+        <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+        <div className="relative w-10 h-10 rounded-xl bg-white/20 border border-white/25 flex items-center justify-center flex-shrink-0">
+          <CheckCircle2 className="w-5 h-5 text-white" />
         </div>
-      </motion.div>
+        <div className="relative flex-1 min-w-0">
+          <p className="font-bold text-white text-base leading-tight">{tt.allReady}</p>
+          <p className="text-white/65 text-xs mt-0.5 truncate">{tt.checkDataAndAssign}</p>
+        </div>
+        <div className="relative flex-shrink-0 flex items-center gap-1.5">
+          {[
+            { ok: connectionQuality === 'good', warn: connectionQuality === 'fair', label: tt.connShort },
+            { ok: cameraPermission === 'granted', warn: false, label: tt.cameraShort },
+            { ok: micPermission === 'granted', warn: false, label: tt.micShort },
+          ].map(({ ok, warn, label }) => (
+            <div key={label} title={label} className={`w-2 h-2 rounded-full ${ok ? 'bg-emerald-400' : warn ? 'bg-amber-400' : 'bg-red-400'}`} />
+          ))}
+        </div>
+      </div>
 
-      {/* Important Information */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl sm:rounded-2xl lg:rounded-3xl p-4 sm:p-5 md:p-6 lg:p-8 shadow-lg"
-      >
-        <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
-          <Shield className="text-blue-600 flex-shrink-0 mt-1 w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
-          <div className="space-y-3 sm:space-y-4 flex-1">
-            <h3 className="font-bold text-blue-900 text-base sm:text-lg md:text-xl">Важная информация</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:gap-6 text-xs sm:text-sm md:text-base text-blue-800">
-              <div className="flex items-start gap-2 sm:gap-3">
-                <Clock className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 text-blue-600" />
-                <span className="leading-relaxed">Средняя продолжительность: 10-15 минут</span>
+      {/* ── Main summary card ── */}
+      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+
+        {/* Doctor row */}
+        {doctor && (
+          <div className="flex items-center gap-3 px-4 py-3.5 border-b border-gray-50">
+            <div className="relative flex-shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-sm shadow-sm">
+                {doctor.name.charAt(0)}
               </div>
-              <div className="flex items-start gap-2 sm:gap-3">
-                <Info className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 text-blue-600" />
-                <span className="leading-relaxed">Консультация записывается в мед. карту</span>
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-gray-900 text-sm truncate">{doctor.name}</p>
+              <p className="text-xs text-blue-600 truncate">{doctor.doctor_type}</p>
+            </div>
+            {(doctor.rating || doctor.experience) && (
+              <div className="flex-shrink-0 flex items-center gap-2 text-[11px] text-gray-400">
+                {doctor.rating && (
+                  <span className="flex items-center gap-0.5">
+                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />{doctor.rating}
+                  </span>
+                )}
+                {doctor.experience && <span>{doctor.experience} {tt.years}</span>}
               </div>
-              <div className="flex items-start gap-2 sm:gap-3">
-                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 text-blue-600" />
-                <span className="leading-relaxed">После консультации вы получите рекомендации врача</span>
+            )}
+          </div>
+        )}
+
+        {/* Appointment row — online, so BOTH the viewer's own time and the
+            clinic's time matter; shown explicitly (date + UTC-offset label),
+            not just "HH:MM", so an international patient always knows
+            exactly which day/instant they're booked for. */}
+        {scheduledConsultation && (() => {
+          const dual = formatDualTime(scheduledConsultation.scheduled_time, scheduledConsultation.clinic_timezone, undefined, tt.locale);
+          return (
+            <div className="flex items-center gap-3 px-4 py-3.5 border-b border-gray-50">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0">
+                <Calendar className="w-4 h-4 text-emerald-600" />
               </div>
-              <div className="flex items-start gap-2 sm:gap-3">
-                <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 text-blue-600" />
-                <span className="leading-relaxed">В случае технических проблем обратитесь в поддержку</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-400 font-medium">{tt.appointment}</p>
+                <p className="text-sm font-semibold text-gray-900 leading-tight">
+                  {dual.viewerDate} · {dual.viewerTime} ({dual.viewerLabel})
+                </p>
+                {!dual.sameTimezone && (
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {tt.clinicTime}: {dual.clinicDate} · {dual.clinicTime} ({dual.clinicLabel})
+                  </p>
+                )}
               </div>
+              <span className="flex-shrink-0 text-[10px] font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                {tt.confirmed}
+              </span>
+            </div>
+          );
+        })()}
+
+        {/* Price row */}
+        {consultationPrice != null && (
+          <div className="flex items-center gap-3 px-4 py-3.5 border-b border-gray-50">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
+              <span className="text-sm font-bold text-blue-600">₸</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-gray-400 font-medium">{tt.consultationCost}</p>
+              <p className="text-sm font-bold text-gray-900">{consultationPrice.toLocaleString()} ₸</p>
             </div>
           </div>
+        )}
+
+        {/* Symptoms row */}
+        {symptoms && (
+          <div className="flex items-start gap-3 px-4 py-3.5 border-b border-gray-50">
+            <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <FileText className="w-4 h-4 text-gray-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-gray-400 font-medium mb-0.5">{tt.symptoms}</p>
+              <p className="text-sm text-gray-700 line-clamp-2 leading-relaxed">{symptoms}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Tech check row */}
+        <div className="px-4 py-3.5">
+          <AILiveChecker
+            onComplete={() => {}}
+            onOpenDetailedCheck={() => setShowTechCheck(true)}
+            cameraPermission={cameraPermission}
+            micPermission={micPermission}
+            connectionQuality={connectionQuality}
+          />
         </div>
-      </motion.div>
+      </div>
 
-      {/* Action Buttons */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-        className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-between items-center pt-4 sm:pt-6 border-t border-gray-200"
-      >
+      {/* ── Action buttons ── */}
+      <div className="flex gap-2.5">
         <motion.button
-          onClick={onBack}
-          whileHover={{ x: -3 }}
-          whileTap={{ scale: 0.97 }}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-5 md:px-6 py-3 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition-all text-sm sm:text-base md:text-lg shadow-md hover:shadow-lg"
+          onClick={() => onScheduleConsultation ? onScheduleConsultation() : setShowConfirmDialog(true)}
+          disabled={loading || !selectedDoctorId || waiting || connecting}
+          whileTap={!loading && !waiting && !connecting ? { scale: 0.97 } : {}}
+          whileHover={!loading && !waiting && !connecting ? { scale: 1.01 } : {}}
+          className="group relative flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white overflow-hidden shadow-md disabled:opacity-60 disabled:cursor-not-allowed transition-all"
+          style={{ background: 'linear-gradient(135deg, #3772ff, #1d4ed8)', boxShadow: '0 4px 16px rgba(55,114,255,0.3)' }}
         >
-          <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-          <span>Изменить данные</span>
-        </motion.button>
-
-        <motion.button
-          onClick={() => {
-            if (isUrgent || (scheduledConsultation && scheduledConsultation.booking_type === 'urgent')) {
-              // Urgent consultations: start video call immediately
-              onCall();
-            } else {
-              // Non-urgent consultations: schedule and return to Step 1
-              if (onScheduleConsultation) {
-                onScheduleConsultation();
-              } else {
-                setShowConfirmDialog(true);
-              }
-            }
-          }}
-          disabled={loading || !selectedDoctorId || waiting}
-          whileTap={!loading && !waiting ? { scale: 0.97 } : {}}
-          whileHover={!loading && !waiting ? { scale: 1.02 } : {}}
-          className={`w-full sm:w-auto flex items-center justify-center gap-2 sm:gap-3 px-6 sm:px-8 md:px-10 py-3 sm:py-3.5 md:py-4 rounded-lg sm:rounded-xl font-bold text-base sm:text-lg md:text-xl transition-all min-w-[200px] sm:min-w-[240px] md:min-w-[280px] shadow-xl ${
-            loading || waiting
-              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-              : isUrgent
-              ? "bg-gradient-to-r from-red-600 to-orange-600 text-white hover:shadow-2xl hover:shadow-red-500/25 hover:from-red-700 hover:to-orange-700"
-              : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-2xl hover:shadow-blue-500/25 hover:from-blue-700 hover:to-indigo-700"
-          }`}
-        >
+          <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
           {loading ? (
-            <>
-              <div className="w-5 h-5 sm:w-6 sm:h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              <span>Подготовка...</span>
-            </>
+            <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /><span>{tt.preparing}</span></>
+          ) : connecting ? (
+            <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /><span>{tt.connecting}</span></>
           ) : waiting ? (
-            <>
-              <Clock className="w-5 h-5 sm:w-6 sm:h-6" />
-              <span>Ожидание ({formatWaitingTime(waitingTime)})</span>
-            </>
+            <><Clock className="w-4 h-4" /><span>{tt.waitingTime(formatWaitingTime(waitingTime))}</span></>
           ) : (
-            <>
-              <Video className="w-5 h-5 sm:w-6 sm:h-6" />
-              <span>
-                {scheduledConsultation
-                  ? (scheduledConsultation.booking_type === 'urgent'
-                      ? 'Начать экстренную консультацию'
-                      : 'Назначить консультацию')
-                  : (isUrgent ? 'Начать консультацию' : 'Назначить консультацию')
-                }
-              </span>
-            </>
+            <><Video className="w-4 h-4" /><span>{tt.assignConsultation}{consultationPrice ? ` · ${consultationPrice.toLocaleString()} ₸` : ""}</span></>
           )}
         </motion.button>
-      </motion.div>
+      </div>
 
-      {/* Waiting State */}
+      {/* ── Waiting state ── */}
       <AnimatePresence>
         {waiting && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 rounded-xl sm:rounded-2xl lg:rounded-3xl p-4 sm:p-5 md:p-6 lg:p-8 shadow-lg"
+            exit={{ opacity: 0, y: -12 }}
+            className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3.5"
           >
-            <div className="text-center space-y-3 sm:space-y-4 md:space-y-6">
-              <div className="flex items-center justify-center gap-2 sm:gap-3">
-                <div className="w-3 h-3 sm:w-4 sm:h-4 bg-yellow-500 rounded-full animate-bounce"></div>
-                <div className="w-3 h-3 sm:w-4 sm:h-4 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-3 h-3 sm:w-4 sm:h-4 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-              </div>
-              <div className="space-y-2 sm:space-y-3">
-                <h3 className="font-bold text-yellow-900 text-base sm:text-lg md:text-xl lg:text-2xl">
-                  Ожидаем подключения врача
-                </h3>
-                <p className="text-sm sm:text-base md:text-lg text-yellow-700 leading-relaxed">
-                  Доктор {doctor?.name} скоро подключится к видеоконсультации
-                </p>
-                <p className="text-xs sm:text-sm md:text-base text-yellow-600 font-medium">
-                  Время ожидания: {formatWaitingTime(waitingTime)}
-                </p>
-              </div>
-              <button
-                onClick={onCancel}
-                className="text-red-600 hover:text-red-700 text-sm sm:text-base font-medium underline transition-colors hover:underline-offset-4"
-              >
-                Отменить консультацию
-              </button>
+            <div className="flex gap-1 flex-shrink-0">
+              {[0, 0.15, 0.3].map((d, i) => (
+                <motion.div key={i} className="w-2 h-2 bg-amber-500 rounded-full"
+                  animate={{ y: [0, -6, 0] }} transition={{ duration: 0.8, repeat: Infinity, delay: d }} />
+              ))}
             </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-900">{tt.waitingDoctor(formatWaitingTime(waitingTime))}</p>
+              <p className="text-xs text-amber-600 truncate">{doctor?.name} {tt.willConnectSoon}</p>
+            </div>
+            <button onClick={onCancel} className="text-red-500 hover:text-red-600 text-xs font-medium flex-shrink-0 transition-colors">
+              {tt.cancel2}
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
 
       <TechCheckModal />
 
-      {/* Confirmation Dialog for Non-Urgent Consultations */}
+      {/* ── Confirm dialog ── */}
       <AnimatePresence>
         {showConfirmDialog && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
             onClick={() => setShowConfirmDialog(false)}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-2xl p-6 max-w-md w-full space-y-6"
+              initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
+              className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center">
-                  <Calendar className="w-8 h-8 text-blue-600" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900">Подтверждение записи</h3>
-                <p className="text-gray-600 leading-relaxed">
-                  Вы готовы назначить консультацию на это время с доктором {doctor?.name}?
-                </p>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowConfirmDialog(false)}
-                  className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-colors"
-                >
-                  Отмена
+              <p className="font-bold text-gray-900 text-base mb-1">{tt.assignQuestion}</p>
+              <p className="text-gray-500 text-sm mb-5">{tt.withDoctorAt(doctor?.name || '')}</p>
+              <div className="flex gap-2.5">
+                <button onClick={() => setShowConfirmDialog(false)}
+                  className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold text-sm transition-colors">
+                  {tt.cancel}
                 </button>
-                <button
-                  onClick={() => {
-                    setShowConfirmDialog(false);
-                    onCall();
-                  }}
-                  className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors"
-                >
-                  Да, назначить
+                <button onClick={() => { setShowConfirmDialog(false); onCall(); }}
+                  className="flex-1 py-2.5 text-white rounded-xl font-semibold text-sm shadow-sm"
+                  style={{ background: 'linear-gradient(135deg, #3772ff, #1d4ed8)' }}>
+                  {tt.confirm}
                 </button>
               </div>
             </motion.div>
@@ -935,7 +938,6 @@ const VideoConsultationStep3: React.FC<Step3Props> = ({
         )}
       </AnimatePresence>
     </motion.div>
-    </div>
   );
 };
 

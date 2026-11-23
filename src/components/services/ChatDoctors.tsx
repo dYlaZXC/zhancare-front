@@ -1,10 +1,14 @@
+// COMMENTED OUT - Replaced with MedicalTourism component
+// This file has been preserved for reference but is no longer in use
+
+/*
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
-import { api } from "@/utils/api"; // Assuming you have API instance
-import doctorPlaceholder from "@/assets/doctor_avatar.png"; // Placeholder image
+import { api } from "@/utils/api";
+import doctorPlaceholder from "@/assets/doctor_avatar.png";
 
 interface Doctor {
   id: number;
@@ -31,7 +35,6 @@ const ChatDoctors = () => {
       setFetchingDoctors(true);
       const response = await api.get("/auth/doctor/available/");
       if (response.status === 200) {
-        // 🚫 Filter out doctors with doctor_type = "Сестринское дело"
         const filteredDoctors = (response.data.doctors || []).filter(
           (doc: { doctor_type: string }) => doc.doctor_type !== "Сестринское дело"
         );
@@ -43,7 +46,7 @@ const ChatDoctors = () => {
       setFetchingDoctors(false);
     }
   };
-  
+
 
   const handleSend = () => {
     if (!inputText.trim() || !selectedDoctor) return;
@@ -56,17 +59,11 @@ const ChatDoctors = () => {
 
     setMessages((prev) => [...prev, newMessage]);
     setInputText("");
-
-    // 🚀 Optionally: send to backend via POST
-    // api.post("/chat/send/", { doctor_id: selectedDoctor.id, message: inputText.trim() });
   };
 
   return (
     <div className="p-6 bg-white shadow-lg rounded-xl max-w-5xl mx-auto">
-      {/* Title */}
       <h2 className="text-3xl font-bold text-[#001E80] mb-6 text-center">Чат с врачами</h2>
-
-      {/* Doctor List */}
       {!selectedDoctor ? (
         <>
           <p className="text-gray-600 mb-6 text-center">Выберите врача для начала общения.</p>
@@ -110,7 +107,6 @@ const ChatDoctors = () => {
         </>
       ) : (
         <>
-          {/* Chat Window */}
           <div className="mb-6">
             <button
               onClick={() => setSelectedDoctor(null)}
@@ -138,8 +134,6 @@ const ChatDoctors = () => {
                 ))
               )}
             </div>
-
-            {/* Input */}
             <div className="flex gap-2">
               <input
                 type="text"
@@ -164,4 +158,9 @@ const ChatDoctors = () => {
   );
 };
 
+export default ChatDoctors;
+*/
+
+// Temporary placeholder export to avoid import errors
+const ChatDoctors = () => null;
 export default ChatDoctors;

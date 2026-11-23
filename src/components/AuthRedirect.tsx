@@ -10,7 +10,7 @@ interface AuthRedirectProps {
 }
 
 export default function AuthRedirect({ children }: AuthRedirectProps) {
-  const { user, loading, setIsAuthOpen } = useAuth();
+  const { user, loading, isDoctor } = useAuth();
   const router = useRouter();
   const [hasShownLoadingScreen, setHasShownLoadingScreen] = useState(false);
   const [showLoading, setShowLoading] = useState(false);
@@ -40,21 +40,19 @@ export default function AuthRedirect({ children }: AuthRedirectProps) {
 
   useEffect(() => {
     if (!loading && !user) {
-      // User is not authenticated, show auth popup and redirect
-      setIsAuthOpen(true);
       router.replace('/');
       return;
     }
     
-    if (!loading && user?.role === "doctor") {
-      router.replace("/doctor-profile");
+    if (!loading && isDoctor) {
+      router.replace("/doctor/consultations");
     }
 
     // Hide loading screen when auth check is done and minimum time elapsed
     if (!loading && minTimeElapsed && showLoading) {
       setShowLoading(false);
     }
-  }, [loading, user, router, setIsAuthOpen, minTimeElapsed, showLoading]);
+  }, [loading, user, isDoctor, router, minTimeElapsed, showLoading]);
 
   // Show loading screen only on first CRM entry
   if (showLoading && !minTimeElapsed) {

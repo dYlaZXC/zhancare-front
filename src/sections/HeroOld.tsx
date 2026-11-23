@@ -1,6 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import heroVideo from "@/assets/hero-video.mp4";
 import Header from "@/sections/Hero/Header";
@@ -8,10 +7,8 @@ import HeroContent from "@/sections/Hero/HeroContent";
 // import HeroChat from "@/sections/Hero/HeroChat";
 import HeroStats from "@/sections/Hero/HeroStats";
 
-const ToastContainer = dynamic(
-  () => import("react-toastify").then((mod) => mod.ToastContainer),
-  { ssr: false }
-);
+// ❌ REMOVED ToastContainer - it's already in layout.tsx
+// Having multiple ToastContainers causes duplicate toast notifications!
 
 export default function Hero() {
   return (
@@ -51,8 +48,7 @@ export default function Hero() {
         <HeroStats />
       </div>
 
-      {/* Toast Notification */}
-      <ToastContainer />
+      {/* ❌ REMOVED - ToastContainer is already in layout.tsx */}
     </motion.section>
   );
 }

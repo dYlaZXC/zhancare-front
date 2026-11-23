@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "lib": ["esnext", "webworker"],
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "isolatedModules": true,
+    "target": "ES2020"
+  },
+  "include": ["src/sw.ts"]
+}

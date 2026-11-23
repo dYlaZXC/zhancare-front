@@ -11,7 +11,9 @@ interface ErrorAlertProps {
 const ErrorAlert: React.FC<ErrorAlertProps> = ({ error }) => {
   const { language } = useLanguage();
 
-  if (!error) return null;
+  if (!error) {
+    return <div className="min-h-[3rem]"></div>;
+  }
 
   // Get common error translations
   const getErrorTranslations = () => {
@@ -78,11 +80,11 @@ const ErrorAlert: React.FC<ErrorAlertProps> = ({ error }) => {
   const lines = error.split(/[.]\s*/).filter(Boolean); // split by period & trim
 
   return (
-    <div className="bg-red-100 text-red-700 rounded-lg p-3 mt-3 text-sm shadow-sm">
+    <div className="bg-red-100 text-red-700 rounded-lg p-3 text-sm shadow-sm min-h-[3rem] flex flex-col justify-center">
       {lines.map((line, index) => (
         <p key={index} className="flex items-start gap-2">
-          <AlertTriangle size={16} className="text-red-500 mt-[2px]" />
-          {translateError(line.trim())}
+          <AlertTriangle size={16} className="text-red-500 mt-[2px] flex-shrink-0" />
+          <span className="leading-tight">{translateError(line.trim())}</span>
         </p>
       ))}
     </div>

@@ -27,7 +27,12 @@ export const filterDoctors = (
     const matchesSearch = doctorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          specialization.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = filterByType === "all" || specialization === filterByType;
-    return matchesSearch && matchesType;
+
+    // Only show available doctors for patient consultation booking
+    // For doctors, check availability_status; for patients, always show (they don't have this field)
+    const isAvailable = doctor.availability_status ? doctor.availability_status === 'available' : true;
+
+    return matchesSearch && matchesType && isAvailable;
   });
 };
 

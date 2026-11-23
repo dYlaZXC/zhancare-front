@@ -14,17 +14,22 @@ import {
   faClinicMedical,
   faChartLine,
   faHouse,
-  faPlane
+  faPlane,
+  faGraduationCap,
+  faTruck,
+  faArrowUpRightFromSquare,
 } from "@fortawesome/free-solid-svg-icons";
 import { useLanguage } from "@/context/LanguageContext";
+import { useBrand } from "@/context/BrandContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import en from "@/locales/en.json";
+import uz from "@/locales/uz.json";
 
 const iconMapping = {
   faVideo, faStethoscope, faNotesMedical, faBell,
   faUserMd, faHeartbeat, faPills, faClinicMedical, faChartLine,
-  faHouse, faPlane
+  faHouse, faPlane, faGraduationCap, faTruck, faArrowUpRightFromSquare,
 } as const;
 
 type IconName = keyof typeof iconMapping;
@@ -34,10 +39,12 @@ interface Service {
   title: string;
   description: string;
   details: string[];
+  href?: string;
 }
 
 export const Services = () => {
   const { language } = useLanguage();
+  const { brand } = useBrand();
   
   // Get translations based on language
   const getTranslations = () => {
@@ -48,6 +55,8 @@ export const Services = () => {
         return kz.services;
       case "en":
         return en.services;
+      case "uz":
+        return uz.services;
       default:
         return en.services;
     }
@@ -76,6 +85,12 @@ export const Services = () => {
           whatIncluded: "What's included:",
           back: "← Back"
         };
+      case "uz":
+        return {
+          learnMore: "Batafsil",
+          whatIncluded: "Nimalar kiritilgan:",
+          back: "← Orqaga"
+        };
       default:
         return {
           learnMore: "Learn More",
@@ -88,11 +103,61 @@ export const Services = () => {
   const staticTranslations = getStaticTranslations();
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
 
-  // Take only first 3 services
-  const services: Service[] = translations.list.slice(0, 3).map((service) => ({
+  // Take only first 3 services from translations
+  const translatedServices: Service[] = translations.list.slice(0, 3).map((service) => ({
     ...service,
     icon: service.icon as IconName,
   }));
+
+  // Static extra cards (second row)
+  const extraServicesTranslations = {
+    ru: {
+      academy: { title: "Академия", description: "Образовательная платформа для медицинских специалистов и пациентов", details: ["Онлайн-курсы для врачей", "Обучение пациентов здоровью", "Сертификаты и кредиты", "Вебинары от экспертов"] },
+      delivery: { title: "Доставка лекарств", description: "Быстрая и удобная доставка лекарств прямо на дом", details: ["Рецептурные и безрецептурные препараты", "Доставка в течение 2 часов", "Отслеживание заказа в реальном времени", "Безопасная бесконтактная доставка"] },
+      crm: { title: "CRM / МИС для клиник", description: "Единая система управления для медицинских учреждений", details: ["Ведение карт и ЭМК пациентов", "Запись на приём и расписание", "Выставление счетов и страхование", "Аналитика и отчётность"] },
+    },
+    kz: {
+      academy: { title: "Академия", description: "Медицина мамандары мен пациенттерге арналған білім беру платформасы", details: ["Дәрігерлерге арналған онлайн курстар", "Пациенттерге денсаулық білімі", "Сертификаттар мен кредиттер", "Сарапшы вебинарлары"] },
+      delivery: { title: "Дәрі-дәрмек жеткізу", description: "Дәрі-дәрмекті үйге жылдам және ыңғайлы жеткізу", details: ["Рецепттік және рецептсіз дәрілер", "2 сағат ішінде жеткізу", "Тапсырысты нақты уақытта қадағалау", "Қауіпсіз байланыссыз жеткізу"] },
+      crm: { title: "Клиникаларға арналған CRM/МИС", description: "Медициналық мекемелер үшін бірыңғай басқару жүйесі", details: ["Пациент жазбалары және ЭМЖ", "Қабылдауды жоспарлау", "Есеп-қисап және сақтандыру", "Аналитика және есептер"] },
+    },
+    en: {
+      academy: { title: "Academy", description: "Educational platform for medical professionals and patients", details: ["Online courses for doctors", "Patient health education", "Certificates & CME credits", "Expert-led webinars"] },
+      delivery: { title: "Medicine Delivery", description: "Fast and convenient medicine delivery to your door", details: ["Prescription & OTC medicines", "Delivery within 2 hours", "Track your order in real-time", "Safe contactless delivery"] },
+      crm: { title: "CRM / HIS for Clinics", description: "Unified management system for medical institutions", details: ["Patient records & EHR", "Appointment scheduling", "Billing & insurance management", "Analytics & reporting dashboard"] },
+    },
+    uz: {
+      academy: { title: "Akademiya", description: "Tibbiyot mutaxassislari va bemorlar uchun ta'lim platformasi", details: ["Shifokorlar uchun onlayn kurslar", "Bemorlarni sog'liq bo'yicha o'qitish", "Sertifikatlar va kreditlar", "Mutaxassislar bilan vebinarlar"] },
+      delivery: { title: "Dori-darmon yetkazib berish", description: "Dori-darmonlarni uyingizga tez va qulay yetkazib berish", details: ["Retsept va retseptsiz dorilar", "2 soat ichida yetkazib berish", "Buyurtmani real vaqtda kuzatish", "Xavfsiz, kontaktsiz yetkazib berish"] },
+      crm: { title: "Klinikalar uchun CRM/MIT", description: "Tibbiyot muassasalari uchun yagona boshqaruv tizimi", details: ["Bemor kartalari va EMK", "Qabulga yozilish va jadval", "Hisob-kitob va sug'urta boshqaruvi", "Tahlil va hisobotlar"] },
+    },
+  } as const;
+
+  const extraT = extraServicesTranslations[language] ?? extraServicesTranslations.en;
+
+  const extraServices: Service[] = [
+    {
+      icon: "faGraduationCap",
+      title: extraT.academy.title,
+      description: extraT.academy.description,
+      details: [...extraT.academy.details],
+      href: "https://academy.zhan.care/",
+    },
+    {
+      icon: "faTruck",
+      title: extraT.delivery.title,
+      description: extraT.delivery.description,
+      details: [...extraT.delivery.details],
+    },
+    {
+      icon: "faClinicMedical",
+      title: extraT.crm.title,
+      description: extraT.crm.description,
+      details: [...extraT.crm.details],
+    },
+  ];
+
+  const services: Service[] = [...translatedServices, ...extraServices];
 
   const handleCardFlip = (index: number) => {
     setFlippedCards(prev => {
@@ -110,7 +175,7 @@ export const Services = () => {
     <>
       <section id="services" className="relative py-24 bg-gradient-to-b from-[#f0f4f8] to-[#e6ebf3] overflow-hidden">
         {/* Floating Background */}
-        <div className="absolute top-10 left-10 w-72 h-72 bg-blue-400 opacity-20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute top-10 left-10 w-72 h-72 rounded-full blur-3xl animate-pulse" style={{ backgroundColor: brand.primary, opacity: 0.2 }}></div>
         <div className="absolute bottom-10 right-10 w-80 h-80 bg-purple-300 opacity-20 rounded-full blur-3xl animate-pulse"></div>
 
         <div className="container mx-auto px-6 relative z-10">
@@ -122,12 +187,12 @@ export const Services = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.7 }}
           >
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl laptop-hd:text-4xl desktop-fhd:text-5xl desktop-qhd:text-6xl desktop-4k:text-7xl font-extrabold tracking-tight text-[#001E80] mb-4 sm:mb-6 lg:mb-8">{translations.servicesHeader}</h1>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl laptop-hd:text-4xl desktop-fhd:text-5xl desktop-qhd:text-6xl desktop-4k:text-7xl font-extrabold tracking-tight mb-4 sm:mb-6 lg:mb-8" style={{ color: brand.secondary }}>{translations.servicesHeader}</h2>
             <p className="text-lg text-gray-600 mt-4">{translations.servicesDescription}</p>
           </motion.div>
 
-          {/* Services Cards - 3 cards in a row */}
-          <motion.div 
+          {/* Services Cards - 3 per row */}
+          <motion.div
             className="grid grid-cols-1 lg:grid-cols-3 gap-10 max-w-6xl mx-auto"
             initial="hidden"
             whileInView="visible"
@@ -152,11 +217,11 @@ export const Services = () => {
                 style={{ perspective: "1000px" }}
               >
                 <motion.div
-                  className="relative w-full h-96 cursor-pointer"
+                  className="relative w-full h-[440px] cursor-pointer"
                   style={{ transformStyle: "preserve-3d" }}
-                  animate={{ rotateY: flippedCards.has(index) ? 180 : 0 }}
+                  animate={{ rotateY: !service.href && flippedCards.has(index) ? 180 : 0 }}
                   transition={{ duration: 0.8, ease: "easeInOut" }}
-                  onClick={() => handleCardFlip(index)}
+                  onClick={() => service.href ? window.open(service.href, "_blank", "noopener,noreferrer") : handleCardFlip(index)}
                 >
                   {/* Front of Card */}
                   <div
@@ -167,10 +232,10 @@ export const Services = () => {
                     }}
                   >
                     <div className="flex flex-col items-center space-y-4 h-full justify-center">
-                      <div className="p-6 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-full shadow-md group-hover:scale-110 transition-all duration-300">
+                      <div className="p-6 text-white rounded-full shadow-md group-hover:scale-110 transition-all duration-300" style={{ background: `linear-gradient(135deg, ${brand.primary} 0%, ${brand.secondary} 100%)` }}>
                         <FontAwesomeIcon icon={iconMapping[service.icon]} className="text-3xl" />
                       </div>
-                      <h5 className="text-2xl font-bold text-gray-800">{service.title}</h5>
+                      <p className="text-2xl font-bold text-gray-800">{service.title}</p>
                       <p className="text-gray-500 leading-relaxed">{service.description}</p>
                       
                       {/* Learn More Button */}
@@ -182,35 +247,46 @@ export const Services = () => {
                       >
                         <motion.button
                           className="
-                            relative px-6 py-3 bg-transparent border-2 border-blue-600 text-blue-600 
-                            rounded-full font-semibold text-sm transition-all duration-300 
-                            hover:bg-blue-600 hover:text-white hover:shadow-lg
-                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                            relative px-6 py-3 bg-transparent border-2
+                            rounded-full font-semibold text-sm transition-all duration-300
+                            hover:text-white hover:shadow-lg
+                            focus:outline-none focus:ring-2 focus:ring-offset-2
                             group/btn overflow-hidden
                           "
+                          style={{ borderColor: brand.primary, color: brand.primary }}
+                          onMouseEnter={(e) => {
+                            (e.currentTarget as HTMLButtonElement).style.color = "white";
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.currentTarget as HTMLButtonElement).style.color = brand.primary;
+                          }}
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                         >
                           {/* Background animation on hover */}
                           <motion.div
-                            className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"
-                            style={{ borderRadius: "inherit" }}
+                            className="absolute inset-0 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"
+                            style={{ background: `linear-gradient(135deg, ${brand.primary} 0%, ${brand.secondary} 100%)`, borderRadius: "inherit" }}
                           />
                           
                           {/* Button content */}
                           <span className="relative z-10 flex items-center space-x-2">
                             <span>{staticTranslations.learnMore}</span>
-                            <motion.span
-                              className="inline-block"
-                              animate={{ x: [0, 3, 0] }}
-                              transition={{ 
-                                duration: 1.5, 
-                                repeat: Infinity, 
-                                ease: "easeInOut" 
-                              }}
-                            >
-                              →
-                            </motion.span>
+                            {service.href ? (
+                              <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="text-xs" />
+                            ) : (
+                              <motion.span
+                                className="inline-block"
+                                animate={{ x: [0, 3, 0] }}
+                                transition={{
+                                  duration: 1.5,
+                                  repeat: Infinity,
+                                  ease: "easeInOut",
+                                }}
+                              >
+                                →
+                              </motion.span>
+                            )}
                           </span>
                           
                           {/* Shine effect */}
@@ -228,28 +304,29 @@ export const Services = () => {
 
                   {/* Back of Card */}
                   <div
-                    className="absolute inset-0 w-full h-full bg-gradient-to-br from-[#001E80] to-[#3A50FF] shadow-lg rounded-2xl p-8 text-white"
-                    style={{ 
+                    className="absolute inset-0 w-full h-full shadow-lg rounded-2xl p-6 text-white overflow-hidden"
+                    style={{
+                      background: `linear-gradient(135deg, ${brand.secondary} 0%, ${brand.primary} 100%)`,
                       backfaceVisibility: "hidden",
                       transform: "rotateY(180deg)"
                     }}
                   >
                     <div className="h-full flex flex-col">
                       {/* Header */}
-                      <div className="text-center mb-6">
-                        <div className="inline-flex p-4 bg-white/20 text-white rounded-xl shadow-lg mb-4 backdrop-blur-sm">
-                          <FontAwesomeIcon icon={iconMapping[service.icon]} className="text-2xl" />
+                      <div className="text-center mb-4">
+                        <div className="inline-flex p-3 bg-white/20 text-white rounded-xl shadow-lg mb-3 backdrop-blur-sm">
+                          <FontAwesomeIcon icon={iconMapping[service.icon]} className="text-xl" />
                         </div>
-                        <h5 className="text-xl font-bold mb-2">{service.title}</h5>
+                        <p className="text-lg font-bold mb-2">{service.title}</p>
                         <div className="w-16 h-0.5 bg-white/30 mx-auto"></div>
                       </div>
                       
                       {/* Details List */}
                       <div className="flex-1">
-                        <h6 className="text-sm font-semibold text-white/80 uppercase tracking-wider mb-4">
+                        <p className="text-xs font-semibold text-white/80 uppercase tracking-wider mb-3">
                           {staticTranslations.whatIncluded}
-                        </h6>
-                        <ul className="space-y-3">
+                        </p>
+                        <ul className="space-y-2">
                           {service.details.map((detail, i) => (
                             <motion.li
                               key={i}
@@ -269,16 +346,17 @@ export const Services = () => {
                       </div>
                       
                       {/* Back to front button */}
-                      <div className="text-center pt-4 border-t border-white/20">
+                      <div className="text-center pt-3 mt-2 border-t border-white/20 flex-shrink-0">
                         <motion.button
                           className="
-                            px-4 py-2 bg-white/20 backdrop-blur-sm text-white 
+                            px-4 py-2 bg-white/20 backdrop-blur-sm text-white
                             rounded-full text-sm font-medium transition-all duration-300
-                            hover:bg-white/30 hover:scale-105 focus:outline-none 
+                            hover:bg-white/30 hover:scale-105 focus:outline-none
                             focus:ring-2 focus:ring-white/50
                           "
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
+                          onClick={(e) => { e.stopPropagation(); handleCardFlip(index); }}
                         >
                           {staticTranslations.back}
                         </motion.button>

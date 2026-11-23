@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import PhoneInput from "@/components/ui/PhoneInput";
 import { useLanguage } from "@/context/LanguageContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
@@ -106,13 +107,16 @@ const RegisterForm: React.FC<Props> = ({
         className="w-full px-4 py-3 md:py-4 rounded-lg mb-3 bg-gray-100 border border-gray-300 focus:outline-none"
         required
       />
-      <input
+      <PhoneInput
         name="phone"
-        type="tel"
-        placeholder={translations.phone}
         value={formData.phone}
-        onChange={onChange}
-        className="w-full px-4 py-3 md:py-4 rounded-lg mb-3 bg-gray-100 border border-gray-300 focus:outline-none"
+        onChange={(e164) => {
+          const syntheticEvent = { target: { name: "phone", value: e164 } } as React.ChangeEvent<HTMLInputElement>;
+          onChange(syntheticEvent);
+        }}
+        defaultCountry="KZ"
+        className="mb-3"
+        inputClassName="py-3 md:py-4 bg-gray-100 border-gray-300"
       />
       <input
         name="password"

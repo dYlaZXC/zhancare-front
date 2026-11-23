@@ -2,17 +2,55 @@
 
 import Image from "next/image";
 import Logo from "@/assets/logosaas.png";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth, computeRole } from "@/context/AuthContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { 
-  faBars, 
-  faBell, 
-  faChevronLeft, 
+import { NotificationBell } from "@/components/layout/NotificationBell";
+import {
+  faBars,
+  faChevronLeft,
   faChevronRight,
   faExpand,
-  faCompress
+  faCompress,
+  faUser
 } from "@fortawesome/free-solid-svg-icons";
 import { useState } from "react";
+import { useLanguage } from "@/context/LanguageContext";
+import LanguageSwitcher from "@/sections/Hero/LanguageSwitcher";
+
+const HEADER_TEXT = {
+  ru: {
+    openMenu: "Открыть меню навигации",
+    openMenuTitle: "Открыть меню",
+    expand: "Развернуть",
+    collapse: "Свернуть",
+    dashboard: "Личный кабинет",
+    roles: { admin: "Администратор", academy_admin: "Администратор академии", doctor: "Доктор", nurse: "Медсестра", teacher: "Преподаватель", patient: "Пациент", student: "Студент" },
+  },
+  kz: {
+    openMenu: "Навигация мәзірін ашу",
+    openMenuTitle: "Мәзірді ашу",
+    expand: "Жазу",
+    collapse: "Жию",
+    dashboard: "Жеке кабинет",
+    roles: { admin: "Әкімші", academy_admin: "Академия әкімшісі", doctor: "Дәрігер", nurse: "Медбике", teacher: "Оқытушы", patient: "Пациент", student: "Студент" },
+  },
+  en: {
+    openMenu: "Open navigation menu",
+    openMenuTitle: "Open menu",
+    expand: "Expand",
+    collapse: "Collapse",
+    dashboard: "Dashboard",
+    roles: { admin: "Administrator", academy_admin: "Academy Administrator", doctor: "Doctor", nurse: "Nurse", teacher: "Teacher", patient: "Patient", student: "Student" },
+  },
+  uz: {
+    openMenu: "Navigatsiya menyusini ochish",
+    openMenuTitle: "Menyuni ochish",
+    expand: "Yoyish",
+    collapse: "Yig'ish",
+    dashboard: "Shaxsiy kabinet",
+    roles: { admin: "Administrator", academy_admin: "Akademiya administratori", doctor: "Shifokor", nurse: "Hamshira", teacher: "O'qituvchi", patient: "Bemor", student: "Talaba" },
+  },
+} as const;
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -26,10 +64,13 @@ export const Header = ({
   onToggleSidebar 
 }: HeaderProps) => {
   const { user } = useAuth();
+  const { language, setLanguage } = useLanguage();
   const [isHovered, setIsHovered] = useState(false);
+  const [avatarBroken, setAvatarBroken] = useState(false);
+  const t = HEADER_TEXT[language as keyof typeof HEADER_TEXT] ?? HEADER_TEXT.ru;
 
   return (
-    <header className="flex justify-between items-center bg-white/95 backdrop-blur-lg border-b border-gray-200/50 p-4 shadow-lg sticky top-0 z-30 transition-all duration-300">
+    <header className="flex justify-between items-center bg-gradient-to-r from-white via-[#F7F9FF] to-white backdrop-blur-lg border-b border-[#E3E9FB] rounded-b-2xl p-4 shadow-[0_4px_24px_-6px_rgba(41,53,143,0.18)] sticky top-0 z-30 transition-all duration-300">
       {/* Left - Mobile Menu Button & Desktop Sidebar Toggle */}
       <div className="flex items-center gap-3">
         {/* Mobile/Tablet/iPad Pro Menu Button - Active up to XL screens */}
@@ -40,8 +81,8 @@ export const Header = ({
             background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)',
             border: '1px solid rgba(255, 255, 255, 0.2)'
           }}
-          aria-label="Открыть меню навигации"
-          title="Открыть меню"
+          aria-label={t.openMenu}
+          title={t.openMenuTitle}
         >
           <FontAwesomeIcon 
             icon={faBars} 
@@ -52,86 +93,77 @@ export const Header = ({
         </button>
 
         {/* Desktop Sidebar Toggle - Only visible on XL screens and above */}
-        <button
-          onClick={onToggleSidebar}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-          className="hidden xl:flex items-center gap-2 group relative overflow-hidden px-4 py-2.5 rounded-xl shadow-md border transition-all duration-300 hover:scale-105 hover:shadow-lg"
-          style={{ 
-            background: sidebarCollapsed 
-              ? 'linear-gradient(135deg, rgba(55, 114, 255, 0.15) 0%, rgba(41, 53, 143, 0.15) 100%)'
-              : 'linear-gradient(135deg, rgba(55, 114, 255, 0.1) 0%, rgba(41, 53, 143, 0.1) 100%)',
-            borderColor: 'rgba(55, 114, 255, 0.2)'
-          }}
-        >
-          {/* Icon Container */}
-          <div className="relative flex items-center justify-center w-6 h-6 rounded-lg transition-all duration-300"
-               style={{ 
-                 background: sidebarCollapsed 
-                   ? 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)'
-                   : 'linear-gradient(135deg, rgba(55, 114, 255, 0.3) 0%, rgba(41, 53, 143, 0.3) 100%)'
-               }}>
-            <FontAwesomeIcon
-              icon={sidebarCollapsed ? faChevronRight : faChevronLeft}
-              className={`text-xs transition-all duration-300 ${
-                sidebarCollapsed ? 'text-white' : 'text-blue-700'
-              } group-hover:scale-110`}
-            />
-          </div>
+        {onToggleSidebar && (
+          <button
+            onClick={onToggleSidebar}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            className="hidden xl:flex items-center gap-2 group relative overflow-hidden px-4 py-2.5 rounded-xl shadow-md border transition-all duration-300 hover:scale-105 hover:shadow-lg"
+            style={{
+              background: sidebarCollapsed
+                ? 'linear-gradient(135deg, rgba(55, 114, 255, 0.15) 0%, rgba(41, 53, 143, 0.15) 100%)'
+                : 'linear-gradient(135deg, rgba(55, 114, 255, 0.1) 0%, rgba(41, 53, 143, 0.1) 100%)',
+              borderColor: 'rgba(55, 114, 255, 0.2)'
+            }}
+          >
+            {/* Icon Container */}
+            <div className="relative flex items-center justify-center w-6 h-6 rounded-lg transition-all duration-300"
+                 style={{
+                   background: sidebarCollapsed
+                     ? 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)'
+                     : 'linear-gradient(135deg, rgba(55, 114, 255, 0.3) 0%, rgba(41, 53, 143, 0.3) 100%)'
+                 }}>
+              <FontAwesomeIcon
+                icon={sidebarCollapsed ? faChevronRight : faChevronLeft}
+                className={`text-xs transition-all duration-300 ${
+                  sidebarCollapsed ? 'text-white' : 'text-blue-700'
+                } group-hover:scale-110`}
+              />
+            </div>
 
-          {/* Text Label */}
-          <span className={`text-sm font-semibold transition-all duration-300 ${
-            sidebarCollapsed ? 'text-blue-700' : 'text-gray-700'
-          } group-hover:text-blue-800`}>
-            {sidebarCollapsed ? 'Развернуть' : 'Свернуть'}
-          </span>
+            {/* Text Label */}
+            <span className={`text-sm font-semibold transition-all duration-300 ${
+              sidebarCollapsed ? 'text-blue-700' : 'text-gray-700'
+            } group-hover:text-blue-800`}>
+              {sidebarCollapsed ? t.expand : t.collapse}
+            </span>
 
-          {/* Animated Background */}
-          <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-               style={{ background: 'linear-gradient(135deg, rgba(55, 114, 255, 0.15) 0%, rgba(41, 53, 143, 0.15) 100%)' }}></div>
+            {/* Animated Background */}
+            <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                 style={{ background: 'linear-gradient(135deg, rgba(55, 114, 255, 0.15) 0%, rgba(41, 53, 143, 0.15) 100%)' }}></div>
 
-          {/* Shimmer Effect */}
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
-        </button>
+            {/* Shimmer Effect */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
+          </button>
+        )}
 
         {/* Optional Logo/Title */}
         <div className="hidden lg:flex items-center gap-3">
           <div className="w-px h-8 bg-gradient-to-b from-transparent via-gray-400 to-transparent"></div>
           <span className="text-lg font-bold text-gray-800">
-            Личный кабинет
+            {t.dashboard}
           </span>
         </div>
       </div>
 
       {/* Right - Notifications & User Info */}
       <div className="flex items-center gap-4">
-        {/* Premium Notifications */}
-        <button className="relative group p-3 rounded-xl transition-all duration-300 hover:scale-110 hover:shadow-lg border border-gray-200/50 backdrop-blur-sm"
-                style={{ background: 'linear-gradient(135deg, rgba(55, 114, 255, 0.05) 0%, rgba(41, 53, 143, 0.05) 100%)' }}>
-          <FontAwesomeIcon 
-            icon={faBell} 
-            className="text-lg text-gray-600 group-hover:text-blue-600 transition-colors duration-300 group-hover:animate-pulse" 
-          />
-          
-          {/* Notification Badge */}
-          <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-lg animate-pulse"
-               style={{ background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' }}>
-            3
-          </div>
+        {/* Language Switcher */}
+        <LanguageSwitcher currentLanguage={language} setLanguage={setLanguage} variant="light" />
 
-          {/* Hover Effect */}
-          <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-               style={{ background: 'linear-gradient(135deg, rgba(55, 114, 255, 0.1) 0%, rgba(41, 53, 143, 0.1) 100%)' }}></div>
-        </button>
+        {/* Notifications */}
+        <NotificationBell buttonClassName="h-11 w-11" />
 
         {/* User Quick Info */}
         {user && (
-          <div className="hidden md:flex items-center gap-3 px-3 py-2 rounded-xl border border-gray-200/50 backdrop-blur-sm"
+          <div className="hidden md:flex items-center gap-3 h-11 px-3 rounded-xl border border-gray-200/50 backdrop-blur-sm"
                style={{ background: 'linear-gradient(135deg, rgba(55, 114, 255, 0.03) 0%, rgba(41, 53, 143, 0.03) 100%)' }}>
             {/* Mini Avatar */}
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold text-white shadow-md"
-                 style={{ background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)' }}>
-              {user.first_name.charAt(0)}
+            <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center text-sm font-bold text-white shadow-md flex-shrink-0"
+                 style={(user.avatar && !avatarBroken) ? undefined : { background: 'linear-gradient(135deg, #3772ff 0%, #29358f 100%)' }}>
+              {user.avatar && !avatarBroken
+                ? <img src={user.avatar} alt="" className="w-full h-full object-cover rounded-[inherit]" onError={() => setAvatarBroken(true)} />
+                : <FontAwesomeIcon icon={faUser} className="text-white text-xs" />}
             </div>
             
             {/* User Info */}
@@ -140,7 +172,7 @@ export const Header = ({
                 {user.first_name} {user.last_name}
               </div>
               <div className="text-xs font-medium text-gray-600 leading-tight capitalize">
-                {user.role === "doctor" ? "Доктор" : user.role === "admin" ? "Администратор" : "Пациент"}
+                {t.roles[computeRole(user.roles) as keyof typeof t.roles] ?? t.roles.patient}
               </div>
             </div>
           </div>

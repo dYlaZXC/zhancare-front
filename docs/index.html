@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZhanCare AI — Внутренняя документация</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="layout">
+
+  <nav class="sidebar">
+    <div class="brand"><span class="dot"></span><strong>ZhanCare AI · Docs</strong></div>
+
+    <div class="group-title">Блоки</div>
+    <ul>
+      <li><a href="#blocks">Авторизация (JWT)</a></li>
+      <li><a href="#blocks">ИБ-аудит</a></li>
+    </ul>
+  </nav>
+
+  <main>
+
+    <div class="hero">
+      <h1>Внутренняя техническая документация</h1>
+      <p>
+        Справочник по устройству ZhanCare: backend (<code>zhancare-back</code>), основной
+        фронтенд (<code>zhancareai</code>) и фронтенд академии
+        (<code>zhancare-academy-refined</code>). Каждый блок ниже — отдельная страница
+        с разбором конкретной подсистемы: архитектура, код, найденные и закрытые
+        проблемы, что осталось улучшить.
+      </p>
+      <div class="badges">
+        <span class="badge">Django REST Framework</span>
+        <span class="badge">Next.js</span>
+        <span class="badge">Только для внутреннего использования</span>
+      </div>
+    </div>
+
+    <section id="blocks">
+      <h2>Блоки документации</h2>
+      <p class="section-intro">
+        Новые блоки добавляются сюда по мере описания других подсистем
+        (платежи, видеоконсультации, уведомления и т.д.).
+      </p>
+
+      <div class="block-grid">
+        <a class="block-card" href="auth.html">
+          <div class="icon">🔐</div>
+          <h3>Авторизация (JWT)</h3>
+          <p>
+            Access/refresh JWT, привязка к <code>UserSession</code> на устройство,
+            Redis-кэш проверки сессии, dual-mode httpOnly cookies, magic-link гостевой
+            доступ к консультациям, WebSocket-аутентификация по cookie, rate limiting
+            на login/password-reset.
+          </p>
+          <div class="tags">
+            <span class="tag">simplejwt</span>
+            <span class="tag">Redis</span>
+            <span class="tag">httpOnly cookies</span>
+            <span class="tag">Django Channels</span>
+          </div>
+          <span class="read-more">Открыть раздел →</span>
+        </a>
+
+        <a class="block-card" href="audit.html">
+          <div class="icon">🛡️</div>
+          <h3>ИБ-аудит (июнь 2026)</h3>
+          <p>
+            Полный аудит трёх репозиториев (back + 2 фронтенда) тремя параллельными
+            security-reviewer агентами: захардкоженные секреты, fail-open платёжный
+            webhook, брутфорсимый гостевой вход, IDOR в профиле, незакрытая CSRF
+            и недоведённая до конца миграция на httpOnly cookie в academy.
+          </p>
+          <div class="tags">
+            <span class="tag">5 Critical</span>
+            <span class="tag">8 High</span>
+            <span class="tag">read-only снимок</span>
+          </div>
+          <span class="read-more">Открыть раздел →</span>
+        </a>
+
+        <div class="block-card placeholder">
+          <div class="icon">＋</div>
+          <h3>Следующий блок</h3>
+          <p>Здесь появится описание следующей подсистемы, когда дойдут руки.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      ZhanCare — внутренняя техническая документация. Не предназначена для публикации.
+    </footer>
+
+  </main>
+</div>
+</body>
+</html>

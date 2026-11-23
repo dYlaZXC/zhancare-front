@@ -1,6 +1,7 @@
 "use client";
 import { motion } from "framer-motion";
 import { useRef } from "react";
+import { useBrand } from "@/context/BrandContext";
 
 interface ActionButtonsProps {
   translations: any;
@@ -55,6 +56,7 @@ export default function ActionButtons({
 }: ActionButtonsProps) {
   const primaryButtonRef = useRef<HTMLButtonElement>(null);
   const secondaryButtonRef = useRef<HTMLButtonElement>(null);
+  const { brand } = useBrand();
 
   const getSecondaryButtonText = () => {
     switch (language) {
@@ -64,8 +66,10 @@ export default function ActionButtons({
         return "Көбірек білу";
       case "en":
         return "Learn More";
+      case "uz":
+        return "Ko'proq bilish";
       default:
-        return "Learn More"; // Default to English
+        return "Learn More";
     }
   };
 
@@ -75,14 +79,14 @@ export default function ActionButtons({
         {/* Primary Button with Stable Glow */}
         <motion.button
           ref={primaryButtonRef}
-          className="group relative bg-gradient-to-r from-[#001E80] to-[#3A50FF] text-white px-4 xs:px-6 sm:px-8 py-3 xs:py-3.5 sm:py-4 rounded-xl font-medium text-sm xs:text-base sm:text-lg shadow-lg hover:shadow-xl transition-shadow w-full xs:w-auto"
+          className="group relative text-white px-4 xs:px-6 sm:px-8 py-3 xs:py-3.5 sm:py-4 rounded-xl font-medium text-sm xs:text-base sm:text-lg shadow-lg hover:shadow-xl transition-shadow w-full xs:w-auto"
+          style={{ background: `linear-gradient(135deg, ${brand.secondary} 0%, ${brand.primary} 100%)` }}
           onClick={onBookAppointment}
           variants={buttonVariants}
         >
           {/* Stable Glow Effect */}
-          <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-[#001E80] to-[#3A50FF] blur-md opacity-50 -z-10"></div>
-          <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-[#4A5DFF] to-[#6B7DFF] blur-lg opacity-30 -z-20"></div>
-          
+          <div className="absolute inset-0 rounded-xl blur-md opacity-50 -z-10" style={{ background: `linear-gradient(135deg, ${brand.secondary} 0%, ${brand.primary} 100%)` }}></div>
+
           <span className="relative z-10 flex items-center justify-center">
             <span className="truncate">
               {translations.content.openDataButton}
@@ -98,7 +102,7 @@ export default function ActionButtons({
           </span>
 
           {/* Hover overlay */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0029A3] to-[#4A5DFF] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left rounded-xl" />
+          <div className="absolute inset-0 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left rounded-xl" style={{ background: `linear-gradient(135deg, ${brand.primary} 0%, ${brand.secondary} 100%)` }} />
         </motion.button>
 
         {/* Secondary Button with Stable Glow */}

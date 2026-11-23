@@ -41,31 +41,27 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       // For development, use the Django backend port
       const host = process.env.NODE_ENV === 'development' ? 'localhost:8002' : window.location.host;
-      const wsUrl = `${protocol}//${host}/ws/consultations/?token=${token}`;
+      // Auth is no longer carried in the URL — the browser attaches the
+      // httpOnly zha_access cookie to the WS handshake automatically
+      // (same-site for any *.zhan.care host). The backend's JWTCookieAuthMiddleware
+      // resolves scope['user'] from that cookie before the consumer even accepts.
+      const wsUrl = `${protocol}//${host}/ws/consultations/`;
 
-      console.log('🔌 Attempting WebSocket connection:', wsUrl);
+      // console.log('🔌 Attempting WebSocket connection:', wsUrl);
 
       ws.current = new WebSocket(wsUrl);
 
       ws.current.onopen = (event) => {
-        console.log('✅ WebSocket connected');
+        // console.log('✅ WebSocket connected');
         setIsConnected(true);
         setReconnectAttempts(0);
         options.onConnect?.();
-
-        // Send authentication message
-        ws.current?.send(JSON.stringify({
-          type: 'authenticate',
-          token: token,
-          user_id: user.id,
-          user_role: user.role
-        }));
       };
 
       ws.current.onmessage = (event) => {
         try {
           const message: WebSocketMessage = JSON.parse(event.data);
-          console.log('📥 WebSocket message received:', message);
+          // console.log('📥 WebSocket message received:', message);
           options.onMessage?.(message);
         } catch (error) {
           console.error('❌ Failed to parse WebSocket message:', error);
@@ -73,12 +69,12 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
       };
 
       ws.current.onclose = (event) => {
-        console.log('🔌 WebSocket disconnected:', event.code, event.reason);
+        // console.log('🔌 WebSocket disconnected:', event.code, event.reason);
         setIsConnected(false);
 
         // Don't show disconnect errors if WebSocket server is not implemented yet
         if (event.code === 1006 || event.code === 1002 || event.code === 1005) {
-          console.log('💡 WebSocket server not ready - disabling WebSocket and falling back to polling');
+          // console.log('💡 WebSocket server not ready - disabling WebSocket and falling back to polling');
           setReconnectAttempts(maxReconnectAttempts); // Prevent further reconnection attempts
           setWebSocketDisabled(true); // Disable future connection attempts
           return; // Don't attempt reconnection or show errors for unimplemented server
@@ -88,24 +84,24 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
 
         // Attempt to reconnect if not manually closed and server exists
         if (event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
-          console.log(`🔄 Attempting to reconnect (${reconnectAttempts + 1}/${maxReconnectAttempts})...`);
+          // console.log(`🔄 Attempting to reconnect (${reconnectAttempts + 1}/${maxReconnectAttempts})...`);
           reconnectTimeoutRef.current = setTimeout(() => {
             setReconnectAttempts(prev => prev + 1);
             connect();
           }, reconnectInterval);
         } else if (reconnectAttempts >= maxReconnectAttempts && event.code !== 1006 && event.code !== 1002 && event.code !== 1005) {
-          console.log('❌ Max reconnection attempts reached for a real server issue');
+          // console.log('❌ Max reconnection attempts reached for a real server issue');
           toast.error('⚠️ Соединение потеряно. Обновите страницу.');
         }
       };
 
       ws.current.onerror = (error) => {
-        console.log('💡 WebSocket connection failed - server likely not ready');
+        // console.log('💡 WebSocket connection failed - server likely not ready');
         // Don't call options.onError for expected failures
         if (reconnectAttempts === 0) {
           // First attempt failed, likely server not ready
           setWebSocketDisabled(true);
-          console.log('🔄 Disabling WebSocket attempts and using polling fallback');
+          // console.log('🔄 Disabling WebSocket attempts and using polling fallback');
         }
       };
 
@@ -131,7 +127,7 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
   const sendMessage = useCallback((message: any) => {
     if (ws.current?.readyState === WebSocket.OPEN) {
       ws.current.send(JSON.stringify(message));
-      console.log('📤 WebSocket message sent:', message);
+      // console.log('📤 WebSocket message sent:', message);
     } else {
       console.warn('⚠️ WebSocket not connected, cannot send message');
     }

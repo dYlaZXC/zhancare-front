@@ -17,6 +17,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import en from "@/locales/en.json";
+import uz from "@/locales/uz.json";
 import LanguageSwitcher from "./LanguageSwitcher";
 import UserDropdown from "./UserDropdown";
 import { motion, AnimatePresence } from "framer-motion";
@@ -38,6 +39,7 @@ export default function MobileMenu({ isOpen, onClose, onScrollToSection }: Props
       case "ru": return ru.hero;
       case "kz": return kz.hero;
       case "en": return en.hero;
+      case "uz": return uz.hero;
       default: return ru.hero;
     }
   })();
@@ -101,6 +103,7 @@ export default function MobileMenu({ isOpen, onClose, onScrollToSection }: Props
       case "ru": return "Закрыть меню";
       case "en": return "Close menu";
       case "kz": return "Мәзірді жабу";
+      case "uz": return "Menyuni yopish";
       default: return "Close menu";
     }
   }, [language]);
@@ -110,6 +113,7 @@ export default function MobileMenu({ isOpen, onClose, onScrollToSection }: Props
       case "ru": return "Навигационное меню";
       case "en": return "Navigation menu";
       case "kz": return "Навигациялық мәзір";
+      case "uz": return "Navigatsiya menyusi";
       default: return "Navigation menu";
     }
   }, [language]);
@@ -119,6 +123,7 @@ export default function MobileMenu({ isOpen, onClose, onScrollToSection }: Props
       case "ru": return "Навигация сайта. Используйте Tab для перемещения.";
       case "en": return "Site navigation. Use Tab to navigate.";
       case "kz": return "Сайт навигациясы. Жылжу үшін Tab пернесін пайдаланыңыз.";
+      case "uz": return "Sayt navigatsiyasi. Harakatlanish uchun Tab dan foydalaning.";
       default: return "Site navigation. Use Tab to navigate.";
     }
   }, [language]);
@@ -128,17 +133,14 @@ export default function MobileMenu({ isOpen, onClose, onScrollToSection }: Props
       case "ru": return "Войти";
       case "en": return "Sign In";
       case "kz": return "Кіру";
+      case "uz": return "Kirish";
       default: return "Sign In";
     }
   }, [language]);
 
   const handleLogout = useCallback(() => {
-    logoutUser();
     onClose();
-    // Redirect to homepage after logout
-    setTimeout(() => {
-      window.location.href = "/";
-    }, 500);
+    logoutUser(); // shows its own toast, revokes the server session, navigates to /login
   }, [logoutUser, onClose]);
 
   // Animation variants
@@ -347,7 +349,9 @@ export default function MobileMenu({ isOpen, onClose, onScrollToSection }: Props
                   >
                     <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
                       <FontAwesomeIcon icon={faGlobe} className="text-white/60 text-sm" />
-                      <span className="text-xs sm:text-sm font-medium text-white/80">Language</span>
+                      <span className="text-xs sm:text-sm font-medium text-white/80">
+                        {language === "ru" ? "Язык" : language === "kz" ? "Тіл" : "Language"}
+                      </span>
                     </div>
                     <LanguageSwitcher
                       currentLanguage={language}

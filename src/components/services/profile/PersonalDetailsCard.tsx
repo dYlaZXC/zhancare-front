@@ -21,6 +21,7 @@ import { useState, useEffect } from "react";
 import { InfoCard } from "./InfoCard";
 import { InfoRow } from "./InfoRow";
 import { User } from "./types";
+import PhoneInput from "@/components/ui/PhoneInput";
 
 interface PersonalDetailsCardProps {
   user: User;
@@ -62,7 +63,7 @@ export const PersonalDetailsCard = ({
         setLoading(true);
         const { api } = await import("@/utils/api");
         const response = await api.get('/user-profile/profile/');
-        console.log('✅ [PersonalDetailsCard] API data loaded:', response.data);
+        // console.log('✅ [PersonalDetailsCard] API data loaded:', response.data);
         setUser(response.data);
       } catch (error: any) {
         console.error('❌ [PersonalDetailsCard] API error:', error);
@@ -77,9 +78,9 @@ export const PersonalDetailsCard = ({
   }, [initialUser]);
 
   // Debug: log all user data
-  console.log('📋 [PersonalDetailsCard] Current user:', user);
-  console.log('📞 [PersonalDetailsCard] User phone field:', user.phone);
-  console.log('🔑 [PersonalDetailsCard] User keys:', Object.keys(user));
+  // console.log('📋 [PersonalDetailsCard] Current user:', user);
+  // console.log('📞 [PersonalDetailsCard] User phone field:', user.phone);
+  // console.log('🔑 [PersonalDetailsCard] User keys:', Object.keys(user));
 
 
 
@@ -311,7 +312,7 @@ export const PersonalDetailsCard = ({
         const { api } = await import("@/utils/api");
         const response = await api.get('/user-profile/profile/');
         setUser(response.data);
-        console.log('✅ [PersonalDetailsCard] Data refreshed after save:', response.data);
+        // console.log('✅ [PersonalDetailsCard] Data refreshed after save:', response.data);
 
         // Also trigger parent refetch if provided
         if (onRefetch) {
@@ -390,7 +391,14 @@ export const PersonalDetailsCard = ({
             </label>
           </div>
           
-          {field.type === 'select' ? (
+          {field.type === 'tel' ? (
+            <PhoneInput
+              value={editValue}
+              onChange={(e164) => handleFieldChange(field.key, e164)}
+              error={errors[field.key] || undefined}
+              defaultCountry="KZ"
+            />
+          ) : field.type === 'select' ? (
             <select
               value={editValue}
               onChange={(e) => handleFieldChange(field.key, e.target.value)}
@@ -605,7 +613,7 @@ export const PersonalDetailsCard = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6 h-full">
       {/* Premium Completion Progress */}
       {showCompletionProgress && (
         <div className="relative overflow-hidden p-6 rounded-2xl border backdrop-blur-xl shadow-xl"
@@ -697,7 +705,7 @@ export const PersonalDetailsCard = ({
       )}
 
       {/* Main Card */}
-      <InfoCard title="Личные данные">
+      <InfoCard title="Личные данные" className="flex-1">
         {/* Action button header */}
         <div className="flex justify-end items-center mb-4">
           {renderActionButton()}

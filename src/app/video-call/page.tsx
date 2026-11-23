@@ -7,15 +7,15 @@ import { Loader2 } from "lucide-react";
 
 const VideoCallPage = () => {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isDoctor, isPatient } = useAuth();
 
   useEffect(() => {
-    if (user?.role === "doctor") {
+    if (isDoctor) {
       router.push(`/video-call/doctor${window.location.search}`);
-    } else if (user?.role === "patient") {
+    } else if (isPatient) {
       router.push(`/video-call/patient${window.location.search}`);
     }
-  }, [user, router]);
+  }, [user, isDoctor, isPatient, router]);
 
   return (
     <div className="flex items-center justify-center h-screen text-blue-600">

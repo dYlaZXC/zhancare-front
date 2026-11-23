@@ -1,0 +1,455 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
+import { motion } from "framer-motion";
+import { useAuth } from "@/context/AuthContext";
+import PhoneInput from "@/components/ui/PhoneInput";
+import { api } from "@/utils/api";
+import { toast } from "react-toastify";
+import {
+  User, Mail, Phone, Save, Camera, Trash2,
+  CheckCircle2, Loader2, Lock, AlignLeft,
+  Award, Building2, Clock, MapPin, GraduationCap,
+  Heart,
+} from "lucide-react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faUserNurse } from "@fortawesome/free-solid-svg-icons";
+import BannerPicker, { useBanner } from "@/components/profile/BannerPicker";
+
+const BACKEND = process.env.NEXT_PUBLIC_API_URL?.replace("/api/v1", "") ?? "http://127.0.0.1:8000";
+const resolveAvatar = (url?: string | null) => {
+  if (!url) return null;
+  return url.startsWith("http") ? url : `${BACKEND}${url}`;
+};
+
+interface NurseProfile {
+  id?: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  specialization?: string;
+  experience?: number;
+  education?: string;
+  bio?: string;
+  avatar?: string | null;
+  clinic?: { name: string; city?: string; address?: string; working_hours?: string };
+}
+
+const InputField = ({
+  label, value, onChange, icon: Icon, placeholder, type = "text", readOnly = false,
+}: {
+  label: string; value: string; onChange?: (v: string) => void;
+  icon: React.ElementType; placeholder?: string; type?: string; readOnly?: boolean;
+}) => (
+  <div className="flex flex-col gap-1.5">
+    <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">{label}</label>
+    <div className="relative group">
+      <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-teal-500 transition-colors z-10" />
+      <input
+        type={type} value={value} placeholder={placeholder} readOnly={readOnly}
+        onChange={(e) => onChange?.(e.target.value)}
+        className={`w-full pl-10 pr-4 py-3 rounded-xl border text-sm outline-none transition-all duration-200 shadow-sm ${
+          readOnly
+            ? "border-dashed border-gray-200 bg-gray-50 text-gray-400 cursor-default"
+            : "border-gray-200 bg-white text-gray-800 placeholder-gray-300 hover:border-gray-300 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10"
+        }`}
+      />
+      {readOnly && (
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-300 font-semibold bg-gray-100 px-2 py-0.5 rounded-full">
+          Не изменяется
+        </span>
+      )}
+    </div>
+  </div>
+);
+
+const TextareaField = ({
+  label, value, onChange, icon: Icon, placeholder,
+}: {
+  label: string; value: string; onChange: (v: string) => void;
+  icon: React.ElementType; placeholder?: string;
+}) => (
+  <div className="flex flex-col gap-1.5">
+    <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">{label}</label>
+    <div className="relative group">
+      <Icon className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-400 group-focus-within:text-teal-500 transition-colors" />
+      <textarea
+        rows={3} value={value} placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-300 outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all duration-200 shadow-sm hover:border-gray-300 resize-none"
+      />
+    </div>
+  </div>
+);
+
+const Card = ({ children, accentColor, delay = 0 }: { children: React.ReactNode; accentColor: string; delay?: number }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}
+    className="relative bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden"
+  >
+    <div className="absolute left-0 top-0 w-1.5 h-full" style={{ background: accentColor }} />
+    <div className="px-8 py-6">{children}</div>
+  </motion.div>
+);
+
+function SaveButton({ saving, saved, onClick, color }: { saving: boolean; saved: boolean; onClick: () => void; color: string }) {
+  return (
+    <motion.button
+      onClick={onClick} disabled={saving} whileTap={{ scale: 0.97 }}
+      className="relative flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white shadow-lg hover:shadow-xl disabled:opacity-50 transition-all overflow-hidden"
+      style={{ background: color }}
+    >
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 -translate-x-full hover:translate-x-full transition-transform duration-700" />
+      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <CheckCircle2 className="w-4 h-4 text-green-200" /> : <Save className="w-4 h-4" />}
+      {saved ? "Сохранено!" : "Сохранить"}
+    </motion.button>
+  );
+}
+
+export default function NurseProfileDashboard() {
+  const { user: authUser, updateUser } = useAuth();
+  const [profile, setProfile] = useState<NurseProfile | null>(null);
+  const [form, setForm] = useState({
+    first_name: "", last_name: "", phone: "",
+    specialization: "", experience: "", education: "", bio: "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const [avatarViewOpen, setAvatarViewOpen] = useState(false);
+  const [avatarBroken, setAvatarBroken] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const avatarMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setAvatarBroken(false); }, [avatarPreview]);
+
+  useEffect(() => {
+    if (!avatarMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (avatarMenuRef.current && !avatarMenuRef.current.contains(e.target as Node)) setAvatarMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [avatarMenuOpen]);
+
+  useEffect(() => { fetchProfile(); }, []);
+
+  const fetchProfile = async () => {
+    try {
+      const res = await api.get("/user-profile/profile/");
+      const d = res.data;
+      setProfile(d);
+      setForm({
+        first_name: d.first_name || "",
+        last_name: d.last_name || "",
+        phone: d.phone || "",
+        specialization: d.specialization || "",
+        experience: d.experience?.toString() || "",
+        education: d.education || "",
+        bio: d.bio || "",
+      });
+      setAvatarPreview(resolveAvatar(d.avatar));
+    } catch {
+      toast.error("Не удалось загрузить профиль");
+    }
+  };
+
+  const cleanPayload = (obj: Record<string, any>) =>
+    Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, v === "" ? null : v]));
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.patch("/user-profile/profile/", cleanPayload({
+        ...form,
+        experience: form.experience ? parseInt(form.experience) : "",
+      }));
+      toast.success("Профиль обновлён");
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (e: any) {
+      const detail = e?.response?.data;
+      toast.error(detail ? JSON.stringify(detail) : "Не удалось сохранить");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error("Максимум 5 МБ"); return; }
+    setAvatarPreview(URL.createObjectURL(file));
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("avatar", file);
+      const res = await api.post("/user-profile/avatar/", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      setAvatarPreview(resolveAvatar(res.data.avatar));
+      updateUser({ avatar: res.data.avatar });
+      toast.success("Фото обновлено");
+    } catch {
+      toast.error("Не удалось загрузить фото");
+      setAvatarPreview(resolveAvatar(profile?.avatar));
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const handleDeleteAvatar = async () => {
+    setDeleting(true);
+    try {
+      await api.delete("/user-profile/avatar/");
+      setAvatarPreview(null);
+      updateUser({ avatar: null });
+      toast.success("Фото удалено");
+    } catch {
+      toast.error("Не удалось удалить");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const { banner, saveBanner } = useBanner(profile?.id);
+
+  if (!profile) return (
+    <div className="flex items-center justify-center py-20">
+      <Loader2 className="w-8 h-8 animate-spin text-teal-500" />
+    </div>
+  );
+
+  const initials = `${form.first_name?.[0] ?? ""}${form.last_name?.[0] ?? ""}`.toUpperCase();
+
+  return (
+    <div className="w-full space-y-6">
+
+      {/* ── HERO ── */}
+      <div
+        className="relative rounded-3xl overflow-hidden"
+        style={banner
+          ? { backgroundImage: `url(${banner})`, backgroundSize: "cover", backgroundPosition: "center" }
+          : { background: "linear-gradient(135deg, #0f2027 0%, #1a2a35 30%, #0e6b6b 70%, #06b6d4 100%)" }}
+      >
+        {/* Overlay for banner readability */}
+        {banner && <div className="absolute inset-0 bg-black/50 pointer-events-none" />}
+        <div className="absolute top-4 right-4 z-10">
+          <BannerPicker userId={profile?.id!} onBannerChange={saveBanner} />
+        </div>
+
+        {/* Ambient blobs */}
+        {!banner && (
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute -top-16 -left-16 w-72 h-72 rounded-full blur-3xl opacity-30"
+                 style={{ background: "radial-gradient(circle, #06b6d4, transparent)" }} />
+            <div className="absolute -bottom-20 right-10 w-64 h-64 rounded-full blur-3xl opacity-20"
+                 style={{ background: "radial-gradient(circle, #0e9b8a, transparent)" }} />
+            <svg className="absolute right-0 top-0 h-full opacity-5" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice">
+              <defs><pattern id="grid-nurse" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="white" strokeWidth="0.5" /></pattern></defs>
+              <rect width="200" height="200" fill="url(#grid-nurse)" />
+            </svg>
+          </div>
+        )}
+
+        <div className="relative flex flex-col sm:flex-row items-center sm:items-end gap-6 px-8 py-8 sm:py-10">
+          {/* Avatar */}
+          <div className="relative flex-shrink-0" ref={avatarMenuRef}>
+            <div
+              className="w-28 h-28 rounded-3xl overflow-hidden border-4 border-white shadow-2xl"
+              style={{ background: avatarPreview && !avatarBroken ? "transparent" : "linear-gradient(135deg, #06b6d4 0%, #0e6b6b 100%)" }}
+            >
+              {avatarPreview && !avatarBroken
+                ? <img src={avatarPreview} alt="avatar" className="w-full h-full object-cover rounded-[inherit]" onError={() => setAvatarBroken(true)} />
+                : <div className="w-full h-full flex items-center justify-center"><span className="text-white font-black text-4xl">{initials}</span></div>}
+              {(uploading || deleting) && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                  <Loader2 className="w-7 h-7 text-white animate-spin" />
+                </div>
+              )}
+            </div>
+            <button onClick={() => !uploading && !deleting && setAvatarMenuOpen(v => !v)} disabled={uploading || deleting}
+              className="absolute inset-0 rounded-3xl bg-black/50 opacity-0 hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-1 cursor-pointer">
+              <Camera className="w-6 h-6 text-white" />
+              <span className="text-white text-[10px] font-bold">Изменить</span>
+            </button>
+            {avatarMenuOpen && (
+              <div className="absolute top-0 left-full ml-3 z-50 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden min-w-[170px]">
+                {avatarPreview && (
+                  <button onClick={() => { setAvatarViewOpen(true); setAvatarMenuOpen(false); }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                    <svg className="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    Просмотреть фото
+                  </button>
+                )}
+                <button onClick={() => { fileRef.current?.click(); setAvatarMenuOpen(false); }}
+                  className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors ${avatarPreview ? "border-t border-gray-100" : ""}`}>
+                  <Camera className="w-4 h-4 text-cyan-500 flex-shrink-0" />
+                  {avatarPreview ? "Заменить фото" : "Загрузить фото"}
+                </button>
+                {avatarPreview && (
+                  <button onClick={() => { handleDeleteAvatar(); setAvatarMenuOpen(false); }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors border-t border-gray-100">
+                    <Trash2 className="w-4 h-4 flex-shrink-0" /> Удалить фото
+                  </button>
+                )}
+              </div>
+            )}
+            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-400 rounded-full border-2 border-[#1a2a35] shadow-lg animate-pulse" />
+          </div>
+
+          {/* Info */}
+          <div className="flex-1 text-center sm:text-left">
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mb-1">
+              {form.first_name} {form.last_name}
+            </h1>
+            <p className="text-cyan-200/80 text-sm mb-3">{profile.email}</p>
+            <div className="flex flex-wrap justify-center sm:justify-start gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-white/90 border border-white/20"
+                    style={{ background: "rgba(6,182,212,0.3)" }}>
+                <FontAwesomeIcon icon={faUserNurse} className="text-xs" /> Медсестра
+              </span>
+              {form.specialization && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold text-teal-200 border border-teal-400/30"
+                      style={{ background: "rgba(14,107,107,0.3)" }}>
+                  <Heart className="w-3 h-3" /> {form.specialization}
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold text-emerald-300 border border-emerald-400/30"
+                    style={{ background: "rgba(16,185,129,0.15)" }}>
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Онлайн
+              </span>
+            </div>
+          </div>
+
+        </div>
+        <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+      </div>
+
+      {/* ── PERSONAL INFO ── */}
+      <Card accentColor="linear-gradient(to bottom, #06b6d4, #0891b2)" delay={0.05}>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #cffafe, #a5f3fc)" }}>
+              <User className="w-4 h-4 text-cyan-600" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-gray-800">Личные данные</h2>
+              <p className="text-xs text-gray-400">Основная информация профиля</p>
+            </div>
+          </div>
+          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold text-cyan-600 bg-cyan-50 border border-cyan-100">
+            <Lock className="w-3 h-3" /> Защищено
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <InputField label="Имя" value={form.first_name} onChange={(v) => setForm((p) => ({ ...p, first_name: v }))} icon={User} />
+          <InputField label="Фамилия" value={form.last_name} onChange={(v) => setForm((p) => ({ ...p, last_name: v }))} icon={User} />
+          <InputField label="Email" value={profile.email} icon={Mail} readOnly />
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Телефон</label>
+            <PhoneInput
+              value={form.phone}
+              onChange={(e164) => setForm((p) => ({ ...p, phone: e164 }))}
+              defaultCountry="KZ"
+            />
+          </div>
+        </div>
+        <div className="mt-6 flex justify-end">
+          <SaveButton saving={saving} saved={saved} onClick={handleSave} color="linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)" />
+        </div>
+      </Card>
+
+      {/* ── PROFESSIONAL INFO ── */}
+      <Card accentColor="linear-gradient(to bottom, #0e9b8a, #059669)" delay={0.1}>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #d1fae5, #a7f3d0)" }}>
+            <Heart className="w-4 h-4 text-emerald-600" />
+          </div>
+          <div>
+            <h2 className="text-sm font-bold text-gray-800">Профессиональная информация</h2>
+            <p className="text-xs text-gray-400">Отделение, опыт и квалификация</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <InputField
+            label="Отделение / специализация" value={form.specialization}
+            onChange={(v) => setForm((p) => ({ ...p, specialization: v }))}
+            icon={Heart} placeholder="Хирургия, терапия..."
+          />
+          <InputField
+            label="Опыт работы (лет)" value={form.experience}
+            onChange={(v) => setForm((p) => ({ ...p, experience: v }))}
+            icon={Award} placeholder="5" type="number"
+          />
+          <div className="sm:col-span-2">
+            <TextareaField
+              label="Образование / квалификация" value={form.education}
+              onChange={(v) => setForm((p) => ({ ...p, education: v }))}
+              icon={GraduationCap} placeholder="Укажите ваше образование и квалификацию..."
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <TextareaField
+              label="О себе" value={form.bio}
+              onChange={(v) => setForm((p) => ({ ...p, bio: v }))}
+              icon={AlignLeft} placeholder="Расскажите о себе..."
+            />
+          </div>
+        </div>
+        <div className="mt-6 flex justify-end">
+          <SaveButton saving={saving} saved={saved} onClick={handleSave} color="linear-gradient(135deg, #0e9b8a 0%, #059669 100%)" />
+        </div>
+      </Card>
+
+      {/* ── CLINIC INFO (read-only) ── */}
+      {profile.clinic && (
+        <Card accentColor="linear-gradient(to bottom, #0e9b8a, #0c7d70)" delay={0.15}>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #ccfbf1, #99f6e4)" }}>
+              <Building2 className="w-4 h-4 text-teal-600" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-gray-800">Место работы</h2>
+              <p className="text-xs text-gray-400">Информация о вашей клинике</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
+              <InputField label="Название клиники" value={profile.clinic.name} icon={Building2} readOnly />
+            </div>
+            {profile.clinic.city && <InputField label="Город" value={profile.clinic.city} icon={MapPin} readOnly />}
+            {profile.clinic.working_hours && <InputField label="Часы работы" value={profile.clinic.working_hours} icon={Clock} readOnly />}
+            {profile.clinic.address && (
+              <div className="sm:col-span-2">
+                <InputField label="Адрес" value={profile.clinic.address} icon={MapPin} readOnly />
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFileChange} />
+
+      {/* Photo viewer modal */}
+      {avatarViewOpen && avatarPreview && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}
+          onClick={() => setAvatarViewOpen(false)}>
+          <div className="relative max-w-sm w-full" onClick={e => e.stopPropagation()}>
+            <img src={avatarPreview} alt="avatar" className="w-full rounded-3xl shadow-2xl object-cover" />
+            <button onClick={() => setAvatarViewOpen(false)}
+              className="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-gray-100 transition-colors">
+              <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}

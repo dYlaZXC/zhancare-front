@@ -1,0 +1,1162 @@
+"use client";
+
+import React, { useState, useMemo, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
+import {
+  Calendar,
+  Clock,
+  Eye,
+  CheckCircle2,
+  XCircle,
+  MoreHorizontal,
+  Video,
+  MessageSquare,
+  Phone,
+  Search,
+  X,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  PhoneCall,
+  Stethoscope,
+  Activity,
+  MapPin,
+  Home,
+  Check,
+  Edit,
+  FileText,
+  FlaskConical,
+} from "lucide-react";
+import { useConsultationManager } from "./useConsultationManager";
+import ConsultationSheetModal from "./ConsultationSheetModal";
+import type { Consultation } from "@/types/consultation";
+import { formatClinicDate, formatClinicTime, formatDualTime, getViewerTimezone } from "@/utils/clinicTime";
+
+interface DoctorConsultationsTableProps {
+  consultations?: Consultation[];
+  showFilters?: boolean;
+  onAccept?: (meetingId: string) => void;
+  onReject?: (meetingId: string) => void;
+  onStatusChange?: (consultation: Consultation, newStatus: string) => void;
+}
+
+type FilterStatus = "all" | "pending" | "ongoing" | "completed" | "cancelled" | "missed" | "planned" | "scheduled";
+type FilterType = "all" | "video" | "chat" | "phone";
+
+interface SelectOption { value: string; label: string; icon?: React.ReactNode; color?: string; }
+
+function CustomSelect({ value, onChange, options, placeholder }: {
+  value: string;
+  onChange: (v: string) => void;
+  options: SelectOption[];
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+        setQuery("");
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  useEffect(() => {
+    if (open) setTimeout(() => searchRef.current?.focus(), 50);
+    else setQuery("");
+  }, [open]);
+
+  const filtered = options.filter(o =>
+    o.value === "all" || o.label.toLowerCase().includes(query.toLowerCase())
+  );
+  const selected = options.find(o => o.value === value);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 bg-white border rounded-xl text-sm font-medium transition-all ${
+          open ? "border-blue-400 ring-2 ring-blue-500/20 shadow-sm" : "border-gray-200 hover:border-gray-300"
+        }`}
+      >
+        <span className="flex items-center gap-2 min-w-0">
+          {selected?.icon && <span className={selected.color}>{selected.icon}</span>}
+          <span className={selected?.value === "all" ? "text-gray-400" : "text-gray-800"}>
+            {selected?.label || placeholder}
+          </span>
+        </span>
+        <ChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1.5 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden">
+          <div className="p-2 border-b border-gray-100">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+              <input
+                ref={searchRef}
+                type="text"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Поиск..."
+                className="w-full pl-8 pr-3 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+              />
+              {query && (
+                <button onClick={() => setQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="max-h-52 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <div className="px-4 py-3 text-sm text-gray-400 text-center">Ничего не найдено</div>
+            ) : filtered.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => { onChange(opt.value); setOpen(false); }}
+                className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm transition-colors text-left ${
+                  opt.value === value
+                    ? "bg-blue-50 text-blue-700 font-semibold"
+                    : "text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                {opt.icon && <span className={`flex-shrink-0 ${opt.value === value ? "text-blue-600" : opt.color || "text-gray-400"}`}>{opt.icon}</span>}
+                {opt.label}
+                {opt.value === value && <CheckCircle2 className="w-3.5 h-3.5 ml-auto text-blue-500" />}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// Status dropdown rendered via portal so it escapes grid overflow clipping
+function StatusDropdown({
+  consultation,
+  onStatusChange,
+}: {
+  consultation: Consultation;
+  onStatusChange?: (consultation: Consultation, newStatus: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  const handleOpen = () => {
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 6, left: r.left });
+    }
+    setOpen(true);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => {
+      if (btnRef.current && !btnRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+
+  const statuses = [
+    { value: "pending",   label: "Ожидание",      icon: <Clock className="w-3.5 h-3.5" />,       cls: "bg-blue-50 text-blue-600 border-blue-200" },
+    { value: "ongoing",   label: "В процессе",    icon: <Activity className="w-3.5 h-3.5" />,    cls: "bg-amber-50 text-amber-600 border-amber-200" },
+    { value: "completed", label: "Завершена",     icon: <CheckCircle2 className="w-3.5 h-3.5" />,cls: "bg-emerald-50 text-emerald-600 border-emerald-200" },
+    { value: "cancelled", label: "Отменена",      icon: <XCircle className="w-3.5 h-3.5" />,     cls: "bg-red-50 text-red-600 border-red-200" },
+    { value: "missed",    label: "Пропущена",     icon: <XCircle className="w-3.5 h-3.5" />,     cls: "bg-orange-50 text-orange-600 border-orange-200" },
+    { value: "planned",   label: "Запланирована", icon: <Calendar className="w-3.5 h-3.5" />,    cls: "bg-violet-50 text-violet-600 border-violet-200" },
+    { value: "scheduled", label: "Запланирована", icon: <Calendar className="w-3.5 h-3.5" />,    cls: "bg-violet-50 text-violet-600 border-violet-200" },
+  ];
+
+  const current = statuses.find(s => s.value === consultation.status) ?? {
+    label: "Неизвестно", icon: <Clock className="w-3.5 h-3.5" />, cls: "bg-gray-50 text-gray-500 border-gray-200"
+  };
+
+  const unique = statuses.filter(s => s.value !== "scheduled");
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        onClick={onStatusChange ? handleOpen : undefined}
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition-all ${current.cls} ${
+          onStatusChange ? "hover:opacity-80 cursor-pointer" : "cursor-default"
+        }`}
+      >
+        {current.icon}
+        {current.label}
+        {onStatusChange && <ChevronDown className="w-3 h-3 ml-0.5 opacity-60" />}
+      </button>
+
+      {open && typeof document !== "undefined" && createPortal(
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div
+            className="fixed z-50 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden min-w-[200px]"
+            style={{ top: pos.top, left: pos.left }}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className="px-3.5 py-2.5 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
+              <Edit className="w-3.5 h-3.5 text-gray-400" />
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Изменить статус</span>
+            </div>
+            <div className="py-1">
+              {unique.map((s) => (
+                <button
+                  key={s.value}
+                  onClick={() => {
+                    onStatusChange!(consultation, s.value);
+                    setOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm transition-colors text-left ${
+                    consultation.status === s.value
+                      ? "bg-blue-50 text-blue-700 font-semibold"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  <span className={s.cls.split(" ").find(c => c.startsWith("text-"))}>{s.icon}</span>
+                  {s.label}
+                  {consultation.status === s.value && <CheckCircle2 className="w-3.5 h-3.5 ml-auto text-blue-500" />}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
+    </>
+  );
+}
+
+const DoctorConsultationsTable: React.FC<DoctorConsultationsTableProps> = ({
+  consultations: propConsultations,
+  showFilters = true,
+  onAccept,
+  onReject,
+  onStatusChange,
+}) => {
+  const { consultations: hookConsultations, fetchConsultations } = useConsultationManager();
+  const consultations = useMemo(() =>
+    propConsultations || hookConsultations || [],
+    [propConsultations, hookConsultations]
+  );
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
+  const [typeFilter, setTypeFilter] = useState<FilterType>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [detailsConsultation, setDetailsConsultation] = useState<Consultation | null>(null);
+  const [sheetConsultation, setSheetConsultation] = useState<Consultation | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRefreshTrigger(prev => prev + 1);
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const canJoinConsultation = (consultation: Consultation): { canJoin: boolean; timeUntil: string; isReady: boolean } => {
+    refreshTrigger;
+    if (!consultation.scheduled_at) return { canJoin: false, timeUntil: "", isReady: false };
+    const now = new Date();
+    // consultation.scheduled_at always carries an explicit UTC offset
+    // (DRF's default DateTimeField rendering) — parsing it directly as an
+    // absolute instant is correct. Stripping a trailing "Z" before parsing
+    // would instead make `new Date()` read the remaining digits as the
+    // BROWSER's own local time, silently shifting this countdown by
+    // whatever the viewer's timezone happens to be.
+    const scheduledTime = new Date(consultation.scheduled_at);
+    const diffMin = Math.floor((scheduledTime.getTime() - now.getTime()) / 60000);
+    const canJoin = diffMin <= 10 && diffMin >= -30;
+    const isReady = diffMin <= 0;
+    let timeUntil = "";
+    if (diffMin > 0) {
+      const h = Math.floor(diffMin / 60), m = diffMin % 60;
+      timeUntil = h > 0 ? `${h}ч ${m}м` : `${m}м`;
+    } else if (diffMin < 0) {
+      timeUntil = Math.abs(diffMin) < 60 ? `опоздание ${Math.abs(diffMin)}м` : "просрочено";
+    } else {
+      timeUntil = "сейчас";
+    }
+    return { canJoin, timeUntil, isReady };
+  };
+
+  const filteredConsultations = useMemo(() => {
+    if (!Array.isArray(consultations)) return [];
+    let filtered = consultations;
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(c => {
+        const patientName = `${c.patient_first_name || ""} ${c.patient_last_name || ""}`.trim();
+        return (
+          patientName.toLowerCase().includes(term) ||
+          c.patient_name?.toLowerCase().includes(term) ||
+          c.patient_email?.toLowerCase().includes(term) ||
+          c.symptoms?.toLowerCase().includes(term) ||
+          c.meeting_id?.toLowerCase().includes(term)
+        );
+      });
+    }
+    if (statusFilter !== "all") filtered = filtered.filter(c => c.status === statusFilter);
+    if (typeFilter !== "all") filtered = filtered.filter(c => (c.type || "video") === typeFilter);
+    return filtered;
+  }, [consultations, searchTerm, statusFilter, typeFilter]);
+
+  const totalPages = Math.ceil(filteredConsultations.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const visibleConsultations = filteredConsultations.slice(startIndex, startIndex + itemsPerPage);
+
+  const goToPage = (page: number) => setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+
+  React.useEffect(() => { setCurrentPage(1); }, [searchTerm, statusFilter, typeFilter]);
+
+  const stats = useMemo(() => ({
+    total: consultations.length,
+    pending: consultations.filter(c => c.status === "pending").length,
+    upcoming: consultations.filter(c => c.status === "scheduled" || c.status === "planned").length,
+    ongoing: consultations.filter(c => c.status === "ongoing").length,
+  }), [consultations]);
+
+  const getStatusConfig = (status: string) => {
+    switch (status) {
+      case "completed":  return { label: "Завершена",     icon: <CheckCircle2 className="w-3.5 h-3.5" />, cls: "bg-emerald-50 text-emerald-600 border-emerald-200" };
+      case "pending":    return { label: "Ожидание",      icon: <Clock className="w-3.5 h-3.5" />,        cls: "bg-blue-50 text-blue-600 border-blue-200" };
+      case "ongoing":    return { label: "В процессе",    icon: <Activity className="w-3.5 h-3.5" />,     cls: "bg-amber-50 text-amber-600 border-amber-200" };
+      case "cancelled":  return { label: "Отменена",      icon: <XCircle className="w-3.5 h-3.5" />,      cls: "bg-red-50 text-red-600 border-red-200" };
+      case "missed":     return { label: "Пропущена",     icon: <XCircle className="w-3.5 h-3.5" />,      cls: "bg-orange-50 text-orange-600 border-orange-200" };
+      case "planned":
+      case "scheduled":  return { label: "Запланирована", icon: <Calendar className="w-3.5 h-3.5" />,     cls: "bg-violet-50 text-violet-600 border-violet-200" };
+      case "confirmed":  return { label: "Подтверждена",  icon: <CheckCircle2 className="w-3.5 h-3.5" />, cls: "bg-blue-50 text-blue-600 border-blue-200" };
+      case "in_progress": return { label: "В процессе",   icon: <Activity className="w-3.5 h-3.5" />,     cls: "bg-amber-50 text-amber-600 border-amber-200" };
+      default:           return { label: "Неизвестно",    icon: <Clock className="w-3.5 h-3.5" />,        cls: "bg-gray-50 text-gray-500 border-gray-200" };
+    }
+  };
+
+  const getTypeConfig = (type: string) => {
+    switch (type) {
+      case "video":   return { label: "Видео",    icon: <Video className="w-3.5 h-3.5" />,         cls: "bg-cyan-50 text-cyan-600 border-cyan-200" };
+      case "chat":    return { label: "Чат",      icon: <MessageSquare className="w-3.5 h-3.5" />, cls: "bg-indigo-50 text-indigo-600 border-indigo-200" };
+      case "phone":   return { label: "Телефон",  icon: <Phone className="w-3.5 h-3.5" />,         cls: "bg-teal-50 text-teal-600 border-teal-200" };
+      case "offline": return { label: "Приём в клинике",  icon: <MapPin className="w-3.5 h-3.5" />,        cls: "bg-emerald-50 text-emerald-600 border-emerald-200" };
+      case "home":    return { label: "На дому",  icon: <Home className="w-3.5 h-3.5" />,          cls: "bg-orange-50 text-orange-600 border-orange-200" };
+      case "diagnostics": return { label: "Диагностика", icon: <FlaskConical className="w-3.5 h-3.5" />, cls: "bg-purple-50 text-purple-600 border-purple-200" };
+      default:        return { label: "Видео",    icon: <Video className="w-3.5 h-3.5" />,         cls: "bg-cyan-50 text-cyan-600 border-cyan-200" };
+    }
+  };
+
+  // Pins this to the BOOKING's OWN clinic time regardless of the viewing
+  // device's own clock — the backend (admin's schedule drawer included)
+  // always renders a given booking's time in its own clinic's timezone, so
+  // a doctor on a device set to a different timezone would otherwise see a
+  // shifted time for the exact same booking. See src/utils/clinicTime.ts.
+  const formatDate = (s: string, clinicTz?: string | null) => {
+    try { return formatClinicDate(s, clinicTz); }
+    catch { return s; }
+  };
+
+  const formatTime = (s: string, clinicTz?: string | null) => {
+    try { return formatClinicTime(s, clinicTz); }
+    catch { return s; }
+  };
+
+  const getPatientName = (c: Consultation) =>
+    c.patient_name ||
+    `${c.patient_first_name || ""} ${c.patient_last_name || ""}`.trim() ||
+    "Пациент не указан";
+
+  const getPatientInitial = (c: Consultation) =>
+    (c.patient_name || c.patient_first_name || "П").charAt(0).toUpperCase();
+
+  const avatarGradients = [
+    "from-emerald-400 to-teal-500",
+    "from-blue-400 to-cyan-500",
+    "from-violet-400 to-purple-500",
+    "from-rose-400 to-pink-500",
+    "from-amber-400 to-orange-500",
+    "from-cyan-400 to-blue-500",
+  ];
+
+  const handleMenuOpen = (e: React.MouseEvent<HTMLButtonElement>, id: number) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    setMenuPos({
+      top: r.bottom + 6,
+      left: Math.max(8, r.right - 200),
+    });
+    setOpenMenuId(prev => (prev === id ? null : id));
+  };
+
+  const renderActions = (consultation: Consultation) => {
+    const joinInfo = canJoinConsultation(consultation);
+    const isPending = consultation.status === "pending";
+    const isOngoing = consultation.status === "ongoing";
+    const isScheduled = consultation.status === "scheduled" || consultation.status === "planned";
+
+    return (
+      <div className="flex items-center gap-2 flex-wrap">
+        {isPending && onAccept && (
+          <button
+            onClick={() => onAccept(consultation.meeting_id ?? "")}
+            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-emerald-500/20 transition-all duration-200"
+          >
+            <Check className="w-3.5 h-3.5" />
+            <span>Принять</span>
+          </button>
+        )}
+        {isPending && onReject && (
+          <button
+            onClick={() => onReject(consultation.meeting_id ?? "")}
+            className="flex items-center gap-1.5 px-3 py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 text-xs font-semibold rounded-xl transition-all duration-200"
+          >
+            <XCircle className="w-3.5 h-3.5" />
+            <span>Отклонить</span>
+          </button>
+        )}
+        {/* Offline WITH ClinicAppointment — navigate to dedicated offline page */}
+        {consultation.type === "offline" && consultation.clinic_appointment_id &&
+          (isScheduled || isOngoing || consultation.status === "confirmed") && (
+          <button
+            onClick={() => window.location.href = `/doctor/appointments/${consultation.clinic_appointment_id}/offline/`}
+            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-emerald-500/20 transition-all duration-200"
+          >
+            <MapPin className="w-3.5 h-3.5" />
+            <span>{isOngoing ? "Войти в приём" : "Начать приём"}</span>
+          </button>
+        )}
+        {/* Offline WITHOUT ClinicAppointment (Consultation record created from admin panel) */}
+        {consultation.type === "offline" && !consultation.clinic_appointment_id && (
+          <>
+            {isScheduled && joinInfo.canJoin && onStatusChange && (
+              <button
+                onClick={() => onStatusChange(consultation, 'ongoing')}
+                className={`flex items-center gap-1.5 px-3 py-2 text-white text-xs font-semibold rounded-xl shadow-lg transition-all duration-200 ${
+                  joinInfo.isReady
+                    ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-500/20"
+                    : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-blue-500/20"
+                }`}
+              >
+                <MapPin className="w-3.5 h-3.5" />
+                <span>{joinInfo.isReady ? "Начать приём" : `Через ${joinInfo.timeUntil}`}</span>
+              </button>
+            )}
+            {isScheduled && !joinInfo.canJoin && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-100 border border-gray-200 rounded-xl">
+                <Clock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                <span className="text-[11px] text-gray-500 font-medium whitespace-nowrap">{joinInfo.timeUntil || "просрочено"}</span>
+              </div>
+            )}
+            {isOngoing && (
+              <button
+                onClick={() => window.location.href = `/doctor/consultations/${consultation.meeting_id}/offline/`}
+                className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-emerald-500/20 transition-all duration-200"
+              >
+                <MapPin className="w-3.5 h-3.5" />
+                <span>Перейти к приёму</span>
+              </button>
+            )}
+          </>
+        )}
+        {/* Diagnostics — dedicated documentation page, not the video-call route.
+            Only surfaced once the doctor has actually started it (in_progress);
+            before that there's nothing to document yet. */}
+        {consultation.type === "diagnostics" && consultation.diagnostics_appointment_id && isOngoing && (
+          <button
+            onClick={() => window.location.href = `/doctor/appointments/${consultation.diagnostics_appointment_id}/diagnostics/`}
+            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-cyan-500/20 transition-all duration-200"
+          >
+            <FlaskConical className="w-3.5 h-3.5" />
+            <span>Открыть</span>
+          </button>
+        )}
+        {consultation.type !== "offline" && consultation.type !== "diagnostics" && isOngoing && (
+          <button
+            onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id ?? ""}`}
+            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-blue-500/20 transition-all duration-200"
+          >
+            <PhoneCall className="w-3.5 h-3.5" />
+            <span>Войти</span>
+          </button>
+        )}
+        {consultation.type !== "offline" && consultation.type !== "diagnostics" && isScheduled && consultation.scheduled_at && (
+          joinInfo.canJoin ? (
+            <button
+              onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id ?? ""}`}
+              className={`flex items-center gap-1.5 px-3 py-2 text-white text-xs font-semibold rounded-xl shadow-lg transition-all duration-200 ${
+                joinInfo.isReady
+                  ? "bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 shadow-emerald-500/20"
+                  : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-blue-500/20"
+              }`}
+            >
+              <Video className="w-3.5 h-3.5" />
+              <span>{joinInfo.isReady ? "Войти" : joinInfo.timeUntil}</span>
+            </button>
+          ) : (
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-100 border border-gray-200 rounded-xl">
+              <Clock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+              <span className="text-[11px] text-gray-500 font-medium whitespace-nowrap">{joinInfo.timeUntil || "просрочено"}</span>
+            </div>
+          )
+        )}
+        <button
+          onClick={() => setSheetConsultation(consultation)}
+          title="Консультационный лист"
+          className="p-2 text-gray-400 hover:text-indigo-600 bg-gray-50 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 rounded-xl transition-all duration-200"
+        >
+          <FileText className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => setDetailsConsultation(consultation)}
+          title="Детали приёма"
+          className="p-2 text-gray-400 hover:text-blue-600 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-200 rounded-xl transition-all duration-200"
+        >
+          <Eye className="w-4 h-4" />
+        </button>
+        <button
+          onClick={e => handleMenuOpen(e, consultation.id)}
+          className="p-2 text-gray-400 hover:text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition-all duration-200"
+        >
+          <MoreHorizontal className="w-4 h-4" />
+        </button>
+      </div>
+    );
+  };
+
+  return (
+    <div className="relative">
+      {/* ── Single unified card ── */}
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-visible">
+
+        {/* Toolbar */}
+        <div className="flex flex-col md:flex-row md:items-center gap-3 px-5 py-4 border-b border-gray-100">
+          {/* Left: icon + title + count */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="relative">
+              <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md shadow-blue-500/20">
+                <Stethoscope className="w-4 h-4 text-white" />
+              </div>
+              <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-white" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900 leading-tight">Мои приёмы</h3>
+              <p className="text-xs text-gray-400">{filteredConsultations.length} из {consultations.length}</p>
+            </div>
+          </div>
+
+          {/* Stat chips */}
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              { label: "Всего",      value: stats.total,    bg: "bg-blue-50",    border: "border-blue-100",    text: "text-blue-600" },
+              { label: "Ожидают",    value: stats.pending,  bg: "bg-amber-50",   border: "border-amber-100",   text: "text-amber-600" },
+              { label: "Предстоит",  value: stats.upcoming, bg: "bg-violet-50",  border: "border-violet-100",  text: "text-violet-600" },
+              { label: "В процессе", value: stats.ongoing,  bg: "bg-emerald-50", border: "border-emerald-100", text: "text-emerald-600" },
+            ].map((s, i) => (
+              <span key={i} className={`inline-flex items-center gap-1 ${s.bg} border ${s.border} rounded-lg px-2 py-0.5 text-xs font-semibold ${s.text}`}>
+                {s.value} <span className="font-normal text-gray-400">{s.label}</span>
+              </span>
+            ))}
+          </div>
+
+          <div className="flex-1" />
+
+          {/* Search */}
+          {showFilters && (
+            <div className="relative flex-shrink-0 w-full md:w-52">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Пациент, симптомы..."
+                className="w-full pl-8 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+              />
+              {searchTerm && (
+                <button onClick={() => setSearchTerm("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Status select */}
+          {showFilters && (
+            <div className="flex-shrink-0 w-full md:w-40">
+              <CustomSelect
+                value={statusFilter}
+                onChange={(v) => setStatusFilter(v as FilterStatus)}
+                options={[
+                  { value: "all",       label: "Все статусы" },
+                  { value: "pending",   label: "Ожидание",      icon: <Clock className="w-3.5 h-3.5" />,        color: "text-blue-500" },
+                  { value: "ongoing",   label: "В процессе",    icon: <Activity className="w-3.5 h-3.5" />,     color: "text-amber-500" },
+                  { value: "completed", label: "Завершена",     icon: <CheckCircle2 className="w-3.5 h-3.5" />, color: "text-emerald-500" },
+                  { value: "cancelled", label: "Отменена",      icon: <XCircle className="w-3.5 h-3.5" />,      color: "text-red-500" },
+                  { value: "missed",    label: "Пропущена",     icon: <XCircle className="w-3.5 h-3.5" />,      color: "text-orange-500" },
+                  { value: "planned",   label: "Запланирована", icon: <Calendar className="w-3.5 h-3.5" />,     color: "text-violet-500" },
+                ]}
+              />
+            </div>
+          )}
+
+          {/* Type select */}
+          {showFilters && (
+            <div className="flex-shrink-0 w-full md:w-36">
+              <CustomSelect
+                value={typeFilter}
+                onChange={(v) => setTypeFilter(v as FilterType)}
+                options={[
+                  { value: "all",   label: "Все типы" },
+                  { value: "video", label: "Видео",   icon: <Video className="w-3.5 h-3.5" />,         color: "text-cyan-500" },
+                  { value: "chat",  label: "Чат",     icon: <MessageSquare className="w-3.5 h-3.5" />, color: "text-indigo-500" },
+                  { value: "phone", label: "Телефон", icon: <Phone className="w-3.5 h-3.5" />,         color: "text-teal-500" },
+                ]}
+              />
+            </div>
+          )}
+
+          {/* Reset + Refresh */}
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {(searchTerm || statusFilter !== "all" || typeFilter !== "all") && (
+              <button
+                onClick={() => { setSearchTerm(""); setStatusFilter("all"); setTypeFilter("all"); }}
+                className="px-2.5 py-2 rounded-xl text-xs font-medium text-blue-600 hover:bg-blue-50 border border-blue-100 transition-all"
+              >
+                Сбросить
+              </button>
+            )}
+            <button
+              onClick={() => fetchConsultations()}
+              className="p-2 rounded-xl text-gray-400 hover:text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* ── Empty State ── */}
+        {filteredConsultations.length === 0 && (
+          <div className="relative bg-gray-50 p-16 text-center overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-violet-50/50" />
+            <div className="relative">
+              <div className="inline-flex items-center justify-center w-16 h-16 mb-5 bg-blue-100 border border-blue-200 rounded-2xl">
+                <Stethoscope className="w-8 h-8 text-blue-500" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
+                {consultations.length === 0 ? "Нет приёмов" : "Нет результатов"}
+              </h3>
+              <p className="text-sm text-gray-500 max-w-xs mx-auto">
+                {consultations.length === 0
+                  ? "Записи пациентов будут отображаться здесь"
+                  : "Попробуйте изменить критерии фильтрации"}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ── Desktop Table — single grid ── */}
+        {filteredConsultations.length > 0 && (
+          <div className="hidden xl:grid grid-cols-[1.4fr_1.8fr_1fr_1.2fr_1.6fr] overflow-visible">
+            {["ДАТА / ВРЕМЯ", "ПАЦИЕНТ", "ТИП", "СТАТУС", "ДЕЙСТВИЯ"].map((h, i) => (
+              <div
+                key={h}
+                className={`py-3.5 px-5 text-[10px] font-semibold text-gray-400 tracking-widest uppercase bg-gray-50 border-b border-gray-200 ${i > 0 ? "border-l border-gray-200" : ""}`}
+              >
+                {h}
+              </div>
+            ))}
+
+            {visibleConsultations.map((consultation, idx) => {
+              const type = getTypeConfig(consultation.type || "video");
+              const grad = avatarGradients[idx % avatarGradients.length];
+              const dateStr = consultation.scheduled_at || consultation.created_at;
+              const timeStr = consultation.scheduled_at || consultation.started_at;
+              const rowBorder = idx > 0 ? "border-t border-gray-100" : "";
+              // Online: the viewer's OWN local time is the natural primary
+              // reading (both sides are remote anyway), with the clinic's
+              // time as a secondary line when it differs. Offline/home/
+              // diagnostics: only the clinic's time is ever shown — showing
+              // up physically doesn't depend on where the viewer is.
+              const isOnline = (consultation.type || "video") === "video";
+              const primaryTz = isOnline ? getViewerTimezone() : consultation.clinic_timezone;
+              const dual = isOnline && timeStr ? formatDualTime(timeStr, consultation.clinic_timezone) : null;
+
+              return (
+                <React.Fragment key={consultation.id}>
+                  {/* Date/Time */}
+                  <div className={`flex items-center gap-3 px-5 py-4 hover:bg-gray-50/70 transition-colors ${rowBorder}`}>
+                    <div className="w-9 h-9 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <Calendar className="w-4 h-4 text-blue-500" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">{dateStr ? formatDate(dateStr, primaryTz) : "—"}</div>
+                      <div className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                        <Clock className="w-3 h-3" />
+                        {timeStr ? formatTime(timeStr, primaryTz) : "—"}
+                      </div>
+                      {dual && !dual.sameTimezone && (
+                        <div className="text-[11px] text-amber-600 mt-0.5">
+                          Время клиники: {dual.datesDiffer ? `${dual.clinicDate}, ` : ""}{dual.clinicTime} ({dual.clinicLabel})
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Patient */}
+                  <div className={`flex items-center gap-3 px-5 py-4 border-l border-gray-100 hover:bg-gray-50/70 transition-colors ${rowBorder}`}>
+                    <div className={`w-10 h-10 bg-gradient-to-br ${grad} rounded-full flex items-center justify-center flex-shrink-0 shadow-md`}>
+                      <span className="text-white font-bold text-sm">{getPatientInitial(consultation)}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-gray-900 leading-tight truncate">{getPatientName(consultation)}</div>
+                    </div>
+                  </div>
+
+                  {/* Type */}
+                  <div className={`px-5 py-4 border-l border-gray-100 hover:bg-gray-50/70 transition-colors ${rowBorder} flex items-center`}>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border ${type.cls}`}>
+                      {type.icon}{type.label}
+                    </span>
+                  </div>
+
+                  {/* Status — clickable dropdown if onStatusChange provided */}
+                  <div className={`px-5 py-4 border-l border-gray-100 hover:bg-gray-50/70 transition-colors ${rowBorder} flex items-center`}>
+                    <StatusDropdown consultation={consultation} onStatusChange={onStatusChange} />
+                  </div>
+
+                  {/* Actions */}
+                  <div className={`px-5 py-4 border-l border-gray-100 hover:bg-gray-50/70 transition-colors ${rowBorder} flex items-center`}>
+                    {renderActions(consultation)}
+                  </div>
+                </React.Fragment>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ── Tablet View — single grid ── */}
+        {filteredConsultations.length > 0 && (
+          <div className="hidden md:grid xl:hidden grid-cols-[1.8fr_1.2fr_1.1fr_1.4fr] overflow-visible border-t border-gray-100">
+            {["ПАЦИЕНТ", "ДАТА", "СТАТУС", "ДЕЙСТВИЯ"].map((h, i) => (
+              <div key={h} className={`py-3.5 px-5 text-[10px] font-semibold text-gray-400 tracking-widest uppercase bg-gray-50 border-b border-gray-200 ${i > 0 ? "border-l border-gray-200" : ""}`}>{h}</div>
+            ))}
+            {visibleConsultations.map((consultation, idx) => {
+              const grad = avatarGradients[idx % avatarGradients.length];
+              const dateStr = consultation.scheduled_at || consultation.created_at;
+              const timeStr = consultation.scheduled_at || consultation.started_at;
+              const rowBorder = idx > 0 ? "border-t border-gray-100" : "";
+              const isOnline = (consultation.type || "video") === "video";
+              const primaryTz = isOnline ? getViewerTimezone() : consultation.clinic_timezone;
+              const dual = isOnline && timeStr ? formatDualTime(timeStr, consultation.clinic_timezone) : null;
+              return (
+                <React.Fragment key={`tab-${consultation.id}`}>
+                  <div className={`flex items-center gap-3 px-5 py-4 hover:bg-gray-50/70 transition-colors ${rowBorder}`}>
+                    <div className={`w-9 h-9 bg-gradient-to-br ${grad} rounded-full flex items-center justify-center flex-shrink-0`}>
+                      <span className="text-white font-bold text-xs">{getPatientInitial(consultation)}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-gray-900 truncate">{getPatientName(consultation)}</div>
+                    </div>
+                  </div>
+                  <div className={`px-5 py-4 border-l border-gray-100 hover:bg-gray-50/70 transition-colors ${rowBorder}`}>
+                    <div className="text-sm font-semibold text-gray-900">{dateStr ? formatDate(dateStr, primaryTz) : "—"}</div>
+                    <div className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><Clock className="w-3 h-3" />{timeStr ? formatTime(timeStr, primaryTz) : "—"}</div>
+                    {dual && !dual.sameTimezone && (
+                      <div className="text-[10px] text-amber-600 mt-0.5">
+                        Клиника: {dual.datesDiffer ? `${dual.clinicDate}, ` : ""}{dual.clinicTime} ({dual.clinicLabel})
+                      </div>
+                    )}
+                  </div>
+                  <div className={`px-5 py-4 border-l border-gray-100 hover:bg-gray-50/70 transition-colors ${rowBorder} flex items-center`}>
+                    <StatusDropdown consultation={consultation} onStatusChange={onStatusChange} />
+                  </div>
+                  <div className={`px-5 py-4 border-l border-gray-100 hover:bg-gray-50/70 transition-colors ${rowBorder} flex items-center`}>
+                    {renderActions(consultation)}
+                  </div>
+                </React.Fragment>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ── Mobile Cards ── */}
+        {filteredConsultations.length > 0 && (
+          <div className="md:hidden space-y-3 p-4">
+            {visibleConsultations.map((consultation, idx) => {
+              const type = getTypeConfig(consultation.type || "video");
+              const grad = avatarGradients[idx % avatarGradients.length];
+              const joinInfo = canJoinConsultation(consultation);
+              const isPending = consultation.status === "pending";
+              const isOngoing = consultation.status === "ongoing";
+              const isScheduled = consultation.status === "scheduled" || consultation.status === "planned";
+              const dateStr = consultation.scheduled_at || consultation.created_at;
+              const timeStr = consultation.scheduled_at || consultation.started_at;
+              const isOnline = (consultation.type || "video") === "video";
+              const primaryTz = isOnline ? getViewerTimezone() : consultation.clinic_timezone;
+              const dual = isOnline && timeStr ? formatDualTime(timeStr, consultation.clinic_timezone) : null;
+
+              return (
+                <div key={`mob-${consultation.id}`} className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-11 h-11 bg-gradient-to-br ${grad} rounded-full flex items-center justify-center flex-shrink-0 shadow-md`}>
+                        <span className="text-white font-bold text-sm">{getPatientInitial(consultation)}</span>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-bold text-gray-900 truncate">{getPatientName(consultation)}</div>
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <StatusDropdown consultation={consultation} onStatusChange={onStatusChange} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div className="bg-gray-50 border border-gray-100 rounded-xl p-3">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Calendar className="w-3 h-3 text-gray-400" />
+                        <span className="text-[10px] text-gray-400 uppercase tracking-wider">Дата</span>
+                      </div>
+                      <div className="text-sm font-semibold text-gray-900">{dateStr ? formatDate(dateStr, primaryTz) : "—"}</div>
+                      <div className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                        <Clock className="w-2.5 h-2.5" />
+                        {timeStr ? formatTime(timeStr, primaryTz) : "—"}
+                      </div>
+                      {dual && !dual.sameTimezone && (
+                        <div className="text-[10px] text-amber-600 mt-0.5">
+                          Клиника: {dual.datesDiffer ? `${dual.clinicDate}, ` : ""}{dual.clinicTime} ({dual.clinicLabel})
+                        </div>
+                      )}
+                    </div>
+                    <div className="bg-gray-50 border border-gray-100 rounded-xl p-3">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Video className="w-3 h-3 text-gray-400" />
+                        <span className="text-[10px] text-gray-400 uppercase tracking-wider">Тип</span>
+                      </div>
+                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold border ${type.cls}`}>
+                        {type.icon}{type.label}
+                      </span>
+                    </div>
+                  </div>
+
+                  {consultation.symptoms && (
+                    <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-xl">
+                      <p className="text-[10px] text-blue-400 uppercase tracking-wider mb-1">Симптомы</p>
+                      <p className="text-xs text-gray-700 leading-relaxed line-clamp-2">{consultation.symptoms}</p>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {isPending && onAccept && (
+                      <button
+                        onClick={() => onAccept(consultation.meeting_id ?? "")}
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-emerald-500 to-green-500 text-white text-sm font-semibold rounded-xl shadow-md shadow-emerald-500/20 transition-all"
+                      >
+                        <Check className="w-4 h-4" />
+                        Принять
+                      </button>
+                    )}
+                    {isPending && onReject && (
+                      <button
+                        onClick={() => onReject(consultation.meeting_id ?? "")}
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-red-50 border border-red-200 text-red-600 text-sm font-semibold rounded-xl transition-all"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Отклонить
+                      </button>
+                    )}
+                    {/* Diagnostics — dedicated documentation page, only once started */}
+                    {consultation.type === "diagnostics" && consultation.diagnostics_appointment_id && isOngoing && (
+                      <button
+                        onClick={() => window.location.href = `/doctor/appointments/${consultation.diagnostics_appointment_id}/diagnostics/`}
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-sm font-semibold rounded-xl shadow-md shadow-cyan-500/20 transition-all"
+                      >
+                        <FlaskConical className="w-4 h-4" />
+                        Открыть
+                      </button>
+                    )}
+                    {/* Online video call button */}
+                    {consultation.type !== "offline" && consultation.type !== "diagnostics" && (isOngoing || (isScheduled && joinInfo.canJoin)) && (
+                      <button
+                        onClick={() => window.location.href = `/video-call/doctor?meetingId=${consultation.meeting_id}`}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-white text-sm font-semibold rounded-xl shadow-md transition-all ${
+                          joinInfo.isReady || isOngoing
+                            ? "bg-gradient-to-r from-emerald-500 to-green-500 shadow-emerald-500/20"
+                            : "bg-gradient-to-r from-blue-600 to-indigo-600 shadow-blue-500/20"
+                        }`}
+                      >
+                        <Video className="w-4 h-4" />
+                        {joinInfo.isReady || isOngoing ? "Подключиться" : `Через ${joinInfo.timeUntil}`}
+                      </button>
+                    )}
+                    {/* Offline WITH ClinicAppointment — navigate to dedicated page */}
+                    {consultation.type === "offline" && consultation.clinic_appointment_id && (isScheduled || isOngoing) && (
+                      <button
+                        onClick={() => window.location.href = `/doctor/appointments/${consultation.clinic_appointment_id}/offline/`}
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-emerald-500 to-green-500 text-white text-sm font-semibold rounded-xl shadow-md shadow-emerald-500/20 transition-all"
+                      >
+                        <MapPin className="w-4 h-4" />
+                        {isOngoing ? "Войти в приём" : "Начать приём"}
+                      </button>
+                    )}
+                    {/* Offline WITHOUT ClinicAppointment — change status inline */}
+                    {consultation.type === "offline" && !consultation.clinic_appointment_id && isScheduled && joinInfo.canJoin && onStatusChange && (
+                      <button
+                        onClick={() => onStatusChange(consultation, 'ongoing')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-white text-sm font-semibold rounded-xl shadow-md transition-all ${
+                          joinInfo.isReady
+                            ? "bg-gradient-to-r from-emerald-500 to-green-500 shadow-emerald-500/20"
+                            : "bg-gradient-to-r from-blue-600 to-indigo-600 shadow-blue-500/20"
+                        }`}
+                      >
+                        <MapPin className="w-4 h-4" />
+                        {joinInfo.isReady ? "Начать приём" : `Через ${joinInfo.timeUntil}`}
+                      </button>
+                    )}
+                    {consultation.type === "offline" && !consultation.clinic_appointment_id && isOngoing && (
+                      <button
+                        onClick={() => window.location.href = `/doctor/consultations/${consultation.meeting_id}/offline/`}
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-emerald-500 to-green-500 text-white text-sm font-semibold rounded-xl shadow-md shadow-emerald-500/20 transition-all"
+                      >
+                        <MapPin className="w-4 h-4" />
+                        Перейти к приёму
+                      </button>
+                    )}
+                    {!isPending && !isOngoing && (!isScheduled || !joinInfo.canJoin) && (
+                      <button
+                        onClick={() =>
+                          consultation.type === "offline" && consultation.clinic_appointment_id
+                            ? (window.location.href = `/doctor/appointments/${consultation.clinic_appointment_id}/offline/`)
+                            : setDetailsConsultation(consultation)
+                        }
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-600 text-sm font-medium rounded-xl transition-colors"
+                      >
+                        <Eye className="w-4 h-4" />
+                        {consultation.type === "offline" ? "Открыть приём" : "Детали"}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setSheetConsultation(consultation)}
+                      title="Консультационный лист"
+                      className="p-2.5 bg-gray-50 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 text-gray-400 hover:text-indigo-600 rounded-xl transition-colors"
+                    >
+                      <FileText className="w-4 h-4" />
+                    </button>
+                    <button className="p-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-400 rounded-xl transition-colors">
+                      <MoreHorizontal className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ── Pagination ── */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3.5">
+            <span className="text-xs text-gray-400">
+              {startIndex + 1}–{Math.min(startIndex + itemsPerPage, filteredConsultations.length)} из {filteredConsultations.length}
+            </span>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="p-2 rounded-xl border border-gray-200 text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                if (totalPages <= 5 || page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1) {
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => goToPage(page)}
+                      className={`w-8 h-8 rounded-xl text-xs font-semibold transition-all border ${
+                        page === currentPage
+                          ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20"
+                          : "border-gray-200 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                } else if (page === 2 && currentPage > 3) {
+                  return <span key={page} className="text-gray-300 text-xs px-1">···</span>;
+                } else if (page === totalPages - 1 && currentPage < totalPages - 2) {
+                  return <span key={page} className="text-gray-300 text-xs px-1">···</span>;
+                }
+                return null;
+              })}
+              <button
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="p-2 rounded-xl border border-gray-200 text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+      </div>{/* end unified card */}
+
+      {/* ── Actions dropdown portal ── */}
+      {openMenuId !== null && typeof document !== "undefined" && createPortal(
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpenMenuId(null)} />
+          <div
+            className="fixed z-50 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden min-w-[200px]"
+            style={{ top: menuPos.top, left: menuPos.left }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="py-1">
+              {(() => {
+                const c = visibleConsultations.find(c => c.id === openMenuId);
+                if (!c) return null;
+                const clinicId = c.clinic_appointment_id ?? (c.id > 100000 ? c.id - 100000 : null);
+                return (
+                  <>
+                    <button
+                      onClick={() => { setDetailsConsultation(c); setOpenMenuId(null); }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 text-left transition-colors"
+                    >
+                      <Eye className="w-4 h-4 text-gray-400" />
+                      Детали приёма
+                    </button>
+                    <button
+                      onClick={() => { setSheetConsultation(c); setOpenMenuId(null); }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-indigo-600 hover:bg-indigo-50 text-left transition-colors"
+                    >
+                      <FileText className="w-4 h-4 text-indigo-400" />
+                      Консультационный лист
+                    </button>
+                    {c.type === "offline" && clinicId && (
+                      <button
+                        onClick={() => { window.location.href = `/doctor/appointments/${clinicId}/offline/`; }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-blue-600 hover:bg-blue-50 text-left transition-colors"
+                      >
+                        <Edit className="w-4 h-4 text-blue-400" />
+                        Редактировать приём
+                      </button>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
+
+      {/* ── Details Modal ── */}
+      {detailsConsultation && typeof document !== "undefined" && createPortal((() => {
+        const c = detailsConsultation;
+        const status = getStatusConfig(c.status);
+        const type = getTypeConfig(c.type || "video");
+        const dateStr = c.scheduled_at || c.created_at;
+        const isOnlineDetail = (c.type || "video") === "video";
+        const primaryTzDetail = isOnlineDetail ? getViewerTimezone() : c.clinic_timezone;
+        const dualDetail = isOnlineDetail && dateStr ? formatDualTime(dateStr, c.clinic_timezone) : null;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setDetailsConsultation(null)}>
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <div
+              className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Детали приёма</h3>
+                  <p className="text-xs text-gray-400 mt-0.5">#{c.id}</p>
+                </div>
+                <button onClick={() => setDetailsConsultation(null)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Patient */}
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                  {getPatientInitial(c)}
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900 text-sm">{getPatientName(c)}</p>
+                  <p className="text-xs text-gray-400">{c.patient_email || "Email не указан"}</p>
+                </div>
+              </div>
+
+              {/* Info grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-gray-50 rounded-xl">
+                  <p className="text-xs text-gray-400 mb-1 flex items-center gap-1"><Calendar className="w-3 h-3" /> Дата</p>
+                  <p className="text-sm font-semibold text-gray-900">{dateStr ? formatDate(dateStr, primaryTzDetail) : "—"}</p>
+                  <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><Clock className="w-3 h-3" />{dateStr ? formatTime(dateStr, primaryTzDetail) : "—"}</p>
+                  {dualDetail && !dualDetail.sameTimezone && (
+                    <p className="text-[11px] text-amber-600 mt-0.5">
+                      Клиника: {dualDetail.datesDiffer ? `${dualDetail.clinicDate}, ` : ""}{dualDetail.clinicTime} ({dualDetail.clinicLabel})
+                    </p>
+                  )}
+                </div>
+                <div className="p-3 bg-gray-50 rounded-xl">
+                  <p className="text-xs text-gray-400 mb-1">Тип</p>
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold border ${type.cls}`}>
+                    {type.icon}{type.label}
+                  </span>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-xl">
+                  <p className="text-xs text-gray-400 mb-1">Статус</p>
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold border ${status.cls}`}>
+                    {status.icon}{status.label}
+                  </span>
+                </div>
+                {c.meeting_id && (
+                  <div className="p-3 bg-gray-50 rounded-xl">
+                    <p className="text-xs text-gray-400 mb-1">ID встречи</p>
+                    <p className="text-xs font-mono text-gray-700 truncate">{c.meeting_id}</p>
+                  </div>
+                )}
+              </div>
+
+              {c.symptoms && (
+                <div className="p-3 bg-gray-50 rounded-xl">
+                  <p className="text-xs text-gray-400 mb-1">Жалобы / симптомы</p>
+                  <p className="text-sm text-gray-700 leading-relaxed">{c.symptoms}</p>
+                </div>
+              )}
+
+              <button
+                onClick={() => setDetailsConsultation(null)}
+                className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-xl transition-colors"
+              >
+                Закрыть
+              </button>
+            </div>
+          </div>
+        );
+      })(), document.body)}
+
+      {sheetConsultation && (
+        <ConsultationSheetModal
+          consultation={sheetConsultation}
+          onClose={() => setSheetConsultation(null)}
+        />
+      )}
+    </div>
+  );
+};
+
+export default DoctorConsultationsTable;

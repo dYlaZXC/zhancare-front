@@ -9,11 +9,15 @@ import { DoctorSidebar } from "@/components/layout/DoctorSidebar";
 import { DoctorHeader } from "@/components/layout/DoctorHeader";
 import { DoctorBreadcrumb } from "@/components/layout/DoctorBreadcrumb";
 import { DoctorMainContent } from "@/components/layout/DoctorMainContent";
+import { PremiumLoadingScreen } from "@/components/layout/PremiumLoadingScreen";
 
-import DoctorConsultations from "@/components/services/DoctorConsultations";
+// import DoctorConsultations from "@/components/services/DoctorConsultations";
+import DoctorConsultationsNew from "@/components/services/DoctorConsultationsNew";
+import DoctorProfileInfo from "@/components/doctor/DoctorProfileInfo";
+import DoctorAnalytics from "@/components/doctor/DoctorAnalytics";
 
 export default function DoctorProfile() {
-  const { user, logoutUser, loading } = useAuth();
+  const { user, logoutUser, loading, isDoctor, isAdmin, isNurse, isPatient } = useAuth();
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState("consultations");
@@ -21,27 +25,32 @@ export default function DoctorProfile() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
-    if (!loading && user?.role !== "doctor") {
+    if (!loading && user && !isDoctor) {
+      if (isAdmin) {
+        router.replace('/admin/profile');
+      } else if (isNurse) {
+        router.replace('/nurse/home-visits');
+      } else if (isPatient) {
+        router.replace('/profile');
+      } else {
+        router.replace("/");
+      }
+    } else if (!loading && !user) {
       router.replace("/");
     }
-  }, [loading, user, router]);
+  }, [loading, user, isDoctor, isAdmin, isNurse, isPatient, router]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-lg">
-        🔄 Проверка авторизации...
-      </div>
-    );
+    return <PremiumLoadingScreen message="Проверка авторизации" />;
   }
 
-  if (!user) return null;
+  if (!user || !isDoctor) {
+    return <PremiumLoadingScreen message="Перенаправление на страницу профиля врача" />;
+  }
 
   const handleLogout = () => {
     toast.success("Вы успешно вышли!", { position: "top-right", autoClose: 3000 });
-    setTimeout(() => {
-      logoutUser();
-      router.replace("/");
-    }, 1000);
+    logoutUser(false); // revokes the server session, clears local state, navigates to /login
   };
 
   const handleToggleSidebar = () => {
@@ -63,7 +72,11 @@ export default function DoctorProfile() {
           </h1>
         );
       case "consultations":
-        return <DoctorConsultations />;
+        return <DoctorConsultationsNew />;
+      case "analytics":
+        return <DoctorAnalytics />;
+      case "profile":
+        return <DoctorProfileInfo />;
       default:
         return null;
     }
@@ -73,8 +86,6 @@ export default function DoctorProfile() {
     <div className="flex min-h-screen bg-gray-100">
       {/* Sidebar */}
       <DoctorSidebar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         isCollapsed={sidebarCollapsed}
@@ -90,12 +101,11 @@ export default function DoctorProfile() {
         />
 
         {/* Main Content */}
-        <main className="flex-1 p-4 sm:p-6 bg-gray-50">
-          {/* Breadcrumb */}
-          <DoctorBreadcrumb 
-            activeTab={activeTab} 
-            onNavigate={setActiveTab}
-          />
+        <main className={`flex-1 bg-gray-50 ${activeTab === 'consultations' || activeTab === 'analytics' ? '' : 'p-4 sm:p-6'}`}>
+          {/* Breadcrumb - Hide for consultations, analytics and profile tabs */}
+          {activeTab !== 'consultations' && activeTab !== 'profile' && activeTab !== 'analytics' && (
+            <DoctorBreadcrumb />
+          )}
 
           {/* Page Content with loading animation */}
           <DoctorMainContent activeTab={activeTab}>

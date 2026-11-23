@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZhanCare — ИБ-аудит (июнь 2026)</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="layout">
+
+  <nav class="sidebar">
+    <div class="brand"><span class="dot"></span><strong>ZhanCare AI · ИБ-аудит</strong></div>
+    <a class="home-link" href="index.html">← Главная</a>
+
+    <div class="group-title">Обзор</div>
+    <ul>
+      <li><a href="#ib-score">Оценка ИБ (0–100)</a></li>
+      <li><a href="#summary-top">Сводка и блокеры</a></li>
+    </ul>
+
+    <div class="group-title">zhancare-back</div>
+    <ul>
+      <li><a href="#back-critical">Critical / High</a></li>
+      <li><a href="#back-medium">Medium / Low</a></li>
+    </ul>
+
+    <div class="group-title">zhancareai</div>
+    <ul>
+      <li><a href="#ai-findings">Все находки</a></li>
+    </ul>
+
+    <div class="group-title">academy-refined</div>
+    <ul>
+      <li><a href="#academy-findings">Все находки</a></li>
+    </ul>
+
+    <div class="group-title">Прочее</div>
+    <ul>
+      <li><a href="#meta">О процессе аудита</a></li>
+      <li><a href="#risk-summary">Итоговая оценка риска</a></li>
+    </ul>
+  </nav>
+
+  <main>
+
+    <div class="hero">
+      <h1>ИБ-аудит платформы ZhanCare</h1>
+      <p>
+        Сканирование трёх кодовых баз (<code>zhancare-back</code>, <code>zhancareai</code>,
+        <code>zhancare-academy-refined</code>) тремя параллельными
+        <code>security-reviewer</code>-агентами. Это снимок состояния на момент
+        проверки, read-only — код по результатам аудита пока не менялся.
+      </p>
+      <div class="badges">
+        <span class="badge">Django REST Framework</span>
+        <span class="badge">Next.js × 2</span>
+        <span class="badge">PHI / медицинские данные</span>
+        <span class="badge">Платежи (TipTopPay, Kaspi)</span>
+      </div>
+    </div>
+
+    <div class="callout ok" style="margin-bottom:0">
+      <strong>Обновлено 2026-06-24:</strong> все 4 CRITICAL и 4 из 5 HIGH в
+      <code>zhancare-back</code> закрыты (плюс отдельный прод-инцидент с Redis,
+      не входивший в исходный аудит). Полный список изменений и что осталось —
+      в <a href="REMEDIATION_PLAN.md">REMEDIATION_PLAN.md</a>. Цифры ниже —
+      актуальное состояние, не снимок на момент первого прохода.
+    </div>
+
+    <div class="stat-row">
+      <div class="stat"><div class="label">Critical</div><div class="value" style="color:var(--red)">1</div></div>
+      <div class="stat"><div class="label">High</div><div class="value" style="color:var(--amber)">4</div></div>
+      <div class="stat"><div class="label">Medium</div><div class="value">9</div></div>
+      <div class="stat"><div class="label">Low</div><div class="value">6</div></div>
+      <div class="stat"><div class="label">Репозиториев</div><div class="value">3</div></div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="ib-score">
+      <h2><span class="num">★</span>Оценка ИБ системы (0–100)</h2>
+      <p class="section-intro">
+        Не сертифицирующий аудит (не ISO 27001 / HIPAA) — это внутренняя directional-оценка
+        для приоритизации, основанная на количестве и тяжести находок текущего прохода.
+        Методология и веса — ниже, чтобы цифра не выглядела взятой из воздуха.
+      </p>
+
+      <div class="card" style="border-color:var(--green); background:rgba(25,195,125,0.07); text-align:center; padding:36px 24px;">
+        <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-dim)">Общая оценка по системе (взвешенная)</div>
+        <div style="font-size:68px;font-weight:800;color:var(--green);margin:10px 0;line-height:1">
+          82<span style="font-size:26px;color:var(--text-dim);font-weight:600">/100</span>
+        </div>
+        <span class="badge" style="background:rgba(25,195,125,.18);border-color:var(--green);color:#a0f0c8;font-size:13px;padding:6px 16px">
+          Низкий риск — было 43/100 до фиксов 2026-06-24
+        </span>
+      </div>
+
+      <div class="grid-2" style="margin-top:18px">
+        <div class="card" style="text-align:center;border-color:var(--green)">
+          <div style="font-size:11px;color:var(--text-dim);text-transform:uppercase">zhancare-back</div>
+          <div style="font-size:36px;font-weight:800;color:var(--green)">88<span style="font-size:16px;color:var(--text-dim)">/100</span></div>
+          <div style="font-size:12px;color:var(--text-dim)">Низкий риск (было 10/100)</div>
+        </div>
+        <div class="card" style="text-align:center;border-color:var(--border)">
+          <div style="font-size:11px;color:var(--text-dim);text-transform:uppercase">zhancareai</div>
+          <div style="font-size:36px;font-weight:800;color:var(--text)">69<span style="font-size:16px;color:var(--text-dim)">/100</span></div>
+          <div style="font-size:12px;color:var(--text-dim)">Средний риск</div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card" style="text-align:center;border-color:var(--green)">
+          <div style="font-size:11px;color:var(--text-dim);text-transform:uppercase">zhancare-academy-refined</div>
+          <div style="font-size:36px;font-weight:800;color:var(--green)">87<span style="font-size:16px;color:var(--text-dim)">/100</span></div>
+          <div style="font-size:12px;color:var(--text-dim)">Низкий риск (но хрупкий)</div>
+        </div>
+        <div class="card" style="text-align:center;border-color:var(--border)">
+          <div style="font-size:11px;color:var(--text-dim);text-transform:uppercase">Вес в общей оценке</div>
+          <div style="font-size:15px;color:var(--text);margin-top:10px;line-height:1.7">
+            back × 0.5 &nbsp;·&nbsp; zhancareai × 0.3 &nbsp;·&nbsp; academy × 0.2
+          </div>
+          <div style="font-size:12px;color:var(--text-dim);margin-top:4px">по объёму PHI/денег, проходящих через каждый репозиторий</div>
+        </div>
+      </div>
+
+      <h3>Методология</h3>
+      <pre><code>Score(repo) = 100 − (Critical×12 + High×6 + Medium×2 + Low×0.5), floor 0
+
+Overall = Score(back)×0.5 + Score(zhancareai)×0.3 + Score(academy)×0.2</code></pre>
+      <p style="font-size:13.5px;color:var(--text-dim)">
+        Веса по severity отражают разницу в реальной эксплуатируемости: CRITICAL-находки
+        в этом проходе — это рабочие цепочки захвата аккаунта/денег в несколько запросов,
+        а не теоретический риск, поэтому штраф за них доминирует в формуле. Веса по
+        репозиториям — backend держит PHI и платежи для <em>обоих</em> фронтендов
+        одновременно, поэтому его проблемы бьют по всей системе сразу.
+      </p>
+
+      <table>
+        <tr><th>Диапазон</th><th>Уровень риска</th></tr>
+        <tr><td>0–30</td><td style="color:var(--red);font-weight:600">Критический</td></tr>
+        <tr><td>31–50</td><td style="color:var(--amber);font-weight:600">Высокий</td></tr>
+        <tr><td>51–70</td><td>Средний</td></tr>
+        <tr><td>71–90</td><td style="color:var(--green);font-weight:600">Низкий</td></tr>
+        <tr><td>91–100</td><td style="color:var(--green);font-weight:600">Минимальный</td></tr>
+      </table>
+
+      <div class="callout warn">
+        <strong>Что тянет общую оценку вниз сейчас:</strong> единственный
+        оставшийся CRITICAL — живые секреты в закоммиченном <code>.env</code>
+        в <code>zhancareai</code> (вес 0.3 в формуле). Закрытие именно этого
+        пункта плюс XSS/CSRF из того же репозитория поднимет общую оценку
+        системы выше 90/100. Полный список оставшегося — в
+        <a href="REMEDIATION_PLAN.md">REMEDIATION_PLAN.md</a>.
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="summary-top">
+      <h2><span class="num">!</span>Топ-блокеры перед следующим деплоем</h2>
+      <p class="section-intro">
+        Ниже — находки, которые реально эксплуатируются «парой curl-запросов» и
+        касаются auth, PHI или денег. Остальное (полный список) — в разделах по
+        репозиториям ниже.
+      </p>
+
+      <div class="callout danger">
+        <strong>1. Захардкоженные продакшен-секреты в <code>settings.py</code></strong> —
+        включая <code>SECRET_KEY</code> (подписывает все JWT), пароль БД, ключи Mistral/LiveKit/TipTopPay,
+        пароль почты. Утечка = подделка токена под любого пользователя, прямой доступ к БД.
+        <span class="filepath" style="margin-top:8px">mchs_back/settings.py</span>
+      </div>
+
+      <div class="callout danger">
+        <strong>2. TipTopPay webhook фейлится в «открыто» (fail-open)</strong> —
+        если заголовок HMAC просто отсутствует или секрет не задан, подпись считается
+        валидной. Эндпоинт <code>AllowAny</code> + без аутентификации → бесплатная
+        выдача оплаченного курса/услуги одним POST-запросом с произвольным
+        существующим <code>InvoiceId</code>.
+        <span class="filepath" style="margin-top:8px">payments/views.py:121-133</span>
+      </div>
+
+      <div class="callout danger">
+        <strong>3. Гостевой вход по <code>access_code</code> — без throttling</strong> —
+        6-значный код (не CSPRNG) при совпадении сразу выдаёt полноценный
+        <code>RefreshToken</code> пациента — захват аккаунта со всей медкартой.
+        Брутфорс ничем не ограничен.
+        <span class="filepath" style="margin-top:8px">consultations/views.py:1420-1488</span>
+      </div>
+
+      <div class="callout danger">
+        <strong>4. IDOR в профиле пользователя</strong> — любой авторизованный
+        пользователь может прочитать и перезаписать профиль <em>любого другого</em>
+        пользователя по ID, без проверки владения или роли.
+        <span class="filepath" style="margin-top:8px">common/views/profile.py:96-108, 163-178</span>
+      </div>
+
+      <div class="callout danger">
+        <strong>5. Живые секреты закоммичены в git (zhancareai)</strong> — Mistral API key
+        и Sentry auth token лежат в трекаемом <code>.env</code> (не в <code>.gitignore</code>,
+        который исключает только <code>.env*.local</code>). Считать утёкшими — ротация
+        обязательна.
+        <span class="filepath" style="margin-top:8px">zhancareai/.env:1-3</span>
+      </div>
+
+      <div class="callout warn">
+        <strong>Плюс заметная системная проблема:</strong> миграция на httpOnly cookie
+        для <code>zhancare-academy-refined</code> технически не работает — <code>apiLogin</code>/
+        <code>apiRefreshToken</code> используют голый <code>fetch()</code> без
+        <code>credentials: "include"</code>, поэтому cookie <code>zha_access</code>/<code>zha_refresh</code>
+        скорее всего никогда не выставляются для пользователей academy. Плюс ни в одном
+        из трёх репозиториев нет CSRF-защиты для cookie-флоу — закрыть до того, как backend
+        начнёт принимать cookie как единственный фактор аутентификации где-либо.
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="back-critical">
+      <h2><span class="num">1</span>zhancare-back — Critical / High</h2>
+      <div class="filepath">Django REST Framework backend</div>
+
+      <table>
+        <tr><th>Severity</th><th>Находка</th><th>Где</th><th>Что делать</th></tr>
+        <tr style="opacity:.6">
+          <td><span class="badge" style="background:rgba(229,72,77,.18);border-color:var(--red);color:#ffb3b6">CRITICAL</span> ✅</td>
+          <td>Секреты с fallback-значениями в коде (<code>os.getenv(key, 'literal-secret')</code>): SECRET_KEY, пароль БД (дважды), Mistral, Telegram bot token, LiveKit, email-пароль, TipTopPay ключи</td>
+          <td><code>settings.py:31,443,448,466,482,490-491,593,622-623</code></td>
+          <td><strong>Закрыто 2026-06-24.</strong> Перенесены в <code>.env</code>, код теперь <code>os.environ[...]</code>. При повторном поиске нашлось и зачищено ещё ~15 копий тех же/других секретов по всему репо (детали — REMEDIATION_PLAN.md). Ротация значений — отдельная незакрытая задача</td>
+        </tr>
+        <tr style="opacity:.6">
+          <td><span class="badge" style="background:rgba(229,72,77,.18);border-color:var(--red);color:#ffb3b6">CRITICAL</span> ✅</td>
+          <td><code>_verify_tiptop_hmac</code> возвращает <code>True</code>, если секрет пуст ИЛИ заголовок HMAC отсутствует — комментарий в коде буквально говорит «skip verification»</td>
+          <td><code>payments/views.py:121-133</code> (вызывается из webhook-view с <code>AllowAny</code>)</td>
+          <td><strong>Закрыто 2026-06-24.</strong> Оба случая теперь отказ. Заодно добавлена идемпотентность по <code>transaction_id</code> и сверка <code>Amount</code> (см. HIGH-пункты ниже)</td>
+        </tr>
+        <tr style="opacity:.6">
+          <td><span class="badge" style="background:rgba(229,72,77,.18);border-color:var(--red);color:#ffb3b6">CRITICAL</span> ✅</td>
+          <td><code>verify_access_code</code> — без rate limiting, код генерируется через <code>random.choices</code> (не CSPRNG), при совпадении выдаёт полный <code>RefreshToken</code></td>
+          <td><code>consultations/views.py:1420-1488</code>, <code>consultations/models.py:10-15</code></td>
+          <td><strong>Закрыто 2026-06-24.</strong> <code>secrets.choice</code> в генераторе; добавлен per-IP <code>ScopedRateThrottle</code> (5/мин) + отдельный платформенный лимит (30/мин по всем IP сразу) вместо точечного lockout по коду</td>
+        </tr>
+        <tr style="opacity:.6">
+          <td><span class="badge" style="background:rgba(229,72,77,.18);border-color:var(--red);color:#ffb3b6">CRITICAL</span> ✅</td>
+          <td><code>update_profile_by_id</code> / <code>profile_by_id</code> — нет проверки, что вызывающий — владелец профиля или админ</td>
+          <td><code>common/views/profile.py:96-108,163-178</code></td>
+          <td><strong>Закрыто 2026-06-24.</strong> Оказался и третий эндпоинт с той же дырой — <code>partial_update_profile_by_id</code> (PATCH), не пойманный первым проходом. У ViewSet вообще не было <code>permission_classes</code> — баг был хуже описанного. Добавлены <code>IsAuthenticated</code> + self-or-admin на все 3. Сериализатор проверен — privilege-escalation полей нет</td>
+        </tr>
+        <tr style="opacity:.6">
+          <td><span class="badge" style="background:rgba(245,166,35,.18);border-color:var(--amber);color:#ffd9a0">HIGH</span> ✅</td>
+          <td>Пароль БД из settings.py повторён как «реальный» пример в документации</td>
+          <td><code>docs/DEPLOYMENT_GUIDE.md:161</code></td>
+          <td><strong>Закрыто.</strong> Плюс тот же пароль нашёлся ещё в 5 других файлах (docs, one_time_scripts, docker-compose.yml) — все зачищены</td>
+        </tr>
+        <tr style="opacity:.6">
+          <td><span class="badge" style="background:rgba(245,166,35,.18);border-color:var(--amber);color:#ffd9a0">HIGH</span> ✅</td>
+          <td>Нет проверки идемпотентности по <code>transaction_id</code> на Pay-webhook — повтор/replay webhook'а проходит повторно</td>
+          <td><code>payments/views.py:197-241</code></td>
+          <td><strong>Закрыто.</strong> Повторный webhook на уже оплаченный <code>invoice_id</code> — no-op; добавлена и сверка <code>Amount</code> (раньше это делал только Check-webhook)</td>
+        </tr>
+        <tr>
+          <td><span class="badge" style="background:rgba(245,166,35,.18);border-color:var(--amber);color:#ffd9a0">HIGH</span></td>
+          <td>Kaspi-интеграция: нет проверки подписи входящих вызовов, хардкоженный «заглушечный» QR, сумма платежа берётся из ответа Kaspi без сверки</td>
+          <td><code>payments/views.py:37-116</code> (QR — строка 55, сумма — строка 106)</td>
+          <td><strong>Не закрыто, заблокировано:</strong> нет источника «ожидаемой» цены вызова на дом для сверки — нужен product-инпут, сколько должен стоить вызов и где это хранить, до того как писать код</td>
+        </tr>
+        <tr style="opacity:.6">
+          <td><span class="badge" style="background:rgba(245,166,35,.18);border-color:var(--amber);color:#ffd9a0">HIGH</span> ✅</td>
+          <td>Presigned upload медицинских документов: <code>file_type</code> без allow-list (любой <code>Content-Type</code>, включая <code>text/html</code>), <code>filename</code> не санитизируется</td>
+          <td><code>common/views/medical_documents.py:205-273</code>, <code>common/serializers/medical_document.py:95-101</code></td>
+          <td><strong>Закрыто.</strong> Общий <code>validate_uploaded_file()</code>/<code>sanitize_upload_filename()</code> в <code>storage_utils.py</code>, применён здесь и в двух пунктах ниже одним проходом</td>
+        </tr>
+        <tr style="opacity:.6">
+          <td><span class="badge" style="background:rgba(245,166,35,.18);border-color:var(--amber);color:#ffd9a0">HIGH</span> ✅</td>
+          <td><code>doctor_upload</code>/<code>admin_upload</code> — без проверки типа файла и лимита размера (в отличие от загрузки аватара/лого)</td>
+          <td><code>common/views/medical_documents.py:306-322,338-371</code></td>
+          <td><strong>Закрыто</strong> тем же общим валидатором, что и presigned upload выше</td>
+        </tr>
+      </table>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="back-medium">
+      <h2><span class="num">2</span>zhancare-back — Medium / Low</h2>
+      <table>
+        <tr><th>Severity</th><th>Находка</th><th>Где</th></tr>
+        <tr style="opacity:.6"><td>MEDIUM ✅</td><td>Pay-webhook (в отличие от Check-webhook) не сверяет <code>Amount</code> перед статусом «paid» — <strong>закрыто</strong> вместе с идемпотентностью (раздел 1)</td><td><code>payments/views.py:286-288</code></td></tr>
+        <tr><td>MEDIUM</td><td><code>.env</code>/<code>.env.prod</code> с реальными ключами Yandex Storage и TipTopPay в рабочей директории (не в git, но на диске)</td><td><code>/.env:2-3,8,22-24</code></td></tr>
+        <tr style="opacity:.6"><td>MEDIUM ✅</td><td>Валидация загрузки файлов несогласована между эндпоинтами — <strong>закрыто</strong>, единый <code>validate_uploaded_file()</code> в <code>storage_utils.py</code></td><td><code>medical_documents.py</code> vs <code>profile.py</code>/<code>clinics/views.py</code></td></tr>
+        <tr style="opacity:.6"><td>MEDIUM ✅</td><td>Проверены поля <code>UserProfileSerializer</code> — <strong>не баг</strong>: <code>Meta.fields</code> не включает role/is_staff-подобные поля, <code>roles</code> — read-only <code>SerializerMethodField</code></td><td>сериализатор профиля</td></tr>
+        <tr><td>MEDIUM</td><td><code>ALLOWED_HOSTS</code> включает wildcard <code>.vercel.app</code> — шире необходимого</td><td><code>settings.py:41</code></td></tr>
+        <tr><td>MEDIUM</td><td><code>requirements.txt</code> — версии не закреплены (кроме <code>django&lt;5.0</code>), риск непредсказуемого <code>pip install</code></td><td><code>requirements.txt</code></td></tr>
+        <tr><td>LOW</td><td>Debug <code>print()</code> на каждый запрос логирует объект User и роль — PII в логах/агрегаторах</td><td><code>consultations/views.py:47-53</code></td></tr>
+      </table>
+      <div class="callout ok">
+        Хранение медицинских документов в остальном спроектировано хорошо: приватный S3-бакет,
+        <code>AWS_DEFAULT_ACL=None</code>, presigned URL с TTL 5 минут, UUID-префиксы путей —
+        это нужно сохранить при исправлении валидации выше, не переделывать.
+      </div>
+      <div class="callout info">
+        SQL-инъекции и SSRF — не найдено. Raw SQL встречается только в миграциях
+        Django (статичные имена таблиц/колонок, не пользовательский ввод). Исходящих
+        запросов, построенных из пользовательского URL, не обнаружено.
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="ai-findings">
+      <h2><span class="num">3</span>zhancareai (основной фронтенд)</h2>
+      <table>
+        <tr><th>Severity</th><th>Находка</th><th>Где</th><th>Что делать</th></tr>
+        <tr>
+          <td><span class="badge" style="background:rgba(229,72,77,.18);border-color:var(--red);color:#ffb3b6">CRITICAL</span></td>
+          <td>Mistral API key и Sentry auth token закоммичены в трекаемый <code>.env</code> (<code>.gitignore</code> исключает только <code>.env*.local</code>)</td>
+          <td><code>zhancareai/.env:1-3</code></td>
+          <td>Добавить <code>.env</code> в <code>.gitignore</code>, ротировать оба секрета, почистить git-историю</td>
+        </tr>
+        <tr>
+          <td><span class="badge" style="background:rgba(245,166,35,.18);border-color:var(--amber);color:#ffd9a0">HIGH</span></td>
+          <td>Поля клиники (<code>name</code>, <code>description</code>, <code>instagram</code> и др.) вставляются в сырую HTML-строку для Leaflet-попапа без экранирования</td>
+          <td><code>src/app/admin/pipeline/page.tsx:995-1018</code></td>
+          <td>Строить попап через DOM (<code>createElement</code>/<code>textContent</code>) или санитизировать через DOMPurify перед конкатенацией</td>
+        </tr>
+        <tr>
+          <td><span class="badge" style="background:rgba(245,166,35,.18);border-color:var(--amber);color:#ffd9a0">HIGH</span></td>
+          <td>В <code>api.ts</code> нет чтения/отправки CSRF-токена ни на одном запросе — а cookie-аутентификация (раздел 13 <a href="auth.html#storage">auth.html</a>) уже включена</td>
+          <td><code>src/utils/api.ts</code></td>
+          <td>Читать <code>csrftoken</code> cookie и подвешивать <code>X-CSRFToken</code> на все non-GET запросы в request-интерсепторе</td>
+        </tr>
+        <tr>
+          <td>MEDIUM</td>
+          <td>Ссылка <code>instagram</code> в том же Leaflet-попапе — <code>target="_blank"</code> без <code>rel="noopener noreferrer"</code> (там сырой HTML, React-дефолты не применяются)</td>
+          <td><code>admin/pipeline/page.tsx:1018</code></td>
+          <td>Тот же фикс, что и для XSS выше — заодно добавить <code>rel</code></td>
+        </tr>
+        <tr>
+          <td>MEDIUM</td>
+          <td>Версии зависимостей не согласованы: <code>next ^16.1.1</code>, <code>eslint-config-next 15.0.3</code>, <code>react ^18</code> — проверить совместимость и не оставлять на caret-диапазонах для медицинского приложения</td>
+          <td><code>package.json</code></td>
+          <td><code>npm ls react next</code>, <code>npm audit --audit-level=high</code>, закрепить точные версии</td>
+        </tr>
+        <tr>
+          <td>LOW</td>
+          <td><code>dangerouslySetInnerHTML</code> в чат-боксах (<code>\n</code>→<code>&lt;br/&gt;</code>) — сейчас безопасно (текст от AI-бэкенда, не от собеседника), но хрупко на будущее</td>
+          <td><code>ChatBox.tsx:99</code>, <code>PatientChatBox.tsx:120</code>, <code>DoctorChatBox.tsx:128</code></td>
+          <td>Заменить на <code>whitespace-pre-wrap</code>, убрать <code>dangerouslySetInnerHTML</code> полностью</td>
+        </tr>
+        <tr>
+          <td>LOW</td>
+          <td>Параметр <code>?next=</code> в middleware-редиректе нигде не читается на странице логина — мёртвый код, открытого редиректа сейчас нет, но риск появится, если параметр когда-нибудь подключат без валидации</td>
+          <td><code>src/middleware.ts:59</code>, <code>src/app/login/page.tsx</code></td>
+          <td>Если задействуют — валидировать как относительный same-origin путь</td>
+        </tr>
+      </table>
+      <div class="callout ok">
+        Все найденные <code>target="_blank"</code> в обычном JSX (не сырой HTML) уже корректно
+        содержат <code>rel="noopener noreferrer"</code>. JSON-LD блоки (<code>FAQJsonLd</code>,
+        <code>MedicalArticleJsonLd</code> и т.д.) используют <code>dangerouslySetInnerHTML</code>
+        безопасно — только на <code>JSON.stringify()</code> типизированных объектов.
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="academy-findings">
+      <h2><span class="num">4</span>zhancare-academy-refined (academy.zhan.care)</h2>
+      <table>
+        <tr><th>Severity</th><th>Находка</th><th>Где</th><th>Что делать</th></tr>
+        <tr>
+          <td><span class="badge" style="background:rgba(245,166,35,.18);border-color:var(--amber);color:#ffd9a0">HIGH</span></td>
+          <td><code>apiLogin</code> и <code>apiRefreshToken</code> используют голый <code>fetch()</code> без <code>credentials: "include"</code> — httpOnly cookie <code>zha_access</code>/<code>zha_refresh</code>, скорее всего, никогда не выставляются для пользователей academy (cross-origin <code>api.zhan.care</code> ↔ <code>academy.zhan.care</code> без credentials не сохраняет Set-Cookie)</td>
+          <td><code>lib/api/auth.ts:64,180</code></td>
+          <td>Добавить <code>credentials: "include"</code> в оба вызова (и для единообразия — в остальные auth-вызовы того же файла)</td>
+        </tr>
+        <tr>
+          <td>MEDIUM</td>
+          <td>CSRF-защиты нет вообще (<code>grep -i csrf</code> — ноль совпадений) — сейчас риск ниже, т.к. основной путь всё ещё Bearer-в-заголовке, но станет реальной дырой, если backend когда-нибудь начнёт принимать cookie как самостоятельный фактор аутентификации</td>
+          <td>весь репозиторий</td>
+          <td>Подтвердить с backend-командой точную семантику cookie-vs-header; при необходимости — double-submit <code>X-CSRFToken</code></td>
+        </tr>
+        <tr>
+          <td>MEDIUM</td>
+          <td>На странице админа загрузка курсов/категорий не гейтится ролью (в отличие от загрузки преподавателей) — обычный студент, зайдя на <code>/ru/admin</code> напрямую, на краткий момент инициирует загрузку этих данных до срабатывания редиректа</td>
+          <td><code>app/[lang]/(dashboard)/admin/page.tsx:1960-1986</code></td>
+          <td>Гейтить <code>loadCourses</code>/<code>loadCategories</code> через <code>hasAdminAccess || isTeacher</code>, как уже сделано для <code>loadTeachers</code>; подтвердить, что backend сам не возвращает admin-only поля всем</td>
+        </tr>
+        <tr>
+          <td>MEDIUM</td>
+          <td><code>next 16.0.10</code> / <code>react 19.2.0</code> — очень свежие мажорные версии, нужно убедиться, что это не pre-release/canary по ошибке</td>
+          <td><code>package.json</code></td>
+          <td><code>npm audit --audit-level=high</code>, подтвердить GA-статус версий</td>
+        </tr>
+        <tr>
+          <td>LOW</td>
+          <td><code>&lt;Link target="_blank"&gt;</code> без <code>rel</code> (несогласованность с остальным кодом, современные браузеры дефолтят на noopener, но не полагаться на это)</td>
+          <td><code>admin/page.tsx:2308</code></td>
+          <td>Добавить <code>rel="noopener noreferrer"</code></td>
+        </tr>
+        <tr>
+          <td>LOW</td>
+          <td>Пакет <code>i18n@^0.15.3</code> слабо поддерживается — есть штатный <code>[lang]</code>-сегмент Next.js, который мог бы использовать <code>next-intl</code></td>
+          <td><code>package.json</code></td>
+          <td>Рассмотреть миграцию в отдельной задаче</td>
+        </tr>
+      </table>
+      <div class="callout ok">
+        <code>lib/api/base.ts</code> (<code>_doRefresh</code>/<code>fetchWithAuth</code>) сам по
+        себе корректно проставляет <code>credentials: "include"</code> на каждый внутренний
+        вызов, включая retry-путь — проблема именно в <code>lib/api/auth.ts</code>, отдельном
+        более раннем слое, который эту логику не переиспользует. Других параллельных
+        HTTP-клиентов (axios/ky/XHR) в репозитории нет. XSS, открытых редиректов, утечек
+        секретов в <code>NEXT_PUBLIC_*</code> — не найдено.
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="meta">
+      <h2><span class="num">5</span>Методология и процесс аудита</h2>
+      <p class="section-intro">
+        Чем именно был этот аудит, чем не был, кто и как его проводил — чтобы
+        результат можно было корректно интерпретировать и доверять цифрам выше.
+      </p>
+
+      <h3>Тип аудита</h3>
+      <div class="grid-2">
+        <div class="card">
+          <h3 style="margin-top:0;color:var(--green)">✓ Это было</h3>
+          <ul style="font-size:13.5px;color:var(--text-dim);padding-left:18px">
+            <li><strong>White-box статический ревью кода</strong> — полный доступ к исходникам трёх репозиториев</li>
+            <li><strong>Read-only</strong> — ни один файл не менялся в процессе проверки</li>
+            <li>Ручное (агентом) прочтение кода с целевыми чек-листами по категориям риска (см. ниже), а не прогон одного готового SAST-инструмента</li>
+            <li>Severity по OWASP-style шкале влияния: CRITICAL / HIGH / MEDIUM / LOW — та же шкала, что используется в стандартах код-ревью проекта</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0;color:var(--amber)">✕ Этого не было</h3>
+          <ul style="font-size:13.5px;color:var(--text-dim);padding-left:18px">
+            <li><strong>Динамической эксплуатации (pentest)</strong> — находки не подтверждались реальной атакой на работающий стенд, только анализом кода</li>
+            <li>Проверки сетевого/инфраструктурного слоя — firewall, k8s/Helm-конфиги, сетевые ACL, права доступа к серверам</li>
+            <li>Фактического запуска <code>npm audit</code> / <code>pip-audit</code> / <code>safety check</code> — версии зависимостей оценивались визуально по <code>package.json</code>/<code>requirements.txt</code></li>
+            <li>Аудита сторонних SaaS-сервисов (Sentry, LiveKit, Yandex Cloud) и их собственных security-настроек</li>
+            <li>Социальной инженерии, фишинг-симуляций, нагрузочного/DoS-тестирования</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>Кто и как проверял</h3>
+      <p style="font-size:13.5px;color:var(--text-dim)">
+        Три независимых агента <code>security-reviewer</code> запущены параллельно —
+        по одному на репозиторий, без общего состояния между собой. Инструменты
+        каждого агента: <code>Read</code>, <code>Grep</code>, <code>Glob</code>,
+        <code>Bash</code> (для команд типа <code>grep -i csrf</code>, проверки версий
+        пакетов) — то есть только локальное чтение/поиск кода, без сетевых запросов
+        и без записи. Каждому агенту перед стартом был передан явный чек-лист по
+        репозиторию и уже известный контекст из предыдущих проходов (например, какие
+        пункты из JWT-хардения уже закрыты — раздел <a href="auth.html">«Авторизация»</a>),
+        чтобы не тратить ресурс на повторное обнаружение уже решённого и не задвоить
+        находки.
+      </p>
+
+      <h3>Чек-лист по категориям</h3>
+      <table>
+        <tr><th>Репозиторий</th><th>Проверенные категории</th></tr>
+        <tr>
+          <td><code>zhancare-back</code></td>
+          <td>Секреты/credentials, PHI и сериализация полей, валидация загрузки файлов, платёжные webhook'и (подпись, идемпотентность, сверка суммы), SQL-инъекции, IDOR, SSRF, CORS/CSRF/ALLOWED_HOSTS, rate limiting вне auth, версии зависимостей</td>
+        </tr>
+        <tr>
+          <td><code>zhancareai</code></td>
+          <td>XSS (включая <code>dangerouslySetInnerHTML</code> и ручную сборку HTML), open redirect, секреты в <code>NEXT_PUBLIC_*</code>, <code>target="_blank"</code> без <code>rel</code>, утечка токенов в логи/Sentry, CSRF, клиентские role-gate без серверной проверки, версии зависимостей, клиентская валидация загрузки файлов</td>
+        </tr>
+        <tr>
+          <td><code>zhancare-academy-refined</code></td>
+          <td>Полнота фикса <code>credentials:"include"</code> по всем auth-вызовам (не только очевидным), XSS, open redirect, секреты в <code>NEXT_PUBLIC_*</code>, <code>target="_blank"</code>, CSRF, клиентские role-gate, утечка токенов в логи, версии зависимостей</td>
+        </tr>
+      </table>
+
+      <h3>Контроль качества результата</h3>
+      <p style="font-size:13.5px;color:var(--text-dim)">
+        Каждый агент обязан указывать точный <code>файл:строка</code> на каждую находку
+        (не общие рассуждения) и формулировать конкретный фикс, а не «исправьте это».
+        Перед публикацией результаты трёх агентов вручную сверены на дублирование и
+        перенесены в эту страницу без изменения сути находок. Числовая ИБ-оценка
+        (раздел выше) — отдельный шаг, посчитанный по фиксированной формуле от
+        итоговых количеств находок, а не назначенный на глаз.
+      </p>
+
+      <div class="callout info">
+        <strong>Про «prompt injection» в логах агентов:</strong> два из трёх агентов
+        пометили часть содержимого инструментов как похожее на инъекцию промпта —
+        блоки с правилами кодстайла/тестирования, подгруженные через
+        <code>system-reminder</code>. На деле это штатный механизм окружения: личные
+        правила пользователя из <code>~/.claude/rules/ecc/*</code> автоматически
+        подмешиваются в контекст после части вызовов инструментов. Агенты не были
+        в курсе этой особенности окружения и подняли ложную тревогу — ни один из
+        них не последовал инструкциям из этого блока, реальной угрозы не было.
+      </div>
+
+      <div class="callout warn">
+        <strong>Главное ограничение метода:</strong> статический ревью находит
+        «что выглядит небезопасным в коде», но не гарантирует, что все найденные
+        пути реально достижимы в проде (например, может быть compensating control
+        на уровне инфраструктуры, который агент не видел — балансировщик, WAF,
+        сетевые правила). И наоборот — статический анализ может пропустить
+        уязвимости, которые проявляются только в runtime-конфигурации или во
+        взаимодействии нескольких сервисов. Эта страница — приоритизация для
+        инженерной команды, не итоговое заключение для соответствия конкретному
+        стандарту (ISO 27001, HIPAA и т.п.).
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <section id="risk-summary">
+      <h2><span class="num">6</span>Итоговая оценка риска</h2>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3 style="margin-top:0">zhancare-back</h3>
+          <p style="font-size:13.5px;color:var(--text-dim)">
+            Несколько CRITICAL-проблем образуют реальные цепочки захвата аккаунта и
+            мошенничества с платежами: захардкоженные секреты (включая ключ подписи JWT) в
+            git, брутфорсимый вход по access_code сразу выдающий токен, webhook платежей,
+            пропускающий запросы без подписи, и IDOR, позволяющий читать/менять профиль
+            любого пользователя. Эксплуатация — несколько curl-запросов, без специальных
+            знаний. С учётом PHI и живых платежей это блокеры до следующего деплоя.
+          </p>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0">zhancareai</h3>
+          <p style="font-size:13.5px;color:var(--text-dim)">
+            Главное — утечка живых ключей (Mistral, Sentry) в закоммиченный <code>.env</code>,
+            считать их скомпрометированными. Второе — полное отсутствие CSRF-защиты
+            обесценивает недавно добавленную cookie-аутентификацию: переход на httpOnly
+            cookie без CSRF-токена меняет один риск (кража токена через XSS) на другой
+            (CSRF на чувствительные действия). XSS в карте клиник на admin-странице —
+            точечная, но реальная дырка. Остальное — в порядке.
+          </p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">zhancare-academy-refined</h3>
+        <p style="font-size:13.5px;color:var(--text-dim)">
+          Самое значимое: миграция на httpOnly cookie для этого фронтенда фактически не
+          работает — <code>apiLogin</code>/<code>apiRefreshToken</code> не отправляют
+          credentials, так что cookie, скорее всего, не выставляются вообще, и весь поток
+          молча продолжает работать на чистом localStorage-токене. В сочетании с полным
+          отсутствием CSRF это создаёт хрупкую границу доверия: всё держится только на том,
+          что backend пока требует заголовок <code>Authorization</code>, а не доверяет
+          cookie как самостоятельному фактору. Приоритет: сначала credentials-фикс,
+          затем письменное подтверждение от backend-команды про cookie-vs-header,
+          затем — серверный гейт на admin-страницу курсов/категорий.
+        </p>
+      </div>
+
+      <div class="callout warn" style="margin-top:24px">
+        <strong>Рекомендуемый порядок исправлений:</strong> ротация всех секретов
+        (back + zhancareai) → фикс TipTopPay fail-open → throttling/CSPRNG для access_code →
+        фикс IDOR в профиле → credentials-фикс в academy login → CSRF во всех трёх
+        репозиториях → валидация загрузки медицинских документов → остальное (MEDIUM/LOW)
+        по мере появления времени в спринте.
+      </div>
+    </section>
+
+    <footer>
+      ZhanCare — внутренний ИБ-аудит. Сформирован параллельным запуском
+      <code>security-reviewer</code>-агентов по zhancare-back, zhancareai и
+      zhancare-academy-refined. Read-only снимок — код не менялся в рамках этой проверки.
+    </footer>
+
+  </main>
+</div>
+</body>
+</html>

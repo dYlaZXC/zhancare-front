@@ -10,7 +10,7 @@ import { Header } from "@/components/layout/Header";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { MainContent } from "@/components/layout/MainContent";
 
-import VideoConsultation from "@/components/services/VideoConsultation";
+import VideoConsultationFlow from "@/components/services/VideoConsultationFlow";
 import Appointments from "@/components/services/HomeAppointments";
 import MedicalHistory from "@/components/services/MedicalHistory";
 import ChatDoctors from "@/components/services/ChatDoctors";
@@ -18,7 +18,7 @@ import ProfileDetails from "@/components/services/ProfileDetails";
 import { ActivityLog } from "@/components/services/ActivityLog";
 
 const ProfilePage = () => {
-  const { user, loading, setIsAuthOpen } = useAuth();
+  const { user, loading, isDoctor } = useAuth();
   const { userProfile, loading: profileLoading, error: profileError, refetch } = useUserProfile();
   const router = useRouter();
 
@@ -39,17 +39,15 @@ const ProfilePage = () => {
 
   useEffect(() => {
     if (!loading && !user) {
-      // User is not authenticated, show auth popup immediately and redirect
-      setIsAuthOpen(true);
       router.replace('/');
       return;
     }
 
-    if (!loading && user?.role === "doctor") {
-      router.replace("/doctor-profile");
+    if (!loading && isDoctor) {
+      router.replace("/doctor/consultations");
       return;
     }
-  }, [loading, user, router, setIsAuthOpen]);
+  }, [loading, user, isDoctor, router]);
 
   if (loading || profileLoading) {
     return null; // Don't show loading screen, let auth popup handle it
@@ -70,7 +68,7 @@ const ProfilePage = () => {
       case "profile":
         return <ProfileDetails user={userProfile} onRefetch={refetch} />;
       case "video":
-        return <VideoConsultation />;
+        return <VideoConsultationFlow />;
       case "appointments":
         return <Appointments />;
       case "history":
@@ -90,8 +88,6 @@ const ProfilePage = () => {
     <div className="flex min-h-screen bg-gray-100">
       {/* Sidebar with control */}
       <Sidebar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         isCollapsed={sidebarCollapsed}
@@ -110,7 +106,7 @@ const ProfilePage = () => {
         <div className="flex-1 overflow-y-auto">
           <main className="flex-1 p-4 sm:p-6 bg-gray-50">
             {/* Breadcrumbs */}
-            <Breadcrumb activeTab={activeTab} />
+            <Breadcrumb />
 
             {/* Animated Content */}
             <MainContent activeTab={activeTab}>{renderContent()}</MainContent>

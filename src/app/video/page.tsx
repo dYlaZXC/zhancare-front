@@ -2,13 +2,13 @@
 
 import AuthRedirect from "@/components/AuthRedirect";
 import TabLayout from "@/components/layout/TabLayout";
-import VideoConsultation from "@/components/services/VideoConsultation";
+import VideoConsultationFlow from "@/components/services/VideoConsultationFlow";
 
 export default function VideoPage() {
   return (
     <AuthRedirect>
       <TabLayout>
-        <VideoConsultation />
+        <VideoConsultationFlow />
       </TabLayout>
     </AuthRedirect>
   );

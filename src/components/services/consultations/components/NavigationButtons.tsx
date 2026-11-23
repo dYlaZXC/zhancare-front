@@ -47,7 +47,7 @@ const NavigationButtons: React.FC<NavigationButtonsProps> = ({
               : "bg-gray-300 text-gray-500 cursor-not-allowed"
           )}
         >
-          Продолжить
+          Выбрать врача
           <ArrowRight size={16} />
         </motion.button>
 

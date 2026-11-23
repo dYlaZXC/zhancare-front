@@ -8,6 +8,7 @@ import { useRef, useMemo } from "react";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import en from "@/locales/en.json";
+import uz from "@/locales/uz.json";
 import HeroText from "./HeroText";
 import HeroVisualization from "./HeroVisualization";
 
@@ -24,7 +25,7 @@ const containerVariants = {
 };
 
 export default function HeroContent() {
-  const { user, setIsAuthOpen } = useAuth();
+  const { user, setIsAuthOpen, isDoctor } = useAuth();
   const { language } = useLanguage();
   const router = useRouter();
   
@@ -34,6 +35,7 @@ export default function HeroContent() {
       case "ru": return ru.hero;
       case "en": return en.hero;
       case "kz": return kz.hero;
+      case "uz": return uz.hero;
       default: return ru.hero;
     }
   }, [language]);
@@ -53,7 +55,7 @@ export default function HeroContent() {
   const handleBookAppointment = () => {
     if (user) {
       // User is authenticated, navigate to appropriate profile page
-      const profileRoute = user.role === "doctor" ? "/doctor-profile" : "/profile";
+      const profileRoute = isDoctor ? "/doctor/consultations" : "/profile";
       router.push(profileRoute);
     } else {
       // User is not authenticated, show auth popup

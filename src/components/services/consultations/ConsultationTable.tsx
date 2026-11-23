@@ -56,7 +56,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
               <ConsultationRow
                 key={consultation.id}
                 consultation={consultation}
-                onAccept={() => onAccept(consultation.meeting_id)}
+                onAccept={() => onAccept(consultation.meeting_id ?? '')}
               />
             ))}
           </tbody>
@@ -92,7 +92,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
             </div>
             <div className="mt-4 flex justify-end">
               <button
-                onClick={() => onAccept(consultation.meeting_id)}
+                onClick={() => onAccept(consultation.meeting_id ?? '')}
                 className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg shadow-sm transition"
               >
                 Принять

@@ -2,16 +2,18 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/api";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth, computeRole } from "@/context/AuthContext";
 
 export interface FullUserProfile {
   id: number;
+  avatar?: string | null;
   first_name: string;
   last_name: string;
   email: string;
   phone?: string;
-  role: "patient" | "doctor" | "admin";
-  role_display?: string;
+  role?: string;
+  roles?: string[];
+  profiles?: Record<string, Record<string, unknown>>;
 
   // Personal details
   birth_date?: string;
@@ -53,7 +55,7 @@ export const useUserProfile = () => {
 
   const fetchUserProfile = useCallback(async () => {
     if (!user) {
-      console.log('❌ [useUserProfile] No user found, skipping API call');
+      // console.log('❌ [useUserProfile] No user found, skipping API call');
       return;
     }
 
@@ -61,20 +63,20 @@ export const useUserProfile = () => {
       setLoading(true);
       setError(null);
 
-      console.log('🔑 [useUserProfile] Starting API call...');
-      console.log('🔑 [useUserProfile] User from AuthContext:', user);
+      // console.log('🔑 [useUserProfile] Starting API call...');
+      // console.log('🔑 [useUserProfile] User from AuthContext:', user);
 
       // Check authentication before making the call
       const token = localStorage.getItem("access_token");
-      console.log('🔑 [useUserProfile] Access token exists:', !!token);
-      console.log('🔑 [useUserProfile] Token preview:', token ? token.substring(0, 20) + '...' : 'none');
+      // console.log('🔑 [useUserProfile] Access token exists:', !!token);
+      // console.log('🔑 [useUserProfile] Token preview:', token ? token.substring(0, 20) + '...' : 'none');
 
-      console.log('🔑 [useUserProfile] Making API call to /user-profile/profile/...');
+      // console.log('🔑 [useUserProfile] Making API call to /user-profile/profile/...');
       const response = await api.get('/user-profile/profile/');
 
-      console.log('✅ [useUserProfile] SUCCESS! API Response:', response.data);
-      console.log('📞 [useUserProfile] Phone in API response:', response.data?.phone);
-      console.log('🎯 [useUserProfile] Full response keys:', Object.keys(response.data));
+      // console.log('✅ [useUserProfile] SUCCESS! API Response:', response.data);
+      // console.log('📞 [useUserProfile] Phone in API response:', response.data?.phone);
+      // console.log('🎯 [useUserProfile] Full response keys:', Object.keys(response.data));
 
       setFullUserProfile(response.data);
     } catch (error: any) {
@@ -88,14 +90,15 @@ export const useUserProfile = () => {
 
       // Fallback to basic user data on error
       if (user) {
-        console.log('📄 [useUserProfile] Using fallback user data:', user);
+        // console.log('📄 [useUserProfile] Using fallback user data:', user);
         setFullUserProfile({
           id: user.id,
           first_name: user.first_name,
           last_name: user.last_name,
           email: user.email,
           phone: user.phone,
-          role: user.role || "patient",
+          role: computeRole(user.roles),
+          roles: user.roles,
         } as FullUserProfile);
       }
     } finally {
@@ -104,27 +107,28 @@ export const useUserProfile = () => {
   }, [user]);
 
   useEffect(() => {
-    console.log('🔄 [useUserProfile] useEffect triggered:', { authLoading, user: !!user });
+    // console.log('🔄 [useUserProfile] useEffect triggered:', { authLoading, user: !!user });
     if (!authLoading && user) {
-      console.log('🔄 [useUserProfile] Calling fetchUserProfile...');
+      // console.log('🔄 [useUserProfile] Calling fetchUserProfile...');
       fetchUserProfile();
     } else if (!authLoading && !user) {
-      console.log('🔄 [useUserProfile] No user, setting loading to false');
+      // console.log('🔄 [useUserProfile] No user, setting loading to false');
       setLoading(false);
     } else {
-      console.log('🔄 [useUserProfile] Still loading auth or no conditions met', { authLoading, user: !!user });
+      // console.log('🔄 [useUserProfile] Still loading auth or no conditions met', { authLoading, user: !!user });
     }
   }, [authLoading, user, fetchUserProfile]);
 
   // Create the final user profile object with proper fallbacks
   const userProfile = fullUserProfile ? {
     id: String(fullUserProfile.id || user?.id || 0),
+    avatar: fullUserProfile.avatar ?? null,
     first_name: fullUserProfile.first_name || user?.first_name || "",
     last_name: fullUserProfile.last_name || user?.last_name || "",
     email: fullUserProfile.email || user?.email || "",
     phone: fullUserProfile.phone || user?.phone || "",
-    role: fullUserProfile.role || user?.role || "patient",
-    role_display: fullUserProfile.role_display || "",
+    role: fullUserProfile.role || computeRole(user?.roles),
+    roles: fullUserProfile.roles ?? user?.roles,
 
     // Personal details
     birth_date: fullUserProfile.birth_date || "",
@@ -158,12 +162,12 @@ export const useUserProfile = () => {
     date_joined: fullUserProfile.date_joined || "",
   } : null;
 
-  console.log('🎯 [useUserProfile] Final userProfile creation:');
-  console.log('🎯 [useUserProfile] - fullUserProfile exists:', !!fullUserProfile);
-  console.log('🎯 [useUserProfile] - fullUserProfile data:', fullUserProfile);
-  console.log('🎯 [useUserProfile] - Final userProfile object:', userProfile);
-  console.log('📞 [useUserProfile] - Final userProfile.phone:', userProfile?.phone);
-  console.log('🔍 [useUserProfile] - Current states:', { loading, error, hasFullProfile: !!fullUserProfile });
+  // console.log('🎯 [useUserProfile] Final userProfile creation:');
+  // console.log('🎯 [useUserProfile] - fullUserProfile exists:', !!fullUserProfile);
+  // console.log('🎯 [useUserProfile] - fullUserProfile data:', fullUserProfile);
+  // console.log('🎯 [useUserProfile] - Final userProfile object:', userProfile);
+  // console.log('📞 [useUserProfile] - Final userProfile.phone:', userProfile?.phone);
+  // console.log('🔍 [useUserProfile] - Current states:', { loading, error, hasFullProfile: !!fullUserProfile });
 
   return {
     userProfile,

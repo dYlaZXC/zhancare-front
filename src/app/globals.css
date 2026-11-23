@@ -1,7 +1,44 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&display=swap");
+@import "leaflet/dist/leaflet.css";
+@import "leaflet.markercluster/dist/MarkerCluster.css";
+@import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import url("https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&display=swap");
+
+/* 404 Page */
+.not-found-404-text {
+  background: linear-gradient(135deg, #001e80 0%, #1a2fc8 50%, #3772ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 40px rgba(55, 114, 255, 0.5));
+}
+
+.not-found-404-reflection {
+  background: linear-gradient(135deg, #001e80 0%, #1a2fc8 50%, #3772ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  -webkit-mask-image: linear-gradient(to bottom, black, transparent);
+  mask-image: linear-gradient(to bottom, black, transparent);
+}
+
+.not-found-grid-bg {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* FontAwesome - Prevent FOUC (Flash of Unstyled Content) */
+svg.svg-inline--fa {
+  display: inline-block;
+  height: 1em;
+  overflow: visible;
+  vertical-align: -0.125em;
+}
 
 body {
   font-family: "Inter", sans-serif;
@@ -47,6 +84,119 @@ html {
 
   .card {
     @apply p-10 rounded-3xl border border-[#F1F1F1] shadow-[0_7px_14px_#EAEAEA] max-w-xs w-full;
+  }
+}
+
+@layer utilities {
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fadeIn {
+    animation: fadeIn 0.4s ease-out forwards;
+  }
+
+  /* Premium blob animation for smart consultation */
+  @keyframes blob {
+    0% {
+      transform: translate(0px, 0px) scale(1);
+    }
+    33% {
+      transform: translate(30px, -50px) scale(1.1);
+    }
+    66% {
+      transform: translate(-20px, 20px) scale(0.9);
+    }
+    100% {
+      transform: translate(0px, 0px) scale(1);
+    }
+  }
+
+  .animate-blob {
+    animation: blob 7s infinite;
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+    20%, 40%, 60%, 80% { transform: translateX(4px); }
+  }
+
+  .animate-shake {
+    animation: shake 0.4s ease-in-out;
+  }
+
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
+
+  .animation-delay-1000 {
+    animation-delay: 1s;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Premium sidebar scrollbar — left side, invisible until hovered/focused
+     (macOS-style auto-hide) so it doesn't sit there as a visible UI chrome
+     element when nobody's interacting with the list. */
+  .sidebar-scroll {
+    direction: rtl;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.3s ease;
+  }
+
+  .sidebar-scroll:hover,
+  .sidebar-scroll:focus-within {
+    scrollbar-color: rgba(99, 131, 255, 0.45) transparent;
+  }
+
+  .sidebar-scroll > * {
+    direction: ltr;
+  }
+
+  .sidebar-scroll::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .sidebar-scroll::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 99px;
+  }
+
+  .sidebar-scroll::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 99px;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .sidebar-scroll:hover::-webkit-scrollbar-thumb,
+  .sidebar-scroll:focus-within::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(99, 131, 255, 0.6) 0%, rgba(139, 92, 246, 0.5) 100%);
+    box-shadow: 0 0 6px rgba(99, 131, 255, 0.3);
+  }
+
+  .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgba(99, 131, 255, 0.9) 0%, rgba(139, 92, 246, 0.8) 100%);
+    box-shadow: 0 0 10px rgba(99, 131, 255, 0.5);
   }
 }
 

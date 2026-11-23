@@ -2,13 +2,15 @@
 
 import React, { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/utils/api";
+import { toast } from "react-toastify";
 import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import { Consultation } from "@/types/consultation";
+import { useDeepgram } from "@/hooks/useDeepgram";
 
 // Doctor-specific components
 import DoctorVideoHeader from "./components/DoctorVideoHeader";
@@ -16,24 +18,28 @@ import DoctorVideoFrame from "./components/DoctorVideoFrame";
 import DoctorChatBox from "./components/DoctorChatBox";
 import DoctorChatInput from "./components/DoctorChatInput";
 import DoctorCallFooter from "./components/DoctorCallFooter";
+import FloatingConsultationButton from "./components/FloatingConsultationButton";
+import { isInjectionAttempt, CHAT_ENDPOINT } from "@/lib/ai";
 // import DoctorFloatingBadge from "./components/DoctorFloatingBadge";
-
-const API_KEY = "QqkMxELY0YVGkCx17Vya04Sq9nGvCahu";
-const ENDPOINT = "https://api.mistral.ai/v1/chat/completions";
 
 // Using shared Consultation type from @/types/consultation
 
 const DoctorVideoCallPage: React.FC = () => {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isDoctor, loading: authLoading } = useAuth();
 
-  // Redirect if not a doctor
+  // Auth guards — run after auth is resolved
   useEffect(() => {
-    if (user && user.role !== "doctor") {
-      router.push(`/video-call/patient?${window.location.search}`);
+    if (authLoading) return;
+    if (!user) {
+      // Not logged in — redirect to home (auth popup will open there)
+      router.push(`/?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
       return;
     }
-  }, [user, router]);
+    if (!isDoctor) {
+      router.push(`/video-call/patient?${window.location.search}`);
+    }
+  }, [user, isDoctor, authLoading, router]);
 
   const [meetingId, setMeetingId] = useState<string | null>(null);
   const [consultation, setConsultation] = useState<Consultation | null>(null);
@@ -43,11 +49,13 @@ const DoctorVideoCallPage: React.FC = () => {
   const safeUserName = user?.first_name || user?.email?.split("@")[0] || "doctor";
   const userEmail = user?.email || `${safeUserName.toLowerCase().replace(/\s+/g, "")}@medical.com`;
 
+  // Doctor's clinic id — already loaded onto the auth user via GET /user-profile/profile/,
+  // just not reflected in the loosely-typed `profiles` field.
+  const doctorClinicId = (user as any)?.profiles?.doctor?.clinic?.id as number | undefined;
+
   // Get patient name for doctor interface
   const patientName = consultation?.patient_name || "Пациент";
 
-  const [callActive, setCallActive] = useState(true);
-  const [otherPartyJoined, setOtherPartyJoined] = useState(false);
   const [userInput, setUserInput] = useState("");
   const [messages, setMessages] = useState<{ user: string; response: string }[]>([]);
   const [loading, setLoading] = useState(false);
@@ -55,21 +63,33 @@ const DoctorVideoCallPage: React.FC = () => {
 
   // Doctor-specific states
   const [isRecording, setIsRecording] = useState(false);
-  const [sessionNotes, setSessionNotes] = useState("");
-  const [prescriptionMode, setPrescriptionMode] = useState(false);
+
+  // Deepgram transcription
+  const {
+    transcript,
+    isConnected: isTranscribing,
+    error: transcriptionError,
+    stream: micStream,
+    duration: recordingDuration,
+    startTranscription,
+    stopTranscription,
+    clearTranscript,
+  } = useDeepgram();
 
   const chatBoxRef = useRef<HTMLDivElement>(null);
+  const consultationSheetRef = useRef<{ openSheet: () => void }>(null);
   const { language } = useLanguage();
   const t = language === "ru" ? ru.chat : kz.chat;
 
-  // Fetch consultation data from API using meetingId
+  // Fetch consultation data — only after auth is confirmed
   useEffect(() => {
+    if (authLoading || !user || !isDoctor) return;
+
     const fetchConsultationData = async () => {
       try {
         setConsultationLoading(true);
         setConsultationError(null);
 
-        // Get meetingId from URL
         const params = new URLSearchParams(window.location.search);
         const meetingIdParam = params.get("meetingId");
 
@@ -80,7 +100,6 @@ const DoctorVideoCallPage: React.FC = () => {
 
         setMeetingId(meetingIdParam);
 
-        // Fetch consultation data from API
         const response = await api.get(`/consultations/?meeting_id=${meetingIdParam}`);
 
         if (response.data && response.data.length > 0) {
@@ -90,32 +109,51 @@ const DoctorVideoCallPage: React.FC = () => {
         }
       } catch (err: any) {
         console.error('Error fetching consultation data:', err);
-        setConsultationError("Ошибка загрузки данных консультации");
+        const status = err?.response?.status;
+        if (status === 401 || status === 403) {
+          setConsultationError("Нет доступа. Войдите в систему как врач.");
+        } else {
+          setConsultationError("Ошибка загрузки данных консультации");
+        }
       } finally {
         setConsultationLoading(false);
       }
     };
 
     fetchConsultationData();
-  }, []);
+  }, [authLoading, user, isDoctor]);
 
-  const handleEndCall = () => {
-    setCallActive(false);
-    router.push("/doctor-profile");
+  const handleDisconnect = () => {
+    router.push("/doctor/consultations");
   };
 
-  const handleStartRecording = () => {
+  const handleStartRecording = async () => {
     setIsRecording(true);
-    // Implement recording logic
+    // Start Deepgram transcription
+    try {
+      await startTranscription();
+      console.log('Transcription started');
+    } catch (err) {
+      console.error('Error starting transcription:', err);
+      setIsRecording(false);
+    }
   };
 
   const handleStopRecording = () => {
     setIsRecording(false);
-    // Implement stop recording logic
+    // Stop Deepgram transcription
+    stopTranscription();
+    console.log('Transcription stopped');
   };
 
   const sendMessage = async () => {
     if (!userInput.trim()) return;
+
+    if (isInjectionAttempt(userInput)) {
+      setMessages(prev => [...prev, { user: userInput, response: "Я медицинский ассистент. Пожалуйста, задайте медицинский вопрос." }]);
+      setUserInput("");
+      return;
+    }
 
     const newMessage = { user: userInput, response: "" };
     setMessages((prev) => [...prev, newMessage]);
@@ -123,24 +161,15 @@ const DoctorVideoCallPage: React.FC = () => {
     setError("");
 
     try {
-      const payload = {
-        model: "open-mistral-nemo",
-        temperature: 0.3,
-        top_p: 1,
-        max_tokens: 500,
-        messages: [
-          { role: "system", content: "Вы медицинский ассистент врача. Предоставляйте профессиональные медицинские советы." },
-          { role: "user", content: userInput },
-        ],
-      };
-
-      const res = await fetch(ENDPOINT, {
+      const res = await fetch(CHAT_ENDPOINT, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${API_KEY}`,
-        },
-        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          message: userInput,
+          language: "ru",
+          context: "doctor_assistant",
+        }),
       });
 
       if (!res.ok) throw new Error("Ошибка запроса");
@@ -148,7 +177,7 @@ const DoctorVideoCallPage: React.FC = () => {
       const data = await res.json();
       setMessages((prev) => {
         const last = prev[prev.length - 1];
-        return [...prev.slice(0, -1), { ...last, response: data.choices[0].message.content }];
+        return [...prev.slice(0, -1), { ...last, response: data.text }];
       });
     } catch {
       setError("Ошибка получения ответа");
@@ -159,11 +188,6 @@ const DoctorVideoCallPage: React.FC = () => {
   };
 
   useEffect(() => {
-    const timeout = setTimeout(() => setOtherPartyJoined(true), 3000);
-    return () => clearTimeout(timeout);
-  }, []);
-
-  useEffect(() => {
     if (chatBoxRef.current) {
       chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
     }
@@ -172,173 +196,263 @@ const DoctorVideoCallPage: React.FC = () => {
   // Loading or error states
   if (consultationLoading) {
     return (
-      <div className="flex items-center justify-center h-screen text-blue-700 text-lg font-semibold">
-        <Loader2 className="animate-spin w-8 h-8 mr-2" />
-        ⏳ Загрузка данных консультации...
+      <div className="relative flex items-center justify-center h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-hidden">
+        {/* Animated background circles */}
+        <div className="absolute inset-0">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-600/20 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-green-600/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        </div>
+
+        {/* Content */}
+        <div className="relative z-10 text-center max-w-md px-8">
+          <div className="mb-6 inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-emerald-600/30 border-2 border-emerald-400/50 backdrop-blur-sm shadow-xl shadow-emerald-500/20">
+            <Loader2 className="animate-spin w-12 h-12 text-emerald-300" strokeWidth={2.5} />
+          </div>
+          <h2 className="text-3xl font-bold text-white mb-4 drop-shadow-lg">Загрузка консультации</h2>
+          <p className="text-lg text-slate-200 mb-6">Получаем информацию о вашей встрече...</p>
+          <div className="flex items-center justify-center gap-3">
+            <div className="w-3 h-3 bg-emerald-500 rounded-full animate-bounce shadow-lg shadow-emerald-500/50"></div>
+            <div className="w-3 h-3 bg-green-500 rounded-full animate-bounce delay-75 shadow-lg shadow-green-500/50"></div>
+            <div className="w-3 h-3 bg-teal-500 rounded-full animate-bounce delay-150 shadow-lg shadow-teal-500/50"></div>
+          </div>
+        </div>
+
+        {/* Grid overlay */}
+        <div className="absolute inset-0 opacity-[0.02] pointer-events-none">
+          <div className="w-full h-full"
+               style={{
+                 backgroundImage: `
+                   linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+                   linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px)
+                 `,
+                 backgroundSize: '24px 24px'
+               }}>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (consultationError) {
     return (
-      <div className="flex items-center justify-center h-screen text-red-600 text-lg font-semibold">
-        ❌ {consultationError}
+      <div className="relative flex items-center justify-center h-screen bg-gradient-to-br from-gray-900 via-red-900/20 to-orange-900/20 overflow-hidden">
+        {/* Animated background circles */}
+        <div className="absolute inset-0">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-red-500/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        </div>
+
+        {/* Content */}
+        <div className="relative z-10 text-center max-w-md px-8">
+          <div className="mb-6 inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-red-600/20 border-2 border-red-400/30 backdrop-blur-sm">
+            <svg className="w-10 h-10 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-4">Ошибка загрузки</h2>
+          <p className="text-red-200/90 mb-6">{consultationError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 text-white font-semibold hover:from-emerald-700 hover:to-green-700 transition-all duration-300 border-2 border-emerald-400/50 shadow-lg hover:shadow-emerald-500/50 hover:scale-105"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Обновить страницу
+          </button>
+          <p className="text-xs text-white/60 mt-6">
+            Если проблема повторяется, обратитесь в службу поддержки
+          </p>
+        </div>
+
+        {/* Grid overlay */}
+        <div className="absolute inset-0 opacity-5 pointer-events-none">
+          <div className="w-full h-full"
+               style={{
+                 backgroundImage: `
+                   linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                   linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px)
+                 `,
+                 backgroundSize: '24px 24px'
+               }}>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!meetingId || !consultation) {
     return (
-      <div className="flex items-center justify-center h-screen text-blue-700 text-lg font-semibold">
-        ⏳ Загрузка данных встречи...
+      <div className="relative flex items-center justify-center h-screen bg-gradient-to-br from-gray-900 via-emerald-900/20 to-green-900/20 overflow-hidden">
+        {/* Animated background circles */}
+        <div className="absolute inset-0">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-green-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        </div>
+
+        {/* Content */}
+        <div className="relative z-10 text-center max-w-md px-8">
+          <div className="mb-6 inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-emerald-600/20 border-2 border-emerald-400/30 backdrop-blur-sm">
+            <Loader2 className="animate-spin w-10 h-10 text-emerald-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-4">Подготовка встречи</h2>
+          <p className="text-emerald-200/90 mb-6">Загружаем данные встречи...</p>
+          <div className="flex items-center justify-center gap-2">
+            <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce"></div>
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-bounce delay-75"></div>
+            <div className="w-2 h-2 bg-teal-400 rounded-full animate-bounce delay-150"></div>
+          </div>
+        </div>
+
+        {/* Grid overlay */}
+        <div className="absolute inset-0 opacity-5 pointer-events-none">
+          <div className="w-full h-full"
+               style={{
+                 backgroundImage: `
+                   linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                   linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px)
+                 `,
+                 backgroundSize: '24px 24px'
+               }}>
+          </div>
+        </div>
       </div>
     );
   }
 
+  const handleSaveConsultation = async (data: any) => {
+    console.log("Saving consultation data:", data);
+
+    if (!meetingId) {
+      console.error("Meeting ID not available");
+      toast.error("Ошибка: Meeting ID не найден");
+      return;
+    }
+
+    try {
+      // `data` is keyed by the clinic's own template sections (see
+      // FloatingConsultationButton's sectionValues) plus `transcription` —
+      // pass everything through as-is, the backend validates keys against
+      // this consultation's own template_snapshot.
+      const { transcription, ...structured_data } = data;
+      const response = await api.patch(
+        `/consultations/${meetingId}/save-consultation-form/`,
+        { structured_data, transcription }
+      );
+
+      console.log("Consultation form saved successfully:", response.data);
+
+      // Update the consultation state with the saved data
+      if (response.data.consultation) {
+        setConsultation(response.data.consultation);
+      }
+
+      // Show success toast
+      toast.success("✅ Данные успешно сохранены!");
+    } catch (error: any) {
+      console.error("Failed to save consultation form:", error);
+      console.error("Error response:", error?.response?.data);
+
+      // Show error toast with specific error message if available
+      const errorMessage = error?.response?.data?.error || "Ошибка при сохранении данных";
+      toast.error(`❌ ${errorMessage}`);
+    }
+  };
+
+  const handleGenerateReport = (data: any) => {
+    console.log("Generating report with data:", data);
+  };
+
+  const handleOpenConsultationSheet = () => {
+    consultationSheetRef.current?.openSheet();
+  };
+
+  const handleStartCall = async () => {
+    if (!meetingId) return;
+    try {
+      await api.post(`/consultations/${meetingId}/start-call/`);
+      setConsultation((prev) => prev ? { ...prev, status: "ongoing", started_at: new Date().toISOString() } : prev);
+      toast.success("Консультация начата");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Не удалось начать консультацию");
+    }
+  };
+
+  const handleEndCall = async () => {
+    if (!meetingId) return;
+    try {
+      await api.post(`/consultations/${meetingId}/end-call/`);
+      setConsultation((prev) => prev ? { ...prev, status: "completed", ended_at: new Date().toISOString() } : prev);
+      toast.success("Консультация завершена");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Не удалось завершить консультацию");
+    }
+    handleDisconnect();
+  };
+
   return (
-    <div
-      className="min-h-screen h-screen flex flex-col text-white relative overflow-hidden"
-      style={{
-        background: `
-          radial-gradient(circle at 20% 50%, rgba(16, 185, 129, 0.15) 0%, transparent 50%),
-          radial-gradient(circle at 80% 20%, rgba(34, 197, 94, 0.1) 0%, transparent 50%),
-          radial-gradient(circle at 40% 80%, rgba(21, 128, 61, 0.1) 0%, transparent 50%),
-          linear-gradient(135deg, #0f1419 0%, #1a2e23 25%, #234a35 50%, #2d6a4f 75%, #16a085 100%)
-        `
-      }}
-    >
-      {/* Responsive Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-4 left-4 sm:top-10 sm:left-10 w-16 h-16 sm:w-24 sm:h-24 lg:w-32 lg:h-32 rounded-full blur-xl animate-pulse"
-             style={{ background: 'radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, rgba(21, 128, 61, 0.1) 100%)', animationDuration: '4s' }}></div>
-        <div className="absolute bottom-10 right-4 sm:bottom-20 sm:right-10 w-12 h-12 sm:w-16 sm:h-16 lg:w-24 lg:h-24 rounded-full blur-lg animate-bounce"
-             style={{ background: 'radial-gradient(circle, rgba(34, 197, 94, 0.2) 0%, rgba(22, 163, 74, 0.1) 100%)', animationDuration: '3s' }}></div>
-        <div className="absolute top-1/2 left-1/2 w-8 h-8 sm:w-12 sm:h-12 lg:w-16 lg:h-16 rounded-full blur-md animate-ping"
-             style={{ background: 'radial-gradient(circle, rgba(16, 185, 129, 0.25) 0%, transparent 70%)', animationDuration: '2s' }}></div>
+    <div className="w-full min-h-screen bg-gray-900 flex flex-col">
+      <div className="sticky top-0 z-20">
+        <DoctorVideoHeader
+          meetingId={meetingId}
+          patientName={patientName}
+          consultation={consultation}
+        />
       </div>
 
-      {/* <DoctorFloatingBadge
-        patientName={patientName}
-        isRecording={isRecording}
-        consultationId={consultation.id}
-      /> */}
-
-      <DoctorVideoHeader
-        meetingId={meetingId}
-        patientName={patientName}
-        consultation={consultation}
-        isRecording={isRecording}
-        onStartRecording={handleStartRecording}
-        onStopRecording={handleStopRecording}
-      />
-
-      {callActive ? (
-        <>
-          <main className="flex-1 flex flex-col lg:flex-row gap-2 sm:gap-3 lg:gap-4 xl:gap-6 p-2 sm:p-3 lg:p-4 xl:p-6 relative z-10 min-h-0 overflow-hidden">
-            {/* Video Section - Takes more space on desktop */}
-            <div className="relative group min-w-0 h-[35vh] sm:h-[40vh] md:h-[45vh] lg:h-full lg:flex-[2] xl:flex-[3] overflow-hidden">
-              <DoctorVideoFrame
-                meetingId={meetingId}
-                safeUserName={safeUserName}
-                userEmail={userEmail}
-                otherPartyJoined={otherPartyJoined}
-                onDisconnect={handleEndCall}
-                isRecording={isRecording}
-                patientName={patientName}
-              />
-            </div>
-
-            {/* Medical AI Chat Section - Constrained width on desktop */}
-            <div className="relative group flex-1 lg:flex-[1] xl:flex-[1] lg:h-full lg:max-w-[400px] xl:max-w-[450px] min-h-0 min-w-0 overflow-hidden">
-              <div className="h-full max-h-full flex flex-col overflow-hidden rounded-xl sm:rounded-2xl lg:rounded-3xl backdrop-blur-md border border-white/20 shadow-2xl transition-all duration-500 group-hover:shadow-emerald-500/20"
-                   style={{
-                     background: `
-                       linear-gradient(135deg,
-                         rgba(255, 255, 255, 0.1) 0%,
-                         rgba(255, 255, 255, 0.05) 50%,
-                         rgba(16, 185, 129, 0.08) 100%
-                       )
-                     `
-                   }}>
-
-                {/* Medical Chat Header */}
-                <div className="relative px-3 py-3 sm:px-4 sm:py-3 lg:px-4 lg:py-3 border-b border-white/10 backdrop-blur-sm flex-shrink-0"
-                     style={{
-                       background: `
-                         linear-gradient(135deg,
-                           rgba(16, 185, 129, 0.2) 0%,
-                           rgba(34, 197, 94, 0.15) 50%,
-                           rgba(21, 128, 61, 0.1) 100%
-                         )
-                       `
-                     }}>
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9 rounded-lg sm:rounded-xl flex items-center justify-center text-sm sm:text-base backdrop-blur-sm border border-white/20"
-                         style={{ background: 'rgba(255, 255, 255, 0.15)' }}>
-                      🩺
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="text-white font-semibold text-sm sm:text-base truncate">Медицинский ИИ-Ассистент</h3>
-                      <p className="text-white/70 text-xs truncate">Профессиональная поддержка врача</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Chat content container with proper flex */}
-                <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                  <DoctorChatBox
-                    messages={messages}
-                    loading={loading}
-                    error={error}
-                    chatBoxRef={chatBoxRef}
-                    t={t}
-                    prescriptionMode={prescriptionMode}
-                  />
-
-                  <div className="flex-shrink-0">
-                    <DoctorChatInput
-                      userInput={userInput}
-                      setUserInput={setUserInput}
-                      sendMessage={sendMessage}
-                      loading={loading}
-                      t={t}
-                      prescriptionMode={prescriptionMode}
-                      setPrescriptionMode={setPrescriptionMode}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </main>
-
-          <DoctorCallFooter
-            handleEndCall={handleEndCall}
-            sessionNotes={sessionNotes}
-            setSessionNotes={setSessionNotes}
-            consultation={consultation}
-            isRecording={isRecording}
-            onStartRecording={handleStartRecording}
-            onStopRecording={handleStopRecording}
-          />
-        </>
-      ) : (
-        <div className="flex-1 flex items-center justify-center relative z-10">
-          <div className="text-center p-8 rounded-3xl backdrop-blur-md border border-white/20 shadow-2xl"
-               style={{
-                 background: `
-                   linear-gradient(135deg,
-                     rgba(255, 255, 255, 0.1) 0%,
-                     rgba(255, 255, 255, 0.05) 50%,
-                     rgba(16, 185, 129, 0.1) 100%
-                   )
-                 `
-               }}>
-            <div className="text-6xl mb-4">🩺</div>
-            <h2 className="text-2xl font-bold text-white mb-2">Консультация завершена</h2>
-            <p className="text-white/70">Сохраните заметки и назначения</p>
-          </div>
+      {/* Consultation status bar */}
+      {consultation?.status === "pending" && (
+        <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center justify-between">
+          <span className="text-amber-300 text-sm">Консультация ещё не начата</span>
+          <button
+            onClick={handleStartCall}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors"
+          >
+            ▶ Начать консультацию
+          </button>
         </div>
       )}
+      {consultation?.status === "completed" && (
+        <div className="bg-gray-700/50 border-b border-gray-600 px-4 py-2 flex items-center gap-2">
+          <span className="text-gray-400 text-sm">✓ Консультация завершена</span>
+          {consultation.duration_seconds && (
+            <span className="text-gray-500 text-sm">· {Math.floor(consultation.duration_seconds / 60)} мин</span>
+          )}
+        </div>
+      )}
+
+      <div className="w-full p-4" style={{ height: 'calc(100vh - 180px)' }}>
+        <DoctorVideoFrame
+          meetingId={meetingId}
+          safeUserName={safeUserName}
+          userEmail={userEmail}
+          onDisconnect={handleDisconnect}
+          isRecording={isRecording}
+          patientName={patientName}
+        />
+      </div>
+
+      <DoctorCallFooter
+        handleEndCall={handleEndCall}
+        consultation={consultation}
+        onOpenConsultationSheet={handleOpenConsultationSheet}
+        hasConsultationData={false}
+      />
+
+      {/* Consultation Sheet - No floating button, opened from footer */}
+      <FloatingConsultationButton
+        ref={consultationSheetRef}
+        consultation={consultation}
+        onSave={handleSaveConsultation}
+        onGenerateReport={handleGenerateReport}
+        transcript={transcript}
+        isTranscribing={isTranscribing}
+        micStream={micStream}
+        recordingDuration={recordingDuration}
+        onStartRecording={handleStartRecording}
+        onStopRecording={handleStopRecording}
+        doctorId={user?.id}
+        doctorClinicId={doctorClinicId}
+        patientId={consultation?.patient}
+      />
     </div>
   );
 };

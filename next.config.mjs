@@ -1,6 +1,11 @@
 import {withSentryConfig} from "@sentry/nextjs";
+import withSerwistInit from "@serwist/next";
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  poweredByHeader: false,
+  turbopack: {
+    // Empty config to silence Turbopack warning, we use webpack for SVG handling
+  },
   webpack(config) {
     // Grab the existing rule that handles SVG imports
     const fileLoaderRule = config.module.rules.find((rule) =>
@@ -37,6 +42,7 @@ const nextConfig = {
     return config;
   },
   output: 'standalone',
+  skipTrailingSlashRedirect: true,
   images: {
     remotePatterns: [
       {
@@ -56,7 +62,39 @@ const nextConfig = {
   // Other Next.js config options (if any)
 };
 
-export default withSentryConfig(nextConfig, {
+const withSerwist = withSerwistInit({
+  swSrc: "src/sw.ts",
+  swDest: "public/sw.js",
+  // Never build (or register, see ServiceWorkerProvider.tsx) the service
+  // worker outside production — avoids any interference with dev-mode HMR
+  // and matches the approved rollout ("не активировать Service Worker в
+  // development").
+  disable: process.env.NODE_ENV !== "production",
+  // No offline fallback page in this first version — see src/sw.ts, there
+  // is deliberately no catch-all runtime route either.
+  additionalPrecacheEntries: [],
+  cacheOnNavigation: false,
+  reloadOnOnline: false,
+  // The webpack-asset precache manifest otherwise includes every imported
+  // image/video (landing-page hero shots, doctor photos, logos, …) —
+  // nothing sensitive, but tens of MB a PWA install shouldn't have to pull
+  // up front. Only JS/CSS/webfonts need to be ready before first paint;
+  // marketing media can keep loading over the network like it always has.
+  //
+  // .map is excluded too: @serwist/next's own default exclude predicate
+  // (see its index.mjs) only filters the SW's own output, server/*
+  // assets and root *.json — it does NOT filter sourcemaps, so without
+  // this they'd get swept into the precache whenever they exist as
+  // webpack-emitted assets (confirmed empirically: a build with
+  // Sentry's sourcemap step active precached 193 *.js.map files until
+  // this was added).
+  exclude: [
+    /\/static\/media\/.*\.(?:png|jpe?g|gif|webp|avif|mp4|webm|ogg?v)$/i,
+    /\.map$/,
+  ],
+});
+
+export default withSerwist(withSentryConfig(nextConfig, {
 // For all available options, see:
 // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
@@ -86,4 +124,4 @@ disableLogger: true,
 // https://docs.sentry.io/product/crons/
 // https://vercel.com/docs/cron-jobs
 automaticVercelMonitors: true,
-});
+}));

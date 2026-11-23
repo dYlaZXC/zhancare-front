@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram WebApp Test</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f7f9fc;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .section h2 {
+            color: #764ba2;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .status.success {
+            background: #10b981;
+            color: white;
+        }
+
+        .status.error {
+            background: #ef4444;
+            color: white;
+        }
+
+        .info {
+            background: #e0e7ff;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 5px;
+            transition: transform 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .user-photo {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 10px auto;
+            display: block;
+            border: 3px solid #667eea;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .badge {
+            background: #667eea;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 11px;
+            display: inline-block;
+            margin: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Telegram WebApp Test</h1>
+
+        <div class="section">
+            <h2>📡 SDK Status</h2>
+            <div id="sdk-status"></div>
+        </div>
+
+        <div class="section">
+            <h2>👤 User Information</h2>
+            <div id="user-info"></div>
+        </div>
+
+        <div class="section">
+            <h2>🎨 Theme Information</h2>
+            <div id="theme-info"></div>
+        </div>
+
+        <div class="section">
+            <h2>📱 Platform Information</h2>
+            <div id="platform-info"></div>
+        </div>
+
+        <div class="section">
+            <h2>🔑 Init Data</h2>
+            <div id="init-data"></div>
+        </div>
+
+        <div class="section">
+            <h2>🎮 Actions</h2>
+            <div class="grid">
+                <button onclick="testExpand()">Expand WebApp</button>
+                <button onclick="testHaptic()">Test Haptic</button>
+                <button onclick="testMainButton()">Show Main Button</button>
+                <button onclick="testBackButton()">Show Back Button</button>
+                <button onclick="testClose()">Close WebApp</button>
+                <button onclick="copyInitData()">Copy initData</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize on load
+        window.addEventListener('load', function() {
+            checkSDK();
+            displayUserInfo();
+            displayThemeInfo();
+            displayPlatformInfo();
+            displayInitData();
+
+            // Signal ready
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.ready();
+            }
+        });
+
+        function checkSDK() {
+            const sdkStatus = document.getElementById('sdk-status');
+
+            if (window.Telegram && window.Telegram.WebApp) {
+                sdkStatus.innerHTML = `
+                    <span class="status success">✓ SDK Loaded</span>
+                    <div class="info">
+                        Version: ${window.Telegram.WebApp.version || 'Unknown'}<br>
+                        Is Expanded: ${window.Telegram.WebApp.isExpanded}
+                    </div>
+                `;
+            } else {
+                sdkStatus.innerHTML = `
+                    <span class="status error">✗ SDK Not Available</span>
+                    <div class="info">
+                        Make sure you're opening this page through Telegram WebApp
+                    </div>
+                `;
+            }
+        }
+
+        function displayUserInfo() {
+            const userInfo = document.getElementById('user-info');
+            const tg = window.Telegram?.WebApp;
+
+            if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                const user = tg.initDataUnsafe.user;
+                userInfo.innerHTML = `
+                    ${user.photo_url ? `<img src="${user.photo_url}" class="user-photo" alt="User Photo">` : ''}
+                    <div class="info">
+                        <strong>ID:</strong> ${user.id}<br>
+                        <strong>Name:</strong> ${user.first_name} ${user.last_name || ''}<br>
+                        ${user.username ? `<strong>Username:</strong> @${user.username}<br>` : ''}
+                        <strong>Language:</strong> ${user.language_code || 'N/A'}<br>
+                        ${user.is_premium ? '<span class="badge">⭐ Premium</span>' : ''}
+                    </div>
+                `;
+            } else {
+                userInfo.innerHTML = '<div class="info">No user data available</div>';
+            }
+        }
+
+        function displayThemeInfo() {
+            const themeInfo = document.getElementById('theme-info');
+            const tg = window.Telegram?.WebApp;
+
+            if (tg && tg.themeParams) {
+                const theme = tg.themeParams;
+                themeInfo.innerHTML = `
+                    <div class="info">
+                        <strong>Color Scheme:</strong> ${tg.colorScheme}<br>
+                        <strong>Background:</strong> <span style="background:${theme.bg_color};padding:2px 10px;color:white">${theme.bg_color || 'N/A'}</span><br>
+                        <strong>Text:</strong> <span style="background:${theme.text_color};padding:2px 10px;color:white">${theme.text_color || 'N/A'}</span><br>
+                        <strong>Button:</strong> <span style="background:${theme.button_color};padding:2px 10px;color:white">${theme.button_color || 'N/A'}</span><br>
+                        <strong>Link:</strong> <span style="background:${theme.link_color};padding:2px 10px;color:white">${theme.link_color || 'N/A'}</span>
+                    </div>
+                `;
+            } else {
+                themeInfo.innerHTML = '<div class="info">No theme data available</div>';
+            }
+        }
+
+        function displayPlatformInfo() {
+            const platformInfo = document.getElementById('platform-info');
+            const tg = window.Telegram?.WebApp;
+
+            if (tg) {
+                platformInfo.innerHTML = `
+                    <div class="info">
+                        <strong>Platform:</strong> ${tg.platform}<br>
+                        <strong>Viewport Height:</strong> ${tg.viewportHeight}px<br>
+                        <strong>Stable Height:</strong> ${tg.viewportStableHeight}px<br>
+                        <strong>Header Color:</strong> ${tg.headerColor}
+                    </div>
+                `;
+            } else {
+                platformInfo.innerHTML = '<div class="info">No platform data available</div>';
+            }
+        }
+
+        function displayInitData() {
+            const initData = document.getElementById('init-data');
+            const tg = window.Telegram?.WebApp;
+
+            if (tg && tg.initData) {
+                const data = tg.initData;
+                const truncated = data.length > 100 ? data.substring(0, 100) + '...' : data;
+                initData.innerHTML = `
+                    <div class="info">
+                        <strong>Length:</strong> ${data.length} characters<br>
+                        <strong>Data:</strong><br>
+                        <code style="word-break: break-all;">${truncated}</code><br>
+                        <button onclick="copyInitData()" style="margin-top:10px;">📋 Copy Full Data</button>
+                    </div>
+                `;
+            } else {
+                initData.innerHTML = '<div class="info">No init data available</div>';
+            }
+        }
+
+        // Action functions
+        function testExpand() {
+            const tg = window.Telegram?.WebApp;
+            if (tg) {
+                tg.expand();
+                alert('Expanded!');
+            }
+        }
+
+        function testHaptic() {
+            const tg = window.Telegram?.WebApp;
+            if (tg && tg.HapticFeedback) {
+                tg.HapticFeedback.notificationOccurred('success');
+                setTimeout(() => tg.HapticFeedback.notificationOccurred('warning'), 300);
+                setTimeout(() => tg.HapticFeedback.notificationOccurred('error'), 600);
+                alert('Did you feel the vibrations?');
+            }
+        }
+
+        function testMainButton() {
+            const tg = window.Telegram?.WebApp;
+            if (tg && tg.MainButton) {
+                tg.MainButton.setText('Click Me!');
+                tg.MainButton.show();
+                tg.MainButton.onClick(() => {
+                    alert('Main button clicked!');
+                    tg.MainButton.hide();
+                });
+            }
+        }
+
+        function testBackButton() {
+            const tg = window.Telegram?.WebApp;
+            if (tg && tg.BackButton) {
+                try {
+                    tg.BackButton.show();
+                    tg.BackButton.onClick(() => {
+                        alert('Back button clicked!');
+                        tg.BackButton.hide();
+                    });
+                } catch (e) {
+                    alert('BackButton not supported in this version');
+                }
+            }
+        }
+
+        function testClose() {
+            const tg = window.Telegram?.WebApp;
+            if (tg) {
+                if (confirm('Close the WebApp?')) {
+                    tg.close();
+                }
+            }
+        }
+
+        function copyInitData() {
+            const tg = window.Telegram?.WebApp;
+            if (tg && tg.initData) {
+                navigator.clipboard.writeText(tg.initData).then(() => {
+                    alert('initData copied to clipboard!');
+                }).catch(() => {
+                    // Fallback
+                    const textarea = document.createElement('textarea');
+                    textarea.value = tg.initData;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    alert('initData copied to clipboard!');
+                });
+            }
+        }
+    </script>
+</body>
+</html>
