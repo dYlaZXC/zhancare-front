@@ -325,26 +325,7 @@
     "subtitle": "Describe symptoms → AI selects a doctor → Payment → Video consultation",
     "startButton": "Describe symptoms",
     "startingButton": "Loading...",
-    "scheduleButton": "Book a doctor",
-    "features": [
-      {
-        "title": "Fast",
-        "description": "Consultation starts within 5 minutes after payment"
-      },
-      {
-        "title": "Smart matching",
-        "description": "AI automatically selects the right doctor"
-      },
-      {
-        "title": "Secure",
-        "description": "All data is protected and confidential"
-      }
-    ],
-    "trust": [
-      "Licensed doctors",
-      "500+ consultations",
-      "Rating 4.9/5"
-    ]
+    "scheduleButton": "Book a doctor"
   },
   "impactSection": {
     "title": "Why choose ZhanCare.AI?",
@@ -444,6 +425,10 @@
     "alreadyInstalled": "The app is already installed on this device",
     "androidTabLabel": "Android",
     "iosTabLabel": "iPhone",
+    "benefits": ["Notifications about bookings and doctor replies", "One-tap launch from your home screen", "Fast, no browser needed"],
+    "notifTitle": "ZhanCare.AI",
+    "notifBody": "Your doctor confirmed the consultation — starts in 15 minutes",
+    "stepLabel": "Step",
     "androidSteps": [
       "Open the site in Chrome on your phone.",
       "Tap the ⋮ icon (three dots) in the top-right corner.",

@@ -2,14 +2,7 @@
 
 import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faCommentMedical,
-  faCalendarPlus,
-  faUserMd,
-  faShieldAlt,
-  faClock,
-  faCheckCircle,
-} from "@fortawesome/free-solid-svg-icons";
+import { faCommentMedical, faCalendarPlus } from "@fortawesome/free-solid-svg-icons";
 import { useRouter } from "next/navigation";
 import { useState, useMemo } from "react";
 import heroVideo from "@/assets/hero-video.mp4";
@@ -20,6 +13,7 @@ import ru from "@/locales/ru.json";
 import en from "@/locales/en.json";
 import uz from "@/locales/uz.json";
 import kz from "@/locales/kz.json";
+import HeroLiveStats from "./HeroLiveStats";
 
 export default function HeroMeetStyle() {
   const router = useRouter();
@@ -197,163 +191,10 @@ export default function HeroMeetStyle() {
             </motion.button>
           </motion.div>
 
-          {/* Features Grid - Premium Glassmorphism Cards */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.8, type: "spring", stiffness: 100 }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto"
-          >
-            {/* Feature 1 - Premium Glassmorphism with Depth */}
-            <motion.div
-              className="group relative bg-white/[0.08] backdrop-blur-lg rounded-2xl p-7 border border-white/20 hover:bg-white/[0.12] hover:border-white/30 shadow-[0_4px_20px_rgba(0,0,0,0.2)] hover:shadow-[0_12px_40px_rgba(55,114,255,0.4)] transition-all duration-300 cursor-pointer overflow-hidden"
-              whileHover={{ scale: 1.06, y: -6 }}
-              whileTap={{ scale: 0.98 }}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.9, duration: 0.6 }}
-            >
-              {/* Subtle Inner Glow */}
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 via-transparent to-transparent opacity-60 pointer-events-none" />
-
-              {/* Icon with Brand Colors */}
-              <motion.div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 mx-auto shadow-[0_4px_20px_rgba(55,114,255,0.4)]"
-                style={{ background: `linear-gradient(135deg, ${brand.primary}, ${brand.secondary})` }}
-                whileHover={{ rotate: 360 }}
-                transition={{ duration: 0.6 }}
-              >
-                <FontAwesomeIcon icon={faClock} className="text-white text-2xl" />
-              </motion.div>
-              <p className="text-xl font-bold text-white mb-3 text-center group-hover:text-[#c1d3ff] transition-colors">
-                {t.features[0].title}
-              </p>
-              <p className="text-gray-300 text-sm text-center leading-relaxed group-hover:text-gray-200 transition-colors">
-                {t.features[0].description}
-              </p>
-
-              {/* Premium Hover Gradient Overlay */}
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl pointer-events-none" style={{ background: `linear-gradient(135deg, ${brand.accentRgba}0.1), ${brand.accentRgba}0.06))` }} />
-            </motion.div>
-
-            {/* Feature 2 - Premium Glassmorphism with Depth */}
-            <motion.div
-              className="group relative bg-white/[0.08] backdrop-blur-lg rounded-2xl p-7 border border-white/20 hover:bg-white/[0.12] hover:border-white/30 shadow-[0_4px_20px_rgba(0,0,0,0.2)] hover:shadow-[0_12px_40px_rgba(55,114,255,0.4)] transition-all duration-300 cursor-pointer overflow-hidden"
-              whileHover={{ scale: 1.06, y: -6 }}
-              whileTap={{ scale: 0.98 }}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.0, duration: 0.6 }}
-            >
-              {/* Subtle Inner Glow */}
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 via-transparent to-transparent opacity-60 pointer-events-none" />
-
-              {/* Icon with Brand Colors */}
-              <motion.div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 mx-auto shadow-[0_4px_20px_rgba(55,114,255,0.4)]"
-                style={{ background: `linear-gradient(135deg, ${brand.primary}, ${brand.secondary})` }}
-                whileHover={{ rotate: 360 }}
-                transition={{ duration: 0.6 }}
-              >
-                <FontAwesomeIcon icon={faUserMd} className="text-white text-2xl" />
-              </motion.div>
-              <p className="text-xl font-bold text-white mb-3 text-center group-hover:text-[#c1d3ff] transition-colors">
-                {t.features[1].title}
-              </p>
-              <p className="text-gray-300 text-sm text-center leading-relaxed group-hover:text-gray-200 transition-colors">
-                {t.features[1].description}
-              </p>
-
-              {/* Premium Hover Gradient Overlay */}
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl pointer-events-none" style={{ background: `linear-gradient(135deg, ${brand.accentRgba}0.1), ${brand.accentRgba}0.06))` }} />
-            </motion.div>
-
-            {/* Feature 3 - Premium Glassmorphism with Depth */}
-            <motion.div
-              className="group relative bg-white/[0.08] backdrop-blur-lg rounded-2xl p-7 border border-white/20 hover:bg-white/[0.12] hover:border-white/30 shadow-[0_4px_20px_rgba(0,0,0,0.2)] hover:shadow-[0_12px_40px_rgba(55,114,255,0.4)] transition-all duration-300 cursor-pointer overflow-hidden"
-              whileHover={{ scale: 1.06, y: -6 }}
-              whileTap={{ scale: 0.98 }}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.1, duration: 0.6 }}
-            >
-              {/* Subtle Inner Glow */}
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 via-transparent to-transparent opacity-60 pointer-events-none" />
-
-              {/* Icon with Brand Colors */}
-              <motion.div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 mx-auto shadow-[0_4px_20px_rgba(55,114,255,0.4)]"
-                style={{ background: `linear-gradient(135deg, ${brand.primary}, ${brand.secondary})` }}
-                whileHover={{ rotate: 360 }}
-                transition={{ duration: 0.6 }}
-              >
-                <FontAwesomeIcon icon={faShieldAlt} className="text-white text-2xl" />
-              </motion.div>
-              <p className="text-xl font-bold text-white mb-3 text-center group-hover:text-[#c1d3ff] transition-colors">
-                {t.features[2].title}
-              </p>
-              <p className="text-gray-300 text-sm text-center leading-relaxed group-hover:text-gray-200 transition-colors">
-                {t.features[2].description}
-              </p>
-
-              {/* Premium Hover Gradient Overlay */}
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl pointer-events-none" style={{ background: `linear-gradient(135deg, ${brand.accentRgba}0.1), ${brand.accentRgba}0.06))` }} />
-            </motion.div>
-          </motion.div>
-
-          {/* Trust Indicators - Integrated & Subtle */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 1.2, type: "spring", stiffness: 100 }}
-            className="mt-8 mb-10 sm:mb-6 flex flex-wrap items-center justify-center gap-3 text-xs"
-          >
-            <motion.div
-              className="group flex items-center gap-2 bg-white/[0.06] backdrop-blur-md px-4 py-2 rounded-full border border-white/15 hover:bg-white/[0.08] hover:border-white/20 transition-all duration-300 cursor-pointer"
-              whileHover={{ scale: 1.03, y: -1 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <motion.div
-                animate={{ scale: [1, 1.15, 1] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              >
-                <FontAwesomeIcon icon={faCheckCircle} className="text-sm opacity-80" style={{ color: brand.primary }} />
-              </motion.div>
-              <span className="text-gray-300 font-medium group-hover:text-gray-200 transition-colors opacity-90">
-                {t.trust[0]}
-              </span>
-            </motion.div>
-            <motion.div
-              className="group flex items-center gap-2 bg-white/[0.06] backdrop-blur-md px-4 py-2 rounded-full border border-white/15 hover:bg-white/[0.08] hover:border-white/20 transition-all duration-300 cursor-pointer"
-              whileHover={{ scale: 1.03, y: -1 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <motion.div
-                animate={{ scale: [1, 1.15, 1] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.3 }}
-              >
-                <FontAwesomeIcon icon={faCheckCircle} className="text-sm opacity-80" style={{ color: brand.primary }} />
-              </motion.div>
-              <span className="text-gray-300 font-medium group-hover:text-gray-200 transition-colors opacity-90">
-                {t.trust[1]}
-              </span>
-            </motion.div>
-            <motion.div
-              className="group flex items-center gap-2 bg-white/[0.06] backdrop-blur-md px-4 py-2 rounded-full border border-white/15 hover:bg-white/[0.08] hover:border-white/20 transition-all duration-300 cursor-pointer"
-              whileHover={{ scale: 1.03, y: -1 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <motion.div
-                animate={{ scale: [1, 1.15, 1] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.6 }}
-              >
-                <FontAwesomeIcon icon={faCheckCircle} className="text-sm opacity-80" style={{ color: brand.primary }} />
-              </motion.div>
-              <span className="text-gray-300 font-medium group-hover:text-gray-200 transition-colors opacity-90">
-                {t.trust[2]}
-              </span>
-            </motion.div>
-          </motion.div>
+          {/* Live stats: real numbers from /public/stats/ */}
+          <div className="mb-10 sm:mb-6">
+            <HeroLiveStats language={language} />
+          </div>
         </div>
         </div>
       </div>

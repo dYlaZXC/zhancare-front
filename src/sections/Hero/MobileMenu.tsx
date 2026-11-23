@@ -44,7 +44,9 @@ export default function MobileMenu({ isOpen, onClose, onScrollToSection }: Props
     }
   })();
 
-  const navigationKeys = Object.keys(translations.navigation) as Array<keyof typeof translations.navigation>;
+  // "Наш путь" (traction) is intentionally not in the menu
+  const navigationKeys = (Object.keys(translations.navigation) as Array<keyof typeof translations.navigation>)
+    .filter((k) => k !== "traction");
 
   // Navigation icons mapping
   const getNavigationIcon = (key: string) => {

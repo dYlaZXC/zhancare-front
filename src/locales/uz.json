@@ -325,26 +325,7 @@
     "subtitle": "Simptomlarni tasvirlab bering → AI shifokorni tanlaydi → To'lov → Video konsultatsiya",
     "startButton": "Alomatlarni tavsiflash",
     "startingButton": "Yuklanmoqda...",
-    "scheduleButton": "Shifokorga yozilish",
-    "features": [
-      {
-        "title": "Tez",
-        "description": "Konsultatsiya to'lovdan 5 daqiqa o'tgach boshlanadi"
-      },
-      {
-        "title": "Aqlli tanlov",
-        "description": "AI avtomatik ravishda mos shifokorni tanlaydi"
-      },
-      {
-        "title": "Xavfsiz",
-        "description": "Barcha ma'lumotlar himoyalangan va maxfiy"
-      }
-    ],
-    "trust": [
-      "Litsenziyalangan shifokorlar",
-      "500+ dan ortiq konsultatsiyalar",
-      "Reyting 4.9/5"
-    ]
+    "scheduleButton": "Shifokorga yozilish"
   },
   "impactSection": {
     "title": "Nima uchun JonCare.Ai tanlashadi?",
@@ -444,6 +425,10 @@
     "alreadyInstalled": "Ilova bu qurilmaga allaqachon o'rnatilgan",
     "androidTabLabel": "Android",
     "iosTabLabel": "iPhone",
+    "benefits": ["Yozilish va shifokor javoblari haqida bildirishnomalar", "Bosh ekrandan bir bosishda ochiladi", "Brauzersiz tez ishlaydi"],
+    "notifTitle": "ZhanCare.AI",
+    "notifBody": "Shifokor konsultatsiyani tasdiqladi — 15 daqiqadan so'ng boshlanadi",
+    "stepLabel": "Qadam",
     "androidSteps": [
       "Saytni telefoningizda Chrome orqali oching.",
       "Yuqori o'ng burchakdagi ⋮ (uch nuqta) belgisini bosing.",
