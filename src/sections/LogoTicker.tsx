@@ -54,22 +54,22 @@ export const LogoTicker = () => {
   const organizationTexts = getOrganizationTexts();
 
   const logos = useMemo(() => [
-    { src: Logo0, alt: "Logo0" },
-    { src: Logo3, alt: "Logo3" },
+    { src: Logo0, alt: "ITRY" },
+    { src: Logo3, alt: "Astana Hub" },
     // {
     //   src: Logo2,
     //   alt: "Aqniet Käsipodağy",
     //   text: ["AQNIET", "KÄSIPODAĞY"],
     // },
-    { src: Logo8, alt: "Logo8" },
-    { src: Logo7, alt: "Logo7" },
+    { src: Logo8, alt: "Respublica" },
+    { src: Logo7, alt: "OMRON Healthcare" },
     {
       src: Logo1,
       alt: "Ministry of Digital Kazakhstan",
       text: organizationTexts.digitalMinistry
     },
-    { src: Logo4, alt: "Logo4" },
-    { src: Logo6, alt: "Logo6" },
+    { src: Logo4, alt: "Astana Medical University" },
+    { src: Logo6, alt: "Enactus" },
     {
       src: Logo5,
       alt: "Ministry of Health Kazakhstan",

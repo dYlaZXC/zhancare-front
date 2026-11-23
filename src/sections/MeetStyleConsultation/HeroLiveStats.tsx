@@ -156,7 +156,9 @@ export default function HeroLiveStats({ language }: { language: string }) {
           animate={reduce ? undefined : { rotate: 360 }}
           transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
         />
-        <div className="relative rounded-3xl bg-[#0b1020]/80 backdrop-blur-xl">
+        {/* Opaque fill: the rotating gradient must only show as a 1px edge,
+            not bleed through the panel (made one half look lighter). */}
+        <div className="relative rounded-3xl bg-[#0b1020] bg-[linear-gradient(180deg,rgba(55,114,255,0.06),rgba(11,16,32,0))]">
           <div className={`grid ${cols}`}>
             {cells.map((c, i) => (
               <div
