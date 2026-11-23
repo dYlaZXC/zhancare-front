@@ -163,7 +163,7 @@ export default async function RootLayout({
                     addressCountry: "KZ",
                     addressLocality: "Алматы",
                   },
-                  sameAs: ["https://t.me/zhancareai"],
+                  sameAs: ["https://t.me/zhancareai", "https://www.instagram.com/zhancare_official/", "https://www.facebook.com/profile.php?id=61589492107256", "https://www.linkedin.com/company/zhancare-ai/"],
                 },
               ],
             }),

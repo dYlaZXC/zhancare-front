@@ -1,11 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useBrand } from "@/context/BrandContext";
-import SocialX from "@/assets/social-x.svg";
 import SocialInsta from "@/assets/social-insta.svg";
 import SocialLinkedin from "@/assets/social-linkedin.svg";
-import SocialPin from "@/assets/social-pin.svg";
-import SocialYoutube from "@/assets/social-youtube.svg";
 import Image from "next/image";
 import { motion, useAnimationControls } from "framer-motion";
 import { api } from "@/utils/api";
@@ -17,6 +14,21 @@ import ru from "@/locales/ru.json";
 import kz from "@/locales/kz.json";
 import en from "@/locales/en.json";
 import uz from "@/locales/uz.json";
+
+const SHARE_URL = encodeURIComponent("https://zhan.care/");
+const SHARE_TEXT = encodeURIComponent("ZhanCare.AI — онлайн-консультация врача и AI-анализ симптомов");
+
+const FacebookIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+    <path d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.96.93-1.96 1.89v2.26h3.33l-.53 3.49h-2.8V24C19.61 23.1 24 18.1 24 12.07" />
+  </svg>
+);
+
+const WhatsAppIcon = () => (
+  <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor" aria-hidden="true">
+    <path d="M17.47 14.38c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.64.07-.3-.15-1.25-.46-2.38-1.47-.88-.79-1.47-1.76-1.65-2.05-.17-.3-.02-.46.13-.6.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.03-.52-.07-.15-.67-1.6-.92-2.2-.24-.58-.49-.5-.67-.5h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.21 3.08c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.7.63.71.22 1.36.19 1.87.12.57-.09 1.75-.72 2-1.41.25-.7.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35M12.05 21.79h-.01a9.87 9.87 0 0 1-5.03-1.38l-.36-.21-3.74.98 1-3.65-.24-.37a9.86 9.86 0 0 1-1.51-5.26c0-5.45 4.44-9.88 9.9-9.88a9.83 9.83 0 0 1 7 2.9 9.82 9.82 0 0 1 2.89 6.99c0 5.45-4.44 9.88-9.9 9.88m8.42-18.3A11.82 11.82 0 0 0 12.05 0C5.5 0 .16 5.34.16 11.89c0 2.1.55 4.14 1.59 5.94L.06 24l6.31-1.65a11.88 11.88 0 0 0 5.68 1.45h.01c6.55 0 11.89-5.34 11.89-11.9a11.8 11.8 0 0 0-3.48-8.41" />
+  </svg>
+);
 
 export const Footer = () => {
   const { language } = useLanguage();
@@ -527,15 +539,16 @@ export const Footer = () => {
                       </h4>
                       <div className="flex items-center gap-2.5">
                         {[
-                          { Icon: SocialX,        label: "X (Twitter)" },
-                          { Icon: SocialInsta,    label: "Instagram" },
-                          { Icon: SocialLinkedin, label: "LinkedIn" },
-                          { Icon: SocialPin,      label: "Pinterest" },
-                          { Icon: SocialYoutube,  label: "YouTube" },
+                          { Icon: SocialInsta,    label: "Instagram", href: "https://www.instagram.com/zhancare_official/" },
+                          { Icon: FacebookIcon,   label: "Facebook", href: "https://www.facebook.com/profile.php?id=61589492107256" },
+                          { Icon: SocialLinkedin, label: "LinkedIn", href: "https://www.linkedin.com/company/zhancare-ai/" },
                         ].map((social, index) => (
-                          <motion.div
+                          <motion.a
                             key={index}
                             aria-label={social.label}
+                            href={social.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="group relative w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 hover:bg-gradient-to-br hover:from-blue-500/20 hover:to-indigo-500/20 border border-white/10 hover:border-blue-500/50 transition-all duration-300"
                             whileHover={{ scale: 1.1, y: -2 }}
                             whileTap={{ scale: 0.95 }}
@@ -545,7 +558,39 @@ export const Footer = () => {
                             </div>
                             {/* Glow on hover */}
                             <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 opacity-0 group-hover:opacity-20 blur transition-opacity duration-300" />
-                          </motion.div>
+                          </motion.a>
+                        ))}
+                        <a
+                          href="https://t.me/+C1ePSijNbA1jOTli"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label="Telegram ZhanCare.AI"
+                          className="group relative w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 hover:bg-gradient-to-br hover:from-blue-500/20 hover:to-indigo-500/20 border border-white/10 hover:border-blue-500/50 transition-all duration-300"
+                        >
+                          <Send className="w-5 h-5 text-gray-400 group-hover:text-blue-400 transition-colors duration-300" />
+                        </a>
+                      </div>
+
+                      {/* Share the site — WhatsApp/Telegram are what people use here */}
+                      <h4 className="text-xs font-semibold text-gray-400 mt-4 mb-3 uppercase tracking-wider">
+                        {translations.social.share}
+                      </h4>
+                      <div className="flex items-center gap-2.5">
+                        {[
+                          { label: "WhatsApp", href: `https://wa.me/?text=${SHARE_TEXT}%20${SHARE_URL}`, icon: <WhatsAppIcon /> },
+                          { label: "Telegram", href: `https://t.me/share/url?url=${SHARE_URL}&text=${SHARE_TEXT}`, icon: <Send className="w-5 h-5" /> },
+                        ].map((s) => (
+                          <a
+                            key={s.label}
+                            href={s.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={`${translations.social.share}: ${s.label}`}
+                            className="flex items-center gap-2 h-10 px-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:text-white hover:border-blue-500/50 hover:bg-blue-500/10 transition-all duration-300 text-sm"
+                          >
+                            {s.icon}
+                            {s.label}
+                          </a>
                         ))}
                       </div>
                     </div>

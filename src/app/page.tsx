@@ -4,7 +4,7 @@ import HomeClient from "./HomeClient";
 export const metadata: Metadata = {
   title: "Консультация врача онлайн за 5 минут | ZhanCare.AI",
   description:
-    "AI-анализ симптомов, подбор врача и онлайн-консультация через ZhanCare.AI. Найдите нужного специалиста за несколько минут. Первый ответ — за секунды.",
+    "AI-анализ симптомов, подбор врача и онлайн-консультация через ZhanCare.AI. Найдите специалиста за несколько минут. Первый ответ — за секунды.",
   alternates: {
     canonical: "https://zhan.care/",
     languages: {
