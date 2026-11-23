@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "react-toastify";
 import { api, setTokens, clearTokens, getAccessToken, getRefreshToken, ACCESS_TOKEN_KEY } from "@/utils/api";
+import { unregisterPushOnLogout } from "@/utils/webPush";
 
 const _ROLE_PRIORITY = ["admin", "academy_admin", "doctor", "nurse", "teacher", "patient"] as const;
 
@@ -287,6 +288,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const refreshToken = getRefreshToken();
     let serverRevoked = false;
+    // While still authenticated: drop this device's push subscription so
+    // the next person using it doesn't get this user's notifications.
+    await unregisterPushOnLogout();
     try {
       await api.post(
         "/auth/logout/",

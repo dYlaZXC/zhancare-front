@@ -103,3 +103,52 @@ const serwist = new Serwist({
 });
 
 serwist.addEventListeners();
+
+/*
+ * Web Push — system notifications on Android (Chrome / installed app) and
+ * iPhone (iOS 16.4+, app added to the home screen). Payload format is set
+ * by the backend (common/services/push.py): {title, body, url, tag}.
+ * Only the notification text travels through the push service; nothing is
+ * cached.
+ */
+type PushPayload = { title?: string; body?: string; url?: string; tag?: string | null };
+
+self.addEventListener("push", (event) => {
+  let data: PushPayload = {};
+  try {
+    data = event.data?.json() ?? {};
+  } catch {
+    data = { body: event.data?.text() };
+  }
+  // iOS/Chrome require every push to display a notification.
+  event.waitUntil(
+    self.registration.showNotification(data.title || "ZhanCare", {
+      body: data.body || "",
+      icon: "/icons/icon-192.png",
+      tag: data.tag || undefined,
+      data: { url: data.url || "/" },
+    })
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = new URL(event.notification.data?.url || "/", self.location.origin).href;
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      const existing = windows.find((c) => new URL(c.url).origin === self.location.origin);
+      if (existing) {
+        await existing.focus();
+        try {
+          await existing.navigate(target);
+          return;
+        } catch {
+          // Uncontrolled client (first visit before the SW took over) can't
+          // be navigated from here — fall through and open a window.
+        }
+      }
+      await self.clients.openWindow(target);
+    })()
+  );
+});
