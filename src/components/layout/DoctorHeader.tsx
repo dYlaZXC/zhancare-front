@@ -4,9 +4,9 @@ import Image from "next/image";
 import Logo from "@/assets/logosaas.png";
 import { useAuth } from "@/context/AuthContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 import { 
   faBars, 
-  faBell,
   faUserMd,
   faChevronLeft,
   faChevronRight,
@@ -179,24 +179,8 @@ export const DoctorHeader = ({
 
       {/* Right - Notifications & User Info */}
       <div className="flex items-center gap-4">
-        {/* Premium Notifications */}
-        <button className="relative group p-3 rounded-xl transition-all duration-300 hover:scale-110 hover:shadow-lg border border-gray-200/50 backdrop-blur-sm"
-                style={{ background: 'linear-gradient(135deg, rgba(55, 114, 255, 0.05) 0%, rgba(41, 53, 143, 0.05) 100%)' }}>
-          <FontAwesomeIcon 
-            icon={faBell} 
-            className="text-lg text-gray-600 group-hover:text-blue-600 transition-colors duration-300 group-hover:animate-pulse" 
-          />
-          
-          {/* Notification Badge */}
-          <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-lg animate-pulse"
-               style={{ background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' }}>
-            3
-          </div>
-
-          {/* Hover Effect */}
-          <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-               style={{ background: 'linear-gradient(135deg, rgba(55, 114, 255, 0.1) 0%, rgba(41, 53, 143, 0.1) 100%)' }}></div>
-        </button>
+        {/* Notifications */}
+        <NotificationBell buttonClassName="p-3" />
 
         {/* User Quick Info with Availability Status */}
         {user && (

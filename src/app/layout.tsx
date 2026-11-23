@@ -12,6 +12,7 @@ import { BrandProvider } from "@/context/BrandContext";
 import { BRAND_STYLES } from "@/config/brandConfig";
 import type { BrandId } from "@/config/brandConfig";
 import ServiceWorkerProvider from "@/components/pwa/ServiceWorkerProvider";
+import { PushPermissionPrompt } from "@/components/pwa/PushPermissionPrompt";
 import BottomNavBar from "@/components/layout/BottomNavBar";
 import AuthPopup from "@/components/AuthPopup";
 import ForceChangePasswordModal from "@/components/ForceChangePasswordModal";
@@ -191,6 +192,7 @@ export default async function RootLayout({
                   <BottomNavBar />
                   <AuthPopup />
                   <ForceChangePasswordModal />
+                  <PushPermissionPrompt />
                 </OptimizedConsultationProvider>
               </BrandProvider>
             </LanguageProvider>
