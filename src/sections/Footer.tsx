@@ -492,8 +492,8 @@ export const Footer = () => {
                         {/* Glow Effect on Focus */}
                         <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl opacity-0 group-focus-within:opacity-20 blur transition duration-500" />
 
-                        <div className="relative flex gap-2 group">
-                          <div className="relative flex-1">
+                        <div className="relative flex flex-col gap-2.5 group">
+                          <div className="relative min-w-0">
                             <input
                               type="email"
                               value={email}
@@ -506,7 +506,7 @@ export const Footer = () => {
                           <motion.button
                             type="submit"
                             disabled={isSubmitting}
-                            className="relative px-6 py-3.5 bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 hover:from-blue-700 hover:via-blue-600 hover:to-indigo-700 text-white font-bold rounded-xl transition-all duration-300 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 overflow-hidden group"
+                            className="relative w-full justify-center px-6 py-3.5 bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 hover:from-blue-700 hover:via-blue-600 hover:to-indigo-700 text-white font-bold rounded-xl transition-all duration-300 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 overflow-hidden group"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                           >
@@ -523,7 +523,7 @@ export const Footer = () => {
                               ) : (
                                 <>
                                   <Send className="w-5 h-5" />
-                                  <span className="hidden sm:inline">{translations.newsletter.button}</span>
+                                  <span>{translations.newsletter.button}</span>
                                 </>
                               )}
                             </div>
